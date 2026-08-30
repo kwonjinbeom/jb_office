@@ -29,6 +29,23 @@ if errorlevel 1 (
     goto :fail
 )
 
+echo [1/6] Preparing secure GitHub authentication...
+git credential-manager --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Git Credential Manager is not available.
+    echo Install or update Git for Windows, then run this script again.
+    echo https://git-scm.com/download/win
+    goto :fail
+)
+
+rem Use only Windows Credential Manager for this repository.
+rem This prevents a GitHub token from being saved as plain text in the project.
+git config --local --unset-all credential.helper >nul 2>&1
+git config --local --add credential.helper ""
+if errorlevel 1 goto :fail
+git config --local --add credential.helper manager
+if errorlevel 1 goto :fail
+
 git config user.name >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Git user.name is not configured on this computer.
@@ -43,22 +60,24 @@ if errorlevel 1 (
     goto :fail
 )
 
-echo [1/5] Checking remote origin/main...
-git ls-remote --exit-code --heads origin refs/heads/main >nul 2>&1
+echo [2/6] Checking remote origin/main...
+echo On a new computer, complete the GitHub sign-in window once.
+git ls-remote --exit-code --heads origin refs/heads/main >nul
 set "REMOTE_CHECK=%ERRORLEVEL%"
 
 if "%REMOTE_CHECK%"=="0" (
-    echo [2/5] Pulling origin/main with rebase...
+    echo [3/6] Pulling origin/main with rebase...
     git pull --rebase --autostash origin main
     if errorlevel 1 goto :fail
 ) else if "%REMOTE_CHECK%"=="2" (
-    echo [2/5] origin/main does not exist yet. Skipping pull for the first push.
+    echo [3/6] origin/main does not exist yet. Skipping pull for the first push.
 ) else (
     echo [ERROR] Could not access remote "origin".
+    echo Complete GitHub sign-in if a browser window opened, then run this script again.
     goto :fail
 )
 
-echo [3/5] Staging every change with git add .
+echo [4/6] Staging every change with git add .
 git add .
 if errorlevel 1 goto :fail
 
@@ -69,14 +88,14 @@ if errorlevel 1 (
         for /f "delims=" %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "STAMP=%%T"
         set "COMMIT_MSG=sync: !STAMP!"
     )
-    echo [4/5] Committing all staged changes...
+    echo [5/6] Committing all staged changes...
     git commit -m "!COMMIT_MSG!"
     if errorlevel 1 goto :fail
 ) else (
-    echo [4/5] No local changes to commit.
+    echo [5/6] No local changes to commit.
 )
 
-echo [5/5] Pushing main to origin...
+echo [6/6] Pushing main to origin...
 git push -u origin main
 if errorlevel 1 goto :fail
 
