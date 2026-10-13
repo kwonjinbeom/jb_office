@@ -168,10 +168,17 @@ def sync(root: Path, message: str | None = None) -> dict:
             else:
                 step("commit", 0, "no local changes")
 
-            code, out = _run(["pull", "--rebase", "--autostash", "--quiet", "origin", branch], root)
+            # 1차: fast-forward 만 시도. 2차: 갈라졌으면 merge 로 합친다.
+            # (rebase 는 로컬에 merge 커밋이 있을 때 그 안의 커밋을 다시 재생하려다 충돌을 낸다)
+            code, out = _run(["pull", "--ff-only", "--quiet", "origin", branch], root)
+            if code != 0:
+                code, out = _run(
+                    ["pull", "--no-rebase", "--no-edit", "--autostash", "--quiet", "origin", branch], root
+                )
+                if code != 0:
+                    _run(["merge", "--abort"], root)
             if not step("pull", code, out):
-                _run(["rebase", "--abort"], root)
-                result["error"] = "git pull --rebase failed (conflict?)"
+                result["error"] = "git pull failed (conflict?)"
                 return result
 
             code, out = _run(["push", "-q", "origin", branch], root)
