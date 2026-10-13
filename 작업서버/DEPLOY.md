@@ -14,7 +14,7 @@ cd ~
 git clone https://github.com/kwonjinbeom/jb_office.git
 mkdir -p ~/data
 cd ~/jb_office/작업서버
-python3.10 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
 nano .env
@@ -34,7 +34,7 @@ DEPLOY_RELOAD_TOUCH_FILE=/var/www/<아이디>_pythonanywhere_com_wsgi.py
 비밀 키는 이 명령으로 만들어 붙여 넣으면 된다.
 
 ```bash
-python3.10 -c "import secrets; print(secrets.token_urlsafe(50))"
+python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
 이어서 DB 를 만들고 초기 데이터와 로그인 계정을 넣는다.
@@ -50,7 +50,7 @@ python3.10 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 ## 2. 처음 한 번: 웹앱 등록 (Web 탭)
 
-1. **Web** 탭 → **Add a new web app** → 도메인 확인 → **Manual configuration** → **Python 3.10**.
+1. **Web** 탭 → **Add a new web app** → 도메인 확인 → **Manual configuration** → **Python 3.12** (가상환경을 만든 버전과 같아야 한다).
 2. 같은 페이지에서 아래 항목을 채운다.
 
 | 항목 | 값 |
