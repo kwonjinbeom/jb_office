@@ -141,6 +141,99 @@ pre { background: #f1f3f5; border: 1px solid var(--line); padding: 10px 12px; bo
 .rowlink-row:hover .rowlink { color: var(--accent); }
 .text-2 { color: var(--text-2); }
 
+/* ---- status bar / progress (아이디어 상세 상단) ---- */
+.statusbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 18px; }
+.statusbar__sep { width: 1px; height: 18px; background: var(--line-strong); }
+.progress { display: inline-block; width: 140px; height: 8px; background: #eef0f3; border-radius: 999px; overflow: hidden; vertical-align: middle; }
+.progress--sm { width: 80px; height: 6px; }
+.progress__bar { display: block; height: 100%; background: var(--green); }
+
+/* ---- stages ---- */
+.stages { list-style: none; margin: 0 0 14px; padding: 0; }
+.stage { display: flex; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+.stage:last-child { border-bottom: 0; }
+.stage__num { width: 26px; height: 26px; border-radius: 50%; background: #eef0f3; color: var(--text-2); display: grid; place-items: center; font: 600 12px var(--mono); flex: 0 0 26px; }
+.stage--doing .stage__num { background: var(--accent); color: #fff; }
+.stage--done .stage__num { background: var(--green); color: #fff; }
+.stage--hold .stage__num { background: #e5e7eb; color: var(--muted); }
+.stage__body { flex: 1; min-width: 0; }
+.stage__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stage__title { font-weight: 600; color: var(--text); }
+.stage--done .stage__title { color: var(--muted); text-decoration: line-through; }
+.stage__goal { margin-top: 3px; }
+.stage__result { margin-top: 4px; background: #f8f9fb; border-left: 2px solid var(--green); padding: 4px 8px; }
+.stage__result .k, .ideacard__row .k { color: var(--muted); margin-right: 6px; }
+.stage__actions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.btn--xs { padding: 2px 8px; font-size: 11px; }
+.quickrow { display: flex; gap: 8px; align-items: center; }
+.quickrow .input { flex: 1; }
+
+/* ---- logs ---- */
+.logform { display: grid; gap: 8px; margin-bottom: 14px; }
+.logform__row { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.logform__row .select { width: auto; }
+.loglist { list-style: none; margin: 0; padding: 0; }
+.log { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.log:last-child { border-bottom: 0; }
+.log__meta { display: flex; align-items: center; gap: 6px; }
+.log__del { margin-left: auto; background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; }
+.log__del:hover { color: var(--red); }
+.log__body { margin-top: 2px; line-height: 1.6; }
+.loglist--compact .log { padding: 6px 0; }
+
+/* ---- tasks ---- */
+.tasklist { list-style: none; margin: 0; padding: 0; }
+.task { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.task:last-child { border-bottom: 0; }
+.task__check { background: none; border: 0; font-size: 16px; line-height: 1; cursor: pointer; color: var(--text-2); padding: 0; flex: 0 0 auto; }
+.task__check:hover { color: var(--accent); }
+.task__title { color: var(--text); flex: 1 1 160px; min-width: 0; }
+.task .chip, .task .code { flex: 0 0 auto; }
+.task.is-done .task__title { color: var(--muted); text-decoration: line-through; }
+.task.is-overdue .task__title { color: var(--red); }
+.task__due { flex: 0 0 auto; }
+
+/* ---- evidence ---- */
+.evlist { list-style: none; margin: 0; padding: 0; }
+.ev { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.ev:last-child { border-bottom: 0; }
+.ev__title { font-weight: 600; color: var(--text); }
+.ev__edit { color: var(--muted); margin-left: auto; }
+.ev__note { flex-basis: 100%; padding-left: 2px; }
+.chip--kind { background: #e6f7f9; border-color: #b6e3ea; color: #0e7490; }
+
+/* ---- docs ---- */
+.grid--doc { grid-template-columns: minmax(0, 1fr) 240px; align-items: start; }
+.doc { line-height: 1.75; max-width: 900px; }
+.doc h1 { font-size: 22px; margin: 0 0 16px; }
+.doc h2 { font-size: 17px; margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.doc h3 { font-size: 14px; margin: 20px 0 8px; }
+.doc p { margin: 0 0 12px; }
+.doc ul, .doc ol { padding-left: 22px; margin: 0 0 12px; }
+.doc li { margin: 3px 0; }
+.doc table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 0 0 16px; display: block; overflow-x: auto; }
+.doc th, .doc td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+.doc th { background: #f8f9fb; }
+.doc blockquote { margin: 0 0 12px; padding: 8px 12px; border-left: 3px solid var(--line-strong); background: #f8f9fb; color: var(--text-2); }
+.doc code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; font: 12px var(--mono); }
+.doc pre code { background: none; padding: 0; }
+.doc a { word-break: break-all; }
+.doc-toc { position: sticky; top: 70px; font-size: 12px; }
+.doc-toc ul { list-style: none; padding-left: 0; margin: 0; }
+.doc-toc ul ul { padding-left: 12px; }
+.doc-toc li { margin: 3px 0; }
+.doclist { list-style: none; margin: 0; padding: 0; }
+.doclist li { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.doclist li:last-child { border-bottom: 0; }
+
+/* ---- misc ---- */
+.grid--two { grid-template-columns: 1fr 1fr; }
+.card--details > summary { cursor: pointer; font-weight: 600; font-size: 15px; list-style: none; }
+.card--details > summary::-webkit-details-marker { display: none; }
+.card--details > summary::before { content: "▸ "; color: var(--muted); }
+.card--details[open] > summary::before { content: "▾ "; }
+@media (max-width: 1100px) { .grid--two, .grid--doc { grid-template-columns: 1fr; } .doc-toc { position: static; } }
+
 /* ---- menu cards ---- */
 .menugrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .menucard { display: block; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius); padding: 14px 16px; color: var(--text); box-shadow: var(--shadow); transition: box-shadow .12s, transform .12s; }

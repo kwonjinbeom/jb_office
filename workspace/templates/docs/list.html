@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block heading %}문서 <span class="count">{{ total }}</span>{% endblock %}
+
+{% block content %}
+<p class="muted small" style="margin-bottom:14px">저장소의 Markdown 문서를 읽기 전용으로 보여 줍니다. 수정은 Claude·Codex에게 지시하거나 GitHub에서 합니다.</p>
+<div class="grid grid--two">
+  {% for group, docs in groups.items %}
+  <div class="card">
+    <div class="card__head"><h2>{{ group }}</h2><span class="muted small">{{ docs|length }}개</span></div>
+    <ul class="doclist">
+      {% for d in docs %}
+      <li><a href="{% url 'docs:detail' d.slug %}">{{ d.name }}</a></li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% empty %}
+  <div class="empty">문서 폴더가 비어 있습니다.</div>
+  {% endfor %}
+</div>
+{% endblock %}

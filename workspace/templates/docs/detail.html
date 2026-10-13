@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'docs:list' %}">문서</a> › {{ group }}</div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'docs:list' %}">목록</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid--doc">
+  <article class="card doc">
+    {{ html|safe }}
+  </article>
+  <aside class="card doc-toc">
+    <div class="card__head"><h2>목차</h2></div>
+    {{ toc|safe }}
+  </aside>
+</div>
+{% endblock %}

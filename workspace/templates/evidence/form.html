@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'evidence:list' %}">증거 수집함</a></div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ next|default:'/evidence/' }}">취소</a>
+<button class="btn btn--primary" type="submit" form="main-form">저장</button>
+{% if item %}<a class="btn btn--danger-ghost" href="{% url 'evidence:delete' item.pk %}">삭제</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+<form id="main-form" method="post" class="form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="card">
+    <div class="field">{{ form.url.label_tag }}{{ form.url }}{{ form.url.errors }}</div>
+    <div class="form__row form__row--2">
+      <div class="field">{{ form.title.label_tag }}{{ form.title }}<div class="help">{{ form.title.help_text }}</div>{{ form.title.errors }}</div>
+      <div class="field">{{ form.kind.label_tag }}{{ form.kind }}{{ form.kind.errors }}</div>
+    </div>
+    <div class="field">{{ form.note.label_tag }}{{ form.note }}<div class="help">{{ form.note.help_text }}</div>{{ form.note.errors }}</div>
+    <div class="form__row form__row--2">
+      <div class="field">{{ form.idea.label_tag }}{{ form.idea }}{{ form.idea.errors }}</div>
+      <div class="field">{{ form.stage.label_tag }}{{ form.stage }}{{ form.stage.errors }}</div>
+    </div>
+  </div>
+  <div class="form__footer">
+    <a class="btn" href="{{ next|default:'/evidence/' }}">취소</a>
+    <button class="btn btn--primary" type="submit">저장</button>
+  </div>
+</form>
+{% endblock %}

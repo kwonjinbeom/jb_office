@@ -25,22 +25,11 @@ class Menu:
 
 
 MENUS: list[Menu] = [
-    Menu(
-        key="ideas",
-        title="아이디어 리스트",
-        description="시장조사에서 나온 후보 C01~C35를 카드로 보고, 눌러서 상세 확인·수정",
-        url_name="ideas:list",
-        icon="💡",
-        color="#2563eb",
-    ),
-    Menu(
-        key="memos",
-        title="메모",
-        description="작업 중 떠오른 생각, 할 일, 참고 링크를 빠르게 기록",
-        url_name="memos:list",
-        icon="📝",
-        color="#059669",
-    ),
+    Menu("ideas", "아이디어", "후보 하나를 골라 단계별로 실현해 가는 곳. 단계·할 일·증거·로그가 한 화면에", "ideas:list", "💡", "#2563eb"),
+    Menu("tasks", "할 일", "모든 아이디어의 다음 행동을 마감순으로", "tasks:list", "✅", "#059669"),
+    Menu("evidence", "증거 수집함", "조사 중 발견한 링크. 의뢰 공고·리뷰·가격·정책", "evidence:list", "🔗", "#0891b2"),
+    Menu("memos", "메모", "떠오른 생각, 참고 사항을 빠르게 기록", "memos:list", "📝", "#64748b"),
+    Menu("docs", "문서", "시장조사 폴더의 문서를 화면에서 읽기 (읽기 전용)", "docs:list", "📄", "#475569"),
 ]
 
 

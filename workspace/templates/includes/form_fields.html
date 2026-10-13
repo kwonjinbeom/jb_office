@@ -1,0 +1,14 @@
+{# 공용 폼 렌더링. form 과 선택적으로 layout(필드명 묶음 리스트)을 받는다. #}
+{% if form.non_field_errors %}<div class="flash flash--error">{{ form.non_field_errors }}</div>{% endif %}
+{% for field in form.visible_fields %}
+  {% if field.field.widget.input_type == "checkbox" %}
+  <div class="field field--check"><label>{{ field }} {{ field.label }}</label>{{ field.errors }}</div>
+  {% else %}
+  <div class="field">
+    {{ field.label_tag }}{{ field }}
+    {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+    {{ field.errors }}
+  </div>
+  {% endif %}
+{% endfor %}
+{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}

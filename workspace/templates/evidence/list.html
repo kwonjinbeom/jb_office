@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block heading %}증거 수집함 <span class="count">{{ items|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn btn--primary" href="{% url 'evidence:create' %}">＋ 링크 저장</a>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="filterbar">
+  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="제목, 주소, 메모 검색">
+  <select class="select" name="kind">
+    <option value="">유형 전체</option>
+    {% for value, label in kinds %}<option value="{{ value }}" {% if value == kind %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select class="select" name="idea">
+    <option value="">아이디어 전체</option>
+    {% for i in ideas %}<option value="{{ i.pk }}" {% if i.pk|stringformat:"s" == idea_id %}selected{% endif %}>{{ i.code }} {{ i.title|truncatechars:24 }}</option>{% endfor %}
+  </select>
+  <button class="btn" type="submit">적용</button>
+  {% if is_filtered %}<a class="btn btn--ghost" href="{% url 'evidence:list' %}">초기화</a>{% endif %}
+</form>
+
+<div class="card">
+  {% if total == 0 %}
+  <div class="empty">
+    <p>아직 저장한 링크가 없습니다. 조사하다 발견한 의뢰 공고, 리뷰, 가격 페이지를 <strong>링크 저장</strong>으로 넣으세요.</p>
+    <p class="muted small">시장조사 문서 아래의 근거 링크들도 여기로 옮겨 두면 아이디어별로 모아 볼 수 있습니다.</p>
+  </div>
+  {% else %}
+  {% include "evidence/_rows.html" with items=items show_parent=True %}
+  {% endif %}
+</div>
+{% endblock %}

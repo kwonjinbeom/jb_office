@@ -76,3 +76,79 @@ class Idea(models.Model):
             self.Status.HOLD: "gray",
             self.Status.DROPPED: "red",
         }.get(self.status, "slate")
+
+    @property
+    def current_stage(self):
+        """진행 중인 단계가 있으면 그것, 없으면 첫 번째 대기 단계."""
+        stages = list(self.stages.all())
+        for st in stages:
+            if st.status == Stage.Status.DOING:
+                return st
+        for st in stages:
+            if st.status == Stage.Status.TODO:
+                return st
+        return None
+
+    @property
+    def stage_progress(self) -> tuple[int, int]:
+        stages = list(self.stages.all())
+        done = sum(1 for s in stages if s.status == Stage.Status.DONE)
+        return done, len(stages)
+
+
+class Stage(models.Model):
+    """아이디어를 실현하는 세부 단계 하나. 순서대로 진행한다."""
+
+    class Status(models.TextChoices):
+        TODO = "todo", "대기"
+        DOING = "doing", "진행"
+        DONE = "done", "완료"
+        HOLD = "hold", "보류"
+
+    idea = models.ForeignKey(Idea, verbose_name="아이디어", on_delete=models.CASCADE, related_name="stages")
+    order = models.PositiveIntegerField("순서", default=0)
+    title = models.CharField("단계", max_length=200)
+    goal = models.TextField("이 단계의 목표", blank=True, help_text="끝났다고 말할 수 있는 조건")
+    status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.TODO)
+    due = models.DateField("마감", null=True, blank=True)
+    result = models.TextField("결과·배운 것", blank=True)
+    created_at = models.DateTimeField("생성", auto_now_add=True)
+    updated_at = models.DateTimeField("수정", auto_now=True)
+
+    class Meta:
+        ordering = ["idea", "order", "id"]
+        verbose_name = "단계"
+        verbose_name_plural = "단계"
+
+    def __str__(self) -> str:
+        return f"{self.idea.code} · {self.order}. {self.title}"
+
+    def get_absolute_url(self) -> str:
+        return reverse("ideas:stage_edit", args=[self.idea_id, self.pk])
+
+    @property
+    def status_tone(self) -> str:
+        return {"todo": "slate", "doing": "blue", "done": "green", "hold": "gray"}[self.status]
+
+    @property
+    def is_overdue(self) -> bool:
+        from django.utils import timezone
+
+        return bool(self.due and self.status not in {self.Status.DONE, self.Status.HOLD} and self.due < timezone.localdate())
+
+
+class IdeaLog(models.Model):
+    """아이디어 작업 로그. 날짜순으로 쌓이는 짧은 기록."""
+
+    idea = models.ForeignKey(Idea, verbose_name="아이디어", on_delete=models.CASCADE, related_name="logs")
+    stage = models.ForeignKey(Stage, verbose_name="단계", null=True, blank=True, on_delete=models.SET_NULL, related_name="logs")
+    body = models.TextField("내용")
+    created_at = models.DateTimeField("기록", auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "작업 로그"
+        verbose_name_plural = "작업 로그"
+
+    def __str__(self) -> str:
+        return f"{self.idea.code} {self.created_at:%Y-%m-%d} {self.body[:30]}"

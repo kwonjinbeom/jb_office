@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block heading %}할 일 <span class="count">{{ open_count }}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn btn--primary" href="{% url 'tasks:create' %}">＋ 자세히 추가</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" action="{% url 'tasks:quick_add' %}" class="filterbar">
+  {% csrf_token %}
+  <div class="filterbar__search">{{ quick_form.title }}</div>
+  {{ quick_form.due }}
+  <button class="btn" type="submit">추가</button>
+</form>
+
+<div class="grid grid--two">
+  {% for label, tasks in groups %}
+  <div class="card">
+    <div class="card__head"><h2>{{ label }} <span class="muted small">({{ tasks|length }})</span></h2></div>
+    {% include "tasks/_rows.html" with tasks=tasks show_parent=True next_url="/tasks/" %}
+  </div>
+  {% endfor %}
+</div>
+
+{% if done_tasks %}
+<details class="card card--details">
+  <summary>완료된 할 일 (최근 {{ done_tasks|length }}개)</summary>
+  {% include "tasks/_rows.html" with tasks=done_tasks show_parent=True next_url="/tasks/" %}
+</details>
+{% endif %}
+{% endblock %}

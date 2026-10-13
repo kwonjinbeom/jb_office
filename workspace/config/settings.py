@@ -85,6 +85,8 @@ DEPLOY = {
     "PULL_ENABLED": _env_bool("DEPLOY_PULL_ENABLED", IS_SERVER),
     "RELOAD_TOUCH_FILE": _env("DEPLOY_RELOAD_TOUCH_FILE", ""),
 }
+# 문서 보기 메뉴가 읽는 폴더 (저장소 기준 상대 경로). 읽기 전용.
+DOCS_DIRS = [REPO_ROOT / "시장조사", REPO_ROOT]
 # ---------------------------------------------------------------------------
 
 INSTALLED_APPS = [
@@ -94,10 +96,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",
     # 프로젝트 앱. 메뉴 하나 = 앱 하나.
     "apps.core",
     "apps.ideas",
+    "apps.evidence",
+    "apps.tasks",
     "apps.memos",
+    "apps.docs",
 ]
 
 MIDDLEWARE = [

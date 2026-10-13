@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">아이디어</a> › <a href="{{ idea.get_absolute_url }}">{{ idea.code }}</a> › 단계 {{ stage.order }}</div>{% endblock %}
+{% block heading %}{{ stage.order }}. {{ stage.title }}{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ idea.get_absolute_url }}#stages">취소</a>
+<button class="btn btn--primary" type="submit" form="main-form">저장</button>
+{% endblock %}
+
+{% block content %}
+<form id="main-form" method="post" class="form">
+  {% csrf_token %}
+  <div class="card">
+    <div class="field">{{ form.title.label_tag }}{{ form.title }}{{ form.title.errors }}</div>
+    <div class="form__row form__row--2">
+      <div class="field">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
+      <div class="field">{{ form.due.label_tag }}{{ form.due }}{{ form.due.errors }}</div>
+    </div>
+    <div class="field">{{ form.goal.label_tag }}{{ form.goal }}<div class="help">{{ form.goal.help_text }}</div>{{ form.goal.errors }}</div>
+    <div class="field">{{ form.result.label_tag }}{{ form.result }}{{ form.result.errors }}</div>
+  </div>
+  <div class="form__footer">
+    <a class="btn" href="{{ idea.get_absolute_url }}#stages">취소</a>
+    <button class="btn btn--primary" type="submit">저장</button>
+  </div>
+</form>
+{% endblock %}

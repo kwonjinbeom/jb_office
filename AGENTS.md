@@ -55,6 +55,8 @@ PR 은 다음 경우에만 쓴다.
 자세한 내용은 `workspace/README.md`.
 
 - Django 5.2 + SQLite. 메뉴 하나 = 앱 하나 (`apps/<이름>/`).
+- **아이디어(`apps/ideas`)가 허브다.** 단계(Stage)·작업 로그(IdeaLog)는 ideas 앱 안에, 할 일(tasks)·증거(evidence)는 아이디어·단계에 FK 로 연결된다. 새 기능은 가능하면 아이디어 상세 화면 안으로 들어가야 한다. 범용 도구(장부, CRM, 통계)는 사용자가 요청하기 전에는 만들지 않는다.
+- Python 의존성을 추가하면 `requirements.txt` 에 넣고, 커밋 메시지에 "서버 pip install 필요" 를 적는다 (현재 Markdown 패키지가 그렇다).
 - 새 메뉴 추가: 앱 생성 → `config/settings.py` INSTALLED_APPS → `config/urls.py` include → `apps/core/menus.py` MENUS 에 항목 추가. 홈 카드와 좌측 메뉴가 자동으로 생긴다.
 - 템플릿은 `templates/<앱>/` 에 두고 `{% extends "base.html" %}`. 스타일은 `static/css/app.css` 하나, 외부 CSS 프레임워크 없음, 사무적이고 깔끔한 톤 유지.
 - 실행: `workspace\run.bat` (가상환경 생성 → 설치 → migrate → seed → runserver).

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'tasks:list' %}">할 일</a></div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ next|default:'/tasks/' }}">취소</a>
+<button class="btn btn--primary" type="submit" form="main-form">저장</button>
+{% if task %}<a class="btn btn--danger-ghost" href="{% url 'tasks:delete' task.pk %}">삭제</a>{% endif %}
+{% endblock %}
+
+{% block content %}
+<form id="main-form" method="post" class="form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="card">
+    {% include "includes/form_fields.html" %}
+  </div>
+  <div class="form__footer">
+    <a class="btn" href="{{ next|default:'/tasks/' }}">취소</a>
+    <button class="btn btn--primary" type="submit">저장</button>
+  </div>
+</form>
+{% endblock %}
