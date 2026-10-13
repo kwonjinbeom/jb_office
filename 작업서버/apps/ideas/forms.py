@@ -39,6 +39,7 @@ class IdeaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.label_suffix = ""
         for field in self.fields.values():
             css = "select" if isinstance(field.widget, forms.Select) else "input"
             field.widget.attrs.setdefault("class", css)

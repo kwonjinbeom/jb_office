@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "workserver",
+      "runtimeExecutable": "작업서버\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["작업서버\\manage.py", "runserver", "127.0.0.1:8000", "--noreload"],
+      "port": 8000
+    }
+  ]
+}
