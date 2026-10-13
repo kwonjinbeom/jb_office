@@ -51,6 +51,43 @@ def get_status(fetch: bool = False) -> dict:
     return gitsync.status(repo_root(), fetch=fetch)
 
 
+def pull_and_reload() -> dict:
+    """서버 역할: git pull --ff-only 로 코드를 받고, 설정된 파일을 touch 해 앱을 재시작시킨다."""
+    import os
+    import subprocess
+    import time
+
+    root = repo_root()
+    result: dict = {"ok": False, "pulled": False, "reloaded": False, "output": ""}
+    try:
+        proc = subprocess.run(
+            ["git", "-c", "core.quotepath=false", "pull", "--ff-only", "origin"],
+            cwd=str(root),
+            capture_output=True,
+            timeout=120,
+        )
+        out = ((proc.stdout or b"") + (proc.stderr or b"")).decode("utf-8", errors="replace").strip()
+        result["output"] = out[-2000:]
+        if proc.returncode != 0:
+            result["error"] = "git pull 실패 (fast-forward 불가?)"
+            return result
+        result["pulled"] = True
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        result["error"] = str(exc)
+        return result
+
+    touch = settings.DEPLOY.get("RELOAD_TOUCH_FILE") or ""
+    if touch:
+        try:
+            os.utime(touch, (time.time(), time.time()))
+            result["reloaded"] = True
+        except OSError as exc:
+            result["error"] = f"재시작 파일 touch 실패: {exc}"
+            return result
+    result["ok"] = True
+    return result
+
+
 def run_sync(reason: str, message: str | None = None) -> dict:
     """동기화를 실행하고 결과를 상태 파일에 기록한다."""
     result = gitsync.sync(repo_root(), message)

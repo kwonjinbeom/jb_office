@@ -29,7 +29,10 @@ python -m venv .venv
   manage.py
   run.bat                 실행 스크립트
   requirements.txt
-  db.sqlite3              데이터. git 에 포함한다 (폰과 PC가 같은 데이터를 봄)
+  db.sqlite3              로컬 개발용 임시 DB (git 제외). 실제 데이터는 서버에 있다 → DEPLOY.md
+  .env                    역할·비밀 설정 (git 제외). 예시는 .env.example
+  DEPLOY.md               PythonAnywhere 배포 안내
+  deploy/                 서버용 WSGI 파일 템플릿
   config/                 settings, urls
   apps/
     core/                 홈, 메뉴 레지스트리, git 상태·자동 동기화
@@ -61,5 +64,15 @@ python -m venv .venv
 동작: `git add -A` → 변경 있으면 커밋 → `pull --rebase --autostash` → `push`.
 결과는 `작업서버/.sync_state.json` (git 제외) 에 남고 홈 화면에 표시된다.
 
-주의: `db.sqlite3` 는 바이너리라 PC 와 폰에서 동시에 데이터를 고치면 병합이 안 된다.
-한쪽에서 작업을 끝내고 push 한 뒤 다른 쪽을 시작하는 것이 안전하다.
+## 역할 (WORKSERVER_ROLE)
+
+| | dev (기본, PC) | server (PythonAnywhere) |
+|---|---|---|
+| DEBUG | 켜짐 | 꺼짐 |
+| 로그인 | 없음 | 필수 (`createsuperuser` 계정) |
+| 자동 동기화 | 켜짐 | 꺼짐 |
+| 홈 버튼 | 지금 동기화 (commit+push) | 서버 코드 갱신 (pull+reload) |
+| DB | 로컬 임시 | `DATABASE_PATH` (저장소 밖) |
+
+데이터의 원본은 서버 DB 하나다. PC 에서 실제 데이터를 고칠 때도 브라우저로 서버에 접속한다.
+로컬 `runserver` 는 코드 개발·검증용이다.

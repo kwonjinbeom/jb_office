@@ -27,6 +27,13 @@
       <a class="nav__item" href="/admin/"><span class="nav__icon">⚙️</span><span>Django 관리자</span></a>
     </nav>
     <div class="sidebar__footer">
+      {% if user.is_authenticated %}
+      <form method="post" action="{% url 'logout' %}" class="userrow">
+        {% csrf_token %}
+        <span class="userrow__name" title="로그인 계정">{{ user.get_username }}</span>
+        <button type="submit" class="userrow__out" title="로그아웃">로그아웃</button>
+      </form>
+      {% endif %}
       <div class="gitpill" id="gitpill" title="git 상태 (30초마다 갱신)">
         <span class="gitpill__dot" data-git="dot"></span>
         <span data-git="branch">…</span>

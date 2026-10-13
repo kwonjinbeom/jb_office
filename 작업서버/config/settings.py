@@ -1,8 +1,12 @@
 """
 작업서버 Django settings.
 
-로컬 전용 도구다. 외부에 공개하지 않는다는 전제로 DEBUG=True, 인증 없음으로 운영한다.
-환경변수로 바꿀 수 있는 값은 아래 ENV 블록에 모아 둔다.
+두 가지 역할로 돌아간다. 역할은 환경변수 WORKSERVER_ROLE 로 정한다.
+- dev    (기본): PC 로컬 개발. DEBUG 켜짐, 로그인 없음, git 자동 동기화 켜짐.
+- server       : PythonAnywhere 같은 호스팅. DEBUG 꺼짐, 로그인 필수, 자동 동기화 꺼짐,
+                 홈 화면에서 'git pull + 재시작' 버튼으로 코드를 갱신한다.
+
+환경변수는 작업서버/.env 파일(없으면 무시)에서도 읽는다. 예시는 .env.example 참고.
 """
 from __future__ import annotations
 
@@ -11,12 +15,32 @@ import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # 작업서버/
-REPO_ROOT = BASE_DIR.parent  # git 저장소 루트 (sub_pj/)
+REPO_ROOT = BASE_DIR.parent  # git 저장소 루트 (jb_office/)
 
 # tools/gitsync.py 를 어디서든 import 할 수 있게 한다.
 TOOLS_DIR = BASE_DIR / "tools"
 if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
+
+
+def _load_dotenv(path: Path) -> None:
+    """KEY=VALUE 줄을 환경변수로 넣는다. 이미 있는 변수는 덮어쓰지 않는다. 외부 패키지 없이 처리."""
+    if not path.exists():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+_load_dotenv(BASE_DIR / ".env")
+
+
+def _env(name: str, default: str = "") -> str:
+    return os.environ.get(name, default)
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -26,16 +50,40 @@ def _env_bool(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-# ---- ENV -------------------------------------------------------------------
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "local-workserver-not-secret")
-DEBUG = _env_bool("DJANGO_DEBUG", True)
-ALLOWED_HOSTS = ["*"]
+def _env_list(name: str, default: list[str]) -> list[str]:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return [item.strip() for item in raw.split(",") if item.strip()]
 
-# git 자동 동기화 (apps/core/autosync.py)
+
+# ---- ENV -------------------------------------------------------------------
+ROLE = _env("WORKSERVER_ROLE", "dev").lower()  # dev | server
+IS_SERVER = ROLE == "server"
+
+SECRET_KEY = _env("DJANGO_SECRET_KEY", "local-workserver-not-secret")
+DEBUG = _env_bool("DJANGO_DEBUG", not IS_SERVER)
+ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", ["*"])
+CSRF_TRUSTED_ORIGINS = _env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
+
+# 로그인 요구 여부. 서버 역할이면 기본 켜짐, 로컬은 꺼짐.
+REQUIRE_LOGIN = _env_bool("REQUIRE_LOGIN", IS_SERVER)
+
+# DB 파일 위치. 서버에서는 저장소 밖(예: /home/<id>/data/db.sqlite3)에 두면 git pull 과 무관해진다.
+DATABASE_PATH = Path(_env("DATABASE_PATH", str(BASE_DIR / "db.sqlite3")))
+
+# git 자동 동기화 (apps/core/autosync.py). 서버에서는 push 하지 않으므로 기본 꺼짐.
 AUTOSYNC = {
-    "ENABLED": _env_bool("AUTOSYNC_ENABLED", True),
-    "INTERVAL_SECONDS": int(os.environ.get("AUTOSYNC_INTERVAL_SECONDS", "180")),
+    "ENABLED": _env_bool("AUTOSYNC_ENABLED", not IS_SERVER),
+    "INTERVAL_SECONDS": int(_env("AUTOSYNC_INTERVAL_SECONDS", "180")),
     "STATE_FILE": BASE_DIR / ".sync_state.json",
+}
+
+# 서버 역할: 홈의 '코드 갱신' 버튼이 git pull 뒤 이 파일을 touch 해서 앱을 재시작시킨다.
+# PythonAnywhere 는 /var/www/<id>_pythonanywhere_com_wsgi.py 를 touch 하면 reload 된다.
+DEPLOY = {
+    "PULL_ENABLED": _env_bool("DEPLOY_PULL_ENABLED", IS_SERVER),
+    "RELOAD_TOUCH_FILE": _env("DEPLOY_RELOAD_TOUCH_FILE", ""),
 }
 # ---------------------------------------------------------------------------
 
@@ -61,6 +109,13 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+if REQUIRE_LOGIN:
+    # 모든 화면에 로그인을 요구한다. 로그인/로그아웃/관리자 로그인 화면은 Django 가 예외 처리한다.
+    MIDDLEWARE.append("django.contrib.auth.middleware.LoginRequiredMiddleware")
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "core:home"
+LOGOUT_REDIRECT_URL = "login"
 
 ROOT_URLCONF = "config.urls"
 
@@ -85,7 +140,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": DATABASE_PATH,
     }
 }
 
@@ -103,3 +158,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
+
+if IS_SERVER:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30일. 폰에서 매번 로그인하지 않게
