@@ -13,12 +13,16 @@ PythonAnywhere 사이트 → **Consoles** → **Bash** 를 열고 한 줄씩 실
 cd ~
 git clone https://github.com/kwonjinbeom/jb_office.git
 mkdir -p ~/data
-cd ~/jb_office/작업서버
-python3.12 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+ln -sfn ~/jb_office/작업서버 ~/workserver
+python3.12 -m venv ~/venv
+~/venv/bin/pip install -r ~/workserver/requirements.txt
+cd ~/workserver
 cp .env.example .env
 nano .env
 ```
+
+PythonAnywhere 는 가상환경 경로에 한글을 허용하지 않는다. 그래서 가상환경은 `~/venv` 에 두고,
+한글 폴더 `작업서버` 는 영문 바로가기 `~/workserver` 로 가리킨다. 서버에서는 항상 `~/workserver` 경로를 쓴다.
 
 `nano` 에서 `.env` 를 아래처럼 고친다 (`<아이디>` 4곳 교체, 비밀 키는 아무 긴 문자열). 저장은 Ctrl+O, Enter, 종료는 Ctrl+X.
 
@@ -40,10 +44,10 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 이어서 DB 를 만들고 초기 데이터와 로그인 계정을 넣는다.
 
 ```bash
-.venv/bin/python manage.py migrate
-.venv/bin/python manage.py seed_ideas
-.venv/bin/python manage.py createsuperuser
-.venv/bin/python manage.py collectstatic --noinput
+~/venv/bin/python manage.py migrate
+~/venv/bin/python manage.py seed_ideas
+~/venv/bin/python manage.py createsuperuser
+~/venv/bin/python manage.py collectstatic --noinput
 ```
 
 `createsuperuser` 가 묻는 아이디·비밀번호가 작업서버 로그인 계정이 된다. 이메일은 비워도 된다.
@@ -55,12 +59,12 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 | 항목 | 값 |
 |---|---|
-| Source code | `/home/<아이디>/jb_office/작업서버` |
-| Working directory | `/home/<아이디>/jb_office/작업서버` |
-| Virtualenv | `/home/<아이디>/jb_office/작업서버/.venv` |
+| Source code | `/home/<아이디>/workserver` |
+| Working directory | `/home/<아이디>/workserver` |
+| Virtualenv | `/home/<아이디>/venv` |
 
 3. **WSGI configuration file** 링크를 눌러 열고, 내용을 전부 지운 뒤 저장소의 `작업서버/deploy/pythonanywhere_wsgi.py` 내용을 붙여 넣는다. `USERNAME = "<아이디>"` 를 고치고 저장한다.
-4. **Static files** 에 한 줄 추가: URL `/static/` → Directory `/home/<아이디>/jb_office/작업서버/staticfiles`.
+4. **Static files** 에 한 줄 추가: URL `/static/` → Directory `/home/<아이디>/workserver/staticfiles`.
 5. 맨 위 초록색 **Reload** 버튼을 누른다.
 6. `https://<아이디>.pythonanywhere.com` 에 접속해 로그인 화면이 나오면 성공.
 
@@ -71,7 +75,7 @@ PC 에서 Claude 가 push 한 뒤, 서버 홈 화면의 **서버 코드 갱신**
 model 이 바뀌어 migration 이 추가된 경우에만 Bash 콘솔에서 한 번 더 실행한다.
 
 ```bash
-cd ~/jb_office/작업서버 && .venv/bin/python manage.py migrate && .venv/bin/python manage.py collectstatic --noinput
+cd ~/workserver && ~/venv/bin/python manage.py migrate && ~/venv/bin/python manage.py collectstatic --noinput
 ```
 
 (CSS·JS 가 바뀐 경우도 `collectstatic` 이 필요하다.)
