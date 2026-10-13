@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block heading %}아이디어 리스트 <span class="count">{{ ideas|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
+{% block heading %}내 아이디어 <span class="count">{{ ideas|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
 
 {% block actions %}
 <a class="btn btn--primary" href="{% url 'ideas:create' %}">＋ 아이디어 추가</a>
@@ -8,17 +8,11 @@
 
 {% block content %}
 <form method="get" class="filterbar" id="filterbar">
-  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="코드, 제목, 고객, 판단, 태그 검색">
+  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="코드, 제목, 고객, 결과물, 태그 검색">
   <select class="select" name="category">
     <option value="">분류 전체</option>
     {% for value, label in categories %}
     <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
-  <select class="select" name="status">
-    <option value="">상태 전체</option>
-    {% for value, label in statuses %}
-    <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
   <input type="hidden" name="sort" value="{{ sort }}">
@@ -31,8 +25,8 @@
     <thead>
       <tr>
         {% for key, label in columns %}
-        <th class="{% if key == sort_key %}is-sorted{% endif %}" style="{% if key == 'code' %}width:64px{% elif key == 'category' %}width:110px{% elif key == 'status' %}width:100px{% elif key == 'priority' %}width:90px{% elif key == 'customer' %}width:200px{% elif key == 'updated' %}width:130px{% endif %}">
-          <a href="?q={{ q|urlencode }}&category={{ category }}&status={{ status }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}" class="th-sort">
+        <th class="{% if key == sort_key %}is-sorted{% endif %}" style="{% if key == 'code' %}width:64px{% elif key == 'category' %}width:110px{% elif key == 'customer' %}width:220px{% elif key == 'min_product' %}width:300px{% elif key == 'updated' %}width:130px{% endif %}">
+          <a href="?q={{ q|urlencode }}&category={{ category }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}" class="th-sort">
             {{ label }}{% if key == sort_key %}<span class="th-sort__arrow">{% if sort_desc %}▼{% else %}▲{% endif %}</span>{% endif %}
           </a>
         </th>
@@ -45,15 +39,13 @@
         <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
         <td class="cell-title"><a class="rowlink" href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
         <td><span class="chip">{{ idea.get_category_display }}</span></td>
-        <td><span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span></td>
-        <td><span class="stars" title="우선순위 {{ idea.priority }}">{% for _ in "12345"|slice:idea.priority %}★{% endfor %}</span></td>
         <td class="small"><span class="clip clip--sm" title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</span></td>
-        <td class="small text-2 cell-clip"><span class="clip" title="{{ idea.judgement }}">{{ idea.judgement|default:"-" }}</span></td>
+        <td class="small text-2 cell-clip"><span class="clip" title="{{ idea.min_product }}">{{ idea.min_product|default:"-" }}</span></td>
         <td class="mono small muted nowrap">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
       </tr>
       {% empty %}
       <tr><td colspan="{{ columns|length }}" class="empty">
-        {% if total == 0 %}아직 아이디어가 없습니다. 터미널에서 <code>python manage.py seed_ideas</code> 를 실행하면 시장조사 후보가 들어옵니다.
+        {% if total == 0 %}아직 내 아이디어가 없습니다. <a href="{% url 'daily_ideas:list' %}">일일 아이디어</a>에서 필요한 후보를 담거나 직접 추가하세요.
         {% else %}조건에 맞는 아이디어가 없습니다.{% endif %}
       </td></tr>
       {% endfor %}

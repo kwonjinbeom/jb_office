@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">아이디어</a> › {{ idea.code }}</div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">내 아이디어</a> › {{ idea.code }}</div>{% endblock %}
 {% block heading %}<span class="code code--lg">{{ idea.code }}</span> {{ idea.title }}{% endblock %}
 
 {% block actions %}
@@ -14,8 +14,6 @@
 {% block content %}
 <div class="statusbar">
   <span class="chip">{{ idea.get_category_display }}</span>
-  <span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span>
-  <span class="stars" title="우선순위">{% for _ in "12345"|slice:idea.priority %}★{% endfor %}</span>
   <span class="statusbar__sep"></span>
   {% if current_stage %}
     <span class="muted small">현재 단계</span> <strong>{{ current_stage.order }}. {{ current_stage.title }}</strong>

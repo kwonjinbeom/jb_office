@@ -90,6 +90,8 @@ DEPLOY = {
 }
 # 문서 보기 메뉴가 읽는 폴더 (저장소 기준 상대 경로). 읽기 전용.
 DOCS_DIRS = [REPO_ROOT / "시장조사", REPO_ROOT]
+# 날짜별 조사 후보 원본. 모델로 옮기기 전까지 저장소 파일로 보존한다.
+DAILY_IDEAS_DIR = REPO_ROOT / "시장조사" / "일일아이디어"
 # ---------------------------------------------------------------------------
 
 INSTALLED_APPS = [
@@ -102,6 +104,7 @@ INSTALLED_APPS = [
     "django.contrib.humanize",
     # 프로젝트 앱. 메뉴 하나 = 앱 하나.
     "apps.core",
+    "apps.daily_ideas",
     "apps.ideas",
     "apps.evidence",
     "apps.tasks",

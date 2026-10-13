@@ -59,8 +59,6 @@ class IdeaForm(forms.ModelForm):
             "code",
             "title",
             "category",
-            "status",
-            "priority",
             "customer",
             "pain",
             "current_alternative",

@@ -6,7 +6,7 @@
 <div class="card card--narrow">
   <h2>정말 삭제할까요?</h2>
   <p><span class="code">{{ idea.code }}</span> <strong>{{ idea.title }}</strong> 아이디어를 삭제합니다. 되돌릴 수 없습니다.</p>
-  <p class="muted small">폐기 판단이라면 삭제 대신 상태를 <strong>폐기</strong>로 바꾸는 편이 기록이 남아 좋습니다.</p>
+  <p class="muted small">삭제하면 이 아이디어에 연결된 단계와 작업 로그도 함께 없어집니다.</p>
   <form method="post" class="form__footer">
     {% csrf_token %}
     <a class="btn" href="{{ idea.get_absolute_url }}">취소</a>

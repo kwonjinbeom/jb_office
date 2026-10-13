@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block heading %}일일 아이디어 <span class="count">{{ total }}개</span>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'ideas:list' %}">내 아이디어 보기</a>
+{% endblock %}
+
+{% block content %}
+<div class="daily-intro">
+  <div>
+    <strong>날짜별 조사 후보</strong>
+    <p class="muted small">여기에 있는 항목은 검토 전 원장입니다. 실제로 진행하고 싶은 것만 내 아이디어에 담으세요.</p>
+  </div>
+  {% if groups %}
+  <details class="daily-method">
+    <summary>조사 범위와 한계</summary>
+    <p>{{ groups.0.method }}</p>
+  </details>
+  {% endif %}
+</div>
+
+<nav class="datebar" aria-label="조사 날짜">
+  {% for day in available_dates %}
+  <a class="datebar__item {% if selected_date == day %}is-active{% endif %}" href="?date={{ day }}">{{ day }}</a>
+  {% endfor %}
+  {% if available_dates|length > 1 %}
+  <a class="datebar__item {% if selected_date == 'all' %}is-active{% endif %}" href="?date=all">전체</a>
+  {% endif %}
+</nav>
+
+<form method="get" class="filterbar">
+  <input type="hidden" name="date" value="{{ selected_date }}">
+  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="아이디어, 고객, 문제, 결과물 검색">
+  <select class="select" name="category">
+    <option value="">분류 전체</option>
+    {% for value, label in categories %}
+    <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn" type="submit">적용</button>
+  {% if q or category %}<a class="btn btn--ghost" href="?date={{ selected_date }}">초기화</a>{% endif %}
+</form>
+
+{% for group in groups %}
+<section class="daily-group">
+  <div class="daily-group__head">
+    <div>
+      <h2>{{ group.date }} <span class="count">{{ group.items|length }}개</span></h2>
+      <p class="muted small">{{ group.summary }}</p>
+    </div>
+    <a class="btn btn--sm btn--ghost" href="{% url 'docs:detail' group.source_doc %}">상세 조사 문서</a>
+  </div>
+
+  <div class="card card--flush">
+    <table class="table table--rows daily-table">
+      <thead>
+        <tr>
+          <th style="width:72px">번호</th>
+          <th style="width:240px">아이디어</th>
+          <th style="width:270px">고객과 문제</th>
+          <th style="width:280px">최소 결과물</th>
+          <th style="width:230px">돈의 흐름</th>
+          <th style="width:300px">근거와 반대 이유</th>
+          <th style="width:120px">선택</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in group.items %}
+        <tr>
+          <td class="mono small nowrap">{{ item.id|slice:"9:" }}</td>
+          <td>
+            <strong>{{ item.title }}</strong>
+            <div class="daily-meta"><span class="chip">{{ item.category_label }}</span> <span>{{ item.decision }}</span></div>
+          </td>
+          <td class="small">
+            <strong>{{ item.audience }}</strong>
+            <p class="muted">{{ item.problem }}</p>
+          </td>
+          <td class="small">
+            <strong>{{ item.min_product }}</strong>
+            <p class="muted"><span class="daily-label">첫 검증</span>{{ item.first_test }}</p>
+          </td>
+          <td class="small">
+            {{ item.money_flow }}
+            <p class="muted"><span class="daily-label">경로</span>{{ item.channel }}</p>
+          </td>
+          <td class="small">
+            <details class="evidence-detail">
+              <summary>{{ item.evidence|truncatechars:84 }}</summary>
+              <div class="evidence-detail__body">
+                <p><strong>확인된 신호</strong><br>{{ item.evidence }}</p>
+                <p><strong>가장 큰 반대 이유</strong><br>{{ item.risk }}</p>
+                <ul class="source-list">
+                  {% for source in item.sources %}
+                  <li><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </details>
+          </td>
+          <td class="nowrap">
+            {% if item.adopted_idea %}
+            <a class="btn btn--sm" href="{{ item.adopted_idea.get_absolute_url }}">{{ item.adopted_idea.code }} 보기</a>
+            {% else %}
+            <form method="post" action="{% url 'daily_ideas:adopt' item.id %}">{% csrf_token %}
+              <button class="btn btn--sm btn--primary" type="submit">내 아이디어에 담기</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">조건에 맞는 아이디어가 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% empty %}
+<div class="empty">아직 날짜별 아이디어 조사가 없습니다.</div>
+{% endfor %}
+{% endblock %}

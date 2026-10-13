@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">아이디어 리스트</a>{% if idea %} › <a href="{{ idea.get_absolute_url }}">{{ idea.code }}</a>{% endif %}</div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">내 아이디어</a>{% if idea %} › <a href="{{ idea.get_absolute_url }}">{{ idea.code }}</a>{% endif %}</div>{% endblock %}
 
 {% block actions %}
 <a class="btn" href="{% if idea %}{{ idea.get_absolute_url }}{% else %}{% url 'ideas:list' %}{% endif %}">취소</a>
@@ -14,11 +14,9 @@
 
   <div class="card">
     <div class="card__head"><h2>기본</h2></div>
-    <div class="form__row form__row--4">
+    <div class="form__row form__row--2">
       <div class="field">{{ form.code.label_tag }}{{ form.code }}{{ form.code.errors }}</div>
       <div class="field">{{ form.category.label_tag }}{{ form.category }}{{ form.category.errors }}</div>
-      <div class="field">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
-      <div class="field">{{ form.priority.label_tag }}{{ form.priority }}{{ form.priority.errors }}</div>
     </div>
     <div class="field">{{ form.title.label_tag }}{{ form.title }}{{ form.title.errors }}</div>
     <div class="form__row form__row--2">

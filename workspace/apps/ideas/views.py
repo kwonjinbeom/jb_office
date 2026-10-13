@@ -11,10 +11,8 @@ COLUMNS = [
     ("code", "코드", "code"),
     ("title", "제목", "title"),
     ("category", "분류", "category"),
-    ("status", "상태", "status"),
-    ("priority", "우선순위", "priority"),
     ("customer", "고객", "customer"),
-    ("judgement", "현재 판단", "judgement"),
+    ("min_product", "최소 결과물", "min_product"),
     ("updated", "수정", "updated_at"),
 ]
 SORT_FIELDS = {key: field for key, _, field in COLUMNS}
@@ -23,7 +21,6 @@ SORT_FIELDS = {key: field for key, _, field in COLUMNS}
 def idea_list(request):
     q = request.GET.get("q", "").strip()
     category = request.GET.get("category", "")
-    status = request.GET.get("status", "")
 
     sort = request.GET.get("sort", "code")
     sort_desc = sort.startswith("-")
@@ -39,29 +36,26 @@ def idea_list(request):
             | Q(title__icontains=q)
             | Q(customer__icontains=q)
             | Q(pain__icontains=q)
+            | Q(min_product__icontains=q)
             | Q(judgement__icontains=q)
             | Q(tags__icontains=q)
         )
     if category:
         qs = qs.filter(category=category)
-    if status:
-        qs = qs.filter(status=status)
     qs = qs.order_by(order, "code").prefetch_related("stages")
 
     context = {
-        "page_title": "아이디어",
+        "page_title": "내 아이디어",
         "ideas": qs,
         "total": Idea.objects.count(),
         "q": q,
         "category": category,
-        "status": status,
         "sort": ("-" if sort_desc else "") + sort_key,
         "sort_key": sort_key,
         "sort_desc": sort_desc,
         "columns": [(key, label) for key, label, _ in COLUMNS],
         "categories": Idea.Category.choices,
-        "statuses": Idea.Status.choices,
-        "is_filtered": bool(q or category or status),
+        "is_filtered": bool(q or category),
     }
     return render(request, "ideas/list.html", context)
 
