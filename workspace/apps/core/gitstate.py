@@ -71,7 +71,61 @@ def _python_executable() -> str:
     return sys.executable
 
 
-def pull_and_reload() -> dict:
+DEPLOY_STATE_FILE = "deploy_state.json"
+_head_cache: dict = {"at": 0.0, "value": ""}
+
+
+def _deploy_state_path() -> Path:
+    return Path(settings.BASE_DIR) / f".{DEPLOY_STATE_FILE}"
+
+
+def load_deploy_state() -> dict | None:
+    p = _deploy_state_path()
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def record_deploy(result: dict, reason: str) -> None:
+    import datetime as _dt
+
+    data = {
+        "ok": result.get("ok", False),
+        "reason": reason,
+        "finished_at": _dt.datetime.now().isoformat(timespec="seconds"),
+        "head": head_short(force=True),
+        "error": result.get("error", ""),
+        "pip": result.get("pip"),
+        "migrated": result.get("migrated", False),
+    }
+    p = _deploy_state_path()
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(p)
+
+
+def head_short(force: bool = False) -> str:
+    """현재 체크아웃된 커밋의 짧은 해시. 30초 캐시."""
+    import subprocess
+    import time
+
+    now = time.time()
+    if not force and _head_cache["value"] and now - _head_cache["at"] < 30:
+        return _head_cache["value"]
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=str(repo_root()), capture_output=True, timeout=10
+        ).stdout.decode().strip()
+    except (OSError, subprocess.TimeoutExpired):
+        out = ""
+    _head_cache.update(at=now, value=out)
+    return out
+
+
+def pull_and_reload(reason: str = "manual") -> dict:
     """서버 역할: 코드 갱신 한 번에 끝내기.
 
     git pull --ff-only  →  manage.py migrate  →  manage.py collectstatic  →  reload 파일 touch
@@ -87,6 +141,7 @@ def pull_and_reload() -> dict:
     result: dict = {
         "ok": False,
         "pulled": False,
+        "pip": None,
         "migrated": False,
         "collected": False,
         "reloaded": False,
@@ -111,6 +166,8 @@ def pull_and_reload() -> dict:
     result["pulled"] = True
 
     def reload_app() -> None:
+        result["ok"] = result.get("ok") or ("error" not in result and result.get("collected", False))
+        record_deploy(result, reason)
         touch = settings.DEPLOY.get("RELOAD_TOUCH_FILE") or ""
         if not touch:
             return
@@ -119,6 +176,15 @@ def pull_and_reload() -> dict:
             result["reloaded"] = True
         except OSError as exc:
             result.setdefault("error", f"재시작 파일 touch 실패: {exc}")
+
+    # 새 패키지가 추가됐을 수 있으니 requirements 를 맞춘다. 변경 없으면 몇 초 안에 끝난다.
+    req = Path(settings.BASE_DIR) / "requirements.txt"
+    if req.exists():
+        if run("pip", [python, "-m", "pip", "install", "-q", "--disable-pip-version-check", "-r", str(req)], Path(settings.BASE_DIR), 420):
+            result["pip"] = True
+        else:
+            # 설치 실패는 치명적이지 않을 수 있으니 기록만 하고 계속 간다.
+            result["pip"] = False
 
     if not run("migrate", [python, str(manage_py), "migrate", "--noinput"], Path(settings.BASE_DIR)):
         result["error"] = f"migrate 실패 (python={python})"
@@ -132,8 +198,8 @@ def pull_and_reload() -> dict:
         return result
     result["collected"] = True
 
-    reload_app()
     result["ok"] = "error" not in result
+    reload_app()
     return result
 
 

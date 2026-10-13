@@ -17,6 +17,9 @@
 {% endblock %}
 
 {% block content %}
+{% if is_server and not webhook_ready %}
+<div class="flash flash--info" style="margin-bottom:16px">push 자동 반영이 아직 꺼져 있습니다. <a href="{% url 'core:settings' %}">설정</a>에서 비밀값을 만들고 GitHub 웹훅에 등록하면 이후로는 버튼을 누르지 않아도 됩니다.</div>
+{% endif %}
 <section class="grid grid--home">
   <!-- 진행 중인 아이디어 -->
   <div class="card card--span2">

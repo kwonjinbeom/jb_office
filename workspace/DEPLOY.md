@@ -65,54 +65,29 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 5. 맨 위 초록색 **Reload** 버튼을 누른다.
 6. `https://<아이디>.pythonanywhere.com` 에 접속해 로그인 화면이 나오면 성공.
 
-## 3. 이후 코드가 바뀌었을 때
+## 3. 이후 코드가 바뀌었을 때 (콘솔 필요 없음)
 
-두 경로가 있다. 둘 다 `git pull` → `migrate` → `collectstatic` → 앱 재시작을 한 번에 한다.
+두 경로가 있고, 둘 다 `git pull` → 패키지 설치(requirements) → `migrate` → `collectstatic` → 앱 재시작을 한 번에 한다.
 
-- **자동**: GitHub `main` 에 push 되면 GitHub 가 서버의 `/deploy/webhook/` 을 호출하고 서버가 스스로 반영한다 (아래 3-1 설정 후).
+- **자동**: GitHub `main` 에 push 되면 GitHub 가 서버의 `/deploy/webhook/` 을 호출하고 서버가 스스로 반영한다.
 - **수동**: 서버 홈 화면의 **서버 코드 갱신** 버튼. 웹훅이 실패했거나 바로 확인하고 싶을 때.
 
-### 3-1. 자동 반영(웹훅) 처음 한 번 설정
+### 3-1. 자동 반영 처음 한 번 켜기 (화면에서)
 
-1. Bash 콘솔에서 비밀값을 하나 만든다.
-
-```bash
-python3.12 -c "import secrets; print(secrets.token_urlsafe(40))"
-```
-
-2. `nano ~/jb_office/workspace/.env` 로 열어 맨 아래에 한 줄 추가하고 저장한다 (값은 1번 출력).
-
-```
-DEPLOY_WEBHOOK_SECRET=<1번에서 나온 값>
-```
-
-3. 앱을 재시작한다: `touch /var/www/<아이디>_pythonanywhere_com_wsgi.py`
-4. GitHub 저장소 → **Settings** → **Webhooks** → **Add webhook** 에 입력한다.
+1. 작업서버 좌측 메뉴 **설정** → **비밀값 만들기** 를 누른다. 비밀값과 Payload URL 이 화면에 나온다.
+2. GitHub 저장소 → **Settings** → **Webhooks** → **Add webhook** 에 입력한다.
 
 | 항목 | 값 |
 |---|---|
-| Payload URL | `https://<아이디>.pythonanywhere.com/deploy/webhook/` |
+| Payload URL | 설정 화면에 표시된 주소 (`https://<아이디>.pythonanywhere.com/deploy/webhook/`) |
 | Content type | `application/json` |
-| Secret | 1번에서 나온 값 (.env 와 동일) |
+| Secret | 설정 화면의 비밀값 |
 | Which events | **Just the push event** |
 
-5. Add webhook 을 누르면 GitHub 가 ping 을 보낸다. Webhooks 목록에서 Recent Deliveries 가 초록 체크(200, 본문 `pong`)면 성공.
-6. 이후 push 마다 Recent Deliveries 에 `deployed <해시>` 가 남는다. 응답이 10초를 넘겨 GitHub 쪽에 timeout 으로 표시돼도 서버 반영은 진행된다.
+3. Add webhook 을 누르면 GitHub 가 ping 을 보낸다. Recent Deliveries 가 초록 체크(200, 본문 `pong`)면 성공.
+4. 이후 push 마다 Recent Deliveries 에 `deployed <해시>` 가 남는다. 응답이 10초를 넘겨 GitHub 쪽에 timeout 으로 표시돼도 서버 반영은 진행된다.
 
-주의: 웹훅은 `main` 브랜치 push 만 처리한다. 다른 브랜치 push 는 무시한다.
-
-결과 메시지에 pull 결과, 적용된 migration 수가 표시된다. 실패하면 어느 단계에서 왜 실패했는지 메시지에 나온다.
-그래도 안 될 때만 Bash 콘솔에서 수동으로 실행한다.
-
-```bash
-cd ~/jb_office/workspace && git pull --ff-only && .venv/bin/python manage.py migrate && .venv/bin/python manage.py collectstatic --noinput
-```
-
-requirements.txt 에 새 패키지가 추가된 경우는 예외다. 그때는 Bash 콘솔에서 한 번 설치해야 한다.
-
-```bash
-cd ~/jb_office/workspace && .venv/bin/pip install -r requirements.txt
-```
+웹훅은 `main` 브랜치 push 만 처리한다. 비밀값은 DB(앱 설정)에 저장되며 `.env` 의 `DEPLOY_WEBHOOK_SECRET` 은 예비용이다.
 
 ## 4. 데이터 백업
 

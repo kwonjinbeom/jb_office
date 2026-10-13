@@ -20,6 +20,12 @@ from apps.tasks.models import Task
 
 from . import autosync, gitstate
 from .menus import get_menus
+from .models import WEBHOOK_SECRET_KEY, AppSetting
+
+
+def _webhook_secret() -> str:
+    """화면 설정(DB) 우선, 없으면 .env 의 DEPLOY_WEBHOOK_SECRET."""
+    return AppSetting.get(WEBHOOK_SECRET_KEY) or settings.DEPLOY.get("WEBHOOK_SECRET") or ""
 
 
 def home(request):
@@ -62,8 +68,33 @@ def home(request):
         "role": settings.ROLE,
         "is_server": settings.IS_SERVER,
         "pull_enabled": settings.DEPLOY["PULL_ENABLED"],
+        "webhook_ready": bool(_webhook_secret()),
     }
     return render(request, "core/home.html", context)
+
+
+def app_settings(request):
+    """화면에서 바꾸는 설정. 지금은 자동 반영 웹훅 비밀값."""
+    import secrets
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action in {"generate", "regenerate"}:
+            AppSetting.set(WEBHOOK_SECRET_KEY, secrets.token_urlsafe(40))
+            messages.success(request, "비밀값을 만들었습니다. GitHub 웹훅의 Secret 에 같은 값을 넣으세요.")
+        return redirect("core:settings")
+    return render(
+        request,
+        "core/settings.html",
+        {
+            "page_title": "설정",
+            "webhook_secret": AppSetting.get(WEBHOOK_SECRET_KEY),
+            "webhook_url": request.build_absolute_uri("/deploy/webhook/"),
+            "is_server": settings.IS_SERVER,
+            "git": gitstate.get_status(),
+            "reload_file": settings.DEPLOY.get("RELOAD_TOUCH_FILE"),
+        },
+    )
 
 
 @require_POST
@@ -85,13 +116,14 @@ def update_code(request):
     if not settings.DEPLOY["PULL_ENABLED"]:
         messages.error(request, "이 서버에서는 코드 갱신이 꺼져 있습니다 (DEPLOY_PULL_ENABLED).")
         return redirect("core:home")
-    result = gitstate.pull_and_reload()
+    result = gitstate.pull_and_reload(reason="button")
     if result["ok"]:
         pull_out = next((s["output"] for s in result["steps"] if s["name"] == "pull"), "")
         pull_tail = pull_out.splitlines()[-1] if pull_out else ""
         mig_out = next((s["output"] for s in result["steps"] if s["name"] == "migrate"), "")
         applied = sum(1 for line in mig_out.splitlines() if "Applying" in line)
-        summary = f"pull 완료 ({pull_tail}). migrate {applied}건 적용. 정적 파일 수집 완료."
+        pip_note = "패키지 확인 완료." if result.get("pip") else ("패키지 설치 실패(계속 진행)." if result.get("pip") is False else "")
+        summary = f"pull 완료 ({pull_tail}). {pip_note} migrate {applied}건 적용. 정적 파일 수집 완료."
         if result["reloaded"]:
             messages.success(request, f"{summary} 앱 재시작을 요청했습니다. 몇 초 뒤 새로고침하세요.")
         else:
@@ -115,7 +147,7 @@ def deploy_webhook(request):
       Secret: .env 의 DEPLOY_WEBHOOK_SECRET 과 같은 값
       Events: Just the push event
     """
-    secret = settings.DEPLOY.get("WEBHOOK_SECRET") or ""
+    secret = _webhook_secret()
     if not secret or not settings.DEPLOY["PULL_ENABLED"]:
         return HttpResponseForbidden("webhook disabled")
 
@@ -139,7 +171,7 @@ def deploy_webhook(request):
     if ref != f"refs/heads/{settings.DEPLOY['WEBHOOK_BRANCH']}":
         return HttpResponse(f"ignored ref {ref}")
 
-    result = gitstate.pull_and_reload()
+    result = gitstate.pull_and_reload(reason="webhook")
     after = (payload.get("after") or "")[:7]
     if result["ok"]:
         log.info("deploy webhook: deployed %s", after)

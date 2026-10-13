@@ -13,6 +13,7 @@ venv/
 workspace/db.sqlite3
 workspace/.env
 workspace/.sync_state.json
+workspace/.deploy_state.json
 .gitsync.lock
 workspace/staticfiles/
 workspace/media/
