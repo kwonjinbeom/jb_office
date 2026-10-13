@@ -16,7 +16,7 @@ Cloud는 코드 개발·검증 역할만 수행한다. Git 자동 동기화를 �
 
 ```bash
 set -euo pipefail
-cd /workspace/jb_office/작업서버
+cd /workspace/jb_office/workspace
 if [ ! -x .venv/bin/python ]; then
   python3 -m venv .venv
 fi
@@ -44,7 +44,7 @@ This is a Django 5.2 + SQLite application with separate `dev` and `server` roles
 Before starting, verify readiness:
 
 ```bash
-cd /workspace/jb_office/작업서버
+cd /workspace/jb_office/workspace
 mkdir -p /tmp/jb_office_cloud
 export WORKSERVER_ROLE=dev
 export AUTOSYNC_ENABLED=0
@@ -59,7 +59,7 @@ export PYTHONDONTWRITEBYTECODE=1
 Start the development server in a persistent terminal session with automatic Git synchronization disabled:
 
 ```bash
-cd /workspace/jb_office/작업서버
+cd /workspace/jb_office/workspace
 WORKSERVER_ROLE=dev AUTOSYNC_ENABLED=0 DATABASE_PATH=/tmp/jb_office_cloud/db.sqlite3 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py runserver 127.0.0.1:8000 --noreload
 ```
 

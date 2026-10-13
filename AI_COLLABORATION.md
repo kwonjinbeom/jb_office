@@ -18,22 +18,22 @@
 - force push, hard reset, 무단 rebase를 하지 않는다.
 - PR을 만들 때 실행한 검사와 남은 위험을 설명한다.
 
-현재 `.claude/settings.json`의 Stop 훅은 `작업서버/tools/gitsync.py`를 실행하며 모든 변경을 자동 stage·commit·pull·push한다. 사용자가 이 훅을 유지하기로 선택했으므로 Claude를 실행하기 전에 `main`을 최신으로 받고, 작업 폴더에 다른 사람의 미커밋 변경이 없는지 확인한다.
+현재 `.claude/settings.json`의 Stop 훅은 `workspace/tools/gitsync.py`를 실행하며 모든 변경을 자동 stage·commit·pull·push한다. 사용자가 이 훅을 유지하기로 선택했으므로 Claude를 실행하기 전에 `main`을 최신으로 받고, 작업 폴더에 다른 사람의 미커밋 변경이 없는지 확인한다.
 
-## SQLite 단일 작성자 규칙
+## DB 규칙 (2026-10-13 갱신)
 
-`작업서버/db.sqlite3`는 Git에 포함된 바이너리 파일이다. 두 브랜치에서 동시에 변경하면 일반적인 merge로 해결하기 어렵다.
+처음에는 `db.sqlite3`를 Git에 넣고 PC의 Claude만 수정하는 규칙이었다. 같은 날 PythonAnywhere 배포로 바뀌었다.
 
-- PC의 Claude와 사용자만 추적 DB를 수정한다.
-- Codex는 DB를 수정·교체·삭제·stage하지 않는다.
-- Codex의 쓰기 테스트는 임시 테스트 DB를 사용한다.
-- migration 파일은 Codex도 만들 수 있지만 실제 DB 적용은 PC에서 수행한다.
+- 데이터 원본은 PythonAnywhere 서버의 `~/data/db.sqlite3` 하나다. Git에는 DB 파일이 없다.
+- 에이전트는 어느 쪽도 서버 DB를 직접 만지지 않는다. migration 소스만 만들고, 서버 적용은 사용자가 Bash 콘솔에서 한다.
+- Codex Cloud는 `/tmp` 임시 DB만 쓴다. 로컬 PC의 `workspace/db.sqlite3`도 개발용 임시 DB다.
+- 현재 규칙의 원문은 `AGENTS.md` 3절이다.
 
 ## 진행 중 작업
 
 | 담당 | 브랜치 | 범위 | 상태 |
 |---|---|---|---|
-| Codex | `codex/ai-collaboration` | 협업 규칙과 저장소 이름 변경 준비 | PR 대기 |
+| Codex | `codex/ai-collaboration` | 협업 규칙과 저장소 이름 변경 준비 | main 병합 완료 (26dc187) |
 
 ## 도구 간 메시지
 
