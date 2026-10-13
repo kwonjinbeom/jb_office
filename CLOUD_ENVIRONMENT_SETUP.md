@@ -7,8 +7,10 @@
 ## 환경변수
 
 - `AUTOSYNC_ENABLED=0`
+- `WORKSERVER_ROLE=dev`
+- `DATABASE_PATH=/tmp/jb_office_cloud/db.sqlite3`
 
-Git 자동 동기화가 다른 AI의 변경까지 stage·commit·pull·push하지 않도록 반드시 비활성화한다.
+Cloud는 코드 개발·검증 역할만 수행한다. Git 자동 동기화를 비활성화하고, PythonAnywhere의 실제 DB와 완전히 분리된 `/tmp` 임시 DB만 사용한다.
 
 ## install_script
 
@@ -20,8 +22,15 @@ if [ ! -x .venv/bin/python ]; then
 fi
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install -r requirements.txt
-AUTOSYNC_ENABLED=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py check
-AUTOSYNC_ENABLED=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py migrate --check --plan
+mkdir -p /tmp/jb_office_cloud
+export WORKSERVER_ROLE=dev
+export AUTOSYNC_ENABLED=0
+export DATABASE_PATH=/tmp/jb_office_cloud/db.sqlite3
+export PYTHONDONTWRITEBYTECODE=1
+.venv/bin/python manage.py migrate --noinput
+.venv/bin/python manage.py seed_ideas
+.venv/bin/python manage.py check
+.venv/bin/python manage.py migrate --check --plan
 ```
 
 ## start_skill
@@ -30,21 +39,28 @@ Use the existing checkout at `/workspace/jb_office`; do not create a Git worktre
 
 Read `/workspace/jb_office/AGENTS.md` before making changes. As Codex Cloud, never commit or push directly to `main`; use a short `codex/<task>` branch and a pull request. Avoid editing files covered by active Claude work, and never run the repository's automatic Git synchronization in the Cloud checkout.
 
-This is a local-only Django 5.2 + SQLite application. The tracked database contains user data and is owned by the PC workflow. Never modify, replace, delete, or stage `/workspace/jb_office/작업서버/db.sqlite3` in Codex Cloud. Do not run `migrate` or seed commands against it. Read-only migration checks are allowed, and write tests must use a temporary test database. Migration source files may be proposed in a PR, with a note that the PC workflow must apply them.
+This is a Django 5.2 + SQLite application with separate `dev` and `server` roles. The source of truth is the PythonAnywhere database at `~/data/db.sqlite3`; it is not in Git. Never access or copy that production database in Codex Cloud. Cloud development must use only `/tmp/jb_office_cloud/db.sqlite3`, which may be migrated and seeded as disposable test data. Migration source files may be proposed in a PR, with a note that the user must apply them on PythonAnywhere.
 
 Before starting, verify readiness:
 
 ```bash
 cd /workspace/jb_office/작업서버
-AUTOSYNC_ENABLED=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py check
-AUTOSYNC_ENABLED=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py migrate --check --plan
+mkdir -p /tmp/jb_office_cloud
+export WORKSERVER_ROLE=dev
+export AUTOSYNC_ENABLED=0
+export DATABASE_PATH=/tmp/jb_office_cloud/db.sqlite3
+export PYTHONDONTWRITEBYTECODE=1
+.venv/bin/python manage.py migrate --noinput
+.venv/bin/python manage.py seed_ideas
+.venv/bin/python manage.py check
+.venv/bin/python manage.py migrate --check --plan
 ```
 
 Start the development server in a persistent terminal session with automatic Git synchronization disabled:
 
 ```bash
 cd /workspace/jb_office/작업서버
-AUTOSYNC_ENABLED=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py runserver 127.0.0.1:8000 --noreload
+WORKSERVER_ROLE=dev AUTOSYNC_ENABLED=0 DATABASE_PATH=/tmp/jb_office_cloud/db.sqlite3 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py runserver 127.0.0.1:8000 --noreload
 ```
 
 Verify readiness locally (do not create a user-facing preview link for this loopback service):
@@ -55,7 +71,7 @@ curl -fsS http://127.0.0.1:8000/ideas/ >/dev/null
 curl -fsS http://127.0.0.1:8000/memos/ >/dev/null
 ```
 
-Keep `AUTOSYNC_ENABLED=0` for cloud development: the application's default autosync and manual sync endpoints can stage, commit, pull, and push unrelated changes. Stage only task-specific files, review the diff, and use a pull request.
+Keep `WORKSERVER_ROLE=dev`, `AUTOSYNC_ENABLED=0`, and the `/tmp` database path for cloud development. Never configure PythonAnywhere server secrets or its production database path in Codex Cloud. The application's automatic sync and manual sync endpoints can stage, commit, pull, and push unrelated changes, so do not invoke them. Stage only task-specific files, review the diff, and use a pull request.
 
 ## 검증 기록
 
@@ -63,6 +79,8 @@ Keep `AUTOSYNC_ENABLED=0` for cloud development: the application's default autos
 - `manage.py check`: 통과
 - `manage.py migrate --check --plan`: 미적용 마이그레이션 없음
 - `pip check`: 의존성 충돌 없음
-- 홈, 아이디어, 메모, Git 상태 API, 정적 CSS: HTTP 200
-- 임시 테스트 DB의 아이디어·메모 CRUD: 통과
+- 최신 `main` 커밋 `90f89ac`을 격리된 임시 디렉터리에서 검증
+- dev 역할의 홈, 아이디어, 메모, 로그인, Git 상태 API, 정적 CSS: HTTP 200
+- server 역할의 비로그인 차단, 로그인 화면, 로그인 후 홈 접근: 통과
+- `/tmp` 임시 DB 마이그레이션과 초기 아이디어 35개 적재: 통과
 - 저장소의 자체 테스트: 0건
