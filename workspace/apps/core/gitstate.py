@@ -52,29 +52,53 @@ def get_status(fetch: bool = False) -> dict:
 
 
 def pull_and_reload() -> dict:
-    """서버 역할: git pull --ff-only 로 코드를 받고, 설정된 파일을 touch 해 앱을 재시작시킨다."""
+    """서버 역할: 코드 갱신 한 번에 끝내기.
+
+    git pull --ff-only  →  manage.py migrate  →  manage.py collectstatic  →  reload 파일 touch
+    migrate/collectstatic 은 새 코드를 읽도록 별도 프로세스(sys.executable)로 실행한다.
+    """
     import os
     import subprocess
+    import sys
     import time
 
     root = repo_root()
-    result: dict = {"ok": False, "pulled": False, "reloaded": False, "output": ""}
-    try:
-        proc = subprocess.run(
-            ["git", "-c", "core.quotepath=false", "pull", "--ff-only", "origin"],
-            cwd=str(root),
-            capture_output=True,
-            timeout=120,
-        )
-        out = ((proc.stdout or b"") + (proc.stderr or b"")).decode("utf-8", errors="replace").strip()
+    manage_py = Path(settings.BASE_DIR) / "manage.py"
+    result: dict = {
+        "ok": False,
+        "pulled": False,
+        "migrated": False,
+        "collected": False,
+        "reloaded": False,
+        "steps": [],
+        "output": "",
+    }
+
+    def run(name: str, cmd: list[str], cwd: Path, timeout: int = 180) -> bool:
+        try:
+            proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, timeout=timeout)
+            out = ((proc.stdout or b"") + (proc.stderr or b"")).decode("utf-8", errors="replace").strip()
+            ok = proc.returncode == 0
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            out, ok = str(exc), False
+        result["steps"].append({"name": name, "ok": ok, "output": out[-1500:]})
         result["output"] = out[-2000:]
-        if proc.returncode != 0:
-            result["error"] = "git pull 실패 (fast-forward 불가?)"
-            return result
-        result["pulled"] = True
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        result["error"] = str(exc)
+        return ok
+
+    if not run("pull", ["git", "-c", "core.quotepath=false", "pull", "--ff-only", "origin"], root, 120):
+        result["error"] = "git pull 실패 (fast-forward 불가?)"
         return result
+    result["pulled"] = True
+
+    if not run("migrate", [sys.executable, str(manage_py), "migrate", "--noinput"], Path(settings.BASE_DIR)):
+        result["error"] = "migrate 실패"
+        return result
+    result["migrated"] = True
+
+    if not run("collectstatic", [sys.executable, str(manage_py), "collectstatic", "--noinput", "-v", "0"], Path(settings.BASE_DIR)):
+        result["error"] = "collectstatic 실패"
+        return result
+    result["collected"] = True
 
     touch = settings.DEPLOY.get("RELOAD_TOUCH_FILE") or ""
     if touch:

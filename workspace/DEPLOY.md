@@ -67,12 +67,20 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 ## 3. 이후 코드가 바뀌었을 때
 
-PC 에서 Claude 가 push 한 뒤, 서버 홈 화면의 **서버 코드 갱신** 버튼을 누르면 `git pull` 과 재시작이 한 번에 된다.
+PC 에서 Claude 나 Codex 가 push 한 뒤, 서버 홈 화면의 **서버 코드 갱신** 버튼 하나만 누르면 된다.
+버튼이 순서대로 `git pull` → `migrate` → `collectstatic` → 앱 재시작까지 전부 한다. Bash 콘솔에 들어갈 일은 없다.
 
-model 이 바뀌어 migration 이 추가된 경우, 또는 CSS·JS 가 바뀐 경우에는 Bash 콘솔에서 한 번 더 실행한다.
+결과 메시지에 pull 결과, 적용된 migration 수가 표시된다. 실패하면 어느 단계에서 왜 실패했는지 메시지에 나온다.
+그래도 안 될 때만 Bash 콘솔에서 수동으로 실행한다.
 
 ```bash
-cd ~/jb_office/workspace && .venv/bin/python manage.py migrate && .venv/bin/python manage.py collectstatic --noinput
+cd ~/jb_office/workspace && git pull --ff-only && .venv/bin/python manage.py migrate && .venv/bin/python manage.py collectstatic --noinput
+```
+
+requirements.txt 에 새 패키지가 추가된 경우는 예외다. 그때는 Bash 콘솔에서 한 번 설치해야 한다.
+
+```bash
+cd ~/jb_office/workspace && .venv/bin/pip install -r requirements.txt
 ```
 
 ## 4. 데이터 백업

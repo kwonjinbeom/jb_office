@@ -34,13 +34,19 @@ def update_code(request):
         return redirect("core:home")
     result = gitstate.pull_and_reload()
     if result["ok"]:
-        tail = result["output"].splitlines()[-1] if result["output"] else ""
+        pull_out = next((s["output"] for s in result["steps"] if s["name"] == "pull"), "")
+        pull_tail = pull_out.splitlines()[-1] if pull_out else ""
+        mig_out = next((s["output"] for s in result["steps"] if s["name"] == "migrate"), "")
+        applied = sum(1 for line in mig_out.splitlines() if "Applying" in line)
+        summary = f"pull 완료 ({pull_tail}). migrate {applied}건 적용. 정적 파일 수집 완료."
         if result["reloaded"]:
-            messages.success(request, f"코드를 갱신하고 재시작을 요청했습니다. {tail}")
+            messages.success(request, f"{summary} 앱 재시작을 요청했습니다. 몇 초 뒤 새로고침하세요.")
         else:
-            messages.success(request, f"코드를 갱신했습니다. 재시작 파일이 설정되지 않아 수동 Reload 가 필요합니다. {tail}")
+            messages.success(request, f"{summary} 재시작 파일이 설정되지 않아 Web 탭에서 Reload 가 필요합니다.")
     else:
-        messages.error(request, f"코드 갱신 실패: {result.get('error')} {result.get('output', '')[-300:]}")
+        failed = next((s for s in result["steps"] if not s["ok"]), None)
+        detail = (failed["output"][-400:] if failed else "")
+        messages.error(request, f"코드 갱신 실패: {result.get('error')} {detail}")
     return redirect("core:home")
 
 
