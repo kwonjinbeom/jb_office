@@ -34,10 +34,10 @@ Claude 가 `main` 에 직접 반영하기 전 확인 사항:
 
 ## 3. DB 규칙 (중요)
 
-- `작업서버/db.sqlite3` 는 바이너리라 git 이 병합하지 못한다. 충돌하면 한쪽 데이터가 사라진다.
-- 그래서 **PC 의 Claude 만** 이 파일을 바꾼다. 폰·클라우드에서는 데이터를 고치지 않는다.
-- Codex 는 추적 중인 DB 에 `migrate`, `seed_ideas` 를 실행하지 않는다. 임시 테스트 DB(예: `DJANGO_SETTINGS_MODULE` 을 바꾸거나 복사본 사용)와 읽기 전용 검사는 허용한다.
-- 사용자가 PC 와 폰에서 번갈아 작업할 때는, 한쪽 작업을 push 한 뒤 다른 쪽을 시작한다.
+- **실제 데이터는 PythonAnywhere 서버의 `~/data/db.sqlite3` 하나다.** git 에는 DB 파일이 없다 (`.gitignore`). 배포 방법은 `작업서버/DEPLOY.md`.
+- PC 와 폰은 브라우저로 서버(`https://<아이디>.pythonanywhere.com`)에 접속해 데이터를 고친다. 로컬 `작업서버/db.sqlite3` 는 개발용 임시 DB 일 뿐이다.
+- 에이전트는 어느 쪽도 서버 DB 파일을 직접 만지지 않는다. 데이터 구조를 바꿀 때는 migration 소스를 만들고, 서버에서 `migrate` 가 필요하다고 PR 또는 커밋 메시지에 명시한다. 서버 적용은 사용자가 Bash 콘솔에서 한다.
+- Codex 는 임시 테스트 DB 와 읽기 전용 검사만 쓴다. `seed_ideas` 는 새 DB 를 만들 때만 쓰는 초기 데이터이며, 서버 데이터의 원본이 아니다.
 
 ## 4. 문서 규칙
 

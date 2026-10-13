@@ -1,10 +1,19 @@
 {% extends "base.html" %}
 
 {% block actions %}
+<span class="badge {% if is_server %}badge--violet{% else %}badge--slate{% endif %}" title="WORKSERVER_ROLE">{% if is_server %}서버{% else %}로컬 개발{% endif %}</span>
+{% if pull_enabled %}
+<form method="post" action="{% url 'core:update_code' %}" class="inline-form">
+  {% csrf_token %}
+  <button type="submit" class="btn btn--primary" title="GitHub 에서 최신 코드를 받고 앱을 재시작합니다">서버 코드 갱신</button>
+</form>
+{% endif %}
+{% if not is_server %}
 <form method="post" action="{% url 'core:sync_now' %}" class="inline-form">
   {% csrf_token %}
   <button type="submit" class="btn btn--primary" title="변경 사항을 커밋하고 push 합니다">지금 동기화</button>
 </form>
+{% endif %}
 {% endblock %}
 
 {% block content %}
