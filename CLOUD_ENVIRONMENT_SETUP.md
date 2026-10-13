@@ -28,9 +28,9 @@ AUTOSYNC_ENABLED=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py migrate 
 
 Use the existing checkout at `/workspace/jb_office`; do not create a Git worktree unless the user explicitly requests one.
 
-Read `/workspace/jb_office/AI_COLLABORATION.md` before making changes. Keep `main` stable, use a short task branch (`codex/<task>` or `claude/<task>`), avoid editing the same files concurrently, and never run the repository's automatic Git synchronization during multi-agent work.
+Read `/workspace/jb_office/AGENTS.md` before making changes. As Codex Cloud, never commit or push directly to `main`; use a short `codex/<task>` branch and a pull request. Avoid editing files covered by active Claude work, and never run the repository's automatic Git synchronization in the Cloud checkout.
 
-This is a local-only Django 5.2 + SQLite application. The tracked database contains user data and is a binary merge-conflict risk. Preserve it, allow only one writer at a time, and do not run destructive database operations or seed commands unless the user explicitly requests them. Use a temporary test database for write tests.
+This is a local-only Django 5.2 + SQLite application. The tracked database contains user data and is owned by the PC workflow. Never modify, replace, delete, or stage `/workspace/jb_office/작업서버/db.sqlite3` in Codex Cloud. Do not run `migrate` or seed commands against it. Read-only migration checks are allowed, and write tests must use a temporary test database. Migration source files may be proposed in a PR, with a note that the PC workflow must apply them.
 
 Before starting, verify readiness:
 
