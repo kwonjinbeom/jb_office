@@ -16,7 +16,7 @@ Cloud는 코드 개발·검증 역할만 수행한다. Git 자동 동기화를 �
 
 ```bash
 set -euo pipefail
-cd /workspace/jb_office/작업서버
+cd /workspace/jb_office/workspace
 if [ ! -x .venv/bin/python ]; then
   python3 -m venv .venv
 fi
@@ -44,7 +44,7 @@ This is a Django 5.2 + SQLite application with separate `dev` and `server` roles
 Before starting, verify readiness:
 
 ```bash
-cd /workspace/jb_office/작업서버
+cd /workspace/jb_office/workspace
 mkdir -p /tmp/jb_office_cloud
 export WORKSERVER_ROLE=dev
 export AUTOSYNC_ENABLED=0
@@ -59,7 +59,7 @@ export PYTHONDONTWRITEBYTECODE=1
 Start the development server in a persistent terminal session with automatic Git synchronization disabled:
 
 ```bash
-cd /workspace/jb_office/작업서버
+cd /workspace/jb_office/workspace
 WORKSERVER_ROLE=dev AUTOSYNC_ENABLED=0 DATABASE_PATH=/tmp/jb_office_cloud/db.sqlite3 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python manage.py runserver 127.0.0.1:8000 --noreload
 ```
 
@@ -79,7 +79,7 @@ Keep `WORKSERVER_ROLE=dev`, `AUTOSYNC_ENABLED=0`, and the `/tmp` database path f
 - `manage.py check`: 통과
 - `manage.py migrate --check --plan`: 미적용 마이그레이션 없음
 - `pip check`: 의존성 충돌 없음
-- 최신 `main` 커밋 `90f89ac`을 격리된 임시 디렉터리에서 검증
+- 최신 `main` 커밋 `47a85a8`을 Cloud 체크아웃에서 검증
 - dev 역할의 홈, 아이디어, 메모, 로그인, Git 상태 API, 정적 CSS: HTTP 200
 - server 역할의 비로그인 차단, 로그인 화면, 로그인 후 홈 접근: 통과
 - `/tmp` 임시 DB 마이그레이션과 초기 아이디어 35개 적재: 통과
