@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block content %}
-<form method="get" class="filterbar">
+<form method="get" class="filterbar" id="filterbar">
   <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="코드, 제목, 고객, 판단, 태그 검색">
   <select class="select" name="category">
     <option value="">분류 전체</option>
@@ -21,40 +21,43 @@
     <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  <select class="select" name="sort">
-    {% for value, label in sort_options %}
-    <option value="{{ value }}" {% if value == sort %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
+  <input type="hidden" name="sort" value="{{ sort }}">
   <button class="btn" type="submit">적용</button>
   {% if is_filtered %}<a class="btn btn--ghost" href="{% url 'ideas:list' %}">초기화</a>{% endif %}
 </form>
 
-<div class="ideagrid">
-  {% for idea in ideas %}
-  <a class="ideacard" href="{{ idea.get_absolute_url }}">
-    <div class="ideacard__top">
-      <span class="code">{{ idea.code }}</span>
-      <span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span>
-    </div>
-    <div class="ideacard__title">{{ idea.title }}</div>
-    <div class="ideacard__meta">
-      <span class="chip">{{ idea.get_category_display }}</span>
-      <span class="stars" title="우선순위 {{ idea.priority }}">{% for _ in "12345"|slice:idea.priority %}★{% endfor %}</span>
-    </div>
-    {% if idea.customer %}<div class="ideacard__row"><span class="k">고객</span>{{ idea.customer }}</div>{% endif %}
-    {% if idea.judgement %}<div class="ideacard__row ideacard__judge">{{ idea.judgement|truncatechars:90 }}</div>{% endif %}
-    <div class="ideacard__foot muted small">수정 {{ idea.updated_at|date:"Y-m-d H:i" }}</div>
-  </a>
-  {% empty %}
-  <div class="empty card--span-all">
-    {% if total == 0 %}
-    <p>아직 아이디어가 없습니다. 시장조사 문서의 후보를 불러오려면 터미널에서 실행하세요.</p>
-    <pre>python manage.py seed_ideas</pre>
-    {% else %}
-    <p>조건에 맞는 아이디어가 없습니다.</p>
-    {% endif %}
-  </div>
-  {% endfor %}
+<div class="card card--flush">
+  <table class="table table--rows table--grid">
+    <thead>
+      <tr>
+        {% for key, label in columns %}
+        <th class="{% if key == sort_key %}is-sorted{% endif %}" style="{% if key == 'code' %}width:64px{% elif key == 'category' %}width:110px{% elif key == 'status' %}width:100px{% elif key == 'priority' %}width:90px{% elif key == 'customer' %}width:200px{% elif key == 'updated' %}width:130px{% endif %}">
+          <a href="?q={{ q|urlencode }}&category={{ category }}&status={{ status }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}" class="th-sort">
+            {{ label }}{% if key == sort_key %}<span class="th-sort__arrow">{% if sort_desc %}▼{% else %}▲{% endif %}</span>{% endif %}
+          </a>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for idea in ideas %}
+      <tr class="rowlink-row" data-href="{{ idea.get_absolute_url }}">
+        <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
+        <td class="cell-title"><a class="rowlink" href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
+        <td><span class="chip">{{ idea.get_category_display }}</span></td>
+        <td><span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span></td>
+        <td><span class="stars" title="우선순위 {{ idea.priority }}">{% for _ in "12345"|slice:idea.priority %}★{% endfor %}</span></td>
+        <td class="small"><span class="clip clip--sm" title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</span></td>
+        <td class="small text-2 cell-clip"><span class="clip" title="{{ idea.judgement }}">{{ idea.judgement|default:"-" }}</span></td>
+        <td class="mono small muted nowrap">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="{{ columns|length }}" class="empty">
+        {% if total == 0 %}아직 아이디어가 없습니다. 터미널에서 <code>python manage.py seed_ideas</code> 를 실행하면 시장조사 후보가 들어옵니다.
+        {% else %}조건에 맞는 아이디어가 없습니다.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

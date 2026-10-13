@@ -122,6 +122,25 @@ pre { background: #f1f3f5; border: 1px solid var(--line); padding: 10px 12px; bo
 .empty { text-align: center; color: var(--muted); padding: 36px 16px; background: var(--surface); border: 1px dashed var(--line-strong); border-radius: var(--radius); }
 .empty pre { display: inline-block; text-align: left; }
 
+/* ---- data grid ---- */
+.card--flush { overflow-x: auto; }
+.table--grid { min-width: 960px; }
+.table--grid th { white-space: nowrap; }
+.table--grid .chip, .table--grid .badge, .table--grid .stars { white-space: nowrap; }
+.table--grid .cell-title { min-width: 220px; }
+.table--grid .cell-clip { max-width: 280px; }
+.table--grid .clip { display: block; max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.table--grid .clip--sm { max-width: 190px; }
+.nowrap { white-space: nowrap; }
+.table--grid td { padding: 7px 10px; vertical-align: middle; }
+.th-sort { color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.th-sort:hover { color: var(--text); text-decoration: none; }
+.is-sorted .th-sort { color: var(--accent); }
+.th-sort__arrow { font-size: 9px; }
+.rowlink-row { cursor: pointer; }
+.rowlink-row:hover .rowlink { color: var(--accent); }
+.text-2 { color: var(--text-2); }
+
 /* ---- menu cards ---- */
 .menugrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
 .menucard { display: block; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius); padding: 14px 16px; color: var(--text); box-shadow: var(--shadow); transition: box-shadow .12s, transform .12s; }

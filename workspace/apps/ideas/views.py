@@ -5,21 +5,31 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import IdeaForm
 from .models import Idea
 
-SORT_OPTIONS = {
-    "code": ("code", "코드순"),
-    "priority": ("-priority", "우선순위 높은순"),
-    "updated": ("-updated_at", "최근 수정순"),
-    "title": ("title", "제목순"),
-}
+# 표의 열. (키, 제목, 정렬 필드)
+COLUMNS = [
+    ("code", "코드", "code"),
+    ("title", "제목", "title"),
+    ("category", "분류", "category"),
+    ("status", "상태", "status"),
+    ("priority", "우선순위", "priority"),
+    ("customer", "고객", "customer"),
+    ("judgement", "현재 판단", "judgement"),
+    ("updated", "수정", "updated_at"),
+]
+SORT_FIELDS = {key: field for key, _, field in COLUMNS}
 
 
 def idea_list(request):
     q = request.GET.get("q", "").strip()
     category = request.GET.get("category", "")
     status = request.GET.get("status", "")
+
     sort = request.GET.get("sort", "code")
-    if sort not in SORT_OPTIONS:
-        sort = "code"
+    sort_desc = sort.startswith("-")
+    sort_key = sort.lstrip("-")
+    if sort_key not in SORT_FIELDS:
+        sort_key, sort_desc = "code", False
+    order = ("-" if sort_desc else "") + SORT_FIELDS[sort_key]
 
     qs = Idea.objects.all()
     if q:
@@ -35,7 +45,7 @@ def idea_list(request):
         qs = qs.filter(category=category)
     if status:
         qs = qs.filter(status=status)
-    qs = qs.order_by(SORT_OPTIONS[sort][0], "code")
+    qs = qs.order_by(order, "code")
 
     context = {
         "page_title": "아이디어 리스트",
@@ -44,10 +54,12 @@ def idea_list(request):
         "q": q,
         "category": category,
         "status": status,
-        "sort": sort,
+        "sort": ("-" if sort_desc else "") + sort_key,
+        "sort_key": sort_key,
+        "sort_desc": sort_desc,
+        "columns": [(key, label) for key, label, _ in COLUMNS],
         "categories": Idea.Category.choices,
         "statuses": Idea.Status.choices,
-        "sort_options": [(k, v[1]) for k, v in SORT_OPTIONS.items()],
         "is_filtered": bool(q or category or status),
     }
     return render(request, "ideas/list.html", context)

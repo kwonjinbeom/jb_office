@@ -64,5 +64,14 @@
   setInterval(function () { if (!document.hidden) refresh(); }, INTERVAL_MS);
   document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(); });
 
+  // 행 전체 클릭 → 상세. 행 안의 링크/버튼/폼을 눌렀을 때는 그 동작을 우선한다.
+  document.addEventListener("click", function (e) {
+    var row = e.target.closest && e.target.closest("tr.rowlink-row[data-href]");
+    if (!row) return;
+    if (e.target.closest("a, button, input, form, select, label")) return;
+    if (e.ctrlKey || e.metaKey) { window.open(row.getAttribute("data-href"), "_blank"); return; }
+    window.location.href = row.getAttribute("data-href");
+  });
+
   // 삭제 버튼 같은 위험 동작은 폼이 confirm 페이지를 거치므로 별도 JS 는 없다.
 })();
