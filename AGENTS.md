@@ -1,42 +1,64 @@
-# Claude와 Codex 공동 작업 규칙
+# AGENTS.md — 이 저장소에서 AI 에이전트가 지키는 규칙
 
-이 파일이 저장소의 AI 협업 규칙에 대한 단일 기준 문서다. Claude와 Codex는 작업 전에 반드시 읽는다. 논의 기록은 `AI_COLLABORATION.md`에 둔다.
+이 저장소(`kwonjinbeom/jb_office`)는 사용자와 두 에이전트가 함께 쓴다.
 
-## 역할과 브랜치
+- **Claude** (Claude Code, PC 로컬): 사용자와 화면을 보며 즉시 검증한다.
+- **Codex** (Codex Cloud): GitHub 저장소를 클론해 작업하고 PR 로 제안한다.
 
-### Claude (PC)
+둘 사이의 통신 채널은 git 이다. 이 문서가 공통 규칙의 단일 기준이며, 규칙을 바꿀 때는 이 파일을 고친다. (합의일: 2026-10-13)
 
-- 사용자가 PC에서 결과를 바로 확인하는 통합 담당자다.
-- 사용자 동석 아래 `main`에 직접 commit·push할 수 있다.
-- 작업 전에 `git pull --ff-only origin main`을 실행하고 working tree가 깨끗한지 확인한다.
-- 같은 파일을 수정하는 Codex PR이 진행 중이면 먼저 그 PR을 병합하거나 작업 범위를 조정한다.
-- Django 검사와 사용자 화면 확인을 마친 뒤 변경을 반영한다.
-- `.claude/settings.json`의 Stop 자동 동기화 훅은 사용자의 선택에 따라 유지한다. 이 훅은 모든 변경을 stage하므로 Claude 실행 전 다른 작업자의 미커밋 변경이 없어야 한다.
+## 1. 브랜치와 반영 방식
 
-### Codex (Cloud)
+| | Claude (PC) | Codex (Cloud) |
+|---|---|---|
+| 작업 브랜치 | `main` 직접 | 최신 `origin/main` 에서 `codex/<작업명>` |
+| 반영 | 직접 push (자동 동기화 포함) | PR 로만 제안, `main` 직접 push 금지 |
+| 병합 담당 | Claude 가 사용자 지시로 PR 을 받아 실행 검증 후 병합 | - |
 
-- `main`에 직접 commit·push하지 않는다.
-- 최신 `origin/main`에서 `codex/<작업명>` 브랜치를 만들고 작업별 PR을 올린다.
-- PR에 변경 내용, 실행한 검사, 실패·미실행 검사와 남은 위험을 기록한다.
-- 애플리케이션의 자동 Git 동기화와 수동 동기화 엔드포인트를 사용하지 않는다.
-- 다른 작업자의 변경을 되돌리거나 덮어쓰지 않는다.
+Claude 가 `main` 에 직접 반영하기 전 확인 사항:
 
-## SQLite와 마이그레이션
+1. `git pull --ff-only origin main` 으로 최신 상태인지 확인한다.
+2. 작업 트리가 clean 한지 확인한다. Stop 훅이 모든 변경을 자동 stage 하므로, 다른 미커밋 작업이 섞여 들어가면 안 된다.
+3. 같은 파일을 건드리는 Codex PR 이 열려 있는지 확인한다. 있으면 먼저 병합하거나 사용자에게 알린다.
 
-- `작업서버/db.sqlite3`의 유일한 작성자는 PC의 Claude와 사용자다.
-- Codex는 `작업서버/db.sqlite3`를 어떤 작업에서도 수정, 교체, 삭제, stage하지 않는다.
-- Codex는 `migrate`, `seed_ideas`처럼 추적 DB를 변경하는 명령을 실행하지 않는다.
-- Codex는 `migrate --check --plan` 같은 읽기 전용 검사와 임시 테스트 DB를 사용할 수 있다.
-- 스키마 변경에 필요한 Django migration 파일을 생성·수정하는 것은 허용된다. 해당 PR에는 PC에서 실제 DB 적용이 필요하다고 명시한다.
+## 2. 담당 영역
 
-## 문서 협업
+| 영역 | Claude | Codex |
+|---|---|---|
+| `작업서버/` 코드 | 담당 | PR 로 제안 가능 |
+| `작업서버/db.sqlite3` | 유일한 변경 주체 | 수정·교체·삭제·stage 금지 |
+| Django migration 소스 | 작성·적용 | 작성 가능. PC DB 적용이 필요하면 PR 본문에 명시 |
+| `시장조사/` 문서 | 수정 가능 | 수정 가능 |
+| `코덱스 작업 폴더/` | 건드리지 않음 | 담당 |
+| `AGENTS.md`, `README.md` | 합의 후 수정 | 합의 후 수정 |
 
-- `시장조사/` 같은 텍스트 문서는 둘 다 수정할 수 있다.
-- 작업 전에 최신 `main`을 반영하고, 같은 문서를 동시에 수정하지 않는다. Git의 자동 병합을 보장된 것으로 간주하지 않는다.
-- 충돌이 생기면 내용을 임의로 버리지 말고 사용자에게 양쪽 변경을 설명한다.
+## 3. DB 규칙 (중요)
 
-## 공통 안전 규칙
+- `작업서버/db.sqlite3` 는 바이너리라 git 이 병합하지 못한다. 충돌하면 한쪽 데이터가 사라진다.
+- 그래서 **PC 의 Claude 만** 이 파일을 바꾼다. 폰·클라우드에서는 데이터를 고치지 않는다.
+- Codex 는 추적 중인 DB 에 `migrate`, `seed_ideas` 를 실행하지 않는다. 임시 테스트 DB(예: `DJANGO_SETTINGS_MODULE` 을 바꾸거나 복사본 사용)와 읽기 전용 검사는 허용한다.
+- 사용자가 PC 와 폰에서 번갈아 작업할 때는, 한쪽 작업을 push 한 뒤 다른 쪽을 시작한다.
 
-- force push, hard reset, 다른 작업자의 commit 수정은 사용자의 명시적 요청 없이 하지 않는다.
-- 실제로 동일한 로컬 체크아웃을 공유한다면 Claude와 다른 도구를 동시에 실행하지 않는다.
-- 비밀값을 저장소, 로그, 문서에 기록하지 않는다.
+## 4. 문서 규칙
+
+- 같은 파일을 동시에 편집하지 않는다. git 자동 병합을 기대하지 말고, 시작 전에 pull 한다.
+- 새 조사 문서는 `시장조사/NN_제목.md` 번호 규칙을 따른다.
+
+## 5. 작업서버 구조 요약
+
+자세한 내용은 `작업서버/README.md`.
+
+- Django 5.2 + SQLite. 메뉴 하나 = 앱 하나 (`apps/<이름>/`).
+- 새 메뉴 추가: 앱 생성 → `config/settings.py` INSTALLED_APPS → `config/urls.py` include → `apps/core/menus.py` MENUS 에 항목 추가. 홈 카드와 좌측 메뉴가 자동으로 생긴다.
+- 템플릿은 `templates/<앱>/` 에 두고 `{% extends "base.html" %}`. 스타일은 `static/css/app.css` 하나, 외부 CSS 프레임워크 없음, 사무적이고 깔끔한 톤 유지.
+- 실행: `작업서버\run.bat` (가상환경 생성 → 설치 → migrate → seed → runserver).
+
+## 6. 자동 동기화 (PC 전용)
+
+- `.claude/settings.json` 의 Stop 훅과 서버 백그라운드 스레드가 `작업서버/tools/gitsync.py` 를 실행해 `add -A → commit → pull --rebase → push` 한다.
+- 이 동작은 PC 의 `main` 에서만 일어난다. Codex 환경에는 영향이 없다.
+
+## 7. 커밋 메시지
+
+- `feat:`, `fix:`, `docs:`, `chore:` 접두어를 쓴다. 자동 동기화 커밋은 `sync: <시각>` 이다.
+- PR 본문에는 바꾼 이유, 확인 방법, PC 에서 추가로 해야 할 일(migrate 등)을 적는다.
