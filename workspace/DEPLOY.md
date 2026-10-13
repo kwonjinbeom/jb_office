@@ -67,8 +67,39 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 ## 3. 이후 코드가 바뀌었을 때
 
-PC 에서 Claude 나 Codex 가 push 한 뒤, 서버 홈 화면의 **서버 코드 갱신** 버튼 하나만 누르면 된다.
-버튼이 순서대로 `git pull` → `migrate` → `collectstatic` → 앱 재시작까지 전부 한다. Bash 콘솔에 들어갈 일은 없다.
+두 경로가 있다. 둘 다 `git pull` → `migrate` → `collectstatic` → 앱 재시작을 한 번에 한다.
+
+- **자동**: GitHub `main` 에 push 되면 GitHub 가 서버의 `/deploy/webhook/` 을 호출하고 서버가 스스로 반영한다 (아래 3-1 설정 후).
+- **수동**: 서버 홈 화면의 **서버 코드 갱신** 버튼. 웹훅이 실패했거나 바로 확인하고 싶을 때.
+
+### 3-1. 자동 반영(웹훅) 처음 한 번 설정
+
+1. Bash 콘솔에서 비밀값을 하나 만든다.
+
+```bash
+python3.12 -c "import secrets; print(secrets.token_urlsafe(40))"
+```
+
+2. `nano ~/jb_office/workspace/.env` 로 열어 맨 아래에 한 줄 추가하고 저장한다 (값은 1번 출력).
+
+```
+DEPLOY_WEBHOOK_SECRET=<1번에서 나온 값>
+```
+
+3. 앱을 재시작한다: `touch /var/www/<아이디>_pythonanywhere_com_wsgi.py`
+4. GitHub 저장소 → **Settings** → **Webhooks** → **Add webhook** 에 입력한다.
+
+| 항목 | 값 |
+|---|---|
+| Payload URL | `https://<아이디>.pythonanywhere.com/deploy/webhook/` |
+| Content type | `application/json` |
+| Secret | 1번에서 나온 값 (.env 와 동일) |
+| Which events | **Just the push event** |
+
+5. Add webhook 을 누르면 GitHub 가 ping 을 보낸다. Webhooks 목록에서 Recent Deliveries 가 초록 체크(200, 본문 `pong`)면 성공.
+6. 이후 push 마다 Recent Deliveries 에 `deployed <해시>` 가 남는다. 응답이 10초를 넘겨 GitHub 쪽에 timeout 으로 표시돼도 서버 반영은 진행된다.
+
+주의: 웹훅은 `main` 브랜치 push 만 처리한다. 다른 브랜치 push 는 무시한다.
 
 결과 메시지에 pull 결과, 적용된 migration 수가 표시된다. 실패하면 어느 단계에서 왜 실패했는지 메시지에 나온다.
 그래도 안 될 때만 Bash 콘솔에서 수동으로 실행한다.

@@ -84,6 +84,9 @@ AUTOSYNC = {
 DEPLOY = {
     "PULL_ENABLED": _env_bool("DEPLOY_PULL_ENABLED", IS_SERVER),
     "RELOAD_TOUCH_FILE": _env("DEPLOY_RELOAD_TOUCH_FILE", ""),
+    # GitHub 웹훅(push) 수신용 비밀값. 비어 있으면 웹훅 엔드포인트는 거부한다.
+    "WEBHOOK_SECRET": _env("DEPLOY_WEBHOOK_SECRET", ""),
+    "WEBHOOK_BRANCH": _env("DEPLOY_WEBHOOK_BRANCH", "main"),
 }
 # 문서 보기 메뉴가 읽는 폴더 (저장소 기준 상대 경로). 읽기 전용.
 DOCS_DIRS = [REPO_ROOT / "시장조사", REPO_ROOT]

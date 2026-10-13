@@ -1,9 +1,18 @@
+import hashlib
+import hmac
+import json
+import logging
+
 from django.conf import settings
 from django.contrib import messages
-from django.http import JsonResponse
+from django.contrib.auth.decorators import login_not_required
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
+
+log = logging.getLogger(__name__)
 
 from apps.evidence.models import Evidence
 from apps.ideas.models import Idea, IdeaLog
@@ -92,6 +101,51 @@ def update_code(request):
         detail = failed["output"][-400:] if failed else ""
         messages.error(request, f"코드 갱신 실패: {result.get('error')} {detail}")
     return redirect("core:home")
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def deploy_webhook(request):
+    """GitHub push 웹훅. 서명이 맞고 대상 브랜치면 pull → migrate → collectstatic → reload.
+
+    GitHub 저장소 Settings → Webhooks 에 아래로 등록한다.
+      Payload URL: https://<아이디>.pythonanywhere.com/deploy/webhook/
+      Content type: application/json
+      Secret: .env 의 DEPLOY_WEBHOOK_SECRET 과 같은 값
+      Events: Just the push event
+    """
+    secret = settings.DEPLOY.get("WEBHOOK_SECRET") or ""
+    if not secret or not settings.DEPLOY["PULL_ENABLED"]:
+        return HttpResponseForbidden("webhook disabled")
+
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    expected = "sha256=" + hmac.new(secret.encode(), request.body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        log.warning("deploy webhook: bad signature")
+        return HttpResponseForbidden("bad signature")
+
+    event = request.headers.get("X-GitHub-Event", "")
+    if event == "ping":
+        return HttpResponse("pong")
+    if event != "push":
+        return HttpResponse(f"ignored event {event}")
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except ValueError:
+        return HttpResponse("bad payload", status=400)
+    ref = payload.get("ref", "")
+    if ref != f"refs/heads/{settings.DEPLOY['WEBHOOK_BRANCH']}":
+        return HttpResponse(f"ignored ref {ref}")
+
+    result = gitstate.pull_and_reload()
+    after = (payload.get("after") or "")[:7]
+    if result["ok"]:
+        log.info("deploy webhook: deployed %s", after)
+        return HttpResponse(f"deployed {after}")
+    log.error("deploy webhook failed: %s", result.get("error"))
+    return HttpResponse(f"failed: {result.get('error')}", status=500)
 
 
 @require_GET
