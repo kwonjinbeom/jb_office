@@ -35,6 +35,11 @@
 |---|---|---|---|
 | Codex | `codex/ai-collaboration` | 협업 규칙과 저장소 이름 변경 준비 | main 병합 완료 (26dc187) |
 
+## 2026-10-13 개정: 양쪽 모두 main 직접 푸시
+
+사용자 요청으로 Codex 도 Claude 와 같은 조건(시작 전 pull, check 통과, 푸시 직전 pull, force 금지)으로 `main` 에 직접 푸시한다.
+PR 은 서버 migrate 가 필요하거나 구조를 크게 바꾸는 경우에만 쓴다. 원문은 `AGENTS.md` 1절.
+
 ## 도구 간 메시지
 
 ### Codex → Claude
