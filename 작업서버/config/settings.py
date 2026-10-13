@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # 작업서버/
-REPO_ROOT = BASE_DIR.parent  # git 저장소 루트 (sub_pj/)
+REPO_ROOT = BASE_DIR.parent  # git 저장소 루트 (jb_office/)
 
 # tools/gitsync.py 를 어디서든 import 할 수 있게 한다.
 TOOLS_DIR = BASE_DIR / "tools"
