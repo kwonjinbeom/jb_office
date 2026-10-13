@@ -51,6 +51,26 @@ def get_status(fetch: bool = False) -> dict:
     return gitsync.status(repo_root(), fetch=fetch)
 
 
+def _python_executable() -> str:
+    """manage.py 를 돌릴 Python 경로.
+
+    uWSGI(PythonAnywhere) 안에서는 sys.executable 이 uwsgi 바이너리라서 쓸 수 없다.
+    가상환경 prefix 아래의 python 을 우선 찾고, 없으면 sys.executable 로 돌아간다.
+    """
+    import sys
+
+    candidates = [
+        Path(sys.prefix) / "bin" / "python",
+        Path(sys.prefix) / "Scripts" / "python.exe",
+        Path(settings.BASE_DIR) / ".venv" / "bin" / "python",
+        Path(settings.BASE_DIR) / ".venv" / "Scripts" / "python.exe",
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+    return sys.executable
+
+
 def pull_and_reload() -> dict:
     """서버 역할: 코드 갱신 한 번에 끝내기.
 
@@ -59,11 +79,11 @@ def pull_and_reload() -> dict:
     """
     import os
     import subprocess
-    import sys
     import time
 
     root = repo_root()
     manage_py = Path(settings.BASE_DIR) / "manage.py"
+    python = _python_executable()
     result: dict = {
         "ok": False,
         "pulled": False,
@@ -90,25 +110,30 @@ def pull_and_reload() -> dict:
         return result
     result["pulled"] = True
 
-    if not run("migrate", [sys.executable, str(manage_py), "migrate", "--noinput"], Path(settings.BASE_DIR)):
-        result["error"] = "migrate 실패"
-        return result
-    result["migrated"] = True
-
-    if not run("collectstatic", [sys.executable, str(manage_py), "collectstatic", "--noinput", "-v", "0"], Path(settings.BASE_DIR)):
-        result["error"] = "collectstatic 실패"
-        return result
-    result["collected"] = True
-
-    touch = settings.DEPLOY.get("RELOAD_TOUCH_FILE") or ""
-    if touch:
+    def reload_app() -> None:
+        touch = settings.DEPLOY.get("RELOAD_TOUCH_FILE") or ""
+        if not touch:
+            return
         try:
             os.utime(touch, (time.time(), time.time()))
             result["reloaded"] = True
         except OSError as exc:
-            result["error"] = f"재시작 파일 touch 실패: {exc}"
-            return result
-    result["ok"] = True
+            result.setdefault("error", f"재시작 파일 touch 실패: {exc}")
+
+    if not run("migrate", [python, str(manage_py), "migrate", "--noinput"], Path(settings.BASE_DIR)):
+        result["error"] = f"migrate 실패 (python={python})"
+        reload_app()  # 새 코드는 받았으니 재시작은 해 둔다
+        return result
+    result["migrated"] = True
+
+    if not run("collectstatic", [python, str(manage_py), "collectstatic", "--noinput", "-v", "0"], Path(settings.BASE_DIR)):
+        result["error"] = "collectstatic 실패"
+        reload_app()
+        return result
+    result["collected"] = True
+
+    reload_app()
+    result["ok"] = "error" not in result
     return result
 
 
