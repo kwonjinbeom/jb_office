@@ -60,6 +60,14 @@ pre { background: #f1f3f5; border: 1px solid var(--line); padding: 10px 12px; bo
 .deploypill { font-size: 11px; color: #9aa5b1; background: #27333f; border-radius: var(--radius); padding: 6px 8px; display: grid; gap: 3px; }
 .deploypill__row { display: flex; gap: 8px; align-items: center; }
 .deploypill__row .mono { color: #cbd2d9; }
+.deploypill__head { font-weight: 700; color: #cbd2d9; margin-bottom: 2px; }
+.deploypill.is-ok { border-left: 3px solid var(--green); }
+.deploypill.is-ok .deploypill__state { color: #6ee7b7; }
+.deploypill.is-behind { border-left: 3px solid var(--amber); }
+.deploypill.is-behind .deploypill__state { color: #fcd34d; }
+.deploybar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); margin-bottom: 16px; font-size: 13px; }
+.deploybar--ok { border-color: #a7e3c6; background: #f0fbf6; }
+.deploybar--behind { border-color: #f8d9a1; background: #fff8ec; }
 .deploypill__dot { width: 8px; height: 8px; border-radius: 50%; background: #7b8794; margin-left: auto; }
 .deploypill__dot.is-ok { background: var(--green); }
 .deploypill__dot.is-fail { background: var(--red); }

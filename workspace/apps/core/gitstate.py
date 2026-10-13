@@ -73,6 +73,69 @@ def _python_executable() -> str:
 
 DEPLOY_STATE_FILE = "deploy_state.json"
 _head_cache: dict = {"at": 0.0, "value": ""}
+_remote_cache: dict = {"at": 0.0, "data": None}
+
+
+def _tz():
+    from zoneinfo import ZoneInfo
+
+    return ZoneInfo(settings.TIME_ZONE)
+
+
+def now_local_iso() -> str:
+    import datetime as _dt
+
+    return _dt.datetime.now(_tz()).isoformat(timespec="seconds")
+
+
+def _to_local(iso: str) -> str:
+    """git 의 ISO 시각(오프셋 포함)을 설정 시간대의 'MM-DD HH:MM' 으로."""
+    import datetime as _dt
+
+    try:
+        return _dt.datetime.fromisoformat(iso).astimezone(_tz()).strftime("%m-%d %H:%M")
+    except ValueError:
+        return iso[:16]
+
+
+def _commit_info(ref: str, root: Path) -> dict:
+    code, out = gitsync._run(["log", "-1", "--date=iso-strict", "--pretty=format:%h%x1f%ad%x1f%s", ref], root)
+    parts = out.split("\x1f") if code == 0 and out else []
+    if len(parts) != 3:
+        return {"hash": "", "time": "", "subject": ""}
+    return {"hash": parts[0], "time": _to_local(parts[1]), "subject": parts[2]}
+
+
+def deploy_status(max_age: int = 120) -> dict:
+    """서버 코드(HEAD)와 GitHub 최신(origin/<branch>)을 비교한다. fetch 는 max_age 초마다 한 번."""
+    import time
+
+    now = time.time()
+    cached = _remote_cache["data"]
+    if cached and now - _remote_cache["at"] < max_age:
+        return cached
+    root = repo_root()
+    branch = settings.DEPLOY.get("WEBHOOK_BRANCH", "main")
+    code, _ = gitsync._run(["fetch", "--quiet", "origin", branch], root, timeout=30)
+    fetch_ok = code == 0
+    local = _commit_info("HEAD", root)
+    remote = _commit_info(f"origin/{branch}", root)
+    code, out = gitsync._run(["rev-list", "--count", f"HEAD..origin/{branch}"], root)
+    behind = int(out) if code == 0 and out.isdigit() else None
+    data = {
+        "local": local,
+        "remote": remote,
+        "behind": behind,
+        "up_to_date": bool(local["hash"] and local["hash"] == remote["hash"]),
+        "fetch_ok": fetch_ok,
+        "checked_at": now_local_iso(),
+    }
+    _remote_cache.update(at=now, data=data)
+    return data
+
+
+def invalidate_remote_cache() -> None:
+    _remote_cache["at"] = 0.0
 
 
 def _deploy_state_path() -> Path:
@@ -92,10 +155,11 @@ def load_deploy_state() -> dict | None:
 def record_deploy(result: dict, reason: str) -> None:
     import datetime as _dt
 
+    invalidate_remote_cache()
     data = {
         "ok": result.get("ok", False),
         "reason": reason,
-        "finished_at": _dt.datetime.now().isoformat(timespec="seconds"),
+        "finished_at": now_local_iso(),
         "head": head_short(force=True),
         "error": result.get("error", ""),
         "pip": result.get("pip"),

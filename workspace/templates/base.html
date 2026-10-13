@@ -35,17 +35,26 @@
         <button type="submit" class="userrow__out" title="로그아웃">로그아웃</button>
       </form>
       {% endif %}
-      <div class="deploypill" title="지금 돌아가는 코드와 마지막 반영">
-        <div class="deploypill__row"><span class="muted">코드</span><span class="mono">{{ DEPLOY_INFO.head|default:"?" }}</span></div>
-        {% with d=DEPLOY_INFO.last %}
+      {% with st=DEPLOY_INFO.status d=DEPLOY_INFO.last %}
+      <div class="deploypill {% if st and st.up_to_date %}is-ok{% elif st and st.behind %}is-behind{% endif %}" title="서버 코드 vs GitHub 최신 (2분마다 확인)">
+        {% if st %}
+        <div class="deploypill__head">
+          {% if st.up_to_date %}<span class="deploypill__state">✓ 최신</span>
+          {% elif st.behind %}<span class="deploypill__state">↓ {{ st.behind }}개 뒤처짐</span>
+          {% elif not st.fetch_ok %}<span class="deploypill__state">GitHub 확인 실패</span>
+          {% else %}<span class="deploypill__state">비교 불가</span>{% endif %}
+        </div>
+        <div class="deploypill__row"><span class="muted">서버</span><span class="mono">{{ st.local.hash|default:"?" }}</span><span class="mono muted">{{ st.local.time }}</span></div>
+        <div class="deploypill__row"><span class="muted">GitHub</span><span class="mono">{{ st.remote.hash|default:"?" }}</span><span class="mono muted">{{ st.remote.time }}</span></div>
+        {% endif %}
         {% if d %}
-        <div class="deploypill__row"><span class="muted">반영</span><span class="mono">{{ d.finished_at|slice:"5:16" }}</span>
+        <div class="deploypill__row"><span class="muted">반영</span><span class="mono muted">{{ d.finished_at|slice:"5:16" }}</span>
           <span class="deploypill__dot {% if d.ok %}is-ok{% else %}is-fail{% endif %}" title="{% if d.ok %}성공{% else %}실패: {{ d.error }}{% endif %} ({{ d.reason }})"></span></div>
         {% elif DEPLOY_INFO.is_server %}
         <div class="deploypill__row"><span class="muted">반영</span><span class="muted">기록 없음</span></div>
         {% endif %}
-        {% endwith %}
       </div>
+      {% endwith %}
       <div class="gitpill" id="gitpill" title="git 상태 (30초마다 갱신)">
         <span class="gitpill__dot" data-git="dot"></span>
         <span data-git="branch">…</span>

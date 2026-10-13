@@ -17,6 +17,22 @@
 {% endblock %}
 
 {% block content %}
+{% with st=DEPLOY_INFO.status %}
+{% if is_server and st %}
+<div class="deploybar {% if st.up_to_date %}deploybar--ok{% elif st.behind %}deploybar--behind{% endif %}">
+  {% if st.up_to_date %}
+    <strong>서버 코드가 GitHub 최신과 같습니다.</strong> <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }} · {{ st.local.subject|truncatechars:60 }}
+  {% elif st.behind %}
+    <strong>GitHub에 새 커밋 {{ st.behind }}개가 있습니다.</strong> 최신 <span class="mono">{{ st.remote.hash }}</span> · {{ st.remote.time }} · {{ st.remote.subject|truncatechars:50 }}
+    <span class="muted">(서버는 <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }})</span>
+    <form method="post" action="{% url 'core:update_code' %}" class="inline-form">{% csrf_token %}<button class="btn btn--sm btn--primary">지금 반영</button></form>
+  {% elif not st.fetch_ok %}
+    GitHub 에 접속하지 못해 최신 여부를 확인할 수 없습니다. 서버 코드 <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }}
+  {% endif %}
+  <span class="muted small">확인 {{ st.checked_at|slice:"11:16" }}</span>
+</div>
+{% endif %}
+{% endwith %}
 {% if is_server and not webhook_ready %}
 <div class="flash flash--info" style="margin-bottom:16px">push 자동 반영이 아직 꺼져 있습니다. <a href="{% url 'core:settings' %}">설정</a>에서 비밀값을 만들고 GitHub 웹훅에 등록하면 이후로는 버튼을 누르지 않아도 됩니다.</div>
 {% endif %}
