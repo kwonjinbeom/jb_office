@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">아이디어 리스트</a> › {{ idea.code }}</div>{% endblock %}
+{% block heading %}<span class="code code--lg">{{ idea.code }}</span> {{ idea.title }}{% endblock %}
+
+{% block actions %}
+{% if prev_idea %}<a class="btn btn--ghost" href="{{ prev_idea.get_absolute_url }}" title="{{ prev_idea.title }}">‹ {{ prev_idea.code }}</a>{% endif %}
+{% if next_idea %}<a class="btn btn--ghost" href="{{ next_idea.get_absolute_url }}" title="{{ next_idea.title }}">{{ next_idea.code }} ›</a>{% endif %}
+<a class="btn" href="{% url 'ideas:list' %}">목록</a>
+<a class="btn btn--primary" href="{% url 'ideas:edit' idea.pk %}">수정</a>
+<a class="btn btn--danger-ghost" href="{% url 'ideas:delete' idea.pk %}">삭제</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid--detail">
+  <div class="card">
+    <div class="card__head">
+      <h2>개요</h2>
+      <div class="badges">
+        <span class="chip">{{ idea.get_category_display }}</span>
+        <span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span>
+        <span class="stars" title="우선순위">{% for _ in "12345"|slice:idea.priority %}★{% endfor %} <span class="muted small">{{ idea.get_priority_display }}</span></span>
+      </div>
+    </div>
+    <dl class="kv kv--wide">
+      {% for label, value in fields %}
+      <dt>{{ label }}</dt>
+      <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">-</span>{% endif %}</dd>
+      {% endfor %}
+    </dl>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card__head"><h2>작업 메모</h2></div>
+      {% if idea.notes %}
+      <div class="prose">{{ idea.notes|linebreaks }}</div>
+      {% else %}
+      <p class="muted">아직 메모가 없습니다. <a href="{% url 'ideas:edit' idea.pk %}">수정</a>에서 적어 두세요.</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div class="card__head"><h2>정보</h2></div>
+      <dl class="kv">
+        <dt>태그</dt>
+        <dd>{% for t in idea.tag_list %}<span class="chip chip--tag">{{ t }}</span>{% empty %}<span class="muted">-</span>{% endfor %}</dd>
+        <dt>출처</dt><dd class="small">{{ idea.source_doc|default:"-" }}</dd>
+        <dt>생성</dt><dd class="mono small">{{ idea.created_at|date:"Y-m-d H:i" }}</dd>
+        <dt>수정</dt><dd class="mono small">{{ idea.updated_at|date:"Y-m-d H:i" }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'memos:list' %}">메모</a></div>{% endblock %}
+{% block heading %}{% if memo.pinned %}📌 {% endif %}{{ memo.title }}{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'memos:list' %}">목록</a>
+<a class="btn btn--primary" href="{% url 'memos:edit' memo.pk %}">수정</a>
+<a class="btn btn--danger-ghost" href="{% url 'memos:delete' memo.pk %}">삭제</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid--detail">
+  <div class="card">
+    {% if memo.body %}
+    <div class="prose">{{ memo.body|linebreaks }}</div>
+    {% else %}
+    <p class="muted">내용이 비어 있습니다.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card__head"><h2>정보</h2></div>
+    <dl class="kv">
+      <dt>태그</dt>
+      <dd>{% for t in memo.tag_list %}<span class="chip chip--tag">{{ t }}</span>{% empty %}<span class="muted">-</span>{% endfor %}</dd>
+      <dt>고정</dt><dd>{% if memo.pinned %}예{% else %}아니오{% endif %}</dd>
+      <dt>생성</dt><dd class="mono small">{{ memo.created_at|date:"Y-m-d H:i" }}</dd>
+      <dt>수정</dt><dd class="mono small">{{ memo.updated_at|date:"Y-m-d H:i" }}</dd>
+    </dl>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block actions %}
+<form method="post" action="{% url 'core:sync_now' %}" class="inline-form">
+  {% csrf_token %}
+  <button type="submit" class="btn btn--primary" title="변경 사항을 커밋하고 push 합니다">지금 동기화</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="grid grid--home">
+  <!-- Git 상태 -->
+  <div class="card card--span2">
+    <div class="card__head">
+      <h2>Git 상태</h2>
+      <span class="muted small" data-git="checked_at">{{ git.checked_at }}</span>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat__label">브랜치</div>
+        <div class="stat__value mono" data-git="branch">{{ git.branch }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">변경 파일</div>
+        <div class="stat__value {% if git.dirty %}text-amber{% else %}text-green{% endif %}" data-git="dirty-value">{{ git.dirty }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">push 대기</div>
+        <div class="stat__value {% if git.ahead %}text-amber{% endif %}" data-git="ahead">{{ git.ahead|default_if_none:"-" }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">pull 필요</div>
+        <div class="stat__value {% if git.behind %}text-red{% endif %}" data-git="behind">{{ git.behind|default_if_none:"-" }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">자동 동기화</div>
+        <div class="stat__value small">
+          {% if autosync_running %}<span class="badge badge--green">실행 중 · {{ autosync_interval }}초</span>
+          {% else %}<span class="badge badge--gray">꺼짐</span>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="split">
+      <div>
+        <h3 class="subhead">변경 파일 <span class="muted">({{ git.dirty }})</span></h3>
+        <ul class="filelist" data-git="changes">
+          {% for c in git.changes|slice:":12" %}
+          <li><span class="filestatus filestatus--{{ c.status|slice:':1' }}">{{ c.status }}</span><span class="mono">{{ c.path }}</span></li>
+          {% empty %}
+          <li class="muted">작업 트리가 깨끗합니다.</li>
+          {% endfor %}
+          {% if git.changes|length > 12 %}<li class="muted">… 외 {{ git.changes|length|add:"-12" }}개</li>{% endif %}
+        </ul>
+      </div>
+      <div>
+        <h3 class="subhead">마지막 동기화</h3>
+        {% if last_sync %}
+        <dl class="kv">
+          <dt>결과</dt>
+          <dd>{% if last_sync.ok %}<span class="badge badge--green">성공</span>{% else %}<span class="badge badge--red">실패</span>{% endif %}
+              <span class="muted small">{{ last_sync.reason }}</span></dd>
+          <dt>시각</dt><dd class="mono small">{{ last_sync.finished_at }}</dd>
+          <dt>커밋</dt><dd class="small">{{ last_sync.message|default:"변경 없음" }}</dd>
+          {% if last_sync.error %}<dt>오류</dt><dd class="text-red small">{{ last_sync.error }}</dd>{% endif %}
+        </dl>
+        {% else %}
+        <p class="muted">아직 이 서버에서 동기화한 기록이 없습니다.</p>
+        {% endif %}
+
+        {% if sync_history %}
+        <h3 class="subhead">최근 이력</h3>
+        <ul class="timeline">
+          {% for h in sync_history %}
+          <li>
+            <span class="dot {% if h.ok %}dot--green{% else %}dot--red{% endif %}"></span>
+            <span class="mono small">{{ h.finished_at|slice:"5:16" }}</span>
+            <span class="small">{{ h.message|default:"변경 없음" }}</span>
+            <span class="muted small">{{ h.reason }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+
+    <h3 class="subhead">최근 커밋</h3>
+    <table class="table table--compact">
+      <thead><tr><th style="width:80px">해시</th><th>메시지</th><th style="width:150px">시각</th></tr></thead>
+      <tbody data-git="commits">
+        {% for c in git.commits %}
+        <tr><td class="mono">{{ c.hash }}</td><td>{{ c.subject }}</td><td class="mono small muted">{{ c.date|slice:":16" }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">원격: <span class="mono">{{ git.remote }}</span></p>
+  </div>
+
+  <!-- 메뉴 카드 -->
+  <div class="card card--plain card--span2">
+    <div class="card__head"><h2>메뉴</h2></div>
+    <div class="menugrid">
+      {% for m in menus %}
+      <a class="menucard" href="{{ m.url }}" style="--accent: {{ m.color }}">
+        <div class="menucard__icon">{{ m.icon }}</div>
+        <div class="menucard__title">{{ m.title }}</div>
+        <div class="menucard__desc">{{ m.description }}</div>
+      </a>
+      {% endfor %}
+      <div class="menucard menucard--ghost">
+        <div class="menucard__icon">＋</div>
+        <div class="menucard__title">다음 메뉴</div>
+        <div class="menucard__desc">apps/core/menus.py 에 항목을 추가하면 여기에 카드가 생깁니다.</div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

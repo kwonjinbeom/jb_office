@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'memos:list' %}">메모</a> › <a href="{{ memo.get_absolute_url }}">{{ memo.title|truncatechars:30 }}</a></div>{% endblock %}
+
+{% block content %}
+<div class="card card--narrow">
+  <h2>정말 삭제할까요?</h2>
+  <p><strong>{{ memo.title }}</strong> 메모를 삭제합니다. 되돌릴 수 없습니다.</p>
+  <form method="post" class="form__footer">
+    {% csrf_token %}
+    <a class="btn" href="{{ memo.get_absolute_url }}">취소</a>
+    <button class="btn btn--danger" type="submit">삭제</button>
+  </form>
+</div>
+{% endblock %}

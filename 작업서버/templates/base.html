@@ -1,0 +1,69 @@
+{% load static %}<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page_title %}{{ page_title }} · {% endif %}작업서버</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <a class="brand" href="{% url 'core:home' %}">
+      <span class="brand__mark">WS</span>
+      <span class="brand__text">작업서버</span>
+    </a>
+    <nav class="nav">
+      <a class="nav__item {% if ACTIVE_MENU == 'core' or ACTIVE_MENU == 'home' %}is-active{% endif %}" href="{% url 'core:home' %}">
+        <span class="nav__icon">🏠</span><span>홈</span>
+      </a>
+      <div class="nav__section">메뉴</div>
+      {% for m in MENUS %}
+      <a class="nav__item {% if ACTIVE_MENU == m.key %}is-active{% endif %}" href="{{ m.url }}">
+        <span class="nav__icon">{{ m.icon }}</span><span>{{ m.title }}</span>
+      </a>
+      {% endfor %}
+      <div class="nav__section">관리</div>
+      <a class="nav__item" href="/admin/"><span class="nav__icon">⚙️</span><span>Django 관리자</span></a>
+    </nav>
+    <div class="sidebar__footer">
+      <div class="gitpill" id="gitpill" title="git 상태 (30초마다 갱신)">
+        <span class="gitpill__dot" data-git="dot"></span>
+        <span data-git="branch">…</span>
+        <span class="gitpill__count" data-git="dirty"></span>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar__title">
+        {% block breadcrumb %}{% endblock %}
+        <h1>{% block heading %}{{ page_title }}{% endblock %}</h1>
+      </div>
+      <div class="topbar__actions">{% block actions %}{% endblock %}</div>
+    </header>
+
+    {% if messages %}
+    <div class="flash-stack">
+      {% for message in messages %}
+      <div class="flash flash--{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+<script>
+  window.APP = {
+    gitStatusUrl: "{% url 'core:api_git_status' %}",
+    csrfToken: "{{ csrf_token }}"
+  };
+</script>
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

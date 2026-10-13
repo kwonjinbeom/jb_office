@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python 작업서버/tools/gitsync.py --quiet",
+            "timeout": 120,
+            "statusMessage": "git 자동 동기화 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

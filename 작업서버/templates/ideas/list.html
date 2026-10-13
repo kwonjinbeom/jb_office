@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block heading %}아이디어 리스트 <span class="count">{{ ideas|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn btn--primary" href="{% url 'ideas:create' %}">＋ 아이디어 추가</a>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="filterbar">
+  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="코드, 제목, 고객, 판단, 태그 검색">
+  <select class="select" name="category">
+    <option value="">분류 전체</option>
+    {% for value, label in categories %}
+    <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select class="select" name="status">
+    <option value="">상태 전체</option>
+    {% for value, label in statuses %}
+    <option value="{{ value }}" {% if value == status %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select class="select" name="sort">
+    {% for value, label in sort_options %}
+    <option value="{{ value }}" {% if value == sort %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn" type="submit">적용</button>
+  {% if is_filtered %}<a class="btn btn--ghost" href="{% url 'ideas:list' %}">초기화</a>{% endif %}
+</form>
+
+<div class="ideagrid">
+  {% for idea in ideas %}
+  <a class="ideacard" href="{{ idea.get_absolute_url }}">
+    <div class="ideacard__top">
+      <span class="code">{{ idea.code }}</span>
+      <span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span>
+    </div>
+    <div class="ideacard__title">{{ idea.title }}</div>
+    <div class="ideacard__meta">
+      <span class="chip">{{ idea.get_category_display }}</span>
+      <span class="stars" title="우선순위 {{ idea.priority }}">{% for _ in "12345"|slice:idea.priority %}★{% endfor %}</span>
+    </div>
+    {% if idea.customer %}<div class="ideacard__row"><span class="k">고객</span>{{ idea.customer }}</div>{% endif %}
+    {% if idea.judgement %}<div class="ideacard__row ideacard__judge">{{ idea.judgement|truncatechars:90 }}</div>{% endif %}
+    <div class="ideacard__foot muted small">수정 {{ idea.updated_at|date:"Y-m-d H:i" }}</div>
+  </a>
+  {% empty %}
+  <div class="empty card--span-all">
+    {% if total == 0 %}
+    <p>아직 아이디어가 없습니다. 시장조사 문서의 후보를 불러오려면 터미널에서 실행하세요.</p>
+    <pre>python manage.py seed_ideas</pre>
+    {% else %}
+    <p>조건에 맞는 아이디어가 없습니다.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

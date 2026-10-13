@@ -1,0 +1,32 @@
+@echo off
+setlocal
+chcp 65001 >nul
+cd /d "%~dp0"
+
+rem 1) 가상환경이 없으면 만들고 Django 를 설치한다.
+if not exist ".venv\Scripts\python.exe" (
+    echo [setup] creating virtualenv...
+    python -m venv .venv || goto :fail
+    ".venv\Scripts\python.exe" -m pip install --quiet --upgrade pip || goto :fail
+)
+".venv\Scripts\python.exe" -c "import django" 2>nul || (
+    echo [setup] installing requirements...
+    ".venv\Scripts\python.exe" -m pip install --quiet -r requirements.txt || goto :fail
+)
+
+rem 2) DB 마이그레이션과 초기 데이터
+".venv\Scripts\python.exe" manage.py migrate --noinput || goto :fail
+".venv\Scripts\python.exe" manage.py seed_ideas || goto :fail
+
+rem 3) 서버 실행 (127.0.0.1:8000). 끄려면 Ctrl+C.
+echo.
+echo  작업서버: http://127.0.0.1:8000/
+echo.
+".venv\Scripts\python.exe" manage.py runserver 127.0.0.1:8000
+goto :eof
+
+:fail
+echo.
+echo [ERROR] 실행에 실패했습니다. 위 메시지를 확인하세요.
+pause
+exit /b 1
