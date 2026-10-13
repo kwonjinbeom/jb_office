@@ -22,6 +22,10 @@ AI와 사용자가 여러 인터넷 시장을 탐색하고, 작은 결과물을 
 - `시장조사/11_통합시장지도_및_후보군.md`: 기존 의뢰 시장과 새 공개형 시장의 통합 비교
 - `시장조사/12_다음작업_실행설계.md`: 다음 조사와 제작으로 넘어가는 구체적인 순서
 
+## 작업서버 (workspace/)
+
+Django + SQLite 로 만든 개인 작업 화면이다. 실행·구조·배포는 `workspace/README.md` 와 `workspace/DEPLOY.md` 를 본다.
+
 ## Git 동기화
 
 저장소 루트의 `git-sync.bat`를 실행하면 `main` 브랜치를 pull한 뒤 모든 변경을 add, commit, push한다. 새 컴퓨터에서는 최초 한 번 GitHub 로그인을 완료하면 이후 인증 정보가 Windows 자격 증명 관리자에 저장된다.

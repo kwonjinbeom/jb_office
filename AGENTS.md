@@ -25,8 +25,8 @@ Claude 가 `main` 에 직접 반영하기 전 확인 사항:
 
 | 영역 | Claude | Codex |
 |---|---|---|
-| `작업서버/` 코드 | 담당 | PR 로 제안 가능 |
-| `작업서버/db.sqlite3` | 유일한 변경 주체 | 수정·교체·삭제·stage 금지 |
+| `workspace/` 코드 | 담당 | PR 로 제안 가능 |
+| `workspace/db.sqlite3` | 유일한 변경 주체 | 수정·교체·삭제·stage 금지 |
 | Django migration 소스 | 작성·적용 | 작성 가능. PC DB 적용이 필요하면 PR 본문에 명시 |
 | `시장조사/` 문서 | 수정 가능 | 수정 가능 |
 | `코덱스 작업 폴더/` | 건드리지 않음 | 담당 |
@@ -34,8 +34,8 @@ Claude 가 `main` 에 직접 반영하기 전 확인 사항:
 
 ## 3. DB 규칙 (중요)
 
-- **실제 데이터는 PythonAnywhere 서버의 `~/data/db.sqlite3` 하나다.** git 에는 DB 파일이 없다 (`.gitignore`). 배포 방법은 `작업서버/DEPLOY.md`.
-- PC 와 폰은 브라우저로 서버(`https://<아이디>.pythonanywhere.com`)에 접속해 데이터를 고친다. 로컬 `작업서버/db.sqlite3` 는 개발용 임시 DB 일 뿐이다.
+- **실제 데이터는 PythonAnywhere 서버의 `~/data/db.sqlite3` 하나다.** git 에는 DB 파일이 없다 (`.gitignore`). 배포 방법은 `workspace/DEPLOY.md`.
+- PC 와 폰은 브라우저로 서버(`https://<아이디>.pythonanywhere.com`)에 접속해 데이터를 고친다. 로컬 `workspace/db.sqlite3` 는 개발용 임시 DB 일 뿐이다.
 - 에이전트는 어느 쪽도 서버 DB 파일을 직접 만지지 않는다. 데이터 구조를 바꿀 때는 migration 소스를 만들고, 서버에서 `migrate` 가 필요하다고 PR 또는 커밋 메시지에 명시한다. 서버 적용은 사용자가 Bash 콘솔에서 한다.
 - Codex 는 임시 테스트 DB 와 읽기 전용 검사만 쓴다. `seed_ideas` 는 새 DB 를 만들 때만 쓰는 초기 데이터이며, 서버 데이터의 원본이 아니다.
 
@@ -46,16 +46,16 @@ Claude 가 `main` 에 직접 반영하기 전 확인 사항:
 
 ## 5. 작업서버 구조 요약
 
-자세한 내용은 `작업서버/README.md`.
+자세한 내용은 `workspace/README.md`.
 
 - Django 5.2 + SQLite. 메뉴 하나 = 앱 하나 (`apps/<이름>/`).
 - 새 메뉴 추가: 앱 생성 → `config/settings.py` INSTALLED_APPS → `config/urls.py` include → `apps/core/menus.py` MENUS 에 항목 추가. 홈 카드와 좌측 메뉴가 자동으로 생긴다.
 - 템플릿은 `templates/<앱>/` 에 두고 `{% extends "base.html" %}`. 스타일은 `static/css/app.css` 하나, 외부 CSS 프레임워크 없음, 사무적이고 깔끔한 톤 유지.
-- 실행: `작업서버\run.bat` (가상환경 생성 → 설치 → migrate → seed → runserver).
+- 실행: `workspace\run.bat` (가상환경 생성 → 설치 → migrate → seed → runserver).
 
 ## 6. 자동 동기화 (PC 전용)
 
-- `.claude/settings.json` 의 Stop 훅과 서버 백그라운드 스레드가 `작업서버/tools/gitsync.py` 를 실행해 `add -A → commit → pull --rebase → push` 한다.
+- `.claude/settings.json` 의 Stop 훅과 서버 백그라운드 스레드가 `workspace/tools/gitsync.py` 를 실행해 `add -A → commit → pull --rebase → push` 한다.
 - 이 동작은 PC 의 `main` 에서만 일어난다. Codex 환경에는 영향이 없다.
 
 ## 7. 커밋 메시지

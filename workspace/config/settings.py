@@ -6,7 +6,7 @@
 - server       : PythonAnywhere 같은 호스팅. DEBUG 꺼짐, 로그인 필수, 자동 동기화 꺼짐,
                  홈 화면에서 'git pull + 재시작' 버튼으로 코드를 갱신한다.
 
-환경변수는 작업서버/.env 파일(없으면 무시)에서도 읽는다. 예시는 .env.example 참고.
+환경변수는 workspace/.env 파일(없으면 무시)에서도 읽는다. 예시는 .env.example 참고.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent  # 작업서버/
+BASE_DIR = Path(__file__).resolve().parent.parent  # workspace/
 REPO_ROOT = BASE_DIR.parent  # git 저장소 루트 (jb_office/)
 
 # tools/gitsync.py 를 어디서든 import 할 수 있게 한다.
