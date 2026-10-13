@@ -4,6 +4,7 @@
 PC 와 폰 모두 브라우저로 이 주소에 접속해 데이터를 고친다. 코드는 GitHub 를 거쳐 서버가 pull 받는다.
 
 아래에서 `<아이디>` 는 PythonAnywhere 로그인 아이디다. 이메일이 아니다.
+서버의 프로젝트 경로는 `/home/<아이디>/jb_office/workspace` 다. (PythonAnywhere 는 경로에 한글을 허용하지 않는다.)
 
 ## 1. 처음 한 번: 서버 준비 (Bash 콘솔)
 
@@ -13,16 +14,12 @@ PythonAnywhere 사이트 → **Consoles** → **Bash** 를 열고 한 줄씩 실
 cd ~
 git clone https://github.com/kwonjinbeom/jb_office.git
 mkdir -p ~/data
-ln -sfn ~/jb_office/작업서버 ~/workserver
-python3.12 -m venv ~/venv
-~/venv/bin/pip install -r ~/workserver/requirements.txt
-cd ~/workserver
+cd ~/jb_office/workspace
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 cp .env.example .env
 nano .env
 ```
-
-PythonAnywhere 는 가상환경 경로에 한글을 허용하지 않는다. 그래서 가상환경은 `~/venv` 에 두고,
-한글 폴더 `작업서버` 는 영문 바로가기 `~/workserver` 로 가리킨다. 서버에서는 항상 `~/workserver` 경로를 쓴다.
 
 `nano` 에서 `.env` 를 아래처럼 고친다 (`<아이디>` 4곳 교체, 비밀 키는 아무 긴 문자열). 저장은 Ctrl+O, Enter, 종료는 Ctrl+X.
 
@@ -44,10 +41,10 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 이어서 DB 를 만들고 초기 데이터와 로그인 계정을 넣는다.
 
 ```bash
-~/venv/bin/python manage.py migrate
-~/venv/bin/python manage.py seed_ideas
-~/venv/bin/python manage.py createsuperuser
-~/venv/bin/python manage.py collectstatic --noinput
+.venv/bin/python manage.py migrate
+.venv/bin/python manage.py seed_ideas
+.venv/bin/python manage.py createsuperuser
+.venv/bin/python manage.py collectstatic --noinput
 ```
 
 `createsuperuser` 가 묻는 아이디·비밀번호가 작업서버 로그인 계정이 된다. 이메일은 비워도 된다.
@@ -59,12 +56,12 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 | 항목 | 값 |
 |---|---|
-| Source code | `/home/<아이디>/workserver` |
-| Working directory | `/home/<아이디>/workserver` |
-| Virtualenv | `/home/<아이디>/venv` |
+| Source code | `/home/<아이디>/jb_office/workspace` |
+| Working directory | `/home/<아이디>/jb_office/workspace` |
+| Virtualenv | `/home/<아이디>/jb_office/workspace/.venv` |
 
-3. **WSGI configuration file** 링크를 눌러 열고, 내용을 전부 지운 뒤 저장소의 `작업서버/deploy/pythonanywhere_wsgi.py` 내용을 붙여 넣는다. `USERNAME = "<아이디>"` 를 고치고 저장한다.
-4. **Static files** 에 한 줄 추가: URL `/static/` → Directory `/home/<아이디>/workserver/staticfiles`.
+3. **WSGI configuration file** 링크를 눌러 열고, 내용을 전부 지운 뒤 저장소의 `workspace/deploy/pythonanywhere_wsgi.py` 내용을 붙여 넣는다. `USERNAME = "<아이디>"` 를 고치고 저장한다.
+4. **Static files** 에 한 줄 추가: URL `/static/` → Directory `/home/<아이디>/jb_office/workspace/staticfiles`.
 5. 맨 위 초록색 **Reload** 버튼을 누른다.
 6. `https://<아이디>.pythonanywhere.com` 에 접속해 로그인 화면이 나오면 성공.
 
@@ -72,18 +69,16 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 
 PC 에서 Claude 가 push 한 뒤, 서버 홈 화면의 **서버 코드 갱신** 버튼을 누르면 `git pull` 과 재시작이 한 번에 된다.
 
-model 이 바뀌어 migration 이 추가된 경우에만 Bash 콘솔에서 한 번 더 실행한다.
+model 이 바뀌어 migration 이 추가된 경우, 또는 CSS·JS 가 바뀐 경우에는 Bash 콘솔에서 한 번 더 실행한다.
 
 ```bash
-cd ~/workserver && ~/venv/bin/python manage.py migrate && ~/venv/bin/python manage.py collectstatic --noinput
+cd ~/jb_office/workspace && .venv/bin/python manage.py migrate && .venv/bin/python manage.py collectstatic --noinput
 ```
-
-(CSS·JS 가 바뀐 경우도 `collectstatic` 이 필요하다.)
 
 ## 4. 데이터 백업
 
 DB 는 `~/data/db.sqlite3` 하나다. **Files** 탭에서 그 파일을 내려받으면 백업이다.
-PC 로 가져와 보고 싶으면 내려받은 파일을 `작업서버/db.sqlite3` 에 두고 `run.bat` 을 실행하면 된다.
+PC 로 가져와 보고 싶으면 내려받은 파일을 `workspace/db.sqlite3` 에 두고 `run.bat` 을 실행하면 된다.
 
 ## 5. 무료 계정에서 알아 둘 것
 

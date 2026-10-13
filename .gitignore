@@ -8,14 +8,14 @@ venv/
 *.log
 
 # 작업서버 runtime
-# DB는 git에 넣지 않는다. 실제 데이터는 PythonAnywhere 서버의 ~/data/db.sqlite3 하나다 (작업서버/DEPLOY.md).
+# DB는 git에 넣지 않는다. 실제 데이터는 PythonAnywhere 서버의 ~/data/db.sqlite3 하나다 (workspace/DEPLOY.md).
 # 로컬 db.sqlite3 는 개발용 임시 DB.
-작업서버/db.sqlite3
-작업서버/.env
-작업서버/.sync_state.json
+workspace/db.sqlite3
+workspace/.env
+workspace/.sync_state.json
 .gitsync.lock
-작업서버/staticfiles/
-작업서버/media/
+workspace/staticfiles/
+workspace/media/
 
 # Editors / OS
 .vscode/

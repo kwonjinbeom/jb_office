@@ -5,7 +5,7 @@ Django + SQLite 로 돌아가는 개인 작업용 로컬 솔루션 화면이다.
 ## 실행
 
 ```bat
-작업서버\run.bat
+workspace\run.bat
 ```
 
 가상환경 생성, Django 설치, 마이그레이션, 초기 데이터 적재, `runserver` 까지 한 번에 한다.
@@ -14,7 +14,7 @@ Django + SQLite 로 돌아가는 개인 작업용 로컬 솔루션 화면이다.
 수동으로 하려면:
 
 ```bat
-cd 작업서버
+cd workspace
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python manage.py migrate
@@ -25,7 +25,7 @@ python -m venv .venv
 ## 구조
 
 ```
-작업서버/
+workspace/
   manage.py
   run.bat                 실행 스크립트
   requirements.txt
@@ -62,7 +62,7 @@ python -m venv .venv
 | 홈 화면 "지금 동기화" 버튼 / `manage.py gitsync` | 수동 | - |
 
 동작: `git add -A` → 변경 있으면 커밋 → `pull --rebase --autostash` → `push`.
-결과는 `작업서버/.sync_state.json` (git 제외) 에 남고 홈 화면에 표시된다.
+결과는 `workspace/.sync_state.json` (git 제외) 에 남고 홈 화면에 표시된다.
 
 ## 역할 (WORKSERVER_ROLE)
 
