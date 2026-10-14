@@ -206,7 +206,9 @@ class DiscussionDocTests(TestCase):
         self.assertEqual(Discussion.objects.filter(doc="").count(), 1)  # README 는 올리지 않고, 중구분 '운영'만 생겼다
         self.assertIn(item, response.context["entries"])
         self.assertContains(response, "검색 표준과 출처")
-        self.assertNotContains(response, "본문 제목")  # 목록에는 제목만
+        self.assertNotContains(response, "본문 제목")  # 목록에는 제목과 요약만
+        self.assertContains(response, "세부내용 요약")
+        self.assertContains(response, "표준을 읽고 출처 6곳에서 찾는다")
 
     def test_detail_reads_like_a_post_with_tables_and_pictures(self):
         self.client.get(reverse("discussions:list"))

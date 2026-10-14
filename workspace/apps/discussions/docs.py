@@ -165,8 +165,11 @@ def _apply(item, rel, digest, area, name, meta):
 
     after = {f: getattr(item, f) for f in SNAPSHOT_FIELDS}
     if before != after:
+        previous = item.history.first()
         record = DiscussionHistory.objects.create(discussion=item, **after)
-        if updated:
+        # 이력 시각은 글의 날짜로. 단 화면에서 그 뒤에 고친 이력이 있으면 지금 시각 그대로 둬서,
+        # 맨 위 이력이 늘 지금 값과 같게 한다.
+        if updated and (previous is None or updated > previous.created_at):
             DiscussionHistory.objects.filter(pk=record.pk).update(created_at=updated)
 
 

@@ -36,23 +36,24 @@
 
 {% block content %}
 <div class="grid-wrap">
-  <table class="grid clickable discussion-grid" style="min-width:{% if scope %}640{% else %}780{% endif %}px">
-    <thead><tr><th style="width:96px">날짜</th>{% if not scope %}<th style="width:120px">메뉴</th>{% endif %}<th style="width:150px">중구분</th><th>제목</th><th style="width:96px">상태</th></tr></thead>
+  <table class="grid clickable discussion-grid" style="min-width:{% if scope %}900{% else %}1020{% endif %}px">
+    <thead><tr><th style="width:96px">날짜</th>{% if not scope %}<th style="width:120px">메뉴</th>{% endif %}<th style="width:140px">중구분</th><th style="width:28%">제목</th><th>세부내용 요약</th><th style="width:96px">상태</th></tr></thead>
     {% for group in day_groups %}
     <tbody>
-      <tr class="day-row"><td colspan="{% if scope %}4{% else %}5{% endif %}"><b>{{ group.label }}</b>{% if group.label == "오늘" or group.label == "어제" %} <span class="muted">{{ group.day|date:"n월 j일" }}</span>{% endif %} <span class="cnt">{{ group.entries|length }}건</span></td></tr>
+      <tr class="day-row"><td colspan="{% if scope %}5{% else %}6{% endif %}"><b>{{ group.label }}</b>{% if group.label == "오늘" or group.label == "어제" %} <span class="muted">{{ group.day|date:"n월 j일" }}</span>{% endif %} <span class="cnt">{{ group.entries|length }}건</span></td></tr>
       {% for entry in group.entries %}
       <tr data-href="{{ entry.get_absolute_url }}">
         <td class="small num muted" title="최근 변경 {{ entry.updated_at|date:'Y-m-d H:i' }} · 등록 {{ entry.created_at|date:'Y-m-d' }}">{{ entry.updated_at|date:"H:i" }}</td>
         {% if not scope %}<td class="small">{{ entry.get_area_display }}</td>{% endif %}
         <td class="small text-2" title="{{ entry.group_path }}">{{ entry.group_path|default:"-" }}</td>
         <td class="title-cell" title="{{ entry.name }}">{% if entry.doc %}<svg class="ic doc-mark" aria-label="정리한 글 있음"><use href="#i-file"/></svg>{% endif %}<a href="{{ entry.get_absolute_url }}">{{ entry.name }}</a></td>
+        <td class="sum" title="{{ entry.summary }}"><span>{{ entry.summary|default:"-" }}</span></td>
         <td><span class="badge st-{{ entry.status }}">{{ entry.get_status_display }}</span></td>
       </tr>
       {% endfor %}
     </tbody>
     {% empty %}
-    <tbody><tr><td colspan="{% if scope %}4{% else %}5{% endif %}" class="grid-empty">{% if is_filtered %}조건에 맞는 논의가 없습니다.{% else %}아직 논의가 없습니다. 정리한 글은 저장소의 <code>논의/</code> 폴더에 md 로 올리면 여기에 나타납니다.{% endif %}</td></tr></tbody>
+    <tbody><tr><td colspan="{% if scope %}5{% else %}6{% endif %}" class="grid-empty">{% if is_filtered %}조건에 맞는 논의가 없습니다.{% else %}아직 논의가 없습니다. 정리한 글은 저장소의 <code>논의/</code> 폴더에 md 로 올리면 여기에 나타납니다.{% endif %}</td></tr></tbody>
     {% endfor %}
   </table>
 </div>

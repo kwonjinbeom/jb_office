@@ -241,6 +241,9 @@ pre code { background: none; padding: 0; }
 .discussion-grid tbody tr.day-row:hover td { background: var(--panel-2); }
 .discussion-grid .day-row .cnt { margin-left: 4px; }
 .date-range { display: inline-flex; align-items: center; gap: 4px; }
+/* 세부내용 요약: 두 줄까지 보이고 나머지는 말줄임 */
+.discussion-grid td.sum { white-space: normal; height: auto; padding-top: 7px; padding-bottom: 7px; color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
+.discussion-grid td.sum span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .discussion-grid .doc-mark { width: 13px; height: 13px; color: var(--accent); margin-right: 5px; vertical-align: -2px; }
 /* 논의 상태 배지 (Discussion.Status 값과 짝) */
 .badge.st-talk, .badge.st-active { background: var(--accent-weak); color: var(--accent); }
