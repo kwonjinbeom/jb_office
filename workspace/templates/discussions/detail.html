@@ -1,6 +1,77 @@
 {% extends "base.html" %}
-{% block breadcrumb %}<div class="crumb">{% if scope %}{{ item.get_area_display }}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ list_url }}">논의 현황</a>{% else %}<a href="{% url 'discussions:list' %}">진행현황</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'discussions:list' %}?area={{ item.area }}">{{ item.get_area_display }}</a>{% endif %}</div>{% endblock %}
-{% block actions %}<a class="btn ghost danger" href="{% url 'discussions:delete' item.pk %}">삭제</a><a class="btn" href="{% url 'discussions:create' %}?parent={{ item.pk }}">하위 주제 추가</a><a class="btn primary" href="{% url 'discussions:edit' item.pk %}">수정</a>{% endblock %}
-{% block content %}<div class="stack"><section class="card"><div class="card-body"><p class="small muted">{{ path }}</p><dl class="kv"><dt>현재 핵심</dt><dd>{{ item.summary|default:'-' }}</dd><dt>다음</dt><dd>{{ item.next_action|default:'-' }}</dd><dt>상태</dt><dd>{{ item.get_status_display }}</dd><dt>대화</dt><dd>{{ item.get_amount_display }} · {{ item.get_partner_display }}</dd><dt>최근 변경</dt><dd class="num">{{ item.updated_at|date:'Y-m-d H:i' }}</dd><dt>등록</dt><dd class="num">{{ item.created_at|date:'Y-m-d H:i' }}</dd></dl>{% if item.idea %}<p><a href="{{ item.idea.get_absolute_url }}">{{ item.idea }}</a></p>{% endif %}{% if item.content %}<p><a href="{{ item.content.get_absolute_url }}">{{ item.content.title }}</a></p>{% endif %}</div></section>
-{% if children %}<section class="card"><div class="card-head"><h2 class="card-title">하위 주제</h2></div><div class="card-body">{% for child in children %}<p><a href="{{ child.get_absolute_url }}">{{ child.name }}</a> <span class="muted small">{{ child.summary }}</span></p>{% endfor %}</div></section>{% endif %}
-<details class="card"><summary>요약 이력 · {{ history|length }}건</summary><div class="grid-wrap"><table class="grid wrap" style="min-width:650px"><thead><tr><th style="width:130px">날짜</th><th style="width:100px">상대</th><th style="width:85px">상태</th><th>핵심</th><th>다음</th></tr></thead><tbody>{% for record in history %}<tr><td class="small num">{{ record.created_at|date:'Y-m-d H:i' }}</td><td>{{ record.get_partner_display }}<span class="sub">{{ record.get_amount_display }}</span></td><td>{{ record.get_status_display }}</td><td>{{ record.summary|default:'-' }}</td><td>{{ record.next_action|default:'-' }}</td></tr>{% empty %}<tr><td colspan="5" class="grid-empty">아직 기록이 없습니다.</td></tr>{% endfor %}</tbody></table></div></details></div>{% endblock %}
+{# 논의 하나를 게시글처럼: 위에 상태·날짜·핵심, 가운데 정리한 글(md), 옆에 목차·빠른 수정·하위 주제·요약 이력 #}
+{% block breadcrumb %}<div class="crumb">{% if scope %}{{ item.get_area_display }}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ list_url }}">논의 현황</a>{% else %}<a href="{% url 'discussions:list' %}">진행현황</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'discussions:list' %}?area={{ item.area }}">{{ item.get_area_display }}</a>{% endif %}{% if item.parent %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ item.parent.get_absolute_url }}">{{ item.parent.name }}</a>{% endif %}</div>{% endblock %}
+{% block actions %}<a class="btn ghost danger" href="{% url 'discussions:delete' item.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a><a class="btn" href="{% url 'discussions:create' %}?parent={{ item.pk }}">{% include "includes/ic.html" with name="plus" %}하위 주제</a><a class="btn primary" href="{% url 'discussions:edit' item.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>{% endblock %}
+
+{% block content %}
+<div class="post-cols">
+  <article class="card post">
+    <header class="post-head">
+      <div class="post-meta">
+        <span class="badge st-{{ item.status }}">{{ item.get_status_display }}</span>
+        <span>{{ item.get_area_display }}{% if path != item.name %} · {{ path }}{% endif %}</span>
+        <span class="num" title="등록 {{ item.created_at|date:'Y-m-d H:i' }}">{{ item.updated_at|date:"Y-m-d H:i" }} 정리</span>
+        <span>{{ item.get_partner_display }} · 대화 {{ item.get_amount_display }}</span>
+      </div>
+      {% if item.summary or item.next_action %}
+      <dl class="post-key">
+        {% if item.summary %}<dt>현재 핵심</dt><dd>{{ item.summary }}</dd>{% endif %}
+        {% if item.next_action %}<dt>다음 행동</dt><dd>{{ item.next_action }}</dd>{% endif %}
+      </dl>
+      {% endif %}
+    </header>
+    {% if post and not post.missing %}
+    <div class="doc post-body">{{ post.html|safe }}</div>
+    <footer class="post-foot muted small">{% include "includes/ic.html" with name="file" %}<span class="mono">{{ post.path }}</span></footer>
+    {% elif post.missing %}
+    <div class="post-body"><div class="notice warn">{% include "includes/ic.html" with name="alert" %}<span>정리한 글 <span class="mono">{{ post.path }}</span> 이 저장소에 없습니다. 옮겼거나 지웠을 수 있습니다.</span></div></div>
+    {% else %}
+    <div class="post-body"><p class="empty-line">아직 정리한 글이 없습니다. 저장소 <code>논의/</code> 폴더에 md 로 정리하면 여기에 글로 보입니다.</p></div>
+    {% endif %}
+    {% if item.idea or item.content %}
+    <div class="post-links">{% if item.idea %}<a class="tag" href="{{ item.idea.get_absolute_url }}">{{ item.idea }}</a>{% endif %}{% if item.content %}<a class="tag" href="{{ item.content.get_absolute_url }}">{{ item.content.title }}</a>{% endif %}</div>
+    {% endif %}
+  </article>
+
+  <aside class="post-side">
+    {% if post.has_toc %}
+    <section class="card doc-toc"><div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="list" %}목차</h2></div><div class="card-body">{{ post.toc|safe }}</div></section>
+    {% endif %}
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="edit" %}빠른 수정</h2></div>
+      <form method="post" action="{% url 'discussions:quick' item.pk %}" class="card-body form-col">{% csrf_token %}
+        <input type="hidden" name="return_to" value="{{ item.get_absolute_url }}">
+        <div class="field"><label for="q-status">상태</label><select class="select sm" id="q-status" name="status">{% for value,label in statuses %}<option value="{{ value }}" {% if item.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="q-summary">현재 핵심</label><input class="input sm" id="q-summary" name="summary" value="{{ item.summary }}" maxlength="140" placeholder="한 문장"></div>
+        <div class="field"><label for="q-next">다음 행동</label><input class="input sm" id="q-next" name="next_action" value="{{ item.next_action }}" maxlength="80" placeholder="할 일 하나"></div>
+        <button class="btn sm primary" type="submit">저장</button>
+        {% if item.doc %}<p class="help">정리한 글이 바뀌면 글에 적힌 값이 다시 들어갑니다.</p>{% endif %}
+      </form>
+    </section>
+
+    {% if children %}
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="layers" %}하위 주제</h2><span class="cnt">{{ children|length }}</span></div>
+      <div class="card-body"><ul class="rows">{% for child in children %}<li><a class="mrow" href="{{ child.get_absolute_url }}"><span class="nm">{{ child.name }}</span><span class="badge st-{{ child.status }}">{{ child.get_status_display }}</span></a></li>{% endfor %}</ul></div>
+    </section>
+    {% endif %}
+
+    <details class="card">
+      <summary>{% include "includes/ic.html" with name="chevron-right" %}요약 이력 <span class="hint">{{ history|length }}건</span></summary>
+      <div class="card-body">
+        <ul class="rows">
+          {% for record in history %}
+          <li class="log" style="grid-template-columns:78px minmax(0,1fr)">
+            <div class="log-date"><b>{{ record.created_at|date:"Y-m-d" }}</b>{{ record.created_at|date:"H:i" }}</div>
+            <div><div class="log-meta">{{ record.get_status_display }} · {{ record.get_partner_display }}</div><div class="log-body small">{{ record.summary|default:"-" }}{% if record.next_action %}<br><span class="muted">다음: {{ record.next_action }}</span>{% endif %}</div></div>
+          </li>
+          {% empty %}
+          <li class="empty-line">아직 기록이 없습니다.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </details>
+  </aside>
+</div>
+{% endblock %}

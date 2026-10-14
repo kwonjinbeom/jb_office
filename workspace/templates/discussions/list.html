@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{# scope 가 있으면 블로그·카페/영상 콘텐츠 아래의 '논의 현황'(그 메뉴 것만), 없으면 전체를 보는 '진행현황'. 최근 변경이 위, 날짜별로 묶는다. #}
+{# scope 가 있으면 각 메뉴 아래의 '논의 현황'(그 대구분만), 없으면 전체를 보는 '진행현황'.
+   목록은 한 줄 제목만 — 누르면 정리한 글(논의/**/*.md)과 핵심·다음 행동이 있는 상세로 들어간다. 최근 변경이 위, 날짜별로 묶는다. #}
 {% block breadcrumb %}{% if scope %}<div class="crumb">{{ scope_label }}</div>{% endif %}{% endblock %}
 {% block heading %}{% if scope %}논의 현황{% else %}진행현황{% endif %} <span class="cnt">{{ entries|length }}</span>{% endblock %}
 {% block subtitle %}<span class="page-sub">{% if not scope %}모든 메뉴의 논의를 한곳에서 · {% endif %}최근 변경순</span>{% endblock %}
@@ -7,13 +8,13 @@
 
 {% block toolbar %}
 <form method="get" class="filter-bar">
-  <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" aria-label="논의 검색" placeholder="주제·핵심·다음 행동·지난 요약 검색  ( / )"></div>
+  <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" aria-label="논의 검색" placeholder="제목·핵심·다음 행동·지난 요약 검색  ( / )"></div>
   {% if scope %}
   <input type="hidden" name="area" value="{{ area }}">
   {% else %}
-  <select class="select sm" name="area" aria-label="메뉴" data-autosubmit><option value="">메뉴 전체</option>{% for value,label in areas %}<option value="{{ value }}" {% if area == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  <select class="select sm" name="area" aria-label="대구분" data-autosubmit><option value="">메뉴 전체</option>{% for value,label in areas %}<option value="{{ value }}" {% if area == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
   {% endif %}
-  <select class="select sm" name="topic" aria-label="상위 주제" data-autosubmit><option value="">주제 전체</option>{% for topic in topics %}<option value="{{ topic.pk }}" {% if selected.pk == topic.pk %}selected{% endif %}>{{ topic.path }}</option>{% endfor %}</select>
+  <select class="select sm" name="topic" aria-label="중구분" data-autosubmit><option value="">주제 전체</option>{% for topic in topics %}<option value="{{ topic.pk }}" {% if selected.pk == topic.pk %}selected{% endif %}>{{ topic.path }}</option>{% endfor %}</select>
   <select class="select sm" name="status" aria-label="상태" data-autosubmit><option value="">상태 전체</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
   <span class="sep"></span>
   {# 기간: 버튼은 누를 때만 period 를 보내고, 날짜 칸을 바꾸면 그 날짜(from~to)로 찾는다 #}
@@ -35,26 +36,23 @@
 
 {% block content %}
 <div class="grid-wrap">
-  <table class="grid discussion-grid" style="min-width:{% if scope %}1200{% else %}1330{% endif %}px">
-    <thead><tr>{% if not scope %}<th style="width:130px">메뉴</th>{% endif %}<th style="width:230px">논의 주제</th><th style="width:100px">날짜</th><th style="width:120px">대화량·상대</th><th style="width:115px">상태</th><th>현재 핵심</th><th style="width:210px">다음 행동</th><th style="width:80px"></th></tr></thead>
+  <table class="grid clickable discussion-grid" style="min-width:{% if scope %}640{% else %}780{% endif %}px">
+    <thead><tr><th style="width:96px">날짜</th>{% if not scope %}<th style="width:120px">메뉴</th>{% endif %}<th style="width:150px">중구분</th><th>제목</th><th style="width:96px">상태</th></tr></thead>
     {% for group in day_groups %}
     <tbody>
-      <tr class="day-row"><td colspan="{% if scope %}7{% else %}8{% endif %}"><b>{{ group.label }}</b>{% if group.label == "오늘" or group.label == "어제" %} <span class="muted">{{ group.day|date:"n월 j일" }}</span>{% endif %} <span class="cnt">{{ group.entries|length }}건</span></td></tr>
+      <tr class="day-row"><td colspan="{% if scope %}4{% else %}5{% endif %}"><b>{{ group.label }}</b>{% if group.label == "오늘" or group.label == "어제" %} <span class="muted">{{ group.day|date:"n월 j일" }}</span>{% endif %} <span class="cnt">{{ group.entries|length }}건</span></td></tr>
       {% for entry in group.entries %}
-      <tr>
-        {% if not scope %}<td>{{ entry.get_area_display }}</td>{% endif %}
-        <td class="title-cell"><a href="{{ entry.get_absolute_url }}">{{ entry.name }}</a><span class="sub" title="{{ entry.path }}">{{ entry.path }}</span></td>
-        <td class="small num" title="최근 변경 {{ entry.updated_at|date:'Y-m-d H:i' }} · 등록 {{ entry.created_at|date:'Y-m-d H:i' }}">{{ entry.updated_at|date:"H:i" }} 변경<span class="sub">등록 {{ entry.created_at|date:"m-d" }}</span></td>
-        <td class="small">{{ entry.get_amount_display }}<span class="sub">{{ entry.get_partner_display }}</span></td>
-        <td><select class="select sm" name="status" form="quick-{{ entry.pk }}" aria-label="{{ entry.name }} 상태">{% for value,label in statuses %}<option value="{{ value }}" {% if entry.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
-        <td><input class="input sm" name="summary" value="{{ entry.summary }}" maxlength="140" form="quick-{{ entry.pk }}" aria-label="{{ entry.name }} 현재 핵심" placeholder="한 문장"></td>
-        <td><input class="input sm" name="next_action" value="{{ entry.next_action }}" maxlength="80" form="quick-{{ entry.pk }}" aria-label="{{ entry.name }} 다음 행동" placeholder="할 일 하나"></td>
-        <td><form id="quick-{{ entry.pk }}" method="post" action="{% url 'discussions:quick' entry.pk %}">{% csrf_token %}<input type="hidden" name="return_to" value="{{ request.get_full_path }}"><button class="btn sm" type="submit">저장</button></form></td>
+      <tr data-href="{{ entry.get_absolute_url }}">
+        <td class="small num muted" title="최근 변경 {{ entry.updated_at|date:'Y-m-d H:i' }} · 등록 {{ entry.created_at|date:'Y-m-d' }}">{{ entry.updated_at|date:"H:i" }}</td>
+        {% if not scope %}<td class="small">{{ entry.get_area_display }}</td>{% endif %}
+        <td class="small text-2" title="{{ entry.group_path }}">{{ entry.group_path|default:"-" }}</td>
+        <td class="title-cell" title="{{ entry.name }}">{% if entry.doc %}<svg class="ic doc-mark" aria-label="정리한 글 있음"><use href="#i-file"/></svg>{% endif %}<a href="{{ entry.get_absolute_url }}">{{ entry.name }}</a></td>
+        <td><span class="badge st-{{ entry.status }}">{{ entry.get_status_display }}</span></td>
       </tr>
       {% endfor %}
     </tbody>
     {% empty %}
-    <tbody><tr><td colspan="{% if scope %}7{% else %}8{% endif %}" class="grid-empty">{% if is_filtered %}조건에 맞는 논의가 없습니다.{% elif scope %}큰 주제 → 세부 주제로 나누고, 현재 핵심 한 문장만 기록하세요.{% else %}메뉴 → 큰 주제 → 세부 주제로 나누고, 현재 핵심 한 문장만 기록하세요.{% endif %}</td></tr></tbody>
+    <tbody><tr><td colspan="{% if scope %}4{% else %}5{% endif %}" class="grid-empty">{% if is_filtered %}조건에 맞는 논의가 없습니다.{% else %}아직 논의가 없습니다. 정리한 글은 저장소의 <code>논의/</code> 폴더에 md 로 올리면 여기에 나타납니다.{% endif %}</td></tr></tbody>
     {% endfor %}
   </table>
 </div>

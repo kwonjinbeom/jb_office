@@ -5,7 +5,8 @@ from django.utils import timezone
 
 
 class Discussion(models.Model):
-    AREA_CHOICES = [("blog", "블로그·카페"), ("video", "영상 콘텐츠"), ("ideas", "내 아이디어"), ("daily_ideas", "일일 아이디어"), ("memos", "메모"), ("docs", "문서"), ("other", "기타")]
+    # 대구분 = 메뉴 이름 (사용자 지시 2026-10-14). 중구분은 상위 주제(parent)로 나눈다.
+    AREA_CHOICES = [("daily_ideas", "일일 아이디어"), ("ideas", "내 아이디어"), ("blog", "블로그·카페"), ("video", "영상 콘텐츠")]
 
     class Status(models.TextChoices):
         NEW = "new", "미논의"
@@ -27,7 +28,7 @@ class Discussion(models.Model):
         CLAUDE = "claude", "Claude"
         BOTH = "both", "둘 다"
 
-    area = models.CharField("메뉴", max_length=20, choices=AREA_CHOICES, default="other")
+    area = models.CharField("대구분", max_length=20, choices=AREA_CHOICES, default="daily_ideas")
     parent = models.ForeignKey("self", verbose_name="상위 주제", null=True, blank=True, on_delete=models.PROTECT, related_name="children")
     name = models.CharField("논의 주제", max_length=80)
     summary = models.CharField("현재 핵심", max_length=140, blank=True, help_text="한 문장만. 최대 140자.")
@@ -39,6 +40,9 @@ class Discussion(models.Model):
     content = models.ForeignKey("content.Content", verbose_name="관련 콘텐츠", null=True, blank=True, on_delete=models.SET_NULL)
     updated_at = models.DateTimeField("최근 변경", auto_now=True)
     created_at = models.DateTimeField("등록", default=timezone.now, editable=False)
+    # 정리한 글: 저장소의 논의/**/*.md. 글이 바뀌면 그 앞머리 값이 화면 값을 덮는다 (apps/discussions/docs.py).
+    doc = models.CharField("정리한 글", max_length=255, blank=True, default="", db_index=True, editable=False)
+    doc_hash = models.CharField(max_length=40, blank=True, default="", editable=False)
 
     class Meta:
         ordering = ["-updated_at", "-pk"]

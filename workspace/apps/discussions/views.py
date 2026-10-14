@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,6 +13,7 @@ from django.views.decorators.http import require_POST
 from apps.content.tree import decorate_tree, subtree_ids
 from apps.content.navigation import list_return
 from apps.core.menus import find_menu
+from . import docs
 from .forms import DiscussionForm, QuickForm
 from .models import Discussion, DiscussionHistory
 
@@ -65,6 +67,7 @@ def _day_label(day, today):
 
 
 def discussion_list(request):
+    docs.sync()  # 저장소의 논의 글(논의/**/*.md)을 먼저 맞춘다
     nodes = decorate_tree(Discussion.objects.all())
     q, area, status = [request.GET.get(key, "").strip() for key in ("q", "area", "status")]
     selected = next((node for node in nodes if str(node.pk) == request.GET.get("topic") and (not area or node.area == area)), None)
@@ -106,6 +109,7 @@ def discussion_list(request):
     day_groups = []
     for entry in entries:
         entry.path = by_id[entry.pk].path
+        entry.group_path = " / ".join(entry.path.split(" / ")[:-1])  # 중구분 (상위 주제들)
         day = timezone.localtime(entry.updated_at).date()
         if not day_groups or day_groups[-1]["day"] != day:
             day_groups.append({"day": day, "label": _day_label(day, today), "entries": []})
@@ -124,10 +128,11 @@ def discussion_list(request):
 
 
 def discussion_detail(request, pk):
-    item = get_object_or_404(Discussion.objects.select_related("idea", "content"), pk=pk)
+    docs.sync()
+    item = get_object_or_404(Discussion.objects.select_related("idea", "content", "parent"), pk=pk)
     nodes = decorate_tree(Discussion.objects.all())
     path = next(node.path for node in nodes if node.pk == pk)
-    return render(request, "discussions/detail.html", {"page_title": item.name, "scope": _nav(request, item.area), "list_url": _list_url(item.area), "item": item, "path": path, "history": item.history.all(), "children": item.children.all()})
+    return render(request, "discussions/detail.html", {"page_title": item.name, "scope": _nav(request, item.area), "list_url": _list_url(item.area), "post": docs.post(item), "statuses": Discussion.Status.choices, "item": item, "path": path, "history": item.history.all(), "children": item.children.all()})
 
 
 def discussion_form(request, pk=None):
@@ -158,7 +163,17 @@ def quick_update(request, pk):
             save_form(form)
         else:
             messages.error(request, "저장하지 못했습니다. 핵심은 140자, 다음 행동은 80자 이내로 적고 상태를 선택하세요.")
+    if request.POST.get("return_to") == item.get_absolute_url():  # 상세 화면에서 고친 경우
+        return redirect(item)
     return redirect(list_return(request, reverse("discussions:list")))
+
+
+def asset(request, rel):
+    """논의 글 옆에 둔 그림 파일."""
+    path = docs.asset_path(rel)
+    if path is None:
+        raise Http404
+    return FileResponse(path.open("rb"), content_type=docs.IMAGE_TYPES[path.suffix.lower()])
 
 
 def discussion_delete(request, pk):

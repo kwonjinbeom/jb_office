@@ -92,6 +92,8 @@ DEPLOY = {
 DOCS_DIRS = [REPO_ROOT / "시장조사", REPO_ROOT]
 # 날짜별 조사 후보 원본. 모델로 옮기기 전까지 저장소 파일로 보존한다.
 DAILY_IDEAS_DIR = REPO_ROOT / "시장조사" / "일일아이디어"
+# 논의 글(md). Claude·Codex 가 쓰고 push 하면 논의 현황·진행현황에 올라온다 (apps/discussions/docs.py)
+DISCUSSIONS_DIR = REPO_ROOT / "논의"
 # ---------------------------------------------------------------------------
 
 INSTALLED_APPS = [

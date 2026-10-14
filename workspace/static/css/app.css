@@ -241,6 +241,29 @@ pre code { background: none; padding: 0; }
 .discussion-grid tbody tr.day-row:hover td { background: var(--panel-2); }
 .discussion-grid .day-row .cnt { margin-left: 4px; }
 .date-range { display: inline-flex; align-items: center; gap: 4px; }
+.discussion-grid .doc-mark { width: 13px; height: 13px; color: var(--accent); margin-right: 5px; vertical-align: -2px; }
+/* 논의 상태 배지 (Discussion.Status 값과 짝) */
+.badge.st-talk, .badge.st-active { background: var(--accent-weak); color: var(--accent); }
+.badge.st-decided, .badge.st-done { background: var(--ok-weak); color: var(--ok); }
+.badge.st-hold { background: var(--warn-weak); color: var(--warn); }
+.badge.st-new { color: var(--text-3); }
+
+/* 논의 상세: 게시글처럼 */
+.post-cols { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; max-width: 1280px; }
+.post { min-width: 0; }
+.post-head { padding: 16px 26px 14px; border-bottom: 1px solid var(--border); }
+.post-meta { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-3); }
+.post-key { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 6px 12px; margin: 12px 0 0; padding: 10px 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; }
+.post-key dt { font-size: 12px; font-weight: 700; color: var(--text-2); }
+.post-key dd { margin: 0; overflow-wrap: anywhere; }
+.post-body { padding: 20px 26px 26px; }
+.doc.post-body { max-width: none; }
+.post-body svg { max-width: 100%; height: auto; }
+.post-body img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+.post-foot { display: flex; align-items: center; gap: 6px; padding: 10px 26px; border-top: 1px solid var(--line-soft); }
+.post-links { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 26px 16px; }
+.post-side { position: sticky; top: 0; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.post-side .doc-toc { position: static; max-height: 40vh; }
 .date-range .input { width: 132px; }
 
 /* ---------------------------------------------------------------------
@@ -712,6 +735,8 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
   .cols-2, .detail-cols, .doc-cols { grid-template-columns: minmax(0, 1fr); }
   .doc-toc { position: static; max-height: none; order: -1; }
   .std { grid-template-columns: minmax(0, 1fr); }
+  .post-cols { grid-template-columns: minmax(0, 1fr); }
+  .post-side { position: static; }
   .std-side { position: static; }
 }
 @media (max-width: 760px) {
@@ -750,6 +775,8 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
   .kv.wide { grid-template-columns: 92px minmax(0, 1fr); }
   .log { grid-template-columns: 62px minmax(0, 1fr) auto; gap: 8px; }
   .doc { padding: 16px 16px 22px; }
+  .post-head, .post-body { padding-left: 16px; padding-right: 16px; }
+  .post-key { grid-template-columns: minmax(0, 1fr); }
   .confirm { margin-top: 2vh; }
   .toast-root { left: 12px; right: 12px; bottom: 12px; align-items: stretch; }
   .toast { max-width: none; }

@@ -1,3 +1,6 @@
+import shutil
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from django.test import Client, TestCase, override_settings
@@ -6,7 +9,8 @@ from .forms import DiscussionForm
 from .models import Discussion
 
 
-@override_settings(REQUIRE_LOGIN=False)
+# 실제 논의/ 폴더의 글이 끼어들지 않게 빈 폴더를 쓴다 (글 동기화는 DiscussionDocTests 에서 따로 본다).
+@override_settings(REQUIRE_LOGIN=False, DISCUSSIONS_DIR=Path(tempfile.mkdtemp(prefix="empty-discussions-")))
 class DiscussionTests(TestCase):
     def setUp(self):
         patcher = patch("apps.core.context_processors.gitstate.deploy_status", return_value=None)
@@ -20,8 +24,10 @@ class DiscussionTests(TestCase):
         response = self.client.get(reverse("discussions:list"), {"topic": self.root.pk, "q": "글 템플릿"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual([x.pk for x in response.context["entries"]], [self.deep.pk])
-        self.assertContains(response, "제품 비교 / AI 도구 / 글 템플릿")
-        self.assertContains(response, 'maxlength="140"')
+        self.assertContains(response, "제품 비교 / AI 도구")  # 중구분 칸
+        self.assertContains(response, "글 템플릿")
+        detail = self.client.get(self.deep.get_absolute_url())
+        self.assertContains(detail, 'maxlength="140"')
 
     def test_cycle_cross_area_and_changing_parent_menu_are_rejected(self):
         self.root.parent = self.deep
@@ -144,3 +150,89 @@ class DiscussionTests(TestCase):
                 response = Client().get(url)
                 self.assertEqual(response.status_code, 302)
                 self.assertTrue(response["Location"].startswith("/login/?next="))
+
+
+POST = """---
+제목: 검색 표준과 출처
+대구분: 일일 아이디어
+중구분: 운영
+상태: 논의 중
+핵심: 표준을 읽고 출처 6곳에서 찾는다
+다음 행동: 크롬 확장 연결
+대화 상대: Claude
+대화량: 여러 번
+등록: 2026-10-12
+날짜: 2026-10-14 13:50
+---
+# 본문 제목
+
+| 출처 | 상태 |
+|---|---|
+| 유튜브 | 열림 |
+
+<div class="fig"><svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg></div>
+
+![흐름](그림/flow.png)
+"""
+
+
+@override_settings(REQUIRE_LOGIN=False)
+class DiscussionDocTests(TestCase):
+    """저장소의 논의 글(md)이 목록 한 줄과 상세 글로 올라오는지."""
+
+    def setUp(self):
+        patcher = patch("apps.core.context_processors.gitstate.deploy_status", return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.repo = Path(tempfile.mkdtemp(prefix="repo-"))
+        self.addCleanup(shutil.rmtree, self.repo, True)
+        self.folder = self.repo / "논의" / "일일아이디어"
+        (self.folder / "그림").mkdir(parents=True)
+        (self.folder / "그림" / "flow.png").write_bytes(bytes([137]) + b"PNG fake")
+        self.file = self.folder / "2026-10-14_검색표준.md"
+        self.file.write_text(POST, encoding="utf-8")
+        (self.repo / "논의" / "README.md").write_text("# 안내", encoding="utf-8")
+        override = self.settings(REPO_ROOT=self.repo, DISCUSSIONS_DIR=self.repo / "논의")
+        override.enable()
+        self.addCleanup(override.disable)
+
+    def test_post_becomes_one_line_entry_with_its_date(self):
+        response = self.client.get(reverse("discussions:list"), {"area": "daily_ideas"})
+        item = Discussion.objects.get(doc="논의/일일아이디어/2026-10-14_검색표준.md")
+        self.assertEqual((item.name, item.area, item.status, item.partner, item.amount), ("검색 표준과 출처", "daily_ideas", "talk", "claude", "several"))
+        self.assertEqual(item.parent.name, "운영")  # 중구분 = 상위 주제
+        self.assertEqual(item.updated_at.astimezone().strftime("%Y-%m-%d %H:%M"), "2026-10-14 13:50")
+        self.assertEqual(item.created_at.date().isoformat(), "2026-10-12")
+        self.assertEqual(Discussion.objects.filter(doc="").count(), 1)  # README 는 올리지 않고, 중구분 '운영'만 생겼다
+        self.assertIn(item, response.context["entries"])
+        self.assertContains(response, "검색 표준과 출처")
+        self.assertNotContains(response, "본문 제목")  # 목록에는 제목만
+
+    def test_detail_reads_like_a_post_with_tables_and_pictures(self):
+        self.client.get(reverse("discussions:list"))
+        item = Discussion.objects.get(doc__endswith="검색표준.md")
+        response = self.client.get(item.get_absolute_url())
+        self.assertContains(response, "<table>")
+        self.assertContains(response, "<svg")
+        image = reverse("discussions:asset", args=["일일아이디어/그림/flow.png"])
+        self.assertContains(response, f'src="{image}"')
+        self.assertEqual(self.client.get(image).status_code, 200)
+        self.assertEqual(self.client.get(reverse("discussions:asset", args=["../../etc/passwd"])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("discussions:asset", args=["일일아이디어/2026-10-14_검색표준.md"])).status_code, 404)
+
+    def test_screen_edits_stay_until_the_post_changes(self):
+        self.client.get(reverse("discussions:list"))
+        item = Discussion.objects.get(doc__endswith="검색표준.md")
+        self.client.post(reverse("discussions:quick", args=[item.pk]), {"summary": "화면에서 고침", "next_action": "확인", "status": "decided", "return_to": item.get_absolute_url()})
+        self.client.get(reverse("discussions:list"))
+        item.refresh_from_db()
+        self.assertEqual(item.summary, "화면에서 고침")  # 글이 그대로면 화면 값 유지
+
+        self.file.write_text(POST.replace("상태: 논의 중", "상태: 결정").replace("표준을 읽고", "최신 표준을 읽고"), encoding="utf-8")
+        self.client.get(reverse("discussions:list"))
+        item.refresh_from_db()
+        self.assertEqual((item.status, item.summary), ("decided", "최신 표준을 읽고 출처 6곳에서 찾는다"))  # 글이 바뀌면 글 값
+        self.assertEqual(item.history.first().summary, "최신 표준을 읽고 출처 6곳에서 찾는다")
+
+        self.file.unlink()
+        self.assertContains(self.client.get(item.get_absolute_url()), "저장소에 없습니다")
