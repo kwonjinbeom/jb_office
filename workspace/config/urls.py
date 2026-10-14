@@ -13,4 +13,7 @@ urlpatterns = [
     path("tasks/", include("apps.tasks.urls")),
     path("memos/", include("apps.memos.urls")),
     path("docs/", include("apps.docs.urls")),
+    path("blog/", include(("apps.content.urls", "blog"), namespace="blog")),
+    path("video/", include(("apps.content.urls", "video"), namespace="video")),
+    path("discussions/", include("apps.discussions.urls")),
 ]

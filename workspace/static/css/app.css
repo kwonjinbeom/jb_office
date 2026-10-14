@@ -212,6 +212,16 @@ pre code { background: none; padding: 0; }
 .btn .kbd { margin-left: 2px; }
 .inline-form { display: inline-flex; gap: 4px; align-items: center; margin: 0; }
 
+/* 콘텐츠 폴더와 간결한 논의 표. 기존 표·폼 스타일을 사용한다. */
+.content-folders { padding: 12px var(--gutter); border-bottom: 1px solid var(--border); background: var(--panel); flex: none; }
+.content-folder-head, .content-folder-links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.content-folder-head { margin-bottom: 8px; }
+.content-folder-head strong { overflow-wrap: anywhere; }
+.content-rules { margin: 8px 0; font-size: 12px; }
+.content-rules summary { cursor: pointer; color: var(--text-2); margin-bottom: 8px; }
+.discussion-grid td { height: 52px; }
+.discussion-grid input { min-width: 0; }
+
 /* ---------------------------------------------------------------------
    입력
    --------------------------------------------------------------------- */

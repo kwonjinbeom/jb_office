@@ -110,6 +110,8 @@ INSTALLED_APPS = [
     "apps.tasks",
     "apps.memos",
     "apps.docs",
+    "apps.content",
+    "apps.discussions",
 ]
 
 MIDDLEWARE = [
