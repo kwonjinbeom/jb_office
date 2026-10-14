@@ -22,15 +22,10 @@ Claude UI `3775b28`의 표·폼·아이콘을 사용한다. 기존 메뉴와 데
 
 ## 서버 반영
 
-**서버 migrate 필요.** 새 `content`, `discussions` 앱의 초기 migration을 추가했다. 실제 서버 DB에는 이 환경에서 적용하지 않는다.
+**서버 migrate 필요 — 기존 서버 반영 기능에서 자동 실행한다.** 새 `content`, `discussions` 앱의 초기 migration을 추가했다.
 
-사용자가 코드 반영 후 서버 가상환경에서 실행:
+GitHub push 웹훅과 화면의 서버 코드 갱신은 같은 `pull_and_reload()`를 사용한다. 최신 코드를 받은 뒤 서버 가상환경 Python으로 `migrate --noinput` → `collectstatic` → 재시작을 수행한다. 이 두 앱도 자동 적용 대상이므로 별도 수동 migration 명령은 필요 없다.
 
-```bash
-python manage.py migrate
-python manage.py check
-```
-
-기존 코드 갱신 기능은 migrate·collectstatic을 실행한다. 배포 실패 시 서버 가상환경과 `DATABASE_PATH` 설정을 확인한다.
+웹훅이 등록되어 있으면 main push에 자동 반영된다. 웹훅을 사용하지 않을 때는 기존 서버 코드 갱신 기능이 같은 순서로 처리한다. 실행 결과·오류는 기존 배포 상태와 갱신 메시지에 기록된다.
 
 추가 패키지는 없다. 2026-10-14 사용자가 최신 main 병합과 푸시를 승인했다. 서버 배포는 사용자가 진행한다.
