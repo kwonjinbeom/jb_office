@@ -140,3 +140,34 @@ class SearchStandardTests(TestCase):
         response = self.client.get(reverse("daily_ideas:list"))
         self.assertContains(response, "표준 없이 조사")
         self.assertContains(response, reverse("daily_ideas:standard"))
+
+
+class SearchMethodTests(TestCase):
+    """10-14 조사 방식: 표준의 '조사 방식' 항목과, 서버의 기존 표준에 새 버전으로 반영하는 migration."""
+
+    def test_migration_adds_a_version_keeping_what_the_user_wrote(self):
+        import importlib
+
+        from django.apps import apps as registry
+
+        from . import standard
+        from .models import SearchStandard
+
+        migration = importlib.import_module("apps.daily_ideas.migrations.0002_searchstandard_approach")
+        migration.forward(registry, None)  # 저장된 표준이 없으면 아무것도 만들지 않는다
+        self.assertEqual(SearchStandard.objects.count(), 0)
+
+        SearchStandard.objects.create(version=1, goal="내 목적", profile="내 조건", areas="내 분야", exclude="성인물만", focus="오늘 주문", criteria="옛 기준", output="30개")
+        migration.forward(registry, None)
+        latest = SearchStandard.latest()
+        self.assertEqual(latest.version, 2)
+        self.assertEqual((latest.goal, latest.profile, latest.areas, latest.exclude, latest.focus), ("내 목적", "내 조건", "내 분야", "성인물만", "오늘 주문"))
+        self.assertEqual((latest.approach, latest.criteria, latest.output), (standard.APPROACH, standard.CRITERIA, standard.OUTPUT))
+        self.assertEqual(SearchStandard.objects.get(version=1).criteria, "옛 기준")  # 옛 버전은 그대로 남는다
+
+    def test_request_points_to_the_method_doc_and_includes_the_approach(self):
+        self.client.post(reverse("daily_ideas:standard"), {**__import__("apps.daily_ideas.standard", fromlist=["defaults"]).defaults(), "note": "첫 표준"})
+        text = self.client.get(reverse("daily_ideas:standard")).context["request_text"]
+        self.assertIn("시장조사/00_아이디어_조사방법.md", text)
+        self.assertIn("## 2. 조사 방식", text)
+        self.assertIn("수익 경로가 서지 않으면", text)

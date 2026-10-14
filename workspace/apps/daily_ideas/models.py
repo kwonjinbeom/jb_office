@@ -9,6 +9,7 @@ class SearchStandard(models.Model):
 
     version = models.PositiveIntegerField("버전", unique=True)
     goal = models.TextField("목적과 방향", blank=True)
+    approach = models.TextField("조사 방식", blank=True)
     profile = models.TextField("나의 조건과 자산", blank=True)
     areas = models.TextField("찾을 분야와 비중", blank=True)
     criteria = models.TextField("좋은 아이디어의 기준", blank=True)
