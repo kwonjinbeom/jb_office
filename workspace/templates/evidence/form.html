@@ -3,30 +3,29 @@
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'evidence:list' %}">증거 수집함</a></div>{% endblock %}
 
 {% block actions %}
+{% if item %}<a class="btn ghost danger" href="{% url 'evidence:delete' item.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
 <a class="btn" href="{{ next|default:'/evidence/' }}">취소</a>
-<button class="btn btn--primary" type="submit" form="main-form">저장</button>
-{% if item %}<a class="btn btn--danger-ghost" href="{% url 'evidence:delete' item.pk %}">삭제</a>{% endif %}
+<button class="btn primary" type="submit" form="main-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}
 
 {% block content %}
-<form id="main-form" method="post" class="form">
+<form id="main-form" method="post" class="form-page">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
-  <div class="card">
-    <div class="field">{{ form.url.label_tag }}{{ form.url }}{{ form.url.errors }}</div>
-    <div class="form__row form__row--2">
-      <div class="field">{{ form.title.label_tag }}{{ form.title }}<div class="help">{{ form.title.help_text }}</div>{{ form.title.errors }}</div>
-      <div class="field">{{ form.kind.label_tag }}{{ form.kind }}{{ form.kind.errors }}</div>
+  {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
+  <section class="card">
+    <div class="card-body form-grid">
+      {% include "includes/field.html" with field=form.url cls="span-2" %}
+      {% include "includes/field.html" with field=form.title %}
+      {% include "includes/field.html" with field=form.kind %}
+      {% include "includes/field.html" with field=form.note cls="span-2" %}
+      {% include "includes/field.html" with field=form.idea %}
+      {% include "includes/field.html" with field=form.stage %}
     </div>
-    <div class="field">{{ form.note.label_tag }}{{ form.note }}<div class="help">{{ form.note.help_text }}</div>{{ form.note.errors }}</div>
-    <div class="form__row form__row--2">
-      <div class="field">{{ form.idea.label_tag }}{{ form.idea }}{{ form.idea.errors }}</div>
-      <div class="field">{{ form.stage.label_tag }}{{ form.stage }}{{ form.stage.errors }}</div>
-    </div>
-  </div>
-  <div class="form__footer">
+  </section>
+  <div class="form-foot">
     <a class="btn" href="{{ next|default:'/evidence/' }}">취소</a>
-    <button class="btn btn--primary" type="submit">저장</button>
+    <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
   </div>
 </form>
 {% endblock %}

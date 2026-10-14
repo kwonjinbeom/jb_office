@@ -1,0 +1,14 @@
+{# 폼 필드 한 칸. 컨텍스트: field, (선택) cls="span-2", nolabel=True #}
+{% if field.field.widget.input_type == "checkbox" %}
+<div class="field check{% if cls %} {{ cls }}{% endif %}">
+  <label>{{ field }} {{ field.label }}</label>
+  {{ field.errors }}
+</div>
+{% else %}
+<div class="field{% if cls %} {{ cls }}{% endif %}">
+  {% if not nolabel %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% endif %}
+  {{ field }}
+  {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+  {{ field.errors }}
+</div>
+{% endif %}

@@ -1,33 +1,37 @@
 {% extends "base.html" %}
 
-{% block heading %}내 아이디어 <span class="count">{{ ideas|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
+{% block heading %}내 아이디어 <span class="cnt">{{ ideas|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
 
 {% block actions %}
-<a class="btn btn--primary" href="{% url 'ideas:create' %}">＋ 아이디어 추가</a>
+<a class="btn primary" href="{% url 'ideas:create' %}">{% include "includes/ic.html" with name="plus" %}아이디어 추가</a>
 {% endblock %}
 
-{% block content %}
-<form method="get" class="filterbar" id="filterbar">
-  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="코드, 제목, 고객, 결과물, 태그 검색">
-  <select class="select" name="category">
+{% block toolbar %}
+<form method="get" class="filter-bar" id="filterbar">
+  <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="코드, 제목, 고객, 결과물, 태그 검색  ( / )"></div>
+  <select class="select sm" name="category" data-autosubmit>
     <option value="">분류 전체</option>
     {% for value, label in categories %}
     <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
   <input type="hidden" name="sort" value="{{ sort }}">
-  <button class="btn" type="submit">적용</button>
-  {% if is_filtered %}<a class="btn btn--ghost" href="{% url 'ideas:list' %}">초기화</a>{% endif %}
+  <button class="btn sm" type="submit">적용</button>
+  {% if is_filtered %}<a class="btn ghost sm" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
 </form>
+{% endblock %}
 
-<div class="card card--flush">
-  <table class="table table--rows table--grid">
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+<div class="grid-wrap">
+  <table class="grid clickable" style="min-width:1000px">
     <thead>
       <tr>
         {% for key, label in columns %}
-        <th class="{% if key == sort_key %}is-sorted{% endif %}" style="{% if key == 'code' %}width:64px{% elif key == 'category' %}width:110px{% elif key == 'customer' %}width:220px{% elif key == 'min_product' %}width:300px{% elif key == 'updated' %}width:130px{% endif %}">
-          <a href="?q={{ q|urlencode }}&category={{ category }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}" class="th-sort">
-            {{ label }}{% if key == sort_key %}<span class="th-sort__arrow">{% if sort_desc %}▼{% else %}▲{% endif %}</span>{% endif %}
+        <th class="{% if key == sort_key %}sorted{% endif %}" style="{% if key == 'code' %}width:84px{% elif key == 'category' %}width:130px{% elif key == 'customer' %}width:220px{% elif key == 'min_product' %}width:300px{% elif key == 'updated' %}width:150px{% endif %}">
+          <a href="?q={{ q|urlencode }}&category={{ category }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}">
+            {{ label }}{% if key == sort_key %}<span class="sort">{% if sort_desc %}▼{% else %}▲{% endif %}</span>{% endif %}
           </a>
         </th>
         {% endfor %}
@@ -35,16 +39,16 @@
     </thead>
     <tbody>
       {% for idea in ideas %}
-      <tr class="rowlink-row" data-href="{{ idea.get_absolute_url }}">
+      <tr data-href="{{ idea.get_absolute_url }}">
         <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
-        <td class="cell-title"><a class="rowlink" href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
-        <td><span class="chip">{{ idea.get_category_display }}</span></td>
-        <td class="small"><span class="clip clip--sm" title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</span></td>
-        <td class="small text-2 cell-clip"><span class="clip" title="{{ idea.min_product }}">{{ idea.min_product|default:"-" }}</span></td>
-        <td class="mono small muted nowrap">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
+        <td class="title-cell" title="{{ idea.title }}"><a href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
+        <td><span class="tag">{{ idea.get_category_display }}</span></td>
+        <td title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</td>
+        <td class="text-2" title="{{ idea.min_product }}">{{ idea.min_product|default:"-" }}</td>
+        <td class="small muted num">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
       </tr>
       {% empty %}
-      <tr><td colspan="{{ columns|length }}" class="empty">
+      <tr><td colspan="{{ columns|length }}" class="grid-empty">
         {% if total == 0 %}아직 내 아이디어가 없습니다. <a href="{% url 'daily_ideas:list' %}">일일 아이디어</a>에서 필요한 후보를 담거나 직접 추가하세요.
         {% else %}조건에 맞는 아이디어가 없습니다.{% endif %}
       </td></tr>

@@ -1,26 +1,28 @@
 {% extends "base.html" %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'memos:list' %}">메모</a>{% if memo %} › <a href="{{ memo.get_absolute_url }}">{{ memo.title|truncatechars:30 }}</a>{% endif %}</div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'memos:list' %}">메모</a>{% if memo %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ memo.get_absolute_url }}">{{ memo.title|truncatechars:30 }}</a>{% endif %}</div>{% endblock %}
 
 {% block actions %}
 <a class="btn" href="{% if memo %}{{ memo.get_absolute_url }}{% else %}{% url 'memos:list' %}{% endif %}">취소</a>
-<button class="btn btn--primary" type="submit" form="memo-form">저장</button>
+<button class="btn primary" type="submit" form="memo-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}
 
 {% block content %}
-<form id="memo-form" method="post" class="form">
+<form id="memo-form" method="post" class="form-page">
   {% csrf_token %}
-  <div class="card">
-    <div class="field">{{ form.title.label_tag }}{{ form.title }}{{ form.title.errors }}</div>
-    <div class="field">{{ form.body.label_tag }}{{ form.body }}{{ form.body.errors }}</div>
-    <div class="form__row form__row--2">
-      <div class="field">{{ form.tags.label_tag }}{{ form.tags }}<div class="help">{{ form.tags.help_text }}</div>{{ form.tags.errors }}</div>
-      <div class="field field--check"><label>{{ form.pinned }} {{ form.pinned.label }}</label>{{ form.pinned.errors }}</div>
+  {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
+  <section class="card">
+    <div class="card-body form-grid">
+      {% include "includes/field.html" with field=form.title cls="span-2" %}
+      {% include "includes/field.html" with field=form.body cls="span-2" %}
+      {% include "includes/field.html" with field=form.tags %}
+      {% include "includes/field.html" with field=form.pinned %}
     </div>
-  </div>
-  <div class="form__footer">
+  </section>
+  <div class="form-foot">
+    <span class="muted small" style="margin-right:auto">본문에서 <span class="kbd">Ctrl+Enter</span> 로 저장</span>
     <a class="btn" href="{% if memo %}{{ memo.get_absolute_url }}{% else %}{% url 'memos:list' %}{% endif %}">취소</a>
-    <button class="btn btn--primary" type="submit">저장</button>
+    <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
   </div>
 </form>
 {% endblock %}

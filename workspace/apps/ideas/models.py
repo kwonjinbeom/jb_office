@@ -67,7 +67,7 @@ class Idea(models.Model):
 
     @property
     def status_tone(self) -> str:
-        """배지 색상 톤. CSS 의 .badge--<tone> 과 짝을 이룬다."""
+        """배지 색상 톤. CSS 의 .badge.<tone> 과 짝을 이룬다."""
         return {
             self.Status.EXPERIMENT: "blue",
             self.Status.ACTIVE: "green",

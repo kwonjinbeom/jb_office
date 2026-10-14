@@ -5,6 +5,17 @@ from . import gitstate
 from .menus import get_menus
 
 
+def _asset_version() -> str:
+    """app.css·app.js 의 수정 시각. 주소 뒤 ?v= 로 붙여, 파일이 바뀌면 폰 브라우저도 새로 받게 한다."""
+    latest = 0
+    for rel in ("css/app.css", "js/app.js"):
+        try:
+            latest = max(latest, int((settings.BASE_DIR / "static" / rel).stat().st_mtime))
+        except OSError:
+            pass
+    return str(latest)
+
+
 def navigation(request):
     """모든 템플릿에 메뉴 목록, 현재 활성 메뉴 키, 오늘 날짜, 배포 정보를 넣는다."""
     match = getattr(request, "resolver_match", None)
@@ -17,6 +28,7 @@ def navigation(request):
         "MENUS": get_menus(),
         "ACTIVE_MENU": active or "home",
         "today": timezone.localdate(),
+        "ASSET_VER": _asset_version(),
         "DEPLOY_INFO": {
             "status": status,
             "last": gitstate.load_deploy_state(),

@@ -1,149 +1,173 @@
 {% extends "base.html" %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">내 아이디어</a> › {{ idea.code }}</div>{% endblock %}
-{% block heading %}<span class="code code--lg">{{ idea.code }}</span> {{ idea.title }}{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">내 아이디어</a>{% include "includes/ic.html" with name="chevron-right" %}{{ idea.code }}</div>{% endblock %}
+{% block heading %}<span class="code lg">{{ idea.code }}</span>{{ idea.title }}{% endblock %}
 
 {% block actions %}
-{% if prev_idea %}<a class="btn btn--ghost" href="{{ prev_idea.get_absolute_url }}" title="{{ prev_idea.title }}">‹ {{ prev_idea.code }}</a>{% endif %}
-{% if next_idea %}<a class="btn btn--ghost" href="{{ next_idea.get_absolute_url }}" title="{{ next_idea.title }}">{{ next_idea.code }} ›</a>{% endif %}
-<a class="btn" href="{% url 'ideas:list' %}">목록</a>
-<a class="btn btn--primary" href="{% url 'ideas:edit' idea.pk %}">개요 수정</a>
-<a class="btn btn--danger-ghost" href="{% url 'ideas:delete' idea.pk %}">삭제</a>
+{% if prev_idea %}<a class="btn ghost" href="{{ prev_idea.get_absolute_url }}" title="{{ prev_idea.title }}">{% include "includes/ic.html" with name="chevron-left" %}{{ prev_idea.code }}</a>{% endif %}
+{% if next_idea %}<a class="btn ghost" href="{{ next_idea.get_absolute_url }}" title="{{ next_idea.title }}">{{ next_idea.code }}{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
+<a class="btn ghost danger" href="{% url 'ideas:delete' idea.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>
+<a class="btn" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="list" %}목록</a>
+<a class="btn primary" href="{% url 'ideas:edit' idea.pk %}">{% include "includes/ic.html" with name="edit" %}개요 수정</a>
 {% endblock %}
 
-{% block content %}
-<div class="statusbar">
-  <span class="chip">{{ idea.get_category_display }}</span>
-  <span class="statusbar__sep"></span>
+{% block toolbar %}
+<div class="filter-bar">
+  <span class="tag">{{ idea.get_category_display }}</span>
+  <span class="sep"></span>
   {% if current_stage %}
     <span class="muted small">현재 단계</span> <strong>{{ current_stage.order }}. {{ current_stage.title }}</strong>
   {% else %}
     <span class="muted small">단계가 없습니다. 아래에서 첫 단계를 추가하세요.</span>
   {% endif %}
-  <span class="statusbar__sep"></span>
-  <span class="progress" title="{{ progress.done }}/{{ progress.total }} 완료"><span class="progress__bar" style="width: {{ progress.pct }}%"></span></span>
-  <span class="muted small">{{ progress.done }}/{{ progress.total }}</span>
+  <span class="sep"></span>
+  <span class="progress" title="{{ progress.done }}/{{ progress.total }} 완료"><i style="width: {{ progress.pct }}%"></i></span>
+  <span class="muted small num">{{ progress.done }}/{{ progress.total }}</span>
 </div>
+{% endblock %}
 
-<div class="grid grid--detail">
+{% block content %}
+<div class="detail-cols">
   <div class="stack">
     <!-- 진행 단계 -->
-    <div class="card" id="stages">
-      <div class="card__head"><h2>진행 단계</h2><span class="muted small">위에서 아래로. 진행 중은 한 번에 하나</span></div>
+    <section class="card" id="stages">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="flag" %}진행 단계</h2><span class="hint">위에서 아래로. 진행 중은 한 번에 하나</span></div>
       {% if stages %}
-      <ol class="stages">
-        {% for st in stages %}
-        <li class="stage stage--{{ st.status }} {% if st.is_overdue %}is-overdue{% endif %}">
-          <div class="stage__num">{{ st.order }}</div>
-          <div class="stage__body">
-            <div class="stage__row">
-              <a class="stage__title" href="{% url 'ideas:stage_edit' idea.pk st.pk %}">{{ st.title }}</a>
-              <span class="badge badge--{{ st.status_tone }}">{{ st.get_status_display }}</span>
-              {% if st.due %}<span class="mono small {% if st.is_overdue %}text-red{% else %}muted{% endif %}">{{ st.due|date:"m-d" }}</span>{% endif %}
+      <div class="card-body flush">
+        <ol class="stages">
+          {% for st in stages %}
+          <li class="stage {{ st.status }}{% if st.is_overdue %} overdue{% endif %}">
+            <div class="stage-num">{% if st.status == 'done' %}<svg class="ic"><use href="#i-check"/></svg>{% else %}{{ st.order }}{% endif %}</div>
+            <div class="stage-body">
+              <div class="stage-row">
+                <a class="stage-title" href="{% url 'ideas:stage_edit' idea.pk st.pk %}" title="단계 수정">{{ st.title }}</a>
+                {% if st.due %}<span class="stage-due{% if st.is_overdue %} over{% endif %}"><svg class="ic"><use href="#i-calendar"/></svg>{{ st.due|date:"m-d" }}</span>{% endif %}
+              </div>
+              {% if st.goal %}<div class="stage-goal">{{ st.goal|linebreaksbr }}</div>{% endif %}
+              {% if st.result %}<div class="stage-result"><span class="k">결과</span>{{ st.result|linebreaksbr }}</div>{% endif %}
+              <div class="stage-actions">
+                <form method="post" action="{% url 'ideas:stage_status' idea.pk st.pk %}" class="status-seg" title="상태 바꾸기">{% csrf_token %}
+                  <button name="status" value="todo" {% if st.status == 'todo' %}class="on" disabled{% endif %}>대기</button>
+                  <button name="status" value="doing" {% if st.status == 'doing' %}class="on" disabled{% endif %}>진행</button>
+                  <button name="status" value="done" {% if st.status == 'done' %}class="on" disabled{% endif %}>완료</button>
+                  <button name="status" value="hold" {% if st.status == 'hold' %}class="on" disabled{% endif %}>보류</button>
+                </form>
+                <span class="tools">
+                  <form method="post" action="{% url 'ideas:stage_move' idea.pk st.pk %}" class="inline-form" style="gap:2px">{% csrf_token %}
+                    <button class="btn ghost sm icon" name="dir" value="up" {% if forloop.first %}disabled{% endif %} title="위로" aria-label="위로"><svg class="ic"><use href="#i-arrow-up"/></svg></button>
+                    <button class="btn ghost sm icon" name="dir" value="down" {% if forloop.last %}disabled{% endif %} title="아래로" aria-label="아래로"><svg class="ic"><use href="#i-arrow-down"/></svg></button>
+                  </form>
+                  <a class="btn ghost sm" href="{% url 'tasks:create' %}?idea={{ idea.pk }}&stage={{ st.pk }}&next={{ idea.get_absolute_url|urlencode }}"><svg class="ic"><use href="#i-plus"/></svg>할 일</a>
+                  <a class="btn ghost sm" href="{% url 'evidence:create' %}?idea={{ idea.pk }}&stage={{ st.pk }}&next={{ idea.get_absolute_url|urlencode }}"><svg class="ic"><use href="#i-plus"/></svg>링크</a>
+                  <form method="post" action="{% url 'ideas:stage_delete' idea.pk st.pk %}" class="inline-form" onsubmit="return confirm('이 단계를 삭제할까요? 달린 할 일과 링크는 아이디어에 남습니다.')">{% csrf_token %}
+                    <button class="btn ghost sm icon danger" title="삭제" aria-label="삭제"><svg class="ic"><use href="#i-trash"/></svg></button>
+                  </form>
+                </span>
+              </div>
             </div>
-            {% if st.goal %}<div class="stage__goal small text-2">{{ st.goal|linebreaksbr }}</div>{% endif %}
-            {% if st.result %}<div class="stage__result small"><span class="k">결과</span>{{ st.result|linebreaksbr }}</div>{% endif %}
-            <div class="stage__actions">
-              <form method="post" action="{% url 'ideas:stage_status' idea.pk st.pk %}" class="inline-form">{% csrf_token %}
-                {% if st.status != 'doing' %}<button class="btn btn--xs" name="status" value="doing">진행</button>{% endif %}
-                {% if st.status != 'done' %}<button class="btn btn--xs" name="status" value="done">완료</button>{% endif %}
-                {% if st.status != 'hold' %}<button class="btn btn--xs btn--ghost" name="status" value="hold">보류</button>{% endif %}
-                {% if st.status != 'todo' %}<button class="btn btn--xs btn--ghost" name="status" value="todo">대기</button>{% endif %}
-              </form>
-              <form method="post" action="{% url 'ideas:stage_move' idea.pk st.pk %}" class="inline-form">{% csrf_token %}
-                <button class="btn btn--xs btn--ghost" name="dir" value="up" {% if forloop.first %}disabled{% endif %} title="위로">↑</button>
-                <button class="btn btn--xs btn--ghost" name="dir" value="down" {% if forloop.last %}disabled{% endif %} title="아래로">↓</button>
-              </form>
-              <a class="btn btn--xs btn--ghost" href="{% url 'tasks:create' %}?idea={{ idea.pk }}&stage={{ st.pk }}&next={{ idea.get_absolute_url|urlencode }}">＋ 할 일</a>
-              <a class="btn btn--xs btn--ghost" href="{% url 'evidence:create' %}?idea={{ idea.pk }}&stage={{ st.pk }}&next={{ idea.get_absolute_url|urlencode }}">＋ 링크</a>
-              <form method="post" action="{% url 'ideas:stage_delete' idea.pk st.pk %}" class="inline-form" onsubmit="return confirm('이 단계를 삭제할까요? 달린 할 일과 링크는 아이디어에 남습니다.')">{% csrf_token %}
-                <button class="btn btn--xs btn--danger-ghost" title="삭제">삭제</button>
-              </form>
-            </div>
-          </div>
-        </li>
-        {% endfor %}
-      </ol>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
       {% else %}
-      <p class="muted small">아직 단계가 없습니다. 예: <em>1. 상위 도구 리뷰에서 반복 불편 10개 뽑기 → 2. 하나 골라 범위 정하기 → 3. 최소 동작 만들기 → 4. 올리기 → 5. 반응 기록</em></p>
+      <div class="card-body"><p class="empty-line">아직 단계가 없습니다. 예: <em>1. 상위 도구 리뷰에서 반복 불편 10개 뽑기 → 2. 하나 골라 범위 정하기 → 3. 최소 동작 만들기 → 4. 올리기 → 5. 반응 기록</em></p></div>
       {% endif %}
-      <form method="post" action="{% url 'ideas:stage_quick_add' idea.pk %}" class="quickrow">{% csrf_token %}
-        {{ quick_stage_form.title }}
-        <button class="btn" type="submit">단계 추가</button>
-      </form>
-    </div>
+      <div class="card-foot">
+        <form method="post" action="{% url 'ideas:stage_quick_add' idea.pk %}" class="quickrow">{% csrf_token %}
+          {{ quick_stage_form.title }}
+          <button class="btn" type="submit">{% include "includes/ic.html" with name="plus" %}단계 추가</button>
+        </form>
+      </div>
+    </section>
 
     <!-- 작업 로그 -->
-    <div class="card" id="logs">
-      <div class="card__head"><h2>작업 로그</h2><span class="muted small">짧게, 자주</span></div>
-      <form method="post" action="{% url 'ideas:log_add' idea.pk %}" class="logform">{% csrf_token %}
-        {{ log_form.body }}
-        <div class="logform__row">
-          {{ log_form.stage }}
-          <button class="btn btn--primary" type="submit">기록</button>
-        </div>
-      </form>
-      {% if logs %}
-      <ul class="loglist">
-        {% for log in logs %}
-        <li class="log">
-          <div class="log__meta mono small muted">{{ log.created_at|date:"Y-m-d H:i" }}{% if log.stage %} · <span class="text-2">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</span>{% endif %}
-            <form method="post" action="{% url 'ideas:log_delete' idea.pk log.pk %}" class="inline-form" onsubmit="return confirm('이 로그를 삭제할까요?')">{% csrf_token %}<button class="log__del" title="삭제">×</button></form>
+    <section class="card" id="logs">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="clock" %}작업 로그</h2><span class="hint">짧게, 자주</span></div>
+      <div class="card-body">
+        <form method="post" action="{% url 'ideas:log_add' idea.pk %}" class="col" style="margin:0 0 12px">{% csrf_token %}
+          {{ log_form.body }}
+          <div class="row" style="justify-content:flex-end">
+            <div style="max-width:260px" class="grow">{{ log_form.stage }}</div>
+            <button class="btn primary" type="submit">기록 <span class="kbd">Ctrl+Enter</span></button>
           </div>
-          <div class="log__body">{{ log.body|linebreaksbr }}</div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="muted small">아직 로그가 없습니다. 오늘 한 일을 한 줄 남기면 내일 이어가기 쉽습니다.</p>
-      {% endif %}
-    </div>
+        </form>
+        {% if logs %}
+        <ul class="rows">
+          {% for log in logs %}
+          <li class="log">
+            <div class="log-date"><b>{{ log.created_at|date:"Y-m-d" }}</b>{{ log.created_at|date:"H:i" }}</div>
+            <div>
+              {% if log.stage %}<div class="log-meta">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</div>{% endif %}
+              <div class="log-body">{{ log.body|linebreaksbr }}</div>
+            </div>
+            <form method="post" action="{% url 'ideas:log_delete' idea.pk log.pk %}" class="inline-form" onsubmit="return confirm('이 로그를 삭제할까요?')">{% csrf_token %}<button class="btn ghost sm icon log-del" title="삭제" aria-label="삭제"><svg class="ic"><use href="#i-x"/></svg></button></form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-line">아직 로그가 없습니다. 오늘 한 일을 한 줄 남기면 내일 이어가기 쉽습니다.</p>
+        {% endif %}
+      </div>
+    </section>
 
     <!-- 개요 (접기) -->
-    <details class="card card--details" {% if not stages %}open{% endif %}>
-      <summary>시장조사 개요 <span class="muted small">(출처: {{ idea.source_doc|default:"-" }})</span></summary>
-      <dl class="kv kv--wide" style="margin-top:12px">
-        {% for label, value in fields %}
-        <dt>{{ label }}</dt>
-        <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">-</span>{% endif %}</dd>
-        {% endfor %}
-      </dl>
+    <details class="card" {% if not stages %}open{% endif %}>
+      <summary>{% include "includes/ic.html" with name="chevron-right" %}시장조사 개요 <span class="hint">출처: {{ idea.source_doc|default:"-" }}</span></summary>
+      <div class="card-body">
+        <dl class="kv wide">
+          {% for label, value in fields %}
+          <dt>{{ label }}</dt>
+          <dd>{% if value %}{{ value|linebreaksbr }}{% else %}<span class="muted">-</span>{% endif %}</dd>
+          {% endfor %}
+        </dl>
+      </div>
     </details>
   </div>
 
   <div class="stack">
     <!-- 할 일 -->
-    <div class="card" id="tasks">
-      <div class="card__head">
-        <h2>할 일 <span class="muted small">({{ tasks|length }})</span></h2>
-        <a class="btn btn--sm" href="{% url 'tasks:create' %}?idea={{ idea.pk }}&next={{ idea.get_absolute_url|urlencode }}">＋ 할 일</a>
+    <section class="card" id="tasks">
+      <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="check-list" %}할 일 <span class="cnt">{{ tasks|length }}</span></h2>
+        <div class="page-actions"><a class="btn ghost sm" href="{% url 'tasks:create' %}?idea={{ idea.pk }}&next={{ idea.get_absolute_url|urlencode }}">{% include "includes/ic.html" with name="plus" %}할 일</a></div>
       </div>
-      {% include "tasks/_rows.html" with tasks=tasks next_url=idea.get_absolute_url show_stage=True %}
-    </div>
+      <div class="card-body">
+        {% include "tasks/_rows.html" with tasks=tasks next_url=idea.get_absolute_url show_stage=True %}
+      </div>
+    </section>
 
     <!-- 증거 링크 -->
-    <div class="card" id="evidence">
-      <div class="card__head">
-        <h2>증거 링크 <span class="muted small">({{ evidence_items|length }})</span></h2>
-        <a class="btn btn--sm" href="{% url 'evidence:create' %}?idea={{ idea.pk }}&next={{ idea.get_absolute_url|urlencode }}">＋ 링크</a>
+    <section class="card" id="evidence">
+      <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="link" %}증거 링크 <span class="cnt">{{ evidence_items|length }}</span></h2>
+        <div class="page-actions"><a class="btn ghost sm" href="{% url 'evidence:create' %}?idea={{ idea.pk }}&next={{ idea.get_absolute_url|urlencode }}">{% include "includes/ic.html" with name="plus" %}링크</a></div>
       </div>
-      {% include "evidence/_rows.html" with items=evidence_items show_stage=True %}
-    </div>
+      <div class="card-body">
+        {% include "evidence/_rows.html" with items=evidence_items show_stage=True %}
+      </div>
+    </section>
 
     <!-- 작업 메모 -->
-    <div class="card">
-      <div class="card__head"><h2>작업 메모</h2><a class="btn btn--sm" href="{% url 'ideas:edit' idea.pk %}">수정</a></div>
-      {% if idea.notes %}<div class="prose small">{{ idea.notes|linebreaks }}</div>{% else %}<p class="muted small">긴 생각은 여기에. 짧은 기록은 작업 로그에.</p>{% endif %}
-    </div>
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="memo" %}작업 메모</h2>
+        <div class="page-actions"><a class="btn ghost sm" href="{% url 'ideas:edit' idea.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a></div>
+      </div>
+      <div class="card-body">
+        {% if idea.notes %}<div class="prose">{{ idea.notes|linebreaks }}</div>{% else %}<p class="empty-line">긴 생각은 여기에. 짧은 기록은 작업 로그에.</p>{% endif %}
+      </div>
+    </section>
 
-    <div class="card">
-      <div class="card__head"><h2>정보</h2></div>
-      <dl class="kv">
-        <dt>태그</dt><dd>{% for t in idea.tag_list %}<span class="chip chip--tag">{{ t }}</span>{% empty %}<span class="muted">-</span>{% endfor %}</dd>
-        <dt>생성</dt><dd class="mono small">{{ idea.created_at|date:"Y-m-d H:i" }}</dd>
-        <dt>수정</dt><dd class="mono small">{{ idea.updated_at|date:"Y-m-d H:i" }}</dd>
-      </dl>
-    </div>
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="info" %}정보</h2></div>
+      <div class="card-body">
+        <dl class="kv">
+          <dt>태그</dt><dd><div class="tags">{% for t in idea.tag_list %}<span class="tag">{{ t }}</span>{% empty %}<span class="muted">-</span>{% endfor %}</div></dd>
+          <dt>생성</dt><dd class="small num">{{ idea.created_at|date:"Y-m-d H:i" }}</dd>
+          <dt>수정</dt><dd class="small num">{{ idea.updated_at|date:"Y-m-d H:i" }}</dd>
+        </dl>
+      </div>
+    </section>
   </div>
 </div>
 {% endblock %}

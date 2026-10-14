@@ -1,19 +1,19 @@
 {# 할 일 행 목록. 컨텍스트: tasks, next_url, show_parent(아이디어 표시), show_stage(단계 표시) #}
 {% if tasks %}
-<ul class="tasklist">
+<ul class="rows">
   {% for t in tasks %}
-  <li class="task {% if t.done %}is-done{% endif %} {% if t.is_overdue %}is-overdue{% endif %}">
+  <li class="task{% if t.done %} done{% endif %}{% if t.is_overdue %} overdue{% endif %}">
     <form method="post" action="{% url 'tasks:toggle' t.pk %}" class="inline-form">{% csrf_token %}
       <input type="hidden" name="next" value="{{ next_url|default:request.get_full_path }}">
-      <button class="task__check" type="submit" title="{% if t.done %}완료 취소{% else %}완료{% endif %}">{% if t.done %}☑{% else %}☐{% endif %}</button>
+      <button class="task-check" type="submit" title="{% if t.done %}완료 취소{% else %}완료{% endif %}" aria-label="{% if t.done %}완료 취소{% else %}완료{% endif %}"><svg class="ic"><use href="#i-{% if t.done %}square-check{% else %}square{% endif %}"/></svg></button>
     </form>
-    <a class="task__title" href="{% url 'tasks:edit' t.pk %}?next={{ next_url|default:request.get_full_path|urlencode }}">{{ t.title }}</a>
+    <a class="task-title" href="{% url 'tasks:edit' t.pk %}?next={{ next_url|default:request.get_full_path|urlencode }}">{{ t.title }}</a>
     {% if show_parent and t.idea %}<a class="code" href="{{ t.idea.get_absolute_url }}" title="{{ t.idea.title }}">{{ t.idea.code }}</a>{% endif %}
-    {% if show_stage and t.stage %}<span class="chip chip--tag" title="{{ t.stage.title }}">{{ t.stage.order }}. {{ t.stage.title|truncatechars:18 }}</span>{% endif %}
-    {% if t.due %}<span class="task__due mono small {% if t.is_overdue %}text-red{% endif %}">{{ t.due|date:"m-d" }}</span>{% endif %}
+    {% if show_stage and t.stage %}<span class="tag" title="{{ t.stage.title }}">{{ t.stage.order }}. {{ t.stage.title|truncatechars:18 }}</span>{% endif %}
+    {% if t.due %}<span class="task-due">{{ t.due|date:"m-d" }}</span>{% endif %}
   </li>
   {% endfor %}
 </ul>
 {% else %}
-<p class="muted small">할 일이 없습니다.</p>
+<p class="empty-line">할 일이 없습니다.</p>
 {% endif %}

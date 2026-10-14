@@ -1,32 +1,40 @@
 {% extends "base.html" %}
 
-{% block heading %}할 일 <span class="count">{{ open_count }}</span>{% endblock %}
+{% block heading %}할 일 <span class="cnt">{{ open_count }}</span>{% endblock %}
 
 {% block actions %}
-<a class="btn btn--primary" href="{% url 'tasks:create' %}">＋ 자세히 추가</a>
+<a class="btn primary" href="{% url 'tasks:create' %}">{% include "includes/ic.html" with name="plus" %}자세히 추가</a>
+{% endblock %}
+
+{% block toolbar %}
+<form method="post" action="{% url 'tasks:quick_add' %}" class="filter-bar">
+  {% csrf_token %}
+  <div class="grow">{{ quick_form.title }}</div>
+  {{ quick_form.due }}
+  <button class="btn" type="submit">{% include "includes/ic.html" with name="plus" %}추가</button>
+</form>
 {% endblock %}
 
 {% block content %}
-<form method="post" action="{% url 'tasks:quick_add' %}" class="filterbar">
-  {% csrf_token %}
-  <div class="filterbar__search">{{ quick_form.title }}</div>
-  {{ quick_form.due }}
-  <button class="btn" type="submit">추가</button>
-</form>
-
-<div class="grid grid--two">
-  {% for label, tasks in groups %}
-  <div class="card">
-    <div class="card__head"><h2>{{ label }} <span class="muted small">({{ tasks|length }})</span></h2></div>
-    {% include "tasks/_rows.html" with tasks=tasks show_parent=True next_url="/tasks/" %}
+<div class="stack">
+  <div class="cols-2">
+    {% for label, tasks in groups %}
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{{ label }} <span class="cnt">{{ tasks|length }}</span></h2></div>
+      <div class="card-body">
+        {% include "tasks/_rows.html" with tasks=tasks show_parent=True next_url="/tasks/" %}
+      </div>
+    </section>
+    {% endfor %}
   </div>
-  {% endfor %}
-</div>
 
-{% if done_tasks %}
-<details class="card card--details">
-  <summary>완료된 할 일 (최근 {{ done_tasks|length }}개)</summary>
-  {% include "tasks/_rows.html" with tasks=done_tasks show_parent=True next_url="/tasks/" %}
-</details>
-{% endif %}
+  {% if done_tasks %}
+  <details class="card">
+    <summary>{% include "includes/ic.html" with name="chevron-right" %}완료된 할 일 <span class="hint">최근 {{ done_tasks|length }}개</span></summary>
+    <div class="card-body">
+      {% include "tasks/_rows.html" with tasks=done_tasks show_parent=True next_url="/tasks/" %}
+    </div>
+  </details>
+  {% endif %}
+</div>
 {% endblock %}

@@ -42,8 +42,9 @@ workspace/
     memos/                메모
     docs/                 시장조사 md 문서 읽기 전용 뷰어
   templates/              base.html + 앱별 템플릿
-  static/css/app.css      공통 스타일 (사무용 톤)
-  static/js/app.js        git 배지 자동 갱신
+  templates/includes/     icons.html(SVG 아이콘 모음), ic.html(아이콘 하나), field.html(폼 필드 한 칸)
+  static/css/app.css      공통 디자인 시스템 (밝은 사이드바, 카드, 표, 배지, 토스트)
+  static/js/app.js        토스트, git 상태 자동 갱신, 행 클릭, 복사, 단축키(/ 검색, Ctrl+Enter 저장)
   tools/gitsync.py        git add/commit/pull/push 를 하는 독립 스크립트
 ```
 
@@ -65,6 +66,12 @@ workspace/
 2. `apps/<이름>/urls.py` 에 `app_name = "<이름>"` 지정, `config/urls.py` 에 include
 3. `apps/core/menus.py` 의 `MENUS` 에 항목 추가 → 홈 카드와 좌측 메뉴에 자동 표시
 4. 템플릿은 `templates/<이름>/` 에 두고 `{% extends "base.html" %}`
+
+화면 뼈대는 `base.html` 의 block 으로 채운다: `heading`(제목), `subtitle`(제목 옆 설명), `actions`(오른쪽 버튼),
+`toolbar`(제목 아래 필터 띠 `.filter-bar`), `content`(본문). 목록을 화면 가득 채우려면 `{% block body_class %}fill{% endblock %}`.
+메뉴 `icon` 은 `templates/includes/icons.html` 의 symbol 이름이고, 화면에서는
+`{% include "includes/ic.html" with name="plus" %}` 로 쓴다. 클래스는 `.btn primary|ghost|danger|sm`, `.card > .card-head + .card-body`,
+`table.grid`, `.badge <톤>`, `.tag`, `.notice info|ok|warn|danger` 를 쓴다 (`static/css/app.css` 머리말 참고).
 
 ## git 자동 동기화
 

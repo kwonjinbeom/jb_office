@@ -1,48 +1,52 @@
 {% extends "base.html" %}
 
-{% block heading %}메모 <span class="count">{{ memos|length }}{% if q %} / {{ total }}{% endif %}</span>{% endblock %}
+{% block heading %}메모 <span class="cnt">{{ memos|length }}{% if q %} / {{ total }}{% endif %}</span>{% endblock %}
 
 {% block actions %}
-<a class="btn btn--primary" href="{% url 'memos:create' %}">＋ 새 메모</a>
+<a class="btn primary" href="{% url 'memos:create' %}">{% include "includes/ic.html" with name="plus" %}새 메모</a>
 {% endblock %}
 
-{% block content %}
-<form method="get" class="filterbar">
-  <input class="input filterbar__search" type="search" name="q" value="{{ q }}" placeholder="제목, 내용, 태그 검색">
-  <button class="btn" type="submit">검색</button>
-  {% if q %}<a class="btn btn--ghost" href="{% url 'memos:list' %}">초기화</a>{% endif %}
+{% block toolbar %}
+<form method="get" class="filter-bar">
+  <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용, 태그 검색  ( / )"></div>
+  <button class="btn sm" type="submit">검색</button>
+  {% if q %}<a class="btn ghost sm" href="{% url 'memos:list' %}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
 </form>
+{% endblock %}
 
-<div class="card card--flush">
-  <table class="table table--rows">
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+<div class="grid-wrap">
+  <table class="grid wrap clickable" style="min-width:640px">
     <thead>
       <tr>
-        <th style="width:36px"></th>
+        <th style="width:56px"></th>
         <th>제목</th>
         <th style="width:220px">태그</th>
-        <th style="width:140px">수정</th>
-        <th style="width:70px"></th>
+        <th style="width:130px">수정</th>
+        <th style="width:66px"></th>
       </tr>
     </thead>
     <tbody>
       {% for memo in memos %}
-      <tr>
-        <td class="center">
+      <tr data-href="{{ memo.get_absolute_url }}">
+        <td class="mid">
           <form method="post" action="{% url 'memos:toggle_pin' memo.pk %}" class="inline-form">
             {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button class="pin {% if memo.pinned %}is-on{% endif %}" type="submit" title="{% if memo.pinned %}고정 해제{% else %}상단 고정{% endif %}">📌</button>
+            <button class="pin{% if memo.pinned %} on{% endif %}" type="submit" title="{% if memo.pinned %}고정 해제{% else %}상단 고정{% endif %}" aria-label="{% if memo.pinned %}고정 해제{% else %}상단 고정{% endif %}"><svg class="ic"><use href="#i-pin"/></svg></button>
           </form>
         </td>
-        <td>
-          <a class="rowlink" href="{{ memo.get_absolute_url }}">{{ memo.title }}</a>
-          {% if memo.excerpt %}<div class="muted small">{{ memo.excerpt }}</div>{% endif %}
+        <td class="title-cell">
+          <a href="{{ memo.get_absolute_url }}">{{ memo.title }}</a>
+          {% if memo.excerpt %}<span class="sub">{{ memo.excerpt }}</span>{% endif %}
         </td>
-        <td>{% for t in memo.tag_list %}<span class="chip chip--tag">{{ t }}</span>{% endfor %}</td>
-        <td class="mono small muted">{{ memo.updated_at|date:"Y-m-d H:i" }}</td>
-        <td class="right"><a class="btn btn--sm" href="{% url 'memos:edit' memo.pk %}">수정</a></td>
+        <td class="mid"><div class="tags">{% for t in memo.tag_list %}<span class="tag">{{ t }}</span>{% endfor %}</div></td>
+        <td class="mid small muted num">{{ memo.updated_at|date:"Y-m-d H:i" }}</td>
+        <td class="mid r"><a class="btn ghost sm icon" href="{% url 'memos:edit' memo.pk %}" title="수정" aria-label="수정"><svg class="ic"><use href="#i-edit"/></svg></a></td>
       </tr>
       {% empty %}
-      <tr><td colspan="5" class="empty">{% if q %}검색 결과가 없습니다.{% else %}아직 메모가 없습니다. 오른쪽 위 <strong>새 메모</strong>로 시작하세요.{% endif %}</td></tr>
+      <tr><td colspan="5" class="grid-empty">{% if q %}검색 결과가 없습니다.{% else %}아직 메모가 없습니다. 오른쪽 위 <strong>새 메모</strong>로 시작하세요.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

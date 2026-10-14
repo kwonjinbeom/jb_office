@@ -1,89 +1,105 @@
-{% load static %}<!DOCTYPE html>
+{% load static %}<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% if page_title %}{{ page_title }} · {% endif %}작업서버</title>
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6bd8'/%3E%3Ctext x='16' y='21.5' font-family='Arial' font-weight='700' font-size='13' fill='white' text-anchor='middle'%3EWS%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_VER }}">
+  {% block head %}{% endblock %}
 </head>
 <body>
-<div class="layout">
+{% include "includes/icons.html" %}
+<div class="app">
   <aside class="sidebar">
     <a class="brand" href="{% url 'core:home' %}">
-      <span class="brand__mark">WS</span>
-      <span class="brand__text">작업서버</span>
+      <span class="brand-mark">WS</span>
+      <span class="brand-text">작업서버</span>
     </a>
     <nav class="nav">
-      <a class="nav__item {% if ACTIVE_MENU == 'core' or ACTIVE_MENU == 'home' %}is-active{% endif %}" href="{% url 'core:home' %}">
-        <span class="nav__icon">🏠</span><span>홈</span>
+      <a class="nav-item{% if ACTIVE_MENU == 'home' or ACTIVE_MENU == 'core' and request.resolver_match.url_name != 'settings' %} active{% endif %}" href="{% url 'core:home' %}">
+        <svg class="ic"><use href="#i-home"/></svg><span>홈</span>
       </a>
-      <div class="nav__section">메뉴</div>
       {% for m in MENUS %}
-      <a class="nav__item {% if ACTIVE_MENU == m.key %}is-active{% endif %}" href="{{ m.url }}">
-        <span class="nav__icon">{{ m.icon }}</span><span>{{ m.title }}</span>
+      <a class="nav-item{% if ACTIVE_MENU == m.key %} active{% endif %}" href="{{ m.url }}">
+        <svg class="ic"><use href="#i-{{ m.icon }}"/></svg><span>{{ m.title }}</span>
       </a>
       {% endfor %}
-      <div class="nav__section">관리</div>
-      <a class="nav__item {% if request.resolver_match.url_name == 'settings' %}is-active{% endif %}" href="{% url 'core:settings' %}"><span class="nav__icon">🔧</span><span>설정</span></a>
-      <a class="nav__item" href="/admin/"><span class="nav__icon">⚙️</span><span>Django 관리자</span></a>
     </nav>
-    <div class="sidebar__footer">
+
+    {% with st=DEPLOY_INFO.status d=DEPLOY_INFO.last %}
+    <div class="side-box">
+      <div class="side-h" title="서버 코드 vs GitHub 최신 (2분마다 확인)">
+        <span>서버 코드</span>
+        {% if st %}
+          {% if st.up_to_date %}<span class="st ok">최신</span>
+          {% elif st.behind %}<span class="st warn">{{ st.behind }}개 뒤처짐</span>
+          {% elif not st.fetch_ok %}<span class="st bad">GitHub 확인 실패</span>
+          {% else %}<span class="st">비교 불가</span>{% endif %}
+        {% endif %}
+      </div>
+      {% if st %}
+      <div class="side-row"><span class="k">서버</span><span class="hash">{{ st.local.hash|default:"?" }}</span><span class="tm">{{ st.local.time }}</span></div>
+      <div class="side-row"><span class="k">GitHub</span><span class="hash">{{ st.remote.hash|default:"?" }}</span><span class="tm">{{ st.remote.time }}</span></div>
+      {% endif %}
+      {% if d %}
+      <div class="side-row" title="{% if d.ok %}성공{% else %}실패: {{ d.error }}{% endif %} ({{ d.reason }})">
+        <span class="k">반영</span><span class="mk {% if d.ok %}ok{% else %}bad{% endif %}"></span><span class="tm">{{ d.finished_at|slice:"5:16" }}</span>
+      </div>
+      {% elif DEPLOY_INFO.is_server %}
+      <div class="side-row"><span class="k">반영</span><span class="tm">기록 없음</span></div>
+      {% endif %}
+      <div class="side-row git" id="gitpill" title="git 상태 (30초마다 갱신)">
+        <svg class="ic"><use href="#i-git-branch"/></svg>
+        <span class="hash" data-git="branch">…</span>
+        <span class="tm" data-git="dirty"></span>
+        <span class="mk" data-git="dot"></span>
+      </div>
+    </div>
+    {% endwith %}
+
+    <div class="nav-foot">
+      <a class="nav-item{% if request.resolver_match.url_name == 'settings' %} active{% endif %}" href="{% url 'core:settings' %}">
+        <svg class="ic"><use href="#i-settings"/></svg><span>설정</span>
+      </a>
+      <a class="nav-item" href="/admin/">
+        <svg class="ic"><use href="#i-shield"/></svg><span>Django 관리자</span>
+      </a>
       {% if user.is_authenticated %}
-      <form method="post" action="{% url 'logout' %}" class="userrow">
+      <form method="post" action="{% url 'logout' %}" class="user-row">
         {% csrf_token %}
-        <span class="userrow__name" title="로그인 계정">{{ user.get_username }}</span>
-        <button type="submit" class="userrow__out" title="로그아웃">로그아웃</button>
+        <span class="nm" title="로그인 계정">{{ user.get_username }}</span>
+        <button type="submit" class="btn ghost sm icon" title="로그아웃" aria-label="로그아웃"><svg class="ic"><use href="#i-logout"/></svg></button>
       </form>
       {% endif %}
-      {% with st=DEPLOY_INFO.status d=DEPLOY_INFO.last %}
-      <div class="deploypill {% if st and st.up_to_date %}is-ok{% elif st and st.behind %}is-behind{% endif %}" title="서버 코드 vs GitHub 최신 (2분마다 확인)">
-        {% if st %}
-        <div class="deploypill__head">
-          {% if st.up_to_date %}<span class="deploypill__state">✓ 최신</span>
-          {% elif st.behind %}<span class="deploypill__state">↓ {{ st.behind }}개 뒤처짐</span>
-          {% elif not st.fetch_ok %}<span class="deploypill__state">GitHub 확인 실패</span>
-          {% else %}<span class="deploypill__state">비교 불가</span>{% endif %}
-        </div>
-        <div class="deploypill__row"><span class="muted">서버</span><span class="mono">{{ st.local.hash|default:"?" }}</span><span class="mono muted">{{ st.local.time }}</span></div>
-        <div class="deploypill__row"><span class="muted">GitHub</span><span class="mono">{{ st.remote.hash|default:"?" }}</span><span class="mono muted">{{ st.remote.time }}</span></div>
-        {% endif %}
-        {% if d %}
-        <div class="deploypill__row"><span class="muted">반영</span><span class="mono muted">{{ d.finished_at|slice:"5:16" }}</span>
-          <span class="deploypill__dot {% if d.ok %}is-ok{% else %}is-fail{% endif %}" title="{% if d.ok %}성공{% else %}실패: {{ d.error }}{% endif %} ({{ d.reason }})"></span></div>
-        {% elif DEPLOY_INFO.is_server %}
-        <div class="deploypill__row"><span class="muted">반영</span><span class="muted">기록 없음</span></div>
-        {% endif %}
-      </div>
-      {% endwith %}
-      <div class="gitpill" id="gitpill" title="git 상태 (30초마다 갱신)">
-        <span class="gitpill__dot" data-git="dot"></span>
-        <span data-git="branch">…</span>
-        <span class="gitpill__count" data-git="dirty"></span>
-      </div>
     </div>
   </aside>
 
-  <div class="main">
-    <header class="topbar">
-      <div class="topbar__title">
+  <main class="main">
+    <header class="page-header">
+      <div class="page-head">
         {% block breadcrumb %}{% endblock %}
-        <h1>{% block heading %}{{ page_title }}{% endblock %}</h1>
+        <h1 class="page-title">{% block heading %}{{ page_title }}{% endblock %}</h1>
       </div>
-      <div class="topbar__actions">{% block actions %}{% endblock %}</div>
+      {% block subtitle %}{% endblock %}
+      <div class="page-actions">{% block actions %}{% endblock %}</div>
     </header>
-
-    {% if messages %}
-    <div class="flash-stack">
-      {% for message in messages %}
-      <div class="flash flash--{{ message.tags }}">{{ message }}</div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
-    <main class="content">
+    {% block toolbar %}{% endblock %}
+    <div class="page-body {% block body_class %}{% endblock %}">
       {% block content %}{% endblock %}
-    </main>
+    </div>
+  </main>
+</div>
+
+<div id="toast-root" class="toast-root">
+  {% for message in messages %}
+  <div class="toast {% if 'error' in message.tags %}error{% elif 'warning' in message.tags %}warn{% elif 'success' in message.tags %}ok{% else %}info{% endif %}" role="status">
+    <svg class="ic"><use href="#i-{% if 'error' in message.tags %}x-circle{% elif 'warning' in message.tags %}alert{% elif 'success' in message.tags %}check-circle{% else %}info{% endif %}"/></svg>
+    <span class="tx">{{ message }}</span>
+    <button type="button" class="x" aria-label="닫기"><svg class="ic"><use href="#i-x"/></svg></button>
   </div>
+  {% endfor %}
 </div>
 <script>
   window.APP = {
@@ -91,7 +107,7 @@
     csrfToken: "{{ csrf_token }}"
   };
 </script>
-<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/app.js' %}?v={{ ASSET_VER }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

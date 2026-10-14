@@ -1,147 +1,178 @@
 {% extends "base.html" %}
 
+{% block subtitle %}
+<span class="page-sub">{{ today|date:"n월 j일 l" }}</span>
+<span class="badge {% if is_server %}violet{% else %}outline{% endif %}" title="WORKSERVER_ROLE">{% if is_server %}서버{% else %}로컬 개발{% endif %}</span>
+{% endblock %}
+
 {% block actions %}
-<span class="badge {% if is_server %}badge--violet{% else %}badge--slate{% endif %}" title="WORKSERVER_ROLE">{% if is_server %}서버{% else %}로컬 개발{% endif %}</span>
 {% if pull_enabled %}
 <form method="post" action="{% url 'core:update_code' %}" class="inline-form">
   {% csrf_token %}
-  <button type="submit" class="btn btn--primary" title="GitHub 에서 최신 코드를 받고 migrate·정적파일 수집 후 재시작">서버 코드 갱신</button>
+  <button type="submit" class="btn primary" title="GitHub 에서 최신 코드를 받고 migrate·정적파일 수집 후 재시작">{% include "includes/ic.html" with name="download" %}서버 코드 갱신</button>
 </form>
 {% endif %}
 {% if not is_server %}
 <form method="post" action="{% url 'core:sync_now' %}" class="inline-form">
   {% csrf_token %}
-  <button type="submit" class="btn btn--primary" title="변경 사항을 커밋하고 push 합니다">지금 동기화</button>
+  <button type="submit" class="btn primary" title="변경 사항을 커밋하고 push 합니다">{% include "includes/ic.html" with name="refresh" %}지금 동기화</button>
 </form>
 {% endif %}
 {% endblock %}
 
 {% block content %}
-{% with st=DEPLOY_INFO.status %}
-{% if is_server and st %}
-<div class="deploybar {% if st.up_to_date %}deploybar--ok{% elif st.behind %}deploybar--behind{% endif %}">
-  {% if st.up_to_date %}
-    <strong>서버 코드가 GitHub 최신과 같습니다.</strong> <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }} · {{ st.local.subject|truncatechars:60 }}
-  {% elif st.behind %}
-    <strong>GitHub에 새 커밋 {{ st.behind }}개가 있습니다.</strong> 최신 <span class="mono">{{ st.remote.hash }}</span> · {{ st.remote.time }} · {{ st.remote.subject|truncatechars:50 }}
-    <span class="muted">(서버는 <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }})</span>
-    <form method="post" action="{% url 'core:update_code' %}" class="inline-form">{% csrf_token %}<button class="btn btn--sm btn--primary">지금 반영</button></form>
-  {% elif not st.fetch_ok %}
-    GitHub 에 접속하지 못해 최신 여부를 확인할 수 없습니다. 서버 코드 <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }}
+<div class="hm">
+  {% with st=DEPLOY_INFO.status %}
+  {% if is_server and st %}
+  <div class="notice {% if st.up_to_date %}ok{% elif st.behind %}warn{% endif %}">
+    {% if st.up_to_date %}
+      {% include "includes/ic.html" with name="check-circle" %}
+      <span><strong>서버 코드가 GitHub 최신과 같습니다.</strong> <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }} · {{ st.local.subject|truncatechars:60 }}</span>
+    {% elif st.behind %}
+      {% include "includes/ic.html" with name="alert" %}
+      <span><strong>GitHub에 새 커밋 {{ st.behind }}개가 있습니다.</strong> 최신 <span class="mono">{{ st.remote.hash }}</span> · {{ st.remote.time }} · {{ st.remote.subject|truncatechars:50 }}
+        <span class="muted">(서버는 <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }})</span></span>
+      <form method="post" action="{% url 'core:update_code' %}" class="inline-form">{% csrf_token %}<button class="btn sm primary">지금 반영</button></form>
+    {% elif not st.fetch_ok %}
+      {% include "includes/ic.html" with name="info" %}
+      <span>GitHub 에 접속하지 못해 최신 여부를 확인할 수 없습니다. 서버 코드 <span class="mono">{{ st.local.hash }}</span> · {{ st.local.time }}</span>
+    {% endif %}
+    <span class="tail">확인 {{ st.checked_at|slice:"11:16" }}</span>
+  </div>
   {% endif %}
-  <span class="muted small">확인 {{ st.checked_at|slice:"11:16" }}</span>
-</div>
-{% endif %}
-{% endwith %}
-{% if is_server and not webhook_ready %}
-<div class="flash flash--info" style="margin-bottom:16px">push 자동 반영이 아직 꺼져 있습니다. <a href="{% url 'core:settings' %}">설정</a>에서 비밀값을 만들고 GitHub 웹훅에 등록하면 이후로는 버튼을 누르지 않아도 됩니다.</div>
-{% endif %}
-<section class="grid grid--home">
+  {% endwith %}
+  {% if is_server and not webhook_ready %}
+  <div class="notice info">
+    {% include "includes/ic.html" with name="info" %}
+    <span>push 자동 반영이 아직 꺼져 있습니다. <a href="{% url 'core:settings' %}">설정</a>에서 비밀값을 만들고 GitHub 웹훅에 등록하면 이후로는 버튼을 누르지 않아도 됩니다.</span>
+  </div>
+  {% endif %}
+
   <!-- 진행 중인 아이디어 -->
-  <div class="card card--span2">
-    <div class="card__head">
-      <h2>진행 중인 아이디어 <span class="muted small">({{ active_ideas|length }})</span></h2>
-      <a class="btn btn--sm" href="{% url 'ideas:list' %}">전체 보기</a>
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{% include "includes/ic.html" with name="bulb" %}진행 중인 아이디어 <span class="cnt">{{ active_ideas|length }}</span></h2>
+      <div class="page-actions"><a class="btn ghost sm" href="{% url 'ideas:list' %}">전체 보기{% include "includes/ic.html" with name="chevron-right" %}</a></div>
     </div>
     {% if active_ideas %}
-    <table class="table table--compact table--rows">
-      <thead><tr><th style="width:64px">코드</th><th>제목</th><th>현재 단계</th><th style="width:120px">진행</th><th style="width:70px">할 일</th></tr></thead>
-      <tbody>
-        {% for idea in active_ideas %}
-        <tr class="rowlink-row" data-href="{{ idea.get_absolute_url }}">
-          <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
-          <td><a class="rowlink" href="{{ idea.get_absolute_url }}">{{ idea.title }}</a> <span class="badge badge--{{ idea.status_tone }}">{{ idea.get_status_display }}</span></td>
-          <td class="small">{% with st=idea.current_stage %}{% if st %}{{ st.order }}. {{ st.title }}{% else %}<span class="muted">단계 없음</span>{% endif %}{% endwith %}</td>
-          <td>{% with p=idea.stage_progress %}<span class="progress progress--sm"><span class="progress__bar" style="width: {% if p.1 %}{% widthratio p.0 p.1 100 %}{% else %}0{% endif %}%"></span></span> <span class="muted small">{{ p.0 }}/{{ p.1 }}</span>{% endwith %}</td>
-          <td class="small">{% if idea.open_task_count %}{{ idea.open_task_count }}개{% else %}<span class="muted">-</span>{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="muted small">진행 중인 아이디어가 없습니다. 아이디어 상태를 <strong>초기 실험군</strong>이나 <strong>진행중</strong>으로 바꾸면 여기에 나타납니다.</p>
-    {% endif %}
-  </div>
-
-  <!-- 할 일 -->
-  <div class="card">
-    <div class="card__head">
-      <h2>할 일 <span class="muted small">(열림 {{ open_count }})</span></h2>
-      <a class="btn btn--sm" href="{% url 'tasks:list' %}">전체</a>
+    <div class="card-body flush scroll-x">
+      <table class="grid clickable" style="min-width:720px">
+        <thead><tr><th style="width:68px">코드</th><th>제목</th><th style="width:104px">상태</th><th style="width:28%">현재 단계</th><th style="width:132px">진행</th><th style="width:64px">할 일</th></tr></thead>
+        <tbody>
+          {% for idea in active_ideas %}
+          <tr data-href="{{ idea.get_absolute_url }}">
+            <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
+            <td class="title-cell" title="{{ idea.title }}"><a href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
+            <td><span class="badge {{ idea.status_tone }}">{{ idea.get_status_display }}</span></td>
+            <td class="text-2">{% with st=idea.current_stage %}{% if st %}<span title="{{ st.title }}">{{ st.order }}. {{ st.title }}</span>{% else %}<span class="muted">단계 없음</span>{% endif %}{% endwith %}</td>
+            <td>{% with p=idea.stage_progress %}<span class="progress sm"><i style="width: {% if p.1 %}{% widthratio p.0 p.1 100 %}{% else %}0{% endif %}%"></i></span> <span class="muted small num">{{ p.0 }}/{{ p.1 }}</span>{% endwith %}</td>
+            <td class="num">{% if idea.open_task_count %}{{ idea.open_task_count }}개{% else %}<span class="muted">-</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    {% if overdue %}<h3 class="subhead text-red">지남 ({{ overdue|length }})</h3>{% include "tasks/_rows.html" with tasks=overdue show_parent=True next_url="/" %}{% endif %}
-    <h3 class="subhead">오늘 ({{ today_tasks|length }})</h3>
-    {% include "tasks/_rows.html" with tasks=today_tasks show_parent=True next_url="/" %}
-    {% if undated %}<h3 class="subhead">마감 없음</h3>{% include "tasks/_rows.html" with tasks=undated show_parent=True next_url="/" %}{% endif %}
-  </div>
-
-  <!-- 최근 로그 -->
-  <div class="card">
-    <div class="card__head"><h2>최근 작업 로그</h2></div>
-    {% if recent_logs %}
-    <ul class="loglist loglist--compact">
-      {% for log in recent_logs %}
-      <li class="log">
-        <div class="log__meta mono small muted">{{ log.created_at|date:"m-d H:i" }} · <a class="code" href="{{ log.idea.get_absolute_url }}#logs">{{ log.idea.code }}</a>{% if log.stage %} · <span class="text-2">{{ log.stage.title|truncatechars:20 }}</span>{% endif %}</div>
-        <div class="log__body small">{{ log.body|truncatechars:140 }}</div>
-      </li>
-      {% endfor %}
-    </ul>
     {% else %}
-    <p class="muted small">아직 로그가 없습니다. 아이디어 상세에서 오늘 한 일을 한 줄 남기세요.</p>
+    <div class="card-body"><p class="empty-line">진행 중인 아이디어가 없습니다. 아이디어 상태를 <strong>초기 실험군</strong>이나 <strong>진행중</strong>으로 바꾸면 여기에 나타납니다.</p></div>
     {% endif %}
-    {% if recent_links %}
-    <h3 class="subhead">최근 저장한 링크</h3>
-    {% include "evidence/_rows.html" with items=recent_links show_parent=True %}
-    {% endif %}
+  </section>
+
+  <div class="cols-2">
+    <!-- 할 일 -->
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="check-list" %}할 일 <span class="cnt">열림 {{ open_count }}</span></h2>
+        <div class="page-actions"><a class="btn ghost sm" href="{% url 'tasks:list' %}">전체{% include "includes/ic.html" with name="chevron-right" %}</a></div>
+      </div>
+      <div class="card-body">
+        {% if overdue %}<h3 class="sub-h danger">{% include "includes/ic.html" with name="alert" %}지남 {{ overdue|length }}</h3>{% include "tasks/_rows.html" with tasks=overdue show_parent=True next_url="/" %}{% endif %}
+        <h3 class="sub-h">오늘 {{ today_tasks|length }}</h3>
+        {% include "tasks/_rows.html" with tasks=today_tasks show_parent=True next_url="/" %}
+        {% if undated %}<h3 class="sub-h">마감 없음</h3>{% include "tasks/_rows.html" with tasks=undated show_parent=True next_url="/" %}{% endif %}
+      </div>
+    </section>
+
+    <!-- 최근 로그 -->
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="clock" %}최근 작업 로그</h2></div>
+      <div class="card-body">
+        {% if recent_logs %}
+        <ul class="rows">
+          {% for log in recent_logs %}
+          <li class="log">
+            <div class="log-date">{{ log.created_at|date:"m-d H:i" }}</div>
+            <div>
+              <div class="log-meta"><a class="code" href="{{ log.idea.get_absolute_url }}#logs" title="{{ log.idea.title }}">{{ log.idea.code }}</a>{% if log.stage %}<span>{{ log.stage.title|truncatechars:20 }}</span>{% endif %}</div>
+              <div class="log-body small">{{ log.body|truncatechars:140 }}</div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-line">아직 로그가 없습니다. 아이디어 상세에서 오늘 한 일을 한 줄 남기세요.</p>
+        {% endif %}
+        {% if recent_links %}
+        <h3 class="sub-h">{% include "includes/ic.html" with name="link" %}최근 저장한 링크</h3>
+        {% include "evidence/_rows.html" with items=recent_links show_parent=True %}
+        {% endif %}
+      </div>
+    </section>
   </div>
 
   <!-- 메뉴 카드 -->
-  <div class="card card--plain card--span2">
-    <div class="card__head"><h2>메뉴</h2></div>
-    <div class="menugrid">
-      {% for m in menus %}
-      <a class="menucard" href="{{ m.url }}" style="--accent: {{ m.color }}">
-        <div class="menucard__icon">{{ m.icon }}</div>
-        <div class="menucard__title">{{ m.title }}</div>
-        <div class="menucard__desc">{{ m.description }}</div>
-      </a>
-      {% endfor %}
-    </div>
+  <div class="sec-h">메뉴</div>
+  <div class="tiles">
+    {% for m in menus %}
+    <a class="tile" href="{{ m.url }}" style="--mc: {{ m.color }}">
+      <span class="tile-ic"><svg class="ic"><use href="#i-{{ m.icon }}"/></svg></span>
+      <span>
+        <span class="tile-title">{{ m.title }}</span>
+        <span class="tile-desc" style="display:block">{{ m.description }}</span>
+      </span>
+    </a>
+    {% endfor %}
   </div>
 
   <!-- Git 상태 (접기) -->
-  <details class="card card--details card--span2">
-    <summary>Git 상태 <span class="muted small">· <span data-git="branch">{{ git.branch }}</span> · 변경 <span data-git="dirty-value">{{ git.dirty }}</span> · push 대기 <span data-git="ahead">{{ git.ahead|default_if_none:"-" }}</span> · pull 필요 <span data-git="behind">{{ git.behind|default_if_none:"-" }}</span>
-      {% if autosync_running %}· 자동 동기화 {{ autosync_interval }}초{% endif %}</span></summary>
-    <div class="split" style="margin-top:12px">
+  <details class="card">
+    <summary>{% include "includes/ic.html" with name="chevron-right" %}Git 상태
+      <span class="gitsum">
+        <span><span data-git="branch" class="mono">{{ git.branch }}</span></span>
+        <span>변경 <b data-git="dirty-value">{{ git.dirty }}</b></span>
+        <span>push 대기 <b data-git="ahead">{{ git.ahead|default_if_none:"-" }}</b></span>
+        <span>pull 필요 <b data-git="behind">{{ git.behind|default_if_none:"-" }}</b></span>
+        {% if autosync_running %}<span>자동 동기화 {{ autosync_interval }}초</span>{% endif %}
+      </span>
+    </summary>
+    <div class="card-body cols-2">
       <div>
-        <h3 class="subhead">변경 파일</h3>
+        <h3 class="sub-h">변경 파일</h3>
         <ul class="filelist" data-git="changes">
           {% for c in git.changes|slice:":12" %}
-          <li><span class="filestatus filestatus--{{ c.status|slice:':1' }}">{{ c.status }}</span><span class="mono">{{ c.path }}</span></li>
+          <li><span class="fstat" data-s="{{ c.status|slice:':1' }}">{{ c.status }}</span><span class="mono">{{ c.path }}</span></li>
           {% empty %}
           <li class="muted">작업 트리가 깨끗합니다.</li>
           {% endfor %}
         </ul>
         {% if last_sync %}
-        <h3 class="subhead">마지막 동기화</h3>
-        <p class="small">{% if last_sync.ok %}<span class="badge badge--green">성공</span>{% else %}<span class="badge badge--red">실패</span>{% endif %}
-          <span class="mono muted">{{ last_sync.finished_at }}</span> {{ last_sync.message|default:"변경 없음" }}{% if last_sync.error %} <span class="text-red">{{ last_sync.error }}</span>{% endif %}</p>
+        <h3 class="sub-h">마지막 동기화</h3>
+        <p class="small">{% if last_sync.ok %}<span class="badge green">성공</span>{% else %}<span class="badge red">실패</span>{% endif %}
+          <span class="muted num">{{ last_sync.finished_at }}</span> {{ last_sync.message|default:"변경 없음" }}{% if last_sync.error %} <span class="tone-danger">{{ last_sync.error }}</span>{% endif %}</p>
         {% endif %}
       </div>
       <div>
-        <h3 class="subhead">최근 커밋</h3>
-        <table class="table table--compact">
+        <h3 class="sub-h">최근 커밋</h3>
+        <table class="grid compact">
+          <colgroup><col style="width:72px"><col><col style="width:122px"></colgroup>
           <tbody data-git="commits">
             {% for c in git.commits %}
-            <tr><td class="mono">{{ c.hash }}</td><td>{{ c.subject }}</td><td class="mono small muted">{{ c.date|slice:":16" }}</td></tr>
+            <tr><td class="mono small">{{ c.hash }}</td><td title="{{ c.subject }}">{{ c.subject }}</td><td class="small muted num">{{ c.date|slice:":16" }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
-        <p class="muted small">원격: <span class="mono">{{ git.remote }}</span> · <span data-git="checked_at">{{ git.checked_at }}</span></p>
+        <p class="muted small" style="margin-top:8px">원격: <span class="mono">{{ git.remote }}</span> · <span data-git="checked_at">{{ git.checked_at }}</span></p>
       </div>
     </div>
   </details>
-</section>
+</div>
 {% endblock %}

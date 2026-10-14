@@ -1,18 +1,18 @@
 {# 증거 행 목록. 컨텍스트: items, show_parent(아이디어 표시), show_stage(단계 표시) #}
 {% if items %}
-<ul class="evlist">
+<ul class="rows">
   {% for e in items %}
   <li class="ev">
-    <span class="chip chip--kind">{{ e.get_kind_display }}</span>
-    <a class="ev__title" href="{{ e.url }}" target="_blank" rel="noopener" title="{{ e.url }}">{{ e.display_title|truncatechars:60 }}</a>
-    <span class="muted small">{{ e.domain }}</span>
+    <span class="tag info">{{ e.get_kind_display }}</span>
+    <a class="ev-title" href="{{ e.url }}" target="_blank" rel="noopener" title="{{ e.url }}">{{ e.display_title|truncatechars:60 }}</a>
+    <span class="ev-domain">{{ e.domain }}</span>
     {% if show_parent and e.idea %}<a class="code" href="{{ e.idea.get_absolute_url }}" title="{{ e.idea.title }}">{{ e.idea.code }}</a>{% endif %}
-    {% if show_stage and e.stage %}<span class="chip chip--tag" title="{{ e.stage.title }}">{{ e.stage.order }}. {{ e.stage.title|truncatechars:18 }}</span>{% endif %}
-    <a class="ev__edit small" href="{% url 'evidence:edit' e.pk %}?next={{ request.get_full_path|urlencode }}">수정</a>
-    {% if e.note %}<div class="ev__note small text-2">{{ e.note }}</div>{% endif %}
+    {% if show_stage and e.stage %}<span class="tag" title="{{ e.stage.title }}">{{ e.stage.order }}. {{ e.stage.title|truncatechars:18 }}</span>{% endif %}
+    <a class="btn ghost sm icon ev-edit" href="{% url 'evidence:edit' e.pk %}?next={{ request.get_full_path|urlencode }}" title="수정" aria-label="수정"><svg class="ic"><use href="#i-edit"/></svg></a>
+    {% if e.note %}<div class="ev-note">{{ e.note }}</div>{% endif %}
   </li>
   {% endfor %}
 </ul>
 {% else %}
-<p class="muted small">저장된 링크가 없습니다.</p>
+<p class="empty-line">저장된 링크가 없습니다.</p>
 {% endif %}
