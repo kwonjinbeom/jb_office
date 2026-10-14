@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if page_title %}{{ page_title }} · {% endif %}작업서버</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6bd8'/%3E%3Ctext x='16' y='21.5' font-family='Arial' font-weight='700' font-size='13' fill='white' text-anchor='middle'%3EWS%3C/text%3E%3C/svg%3E">
+  <title>{% if page_title %}{{ page_title }} · {% endif %}JB Office</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f6bd8'/%3E%3Ctext x='16' y='21.5' font-family='Arial' font-weight='700' font-size='14' fill='white' text-anchor='middle'%3EJB%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_VER }}">
   {% block head %}{% endblock %}
@@ -14,8 +14,8 @@
 <div class="app">
   <aside class="sidebar">
     <a class="brand" href="{% url 'core:home' %}">
-      <span class="brand-mark">WS</span>
-      <span class="brand-text">작업서버</span>
+      <span class="brand-mark">JB</span>
+      <span class="brand-text">Office</span>
     </a>
     <nav class="nav">
       <a class="nav-item{% if ACTIVE_MENU == 'home' or ACTIVE_MENU == 'core' and request.resolver_match.url_name != 'settings' %} active{% endif %}" href="{% url 'core:home' %}">

@@ -1,5 +1,5 @@
 /* =====================================================================
-   작업서버 - 공통 디자인 시스템
+   JB Office (작업서버) - 공통 디자인 시스템
    - 색/간격/글꼴은 :root 토큰만 바꾸면 전체에 반영된다.
    - 컴포넌트: btn, input, field, card, badge, tag, code, seg, grid(표),
                notice, toast, rows(task/ev/log), stage, kv, empty, kbd
@@ -20,6 +20,7 @@
   --accent-hover: #2459bd;
   --accent-weak: #ebf2fd;
   --accent-line: #b9d0f6;
+  --brand: #2f6bd8;   /* 로고(JB) 색 */
   --ok: #16803c;
   --ok-weak: #e7f5ec;
   --warn: #b26a00;
@@ -86,7 +87,7 @@ pre code { background: none; padding: 0; }
 .brand { display: flex; align-items: center; gap: 8px; padding: 4px 8px 14px; color: var(--text); }
 .brand:hover { text-decoration: none; }
 .brand-mark {
-  width: 26px; height: 26px; border-radius: 7px; background: var(--accent); color: #fff;
+  width: 26px; height: 26px; border-radius: 7px; background: var(--brand); color: #fff;
   display: grid; place-items: center; font-weight: 800; font-size: 11px; letter-spacing: .3px; flex: none;
 }
 .brand-text { font-weight: 700; font-size: 15px; letter-spacing: -.2px; }
