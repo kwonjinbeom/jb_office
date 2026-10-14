@@ -17,7 +17,6 @@
   </select>
   <input type="hidden" name="sort" value="{{ sort }}">
   <button class="btn sm" type="submit">적용</button>
-  {% if ideas %}<button class="btn ghost sm" type="button" data-toggle-rows=".log-row" data-label-open="작업 로그 모두 펼치기" data-label-close="작업 로그 모두 접기">작업 로그 모두 펼치기</button>{% endif %}
   {% if is_filtered %}<a class="btn ghost sm" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
 </form>
 {% endblock %}
@@ -30,25 +29,26 @@
     <thead>
       <tr>
         {% for key, label in columns %}
+        {% if forloop.counter == 2 %}
+        {# 작업 로그는 제목 왼쪽: 바로 눌러 보도록. 머리글 버튼 하나로 모두 펼치기/접기 #}
+        <th class="log-th" style="width:150px">
+          <span>작업 로그</span>
+          {% if ideas %}<button type="button" class="log-all" data-toggle-rows=".log-row" data-label-open="모두 펼치기" data-label-close="모두 접기" aria-expanded="false"><svg class="ic"><use href="#i-chevron-down"/></svg><span data-label>모두 펼치기</span></button>{% endif %}
+        </th>
+        {% endif %}
         <th class="{% if key == sort_key %}sorted{% endif %}" style="{% if key == 'code' %}width:84px{% elif key == 'category' %}width:130px{% elif key == 'customer' %}width:220px{% elif key == 'min_product' %}width:300px{% elif key == 'updated' %}width:150px{% endif %}">
           <a href="?q={{ q|urlencode }}&category={{ category }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}">
             {{ label }}{% if key == sort_key %}<span class="sort">{% if sort_desc %}▼{% else %}▲{% endif %}</span>{% endif %}
           </a>
         </th>
         {% endfor %}
-        <th style="width:120px">작업 로그</th>
       </tr>
     </thead>
     <tbody>
       {% for idea in ideas %}
       <tr data-href="{{ idea.get_absolute_url }}">
-        <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
-        <td class="title-cell" title="{{ idea.title }}"><a href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
-        <td><span class="tag">{{ idea.get_category_display }}</span></td>
-        <td title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</td>
-        <td class="text-2" title="{{ idea.min_product }}">{{ idea.min_product|default:"-" }}</td>
-        <td class="small muted num">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
         {% with logs=idea.logs.all %}
+        <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
         <td>
           <button type="button" class="log-toggle" data-toggle-row="#logs-{{ idea.pk }}" aria-expanded="false" title="작업 로그 펼치기">
             <svg class="ic"><use href="#i-chevron-down"/></svg>
@@ -56,6 +56,11 @@
             <span class="d">{% if logs %}{{ logs.0.created_at|date:"m-d" }}{% else %}적기{% endif %}</span>
           </button>
         </td>
+        <td class="title-cell" title="{{ idea.title }}"><a href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
+        <td><span class="tag">{{ idea.get_category_display }}</span></td>
+        <td title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</td>
+        <td class="text-2" title="{{ idea.min_product }}">{{ idea.min_product|default:"-" }}</td>
+        <td class="small muted num">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
       </tr>
       {# 접고 펼치는 작업 로그: 최근 5개 + 그 자리에서 짧게 적기 #}
       <tr class="log-row" id="logs-{{ idea.pk }}" hidden>

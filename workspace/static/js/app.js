@@ -217,6 +217,16 @@
     }
     if (open) all("#" + row.id + " textarea[data-autogrow]").forEach(autogrow);
   }
+  // 모두 펼치기/접기 버튼 하나: 다 열려 있으면 '모두 접기', 하나라도 닫혀 있으면 '모두 펼치기'
+  function syncToggleAll() {
+    all("[data-toggle-rows]").forEach(function (button) {
+      var rows = all(button.getAttribute("data-toggle-rows"));
+      var allOpen = rows.length > 0 && rows.every(function (r) { return !r.hidden; });
+      button.setAttribute("aria-expanded", allOpen ? "true" : "false");
+      var label = button.querySelector("[data-label]") || button;
+      label.textContent = button.getAttribute(allOpen ? "data-label-close" : "data-label-open");
+    });
+  }
   document.addEventListener("click", function (e) {
     if (!e.target.closest) return;
     var one = e.target.closest("[data-toggle-row]");
@@ -224,6 +234,7 @@
       var row = $(one.getAttribute("data-toggle-row"));
       var open = row && row.hidden;
       setRowOpen(row, open);
+      syncToggleAll();
       if (open) { var box = row.querySelector("textarea, input[type=text]"); if (box) box.focus(); }
       return;
     }
@@ -232,7 +243,7 @@
       var rows = all(many.getAttribute("data-toggle-rows"));
       var openAll = rows.some(function (r) { return r.hidden; });
       rows.forEach(function (r) { setRowOpen(r, openAll); });
-      many.textContent = openAll ? many.getAttribute("data-label-close") : many.getAttribute("data-label-open");
+      syncToggleAll();
     }
   });
 
@@ -309,7 +320,7 @@
   if (location.hash.length > 1) {
     var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
     if (target && target.tagName === "DETAILS") { target.open = true; target.scrollIntoView({ block: "center" }); }
-    if (target && target.classList.contains("log-row")) { setRowOpen(target, true); target.scrollIntoView({ block: "center" }); }
+    if (target && target.classList.contains("log-row")) { setRowOpen(target, true); syncToggleAll(); target.scrollIntoView({ block: "center" }); }
   }
 
   document.addEventListener("keydown", function (e) {
