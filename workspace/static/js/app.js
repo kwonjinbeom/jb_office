@@ -168,6 +168,11 @@
       try { localStorage.setItem(NAV_STORE, JSON.stringify(state)); } catch (err) { /* 저장 못 해도 동작은 한다 */ }
       return;
     }
+    // 기간 '전체' 버튼: 같은 폼의 날짜 칸을 비우고 보낸다.
+    var clear = e.target.closest && e.target.closest("[data-clear-dates]");
+    if (clear && clear.form) {
+      all('input[type="date"]').forEach(function (d) { if (d.form === clear.form) d.value = ""; });
+    }
     // 모두 펼치기 / 모두 접기: data-toggle-details="<details 선택자>"
     var toggle = e.target.closest && e.target.closest("[data-toggle-details]");
     if (toggle) {

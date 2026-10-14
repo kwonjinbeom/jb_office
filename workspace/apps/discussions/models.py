@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 
 class Discussion(models.Model):
@@ -36,7 +37,8 @@ class Discussion(models.Model):
     partner = models.CharField("대화 상대", max_length=12, choices=Partner.choices, default=Partner.NONE)
     idea = models.ForeignKey("ideas.Idea", verbose_name="관련 아이디어", null=True, blank=True, on_delete=models.SET_NULL)
     content = models.ForeignKey("content.Content", verbose_name="관련 콘텐츠", null=True, blank=True, on_delete=models.SET_NULL)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField("최근 변경", auto_now=True)
+    created_at = models.DateTimeField("등록", default=timezone.now, editable=False)
 
     class Meta:
         ordering = ["-updated_at", "-pk"]

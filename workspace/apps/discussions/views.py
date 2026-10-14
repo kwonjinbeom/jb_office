@@ -1,9 +1,12 @@
+from datetime import date, timedelta
+
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.content.tree import decorate_tree, subtree_ids
@@ -42,10 +45,42 @@ def save_form(form):
         return item
 
 
+WEEKDAYS = "월화수목금토일"
+PERIODS = [("today", "오늘", 0), ("7", "7일", 6), ("30", "30일", 29)]
+
+
+def _parse_day(value):
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _day_label(day, today):
+    if day == today:
+        return "오늘"
+    if day == today - timedelta(days=1):
+        return "어제"
+    return f"{day.month}월 {day.day}일 ({WEEKDAYS[day.weekday()]})" + (f" · {day.year}" if day.year != today.year else "")
+
+
 def discussion_list(request):
     nodes = decorate_tree(Discussion.objects.all())
     q, area, status = [request.GET.get(key, "").strip() for key in ("q", "area", "status")]
     selected = next((node for node in nodes if str(node.pk) == request.GET.get("topic") and (not area or node.area == area)), None)
+    today = timezone.localdate()
+
+    # 기간: period(오늘·7일·30일) 또는 from~to. 그 기간에 바뀐 논의 = 최근 변경이 그 안이거나, 그 안에 요약 이력이 있는 것.
+    period = request.GET.get("period", "")
+    days_back = next((back for key, _, back in PERIODS if key == period), None)
+    if days_back is not None:
+        date_from, date_to = today - timedelta(days=days_back), today
+    else:
+        period = ""
+        date_from, date_to = _parse_day(request.GET.get("from", "")), _parse_day(request.GET.get("to", ""))
+        if date_from and date_to and date_from > date_to:
+            date_from, date_to = date_to, date_from
+
     qs = Discussion.objects.all()
     if area in dict(Discussion.AREA_CHOICES):
         qs = qs.filter(area=area)
@@ -54,14 +89,38 @@ def discussion_list(request):
     if status in Discussion.Status.values:
         qs = qs.filter(status=status)
     if q:
-        qs = qs.filter(Q(name__icontains=q) | Q(summary__icontains=q) | Q(next_action__icontains=q))
+        qs = qs.filter(Q(name__icontains=q) | Q(summary__icontains=q) | Q(next_action__icontains=q) | Q(history__summary__icontains=q))
+    if date_from or date_to:
+        touched, logged = Q(), Q()
+        if date_from:
+            touched &= Q(updated_at__date__gte=date_from)
+            logged &= Q(history__created_at__date__gte=date_from)
+        if date_to:
+            touched &= Q(updated_at__date__lte=date_to)
+            logged &= Q(history__created_at__date__lte=date_to)
+        qs = qs.filter(touched | logged)
+    qs = qs.distinct().order_by("-updated_at", "-pk")  # 최신 변경이 위로
+
     by_id = {node.pk: node for node in nodes}
     entries = list(qs)
+    day_groups = []
     for entry in entries:
         entry.path = by_id[entry.pk].path
+        day = timezone.localtime(entry.updated_at).date()
+        if not day_groups or day_groups[-1]["day"] != day:
+            day_groups.append({"day": day, "label": _day_label(day, today), "entries": []})
+        day_groups[-1]["entries"].append(entry)
+
     scope = _nav(request, area)
     scope_label = dict(Discussion.AREA_CHOICES)[area] if scope else ""
-    return render(request, "discussions/list.html", {"page_title": f"{scope_label} 논의 현황" if scope else "진행현황", "scope": scope, "scope_label": scope_label, "entries": entries, "topics": [node for node in nodes if not area or node.area == area], "selected": selected, "q": q, "area": area, "status": status, "areas": Discussion.AREA_CHOICES, "statuses": Discussion.Status.choices})
+    return render(request, "discussions/list.html", {
+        "page_title": f"{scope_label} 논의 현황" if scope else "진행현황", "scope": scope, "scope_label": scope_label,
+        "entries": entries, "day_groups": day_groups,
+        "topics": [node for node in nodes if not area or node.area == area], "selected": selected,
+        "q": q, "area": area, "status": status, "areas": Discussion.AREA_CHOICES, "statuses": Discussion.Status.choices,
+        "period": period, "periods": PERIODS, "date_from": date_from.isoformat() if date_from else "", "date_to": date_to.isoformat() if date_to else "",
+        "today": today, "is_filtered": bool(q or status or selected or date_from or date_to or (area and not scope)),
+    })
 
 
 def discussion_detail(request, pk):

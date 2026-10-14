@@ -105,6 +105,34 @@ class DiscussionTests(TestCase):
         self.assertEqual(active_keys(self.client.get(other.get_absolute_url())), ["discussions"])
         self.assertEqual(self.client.post(reverse("discussions:delete", args=[video.pk]))["Location"], "/discussions/?area=video")
 
+    def test_dates_order_group_and_filter(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .models import DiscussionHistory
+
+        now = timezone.now()
+        # 루트는 9일 전, 자식은 2일 전에 바뀐 것으로 둔다 (auto_now 를 피해 update 로).
+        Discussion.objects.filter(pk=self.root.pk).update(updated_at=now - timedelta(days=9), created_at=now - timedelta(days=20))
+        Discussion.objects.filter(pk=self.child.pk).update(updated_at=now - timedelta(days=2))
+        old_log = DiscussionHistory.objects.create(discussion=self.root, summary="열흘 전 요약", status="talk", amount="little", partner="codex")
+        DiscussionHistory.objects.filter(pk=old_log.pk).update(created_at=now - timedelta(days=9))
+
+        response = self.client.get(reverse("discussions:list"))
+        self.assertEqual([x.pk for x in response.context["entries"]], [self.deep.pk, self.child.pk, self.root.pk])  # 최신 변경이 위
+        self.assertEqual([g["label"] for g in response.context["day_groups"]][0], "오늘")
+        self.assertEqual(len(response.context["day_groups"]), 3)
+        self.assertContains(response, "등록")
+
+        week = self.client.get(reverse("discussions:list"), {"period": "7"}).context["entries"]
+        self.assertEqual([x.pk for x in week], [self.deep.pk, self.child.pk])
+
+        # 날짜로 찾기: 그날 바뀌었거나 그날 요약 이력이 있는 것
+        day = timezone.localtime(now - timedelta(days=9)).date().isoformat()
+        picked = self.client.get(reverse("discussions:list"), {"from": day, "to": day}).context["entries"]
+        self.assertEqual([x.pk for x in picked], [self.root.pk])
+        # 지난 요약 내용으로도 찾는다
+        self.assertEqual([x.pk for x in self.client.get(reverse("discussions:list"), {"q": "열흘 전"}).context["entries"]], [self.root.pk])
+
     def test_existing_login_requirement_covers_new_menus(self):
         from django.conf import settings
         middleware = list(settings.MIDDLEWARE)
