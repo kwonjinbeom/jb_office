@@ -636,7 +636,7 @@ a.mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; w
 .log-toggle .n { font-weight: 700; font-variant-numeric: tabular-nums; }
 .log-toggle .d { color: var(--text-3); font-variant-numeric: tabular-nums; }
 .ideas-grid tr.open-row td { background: #f8fbff; }
-.grid th.log-th { white-space: nowrap; }
+.grid th.log-th { white-space: nowrap; text-overflow: clip; }
 .grid th.log-th > span { vertical-align: middle; }
 .log-all { display: inline-flex; align-items: center; gap: 3px; height: 22px; margin-left: 6px; padding: 0 7px; border: 1px solid var(--border); border-radius: 5px; background: var(--panel); color: var(--text-2); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; vertical-align: middle; }
 .log-all:hover { border-color: var(--accent-line); color: var(--accent); }

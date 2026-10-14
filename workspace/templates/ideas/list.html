@@ -25,18 +25,18 @@
 
 {% block content %}
 <div class="grid-wrap">
-  <table class="grid clickable ideas-grid" style="min-width:1100px">
+  <table class="grid clickable ideas-grid" style="min-width:1300px">
     <thead>
       <tr>
         {% for key, label in columns %}
         {% if forloop.counter == 2 %}
         {# 작업 로그는 제목 왼쪽: 바로 눌러 보도록. 머리글 버튼 하나로 모두 펼치기/접기 #}
-        <th class="log-th" style="width:150px">
+        <th class="log-th" style="width:200px">
           <span>작업 로그</span>
           {% if ideas %}<button type="button" class="log-all" data-toggle-rows=".log-row" data-label-open="모두 펼치기" data-label-close="모두 접기" aria-expanded="false"><svg class="ic"><use href="#i-chevron-down"/></svg><span data-label>모두 펼치기</span></button>{% endif %}
         </th>
         {% endif %}
-        <th class="{% if key == sort_key %}sorted{% endif %}" style="{% if key == 'code' %}width:84px{% elif key == 'category' %}width:130px{% elif key == 'customer' %}width:220px{% elif key == 'min_product' %}width:300px{% elif key == 'updated' %}width:150px{% endif %}">
+        <th class="{% if key == sort_key %}sorted{% endif %}" style="{% if key == 'code' %}width:84px{% elif key == 'category' %}width:130px{% elif key == 'customer' %}width:190px{% elif key == 'min_product' %}width:300px{% elif key == 'updated' %}width:150px{% endif %}">
           <a href="?q={{ q|urlencode }}&category={{ category }}&sort={% if key == sort_key and not sort_desc %}-{% endif %}{{ key }}">
             {{ label }}{% if key == sort_key %}<span class="sort">{% if sort_desc %}▼{% else %}▲{% endif %}</span>{% endif %}
           </a>
