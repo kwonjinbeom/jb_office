@@ -1,7 +1,8 @@
 """저장소에 날짜별로 쌓이는 일일 아이디어 JSON을 읽는다.
 
 파일: 시장조사/일일아이디어/<YYYY-MM-DD>.json  (날짜마다 하나)
-  { "date": "2026-10-14", "title": "...", "summary": "...", "method": "...", "source_doc": "...", "items": [ ... ] }
+  { "date": "2026-10-14", "standard_version": 3, "title": "...", "summary": "...", "method": "...", "source_doc": "...", "items": [ ... ] }
+  standard_version: 따른 '아이디어 검색 표준' 버전 (화면 /daily-ideas/standard/). 없으면 표준 없이 찾은 것.
 항목의 필수 값은 REQUIRED_FIELDS. 선택 값:
   tags  ["CSV", "엑셀"]
   plan  구현 계획. 화면에서 항목을 누르면 펼쳐진다. 없으면 만들 것·첫 검증·알릴 곳·돈 받는 방식으로 대신한다.
@@ -107,6 +108,8 @@ def _load_file(path: Path) -> dict:
     result["items"] = normalized
     result["date"] = batch_date
     result["source_doc"] = batch.get("source_doc", f"시장조사/일일아이디어_{batch_date}.md")
+    version = batch.get("standard_version")
+    result["standard_version"] = int(version) if str(version or "").isdigit() else None
     return result
 
 

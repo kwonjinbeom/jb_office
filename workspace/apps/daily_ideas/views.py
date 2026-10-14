@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.db import transaction
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -14,6 +14,12 @@ from django.views.decorators.http import require_POST
 from apps.ideas.models import Idea
 
 from .data import CATEGORY_LABELS, find_item, load_batches
+from .forms import StandardForm
+from .models import SearchStandard
+from .standard import FIELDS as STANDARD_FIELDS
+from .standard import defaults as standard_defaults
+from .standard import request_text as standard_request
+from .standard import to_markdown as standard_to_markdown
 
 
 CATEGORY_TO_IDEA = {
@@ -218,3 +224,66 @@ def adopt(request, item_id: str):
 
     messages.success(request, f"{idea.code}로 내 아이디어에 담았습니다.")
     return redirect(idea)
+
+
+# ---------------------------------------------------------------------------
+# 아이디어 검색 표준
+# ---------------------------------------------------------------------------
+def standard(request):
+    """검색 표준 쓰기. 저장할 때마다 새 버전. ?v=N 은 그 버전을 불러와 보여 준다(저장하면 새 버전)."""
+    request.nav_key = "daily_standard"
+    latest = SearchStandard.latest()
+    history = list(SearchStandard.objects.all()[:30])
+
+    if request.method == "POST":
+        form = StandardForm(request.POST)
+        if form.is_valid():
+            values = {name: form.cleaned_data[name] for name in STANDARD_FIELDS}
+            if latest and latest.same_as(values):
+                messages.info(request, f"바뀐 내용이 없어 v{latest.version} 을 그대로 둡니다.")
+                return redirect("daily_ideas:standard")
+            item = form.save(commit=False)
+            item.version = (latest.version if latest else 0) + 1
+            item.save()
+            messages.success(request, f"검색 표준 v{item.version} 을 저장했습니다. 오른쪽 요청문을 복사해 조사를 맡기세요.")
+            return redirect("daily_ideas:standard")
+        viewing = None
+    else:
+        viewing = None
+        if request.GET.get("v", "").isdigit():
+            viewing = SearchStandard.objects.filter(version=int(request.GET["v"])).first()
+        source = viewing or latest
+        initial = {**(source.values() if source else standard_defaults())}
+        form = StandardForm(initial=initial)
+
+    for_date = _parse_date(request.GET.get("for", "")) or timezone.localdate()
+    current = viewing or latest
+    return render(
+        request,
+        "daily_ideas/standard.html",
+        {
+            "page_title": "아이디어 검색 표준",
+            "form": form,
+            "sections": [form[name] for name in STANDARD_FIELDS],
+            "latest": latest,
+            "viewing": viewing if viewing and latest and viewing.version != latest.version else None,
+            "history": history,
+            "for_date": for_date.isoformat(),
+            "request_text": standard_request(current, for_date.isoformat()) if current else "",
+            "current": current,
+        },
+    )
+
+
+def standard_markdown(request):
+    """검색 표준 Markdown 내려받기 (?v=N 이면 그 버전)."""
+    item = None
+    if request.GET.get("v", "").isdigit():
+        item = SearchStandard.objects.filter(version=int(request.GET["v"])).first()
+    item = item or SearchStandard.latest()
+    if item is None:
+        raise Http404("아직 저장한 검색 표준이 없습니다.")
+    body = standard_to_markdown(item.values(), title=f"아이디어 검색 표준 v{item.version} ({item.saved_label})")
+    response = HttpResponse(body, content_type="text/markdown; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="idea-search-standard-v{item.version}.md"'
+    return response

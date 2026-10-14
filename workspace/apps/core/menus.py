@@ -34,7 +34,12 @@ class Menu:
 
 
 MENUS: list[Menu] = [
-    Menu("daily_ideas", "일일 아이디어", "날짜별로 조사한 후보를 비교하고 필요한 것만 담는 곳", "daily_ideas:list", "sparkles", "#334155"),
+    Menu(
+        "daily_ideas", "일일 아이디어", "날짜별로 조사한 후보를 비교하고 필요한 것만 담는 곳", "daily_ideas:list", "sparkles", "#334155",
+        children=(
+            Menu("daily_standard", "검색 표준", "아이디어를 찾을 때 주는 조건을 쓰고 버전으로 남기는 곳", "daily_ideas:standard", "edit"),
+        ),
+    ),
     Menu("ideas", "내 아이디어", "내가 고른 후보를 단계별로 실제 작업으로 바꾸는 곳", "ideas:list", "bulb", "#2f6bd8"),
     Menu(
         "blog", "블로그·카페", "카테고리별 소재·템플릿·글과 게시 기록", "blog:list", "file", "#2f6bd8",

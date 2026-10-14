@@ -66,6 +66,10 @@ workspace/
 구현 계획은 항목의 `plan` (문장 목록 또는 `{title, detail}` 목록)을 쓰고, 없으면 만들 것·첫 검증·알릴 곳·돈 받는 방식으로 대신한다.
 형식은 `apps/daily_ideas/data.py` 머리말. '내 아이디어'에는 여기서 직접 담은 것만 들어간다 (초기 시드는 넣지 않는다).
 
+**아이디어 검색 표준** (`/daily-ideas/standard/`, 일일 아이디어 아래 하위 메뉴): 조사할 때 Claude·Codex 에게 주는 조건을 항목별로 쓴다.
+저장할 때마다 버전(v1, v2 …)이 DB 에 쌓인다. 조사를 맡길 때는 화면의 '요청문 복사'를 대화에 붙여 넣는다 — 에이전트는 서버 DB 를 직접 읽지 않는다.
+조사 결과 JSON 의 `standard_version` 으로 어느 버전을 따랐는지 남기고, 일일 아이디어 화면에 표시된다. 항목 구성은 `apps/daily_ideas/standard.py`.
+
 ## 메뉴 추가 방법
 
 1. `python manage.py startapp <이름> apps/<이름>` 으로 앱을 만들고 `config/settings.py` 의 `INSTALLED_APPS` 에 `apps.<이름>` 추가

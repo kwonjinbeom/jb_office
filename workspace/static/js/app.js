@@ -178,6 +178,28 @@
     }
   });
 
+  // 글 상자(data-autogrow)는 내용 길이에 맞춰 높이가 자란다.
+  function autogrow(t) {
+    t.style.height = "auto";
+    t.style.height = (t.scrollHeight + 2) + "px";
+  }
+  all("textarea[data-autogrow]").forEach(autogrow);
+  document.addEventListener("input", function (e) {
+    if (e.target.matches && e.target.matches("textarea[data-autogrow]")) autogrow(e.target);
+  });
+
+  // 긴 글을 쓰는 폼(data-dirty-warn): 저장하지 않고 떠나려 하면 묻는다.
+  all("form[data-dirty-warn]").forEach(function (form) {
+    var dirty = false;
+    form.addEventListener("input", function () { dirty = true; });
+    form.addEventListener("submit", function () { dirty = false; });
+    window.addEventListener("beforeunload", function (e) {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    });
+  });
+
   // 주소 끝의 #idea-… 처럼 접힌 항목을 가리키면 펴서 보여 준다.
   if (location.hash.length > 1) {
     var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'daily_ideas:list' %}">일일 아이디어</a></div>{% endblock %}
+{% block heading %}아이디어 검색 표준{% if latest %} <span class="cnt">v{{ latest.version }}</span>{% endif %}{% endblock %}
+{% block subtitle %}<span class="page-sub">{% if latest %}마지막 저장 {{ latest.saved_label }}{% else %}아직 저장 전 · 기본 문장으로 채워 두었습니다{% endif %}</span>{% endblock %}
+
+{% block actions %}
+{% if latest %}<a class="btn" href="{% url 'daily_ideas:standard_md' %}{% if viewing %}?v={{ viewing.version }}{% endif %}">{% include "includes/ic.html" with name="download" %}Markdown</a>{% endif %}
+<button class="btn primary" type="submit" form="standard-form">{% include "includes/ic.html" with name="save" %}저장{% if latest %} (v{{ latest.version|add:1 }}){% endif %}</button>
+{% endblock %}
+
+{% block content %}
+<div class="std">
+  <form id="standard-form" method="post" class="std-form" data-dirty-warn>
+    {% csrf_token %}
+    {% if viewing %}
+    <div class="notice warn">{% include "includes/ic.html" with name="clock" %}
+      <span><b>v{{ viewing.version }}</b> ({{ viewing.saved_label }})을 불러왔습니다. 그대로 저장하면 이 내용이 새 버전 v{{ latest.version|add:1 }} 이 됩니다.</span>
+      <a class="btn sm" href="{% url 'daily_ideas:standard' %}">현재 v{{ latest.version }} 으로</a>
+    </div>
+    {% endif %}
+
+    <div class="notice info">{% include "includes/ic.html" with name="info" %}
+      <span>이 표준이 곧 조사 지시입니다. <b>원하는 방향과 기준을 구체적으로</b> 쓸수록 결과가 좋아집니다. 저장할 때마다 버전이 남고, 그날 조사에 어느 버전을 썼는지 일일 아이디어 화면에 표시됩니다.</span>
+    </div>
+
+    {% for field in sections %}
+    <section class="card std-sec">
+      <div class="card-head">
+        <span class="std-num">{{ forloop.counter }}</span>
+        <div class="grow">
+          <h2 class="card-title"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
+          <div class="hint">{{ field.help_text }}</div>
+        </div>
+      </div>
+      <div class="card-body">{{ field }}{{ field.errors }}</div>
+    </section>
+    {% endfor %}
+
+    <section class="card">
+      <div class="card-body std-save">
+        <div class="grow">{% include "includes/field.html" with field=form.note %}</div>
+        <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장{% if latest %} (v{{ latest.version|add:1 }}){% endif %}</button>
+      </div>
+    </section>
+  </form>
+
+  <aside class="std-side">
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="message" %}조사 맡기기</h2>{% if current %}<span class="badge blue">v{{ current.version }} 기준</span>{% endif %}</div>
+      <div class="card-body col">
+        {% if current %}
+        <form method="get" class="row">
+          {% if viewing %}<input type="hidden" name="v" value="{{ viewing.version }}">{% endif %}
+          <label class="small muted nowrap" for="for-date">찾을 날짜</label>
+          <input class="input sm" id="for-date" type="date" name="for" value="{{ for_date }}" data-autosubmit>
+        </form>
+        <textarea class="input mono std-request" id="request-text" readonly spellcheck="false">{{ request_text }}</textarea>
+        <button class="btn primary block" type="button" data-copy="#request-text">{% include "includes/ic.html" with name="copy" %}요청문 복사</button>
+        <p class="help">복사해서 Claude 대화에 붙여 넣으세요. 그 날짜의 아이디어를 찾아 <code>시장조사/일일아이디어/</code> 에 올리면 일일 아이디어 화면에 나타납니다. 고친 내용은 저장해야 요청문에 들어갑니다.</p>
+        {% else %}
+        <p class="empty-line">먼저 저장하면 이 표준으로 조사를 맡기는 요청문이 여기에 만들어집니다.</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="clock" %}버전 기록</h2><span class="cnt">{{ history|length }}</span></div>
+      <div class="card-body">
+        {% if history %}
+        <ul class="rows std-history">
+          {% for h in history %}
+          <li>
+            <a href="?v={{ h.version }}" class="{% if viewing.version == h.version %}on{% endif %}">
+              <span class="code">v{{ h.version }}</span>
+              <span class="grow"><span class="small num muted">{{ h.saved_label }}</span>{% if h.note %}<span class="std-note">{{ h.note }}</span>{% endif %}</span>
+              {% if latest.version == h.version %}<span class="badge green">현재</span>{% endif %}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-line">아직 기록이 없습니다.</p>
+        {% endif %}
+      </div>
+    </section>
+  </aside>
+</div>
+{% endblock %}

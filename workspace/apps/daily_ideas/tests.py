@@ -10,13 +10,13 @@ class DailyIdeasTests(TestCase):
         response = self.client.get(reverse("daily_ideas:list"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "2026-10-14")
+        self.assertContains(response, "2026-10-13")
         self.assertContains(response, "CSV·엑셀 셀 단위 변경 검수기")
         self.assertContains(response, "36개")
 
     def test_adopt_copies_daily_item_to_my_ideas_once(self):
         Idea.objects.create(code="C35", title="기존 아이디어")
-        url = reverse("daily_ideas:adopt", args=["20261014-01"])
+        url = reverse("daily_ideas:adopt", args=["20261013-01"])
 
         response = self.client.post(url)
 
@@ -24,7 +24,7 @@ class DailyIdeasTests(TestCase):
         idea = Idea.objects.get(code="C36")
         self.assertEqual(idea.code, "C36")
         self.assertEqual(idea.title, "CSV·엑셀 셀 단위 변경 검수기")
-        self.assertIn("daily:20261014-01", idea.tags)
+        self.assertIn("daily:20261013-01", idea.tags)
 
         self.client.post(url)
         self.assertEqual(Idea.objects.count(), 2)
@@ -32,19 +32,19 @@ class DailyIdeasTests(TestCase):
     def test_calendar_moves_between_days_and_keeps_empty_days(self):
         response = self.client.get(reverse("daily_ideas:list"))
         calendar = response.context["calendar"]
-        self.assertEqual(response.context["selected_date"], "2026-10-14")
+        self.assertEqual(response.context["selected_date"], "2026-10-13")
         self.assertEqual([d["weekday"] for d in calendar["days"]], list("월화수목금토일"))
         picked = next(d for d in calendar["days"] if d["is_selected"])
-        self.assertEqual((picked["iso"], picked["count"]), ("2026-10-14", 36))
+        self.assertEqual((picked["iso"], picked["count"]), ("2026-10-13", 36))
 
         # 조사가 없는 날을 골라도 그 날짜에 머물고, 화살표는 조사한 날로 이어진다.
         response = self.client.get(reverse("daily_ideas:list"), {"date": "2026-10-10"})
         self.assertEqual(response.context["selected_date"], "2026-10-10")
         self.assertFalse(response.context["has_research"])
-        self.assertEqual(response.context["calendar"]["next_date"], "2026-10-14")
+        self.assertEqual(response.context["calendar"]["next_date"], "2026-10-13")
         self.assertContains(response, "조사한 아이디어가 없습니다")
 
-        self.assertEqual(self.client.get(reverse("daily_ideas:list"), {"date": "없는날짜"}).context["selected_date"], "2026-10-14")
+        self.assertEqual(self.client.get(reverse("daily_ideas:list"), {"date": "없는날짜"}).context["selected_date"], "2026-10-13")
         self.assertTrue(self.client.get(reverse("daily_ideas:list"), {"date": "all"}).context["show_all"])
 
     def test_rows_show_idea_and_detail_with_plan_behind_a_click(self):
@@ -78,3 +78,50 @@ class DailyIdeasTests(TestCase):
         self.assertNotContains(response, "★")
         self.assertNotContains(response, ">상태<")
         self.assertContains(response, "내 아이디어")
+
+
+class SearchStandardTests(TestCase):
+    def test_first_visit_shows_default_sections_and_no_request_yet(self):
+        response = self.client.get(reverse("daily_ideas:standard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "목적과 방향")
+        self.assertContains(response, "첫 수익")  # 기본 문장으로 채워 둔다
+        self.assertContains(response, "먼저 저장하면")
+        self.assertEqual(response.context["request_text"], "")
+        active = [c["menu"].key for n in response.context["NAV"] for c in n["children"] if c["active"]]
+        self.assertEqual(active, ["daily_standard"])
+
+    def test_saving_makes_versions_only_when_something_changed(self):
+        from .models import SearchStandard
+        from .standard import defaults
+
+        url = reverse("daily_ideas:standard")
+        data = {**defaults(), "focus": "itch.io 도구만 15개", "note": "첫 표준"}
+        self.client.post(url, data)
+        self.client.post(url, data)  # 그대로 다시 저장 → 새 버전 없음
+        self.assertEqual(list(SearchStandard.objects.values_list("version", flat=True)), [1])
+
+        self.client.post(url, {**data, "focus": "리그 오브 레전드 후보 2개 이상", "note": "주문 변경"})
+        latest = SearchStandard.latest()
+        self.assertEqual(latest.version, 2)
+
+        response = self.client.get(url, {"for": "2026-10-14"})
+        text = response.context["request_text"]
+        self.assertIn("2026-10-14 일일 아이디어", text)
+        self.assertIn('"standard_version": 2', text)
+        self.assertIn("리그 오브 레전드 후보 2개 이상", text)
+
+        # 옛 버전을 불러오면 그 내용이 폼에 들어오고, 요청문도 그 버전 기준이다.
+        response = self.client.get(url, {"v": 1})
+        self.assertEqual(response.context["viewing"].version, 1)
+        self.assertIn("itch.io 도구만 15개", response.context["request_text"])
+
+        md = self.client.get(reverse("daily_ideas:standard_md"), {"v": 1})
+        self.assertEqual(md["Content-Type"], "text/markdown; charset=utf-8")
+        self.assertIn("## 1. 목적과 방향", md.content.decode("utf-8"))
+
+    def test_daily_page_shows_which_standard_was_used(self):
+        response = self.client.get(reverse("daily_ideas:list"))
+        self.assertContains(response, "표준 없이 조사")
+        self.assertContains(response, reverse("daily_ideas:standard"))

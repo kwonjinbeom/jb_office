@@ -4,6 +4,7 @@
 {% block subtitle %}{% if adopted_count %}<span class="page-sub">내 아이디어에 담은 것 {{ adopted_count }}개</span>{% endif %}{% endblock %}
 
 {% block actions %}
+<a class="btn" href="{% url 'daily_ideas:standard' %}">{% include "includes/ic.html" with name="edit" %}검색 표준</a>
 <a class="btn" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="bulb" %}내 아이디어 보기</a>
 {% endblock %}
 
@@ -71,6 +72,7 @@
         <details class="il-method"><summary>조사 범위와 한계</summary><p>{{ group.method }}</p></details>
         {% endif %}
       </div>
+      {% if group.standard_version %}<a class="badge blue" href="{% url 'daily_ideas:standard' %}?v={{ group.standard_version }}" title="이 날 조사에 쓴 검색 표준">검색 표준 v{{ group.standard_version }}</a>{% else %}<span class="badge gray" title="검색 표준을 만들기 전에 찾은 조사">표준 없이 조사</span>{% endif %}
       <a class="btn ghost sm" href="{% url 'docs:detail' group.source_doc %}">{% include "includes/ic.html" with name="file" %}상세 조사 문서</a>
     </div>
 
