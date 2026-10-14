@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'writing:list' %}">티스토리 글쓰기</a></div>{% endblock %}
+{% block actions %}<a class="btn" href="{{ cancel_url }}">취소</a><button class="btn primary" form="writing-create">저장</button>{% endblock %}
+{% block toolbar %}{% include "writing/_tabs.html" %}{% endblock %}
+{% block content %}<form method="post" enctype="multipart/form-data" class="form-page" id="writing-create">{% csrf_token %}<section class="card"><div class="card-body form-grid">{% if form.non_field_errors %}<div class="notice danger span-2">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}{% if field.name == 'body' or field.name == 'rules' %}{% include "includes/field.html" with field=field cls="span-2" %}{% else %}{% include "includes/field.html" with field=field %}{% endif %}{% endfor %}</div></section><div class="form-foot"><a class="btn" href="{{ cancel_url }}">취소</a><button class="btn primary">저장</button></div></form>{% endblock %}

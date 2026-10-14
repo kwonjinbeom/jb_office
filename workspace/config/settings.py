@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     "apps.docs",
     "apps.content",
     "apps.discussions",
+    "apps.writing",
 ]
 
 MIDDLEWARE = [

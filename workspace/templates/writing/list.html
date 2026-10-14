@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+{% block actions %}<a class="btn" href="{% url 'writing:import' %}">백업 가져오기</a><a class="btn primary" href="{% url 'writing:create' %}">{% include "includes/ic.html" with name="plus" %}새 원고</a>{% endblock %}
+{% block toolbar %}
+{% include "writing/_tabs.html" %}
+<form class="filter-bar" method="get"><div class="search-box"><input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목·검색어·본문 검색" aria-label="원고 검색"></div><select class="select sm" name="status" aria-label="작성 상태" data-autosubmit><option value="">상태 전체</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn sm">검색</button>{% if q or status %}<a class="btn ghost sm" href="{% url 'writing:list' %}">초기화</a>{% endif %}<span class="muted small">전체 {{ total }}편</span></form>
+{% endblock %}
+{% block body_class %}fill{% endblock %}
+{% block content %}
+{% if not total %}
+<div class="wr-welcome"><span class="badge blue">TISTORY WRITING</span><h2>자료에서 원고까지,<br>글 한 편을 차근차근.</h2><p>독자의 질문을 정하고, 글 틀로 구성하고, 확인한 자료로 채우세요.<br>완성한 본문은 티스토리에 맞게 복사할 수 있습니다.</p><div class="wr-roadmap"><span>1 · 기획·자료</span><span>2 · 원고 작성</span><span>3 · 검수</span><span>4 · 티스토리에 옮기기</span></div><a class="btn primary lg" href="{% url 'writing:create' %}">첫 원고 시작</a><a class="btn" href="{% url 'writing:templates' %}">글 형식 둘러보기</a></div>
+{% else %}
+<div class="grid-wrap"><table class="grid clickable" style="min-width:800px"><thead><tr><th>제목</th><th style="width:160px">검색어</th><th style="width:180px">작성 규칙</th><th style="width:110px">상태</th><th style="width:150px">마지막 저장</th></tr></thead><tbody>{% for draft in page %}<tr data-href="{{ draft.get_absolute_url }}"><td class="title-cell"><a href="{{ draft.get_absolute_url }}">{{ draft.content.title }}</a><span class="sub">{{ draft.answer }}</span></td><td>{{ draft.keyword|default:'-' }}</td><td>{{ draft.profile.name|default:'기본 규칙' }}</td><td><span class="badge">{{ draft.content.get_status_display }}</span></td><td class="small muted num">{{ draft.content.updated_at|date:'m-d H:i' }}</td></tr>{% empty %}<tr><td class="grid-empty" colspan="5">조건에 맞는 원고가 없습니다.</td></tr>{% endfor %}</tbody></table></div>
+{% if page.has_other_pages %}<div class="wr-pagination">{% if page.has_previous %}<a class="btn sm" href="?q={{ q|urlencode }}&status={{ status }}&page={{ page.previous_page_number }}">이전</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?q={{ q|urlencode }}&status={{ status }}&page={{ page.next_page_number }}">다음</a>{% endif %}</div>{% endif %}
+{% endif %}
+{% endblock %}
