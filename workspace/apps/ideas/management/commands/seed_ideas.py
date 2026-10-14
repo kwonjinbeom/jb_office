@@ -5,7 +5,7 @@ from apps.ideas.seed_data import IDEAS
 
 
 class Command(BaseCommand):
-    help = "시장조사 문서의 후보 C01~C35 를 아이디어 테이블에 적재한다. 기본은 없는 코드만 추가."
+    help = "시험용: 시장조사 문서의 후보 C01~C35 를 아이디어 테이블에 넣는다. 기본은 없는 코드만 추가. (실행 스크립트는 더 이상 부르지 않는다)"
 
     def add_arguments(self, parser):
         parser.add_argument(

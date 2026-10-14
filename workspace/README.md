@@ -18,7 +18,6 @@ cd workspace
 python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 .venv\Scripts\python manage.py migrate
-.venv\Scripts\python manage.py seed_ideas
 .venv\Scripts\python manage.py runserver
 ```
 
@@ -60,11 +59,20 @@ workspace/
 
 홈은 진행 중인 아이디어(현재 단계·진행률·열린 할 일), 오늘·지난 할 일, 최근 로그를 보여 준다.
 
+## 일일 아이디어
+
+날짜마다 `시장조사/일일아이디어/<YYYY-MM-DD>.json` 하나. 화면 위쪽 달력에서 날짜를 옮긴다 (← → 키, 날짜 고르기).
+목록에는 아이디어와 세부내용만 보이고, 항목을 누르면 구현 계획과 검토 근거가 펼쳐진다.
+구현 계획은 항목의 `plan` (문장 목록 또는 `{title, detail}` 목록)을 쓰고, 없으면 만들 것·첫 검증·알릴 곳·돈 받는 방식으로 대신한다.
+형식은 `apps/daily_ideas/data.py` 머리말. '내 아이디어'에는 여기서 직접 담은 것만 들어간다 (초기 시드는 넣지 않는다).
+
 ## 메뉴 추가 방법
 
 1. `python manage.py startapp <이름> apps/<이름>` 으로 앱을 만들고 `config/settings.py` 의 `INSTALLED_APPS` 에 `apps.<이름>` 추가
 2. `apps/<이름>/urls.py` 에 `app_name = "<이름>"` 지정, `config/urls.py` 에 include
 3. `apps/core/menus.py` 의 `MENUS` 에 항목 추가 → 홈 카드와 좌측 메뉴에 자동 표시
+   - 하위 메뉴는 그 항목의 `children=(Menu(...), ...)` 에 넣는다 → 좌측 메뉴에서 트리로 펼쳐진다 (블로그·카페, 영상 콘텐츠 아래의 '논의 현황').
+     하위 메뉴 화면의 뷰에서 `request.nav_key = "<key>"` 를 넣으면 그 항목이 강조된다.
 4. 템플릿은 `templates/<이름>/` 에 두고 `{% extends "base.html" %}`
 
 화면 뼈대는 `base.html` 의 block 으로 채운다: `heading`(제목), `subtitle`(제목 옆 설명), `actions`(오른쪽 버튼),

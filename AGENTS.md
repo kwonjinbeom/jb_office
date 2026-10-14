@@ -43,7 +43,7 @@ PR 은 다음 경우에만 쓴다.
 - **실제 데이터는 PythonAnywhere 서버의 `~/data/db.sqlite3` 하나다.** git 에는 DB 파일이 없다 (`.gitignore`). 배포 방법은 `workspace/DEPLOY.md`.
 - PC 와 폰은 브라우저로 서버(`https://<아이디>.pythonanywhere.com`)에 접속해 데이터를 고친다. 로컬 `workspace/db.sqlite3` 는 개발용 임시 DB 일 뿐이다.
 - 에이전트는 어느 쪽도 서버 DB 파일을 직접 만지지 않는다. 데이터 구조를 바꿀 때는 migration 소스를 만들고, 서버에서 `migrate` 가 필요하다고 PR 또는 커밋 메시지에 명시한다. 서버 적용은 사용자가 Bash 콘솔에서 한다.
-- Codex 는 임시 테스트 DB 와 읽기 전용 검사만 쓴다. `seed_ideas` 는 새 DB 를 만들 때만 쓰는 초기 데이터이며, 서버 데이터의 원본이 아니다.
+- Codex 는 임시 테스트 DB 와 읽기 전용 검사만 쓴다. `seed_ideas` 는 시험용 DB 에 예시 후보를 넣는 명령이며 서버 데이터의 원본이 아니다. '내 아이디어'에는 사용자가 일일 아이디어에서 직접 담은 것만 둔다 (2026-10-14: 기존 시드 후보를 모두 지움, `run.bat` 도 더는 시드를 넣지 않는다).
 
 ## 4. 문서 규칙
 
@@ -59,7 +59,7 @@ PR 은 다음 경우에만 쓴다.
 - Python 의존성을 추가하면 `requirements.txt` 에 넣고, 커밋 메시지에 "서버 pip install 필요" 를 적는다 (현재 Markdown 패키지가 그렇다).
 - 새 메뉴 추가: 앱 생성 → `config/settings.py` INSTALLED_APPS → `config/urls.py` include → `apps/core/menus.py` MENUS 에 항목 추가. 홈 카드와 좌측 메뉴가 자동으로 생긴다.
 - 템플릿은 `templates/<앱>/` 에 두고 `{% extends "base.html" %}`. 스타일은 `static/css/app.css` 하나, 외부 CSS 프레임워크 없음, 사무적이고 깔끔한 톤 유지.
-- 실행: `workspace\run.bat` (가상환경 생성 → 설치 → migrate → seed → runserver).
+- 실행: `workspace\run.bat` (가상환경 생성 → 설치 → migrate → runserver).
 
 ## 6. 자동 동기화 (PC 전용)
 

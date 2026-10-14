@@ -1,4 +1,4 @@
-/* 공통 스크립트: 토스트, 사이드바 git 상태 + 홈 Git 패널 자동 갱신(30초), 행 클릭, 복사, 단축키. */
+/* 공통 스크립트: 토스트, 사이드바 git 상태 + 홈 Git 패널 자동 갱신(30초), 트리 메뉴, 행 클릭, 복사, 단축키(/ 검색, ← → 날짜). */
 (function () {
   "use strict";
   var cfg = window.APP || {};
@@ -136,8 +136,53 @@
   // ---- 입력 편의
   // 고르면 바로 적용되는 필터
   document.addEventListener("change", function (e) {
-    if (e.target.matches && e.target.matches("select[data-autosubmit]") && e.target.form) e.target.form.submit();
+    var el = e.target;
+    if (!el.matches || !el.matches("select[data-autosubmit], input[data-autosubmit]") || !el.form) return;
+    if (el.tagName === "INPUT" && !el.value) return;  // 날짜를 지운 것은 이동이 아니다
+    el.form.submit();
   });
+
+  // 좌측 트리 메뉴: 화살표로 접었다 펴고, 편 것은 이 브라우저에 기억한다.
+  var NAV_STORE = "nav.open";
+  function navState() {
+    try { return JSON.parse(localStorage.getItem(NAV_STORE) || "{}") || {}; } catch (err) { return {}; }
+  }
+  function setNavOpen(group, open) {
+    group.classList.toggle("open", open);
+    var caret = group.querySelector("[data-nav-toggle]");
+    if (caret) caret.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  var saved = navState();
+  all("[data-nav-group]").forEach(function (group) {
+    // 현재 화면이 속한 가지는 서버가 이미 펴 두었다. 그 밖에는 기억해 둔 대로.
+    if (!group.classList.contains("open") && saved[group.getAttribute("data-nav-group")]) setNavOpen(group, true);
+  });
+  document.addEventListener("click", function (e) {
+    var caret = e.target.closest && e.target.closest("[data-nav-toggle]");
+    if (caret) {
+      var group = caret.closest("[data-nav-group]");
+      var open = !group.classList.contains("open");
+      setNavOpen(group, open);
+      var state = navState();
+      state[group.getAttribute("data-nav-group")] = open;
+      try { localStorage.setItem(NAV_STORE, JSON.stringify(state)); } catch (err) { /* 저장 못 해도 동작은 한다 */ }
+      return;
+    }
+    // 모두 펼치기 / 모두 접기: data-toggle-details="<details 선택자>"
+    var toggle = e.target.closest && e.target.closest("[data-toggle-details]");
+    if (toggle) {
+      var rows = all(toggle.getAttribute("data-toggle-details"));
+      var openAll = rows.some(function (d) { return !d.open; });
+      rows.forEach(function (d) { d.open = openAll; });
+      toggle.textContent = openAll ? toggle.getAttribute("data-label-close") : toggle.getAttribute("data-label-open");
+    }
+  });
+
+  // 주소 끝의 #idea-… 처럼 접힌 항목을 가리키면 펴서 보여 준다.
+  if (location.hash.length > 1) {
+    var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target && target.tagName === "DETAILS") { target.open = true; target.scrollIntoView({ block: "center" }); }
+  }
 
   document.addEventListener("keydown", function (e) {
     var t = e.target;
@@ -149,10 +194,17 @@
       if (t.form.requestSubmit) t.form.requestSubmit(); else t.form.submit();
       return;
     }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
     // "/" → 검색칸으로
-    if (e.key === "/" && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      var box = $('.filter-bar input[type="search"]');
+    if (e.key === "/") {
+      var box = $('.filter-bar input[type="search"], .il-filter input[type="search"]');
       if (box) { e.preventDefault(); box.focus(); box.select(); }
+      return;
+    }
+    // 화면에 data-hotkey="ArrowLeft" 같은 링크가 있으면 그 키로 누른 것과 같다 (달력의 이전·다음 날).
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      var link = $('a[data-hotkey="' + e.key + '"]');
+      if (link) { e.preventDefault(); link.click(); }
     }
   });
 

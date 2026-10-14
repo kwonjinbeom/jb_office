@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import re
+from datetime import date, timedelta
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.ideas.models import Idea
@@ -32,14 +35,72 @@ def _matches(item: dict, query: str) -> bool:
     return query.casefold() in haystack.casefold()
 
 
+WEEKDAYS = "월화수목금토일"
+
+
+def _parse_date(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _calendar(day: date, selected: str, counts: dict[str, int], today: date) -> dict:
+    """위쪽 달력 띠: day 가 들어 있는 한 주(월~일)와 앞뒤로 움직일 날짜."""
+    monday = day - timedelta(days=day.weekday())
+    days = []
+    for offset in range(7):
+        current = monday + timedelta(days=offset)
+        iso = current.isoformat()
+        days.append(
+            {
+                "iso": iso,
+                "day": current.day,
+                "weekday": WEEKDAYS[offset],
+                "count": counts.get(iso, 0),
+                "is_selected": iso == selected,
+                "is_today": current == today,
+                "is_weekend": offset >= 5,
+                "is_future": current > today,
+            }
+        )
+    researched = sorted(counts)
+    earlier = [d for d in researched if d < day.isoformat()]
+    later = [d for d in researched if d > day.isoformat()]
+    sunday = monday + timedelta(days=6)
+    week_label = f"{monday.year}년 {monday.month}월"
+    if sunday.month != monday.month:
+        week_label += f" ~ {sunday.month}월"
+    return {
+        "days": days,
+        "week_label": week_label,
+        "prev_week": (day - timedelta(days=7)).isoformat(),
+        "next_week": (day + timedelta(days=7)).isoformat(),
+        # 좌우 화살표는 조사한 날만 건너다닌다 (빈 날에 멈추지 않게).
+        "prev_date": earlier[-1] if earlier else "",
+        "next_date": later[0] if later else "",
+        "latest": researched[-1] if researched else "",
+        "today": today.isoformat(),
+        "min": researched[0] if researched else "",
+    }
+
+
 def daily_list(request):
     batches = load_batches()
-    available_dates = [batch["date"] for batch in batches]
-    selected_date = request.GET.get("date", "")
-    if not selected_date:
-        selected_date = available_dates[0] if available_dates else "all"
-    if selected_date != "all" and selected_date not in available_dates:
-        selected_date = available_dates[0] if available_dates else "all"
+    counts = {batch["date"]: len(batch["items"]) for batch in batches}
+    latest = max(counts) if counts else ""
+    today = timezone.localdate()
+
+    # date: 없으면 가장 최근 조사일, "all" 이면 전체 기간, 그 밖에는 고른 날짜(조사가 없는 날도 그대로 보여 준다).
+    raw_date = request.GET.get("date", "")
+    show_all = raw_date == "all"
+    picked = None if show_all else _parse_date(raw_date)
+    if show_all:
+        selected_date = "all"
+        anchor = _parse_date(latest) or today
+    else:
+        anchor = picked or _parse_date(latest) or today
+        selected_date = anchor.isoformat()
 
     query = request.GET.get("q", "").strip()
     category = request.GET.get("category", "")
@@ -47,42 +108,57 @@ def daily_list(request):
         category = ""
 
     adopted = {}
-    for idea in Idea.objects.filter(tags__contains="daily:").only("id", "title", "tags"):
+    for idea in Idea.objects.filter(tags__contains="daily:").only("id", "code", "title", "tags"):
         for tag in idea.tag_list:
             if tag.startswith("daily:"):
                 adopted[tag] = idea
 
     groups = []
-    total = 0
+    total = adopted_count = 0
+    category_counts = dict.fromkeys(CATEGORY_LABELS, 0)
     for batch in batches:
-        if selected_date != "all" and batch["date"] != selected_date:
+        if not show_all and batch["date"] != selected_date:
             continue
         items = []
         for source_item in batch["items"]:
-            if category and source_item["category"] != category:
-                continue
             if not _matches(source_item, query):
                 continue
+            category_counts[source_item["category"]] += 1
+            if category and source_item["category"] != category:
+                continue
             item = dict(source_item)
+            item["no"] = item["id"].rsplit("-", 1)[-1]
             item["adopted_idea"] = adopted.get(item["daily_tag"])
+            adopted_count += bool(item["adopted_idea"])
             items.append(item)
         if items or not (query or category):
-            groups.append({**batch, "items": items})
+            batch_day = date.fromisoformat(batch["date"])
+            groups.append({**batch, "items": items, "day": batch_day, "weekday": WEEKDAYS[batch_day.weekday()]})
             total += len(items)
 
+    # 날짜를 옮겨도 검색어·분류는 유지한다.
+    keep = urlencode({key: value for key, value in (("q", query), ("category", category)) if value})
     return render(
         request,
         "daily_ideas/list.html",
         {
             "page_title": "일일 아이디어",
             "groups": groups,
-            "available_dates": available_dates,
             "selected_date": selected_date,
+            "selected_day": None if show_all else anchor,
+            "selected_weekday": "" if show_all else WEEKDAYS[anchor.weekday()],
+            "has_research": show_all or selected_date in counts,
+            "show_all": show_all,
+            "calendar": _calendar(anchor, selected_date, counts, today),
+            "keep": f"&{keep}" if keep else "",
+            "keep_q": f"&{urlencode({'q': query})}" if query else "",
             "q": query,
             "category": category,
-            "categories": CATEGORY_LABELS.items(),
+            "categories": [(value, label, category_counts[value]) for value, label in CATEGORY_LABELS.items()],
+            "category_total": sum(category_counts.values()),
             "total": total,
-            "is_filtered": bool(query or category or selected_date == "all"),
+            "adopted_count": adopted_count,
+            "is_filtered": bool(query or category),
         },
     )
 

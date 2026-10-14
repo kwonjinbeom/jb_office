@@ -1,117 +1,154 @@
 {% extends "base.html" %}
 
 {% block heading %}일일 아이디어 <span class="cnt">{{ total }}개</span>{% endblock %}
+{% block subtitle %}{% if adopted_count %}<span class="page-sub">내 아이디어에 담은 것 {{ adopted_count }}개</span>{% endif %}{% endblock %}
 
 {% block actions %}
 <a class="btn" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="bulb" %}내 아이디어 보기</a>
 {% endblock %}
 
 {% block toolbar %}
-<form method="get" class="filter-bar">
-  <input type="hidden" name="date" value="{{ selected_date }}">
-  <nav class="seg" aria-label="조사 날짜">
-    {% for day in available_dates %}
-    <a class="{% if selected_date == day %}on{% endif %}" href="?date={{ day }}">{{ day }}</a>
+{# 달력 띠: 좌우 화살표(키보드 ← →)는 조사한 날만 건너다니고, 한 주의 날짜를 눌러 바로 옮긴다. #}
+<div class="cal">
+  <div class="cal-nav">
+    {% if calendar.prev_date %}<a class="btn icon" href="?date={{ calendar.prev_date }}{{ keep }}" data-hotkey="ArrowLeft" title="이전 조사일 {{ calendar.prev_date }} (←)" aria-label="이전 조사일">{% include "includes/ic.html" with name="chevron-left" %}</a>
+    {% else %}<span class="btn icon" aria-disabled="true" title="더 이전 조사가 없습니다">{% include "includes/ic.html" with name="chevron-left" %}</span>{% endif %}
+    <div class="cal-title">
+      {% if show_all %}<strong>전체 기간</strong><span>조사한 날 모두</span>
+      {% else %}<strong>{{ selected_day|date:"n월 j일" }} <em>{{ selected_weekday }}요일</em></strong><span>{{ selected_day|date:"Y년" }}{% if selected_date == calendar.today %} · 오늘{% endif %}{% if selected_date == calendar.latest %} · 최신 조사{% endif %}</span>{% endif %}
+    </div>
+    {% if calendar.next_date %}<a class="btn icon" href="?date={{ calendar.next_date }}{{ keep }}" data-hotkey="ArrowRight" title="다음 조사일 {{ calendar.next_date }} (→)" aria-label="다음 조사일">{% include "includes/ic.html" with name="chevron-right" %}</a>
+    {% else %}<span class="btn icon" aria-disabled="true" title="더 최근 조사가 없습니다">{% include "includes/ic.html" with name="chevron-right" %}</span>{% endif %}
+  </div>
+
+  <nav class="cal-week" aria-label="{{ calendar.week_label }} 한 주">
+    <a class="btn ghost sm icon" href="?date={{ calendar.prev_week }}{{ keep }}" title="지난주" aria-label="지난주">{% include "includes/ic.html" with name="chevron-left" %}</a>
+    {% for d in calendar.days %}
+    <a class="cal-day{% if d.is_selected %} on{% endif %}{% if not d.count %} nodata{% endif %}{% if d.is_today %} today{% endif %}{% if d.is_weekend %} weekend{% endif %}{% if d.is_future %} future{% endif %}"
+       href="?date={{ d.iso }}{{ keep }}" title="{{ d.iso }}{% if d.count %} · 아이디어 {{ d.count }}개{% else %} · 조사 없음{% endif %}"{% if d.is_selected %} aria-current="date"{% endif %}>
+      <span class="wd">{{ d.weekday }}</span>
+      <span class="dd">{{ d.day }}</span>
+      <span class="ct">{% if d.count %}{{ d.count }}{% else %}·{% endif %}</span>
+    </a>
     {% endfor %}
-    {% if available_dates|length > 1 %}
-    <a class="{% if selected_date == 'all' %}on{% endif %}" href="?date=all">전체</a>
-    {% endif %}
+    <a class="btn ghost sm icon" href="?date={{ calendar.next_week }}{{ keep }}" title="다음 주" aria-label="다음 주">{% include "includes/ic.html" with name="chevron-right" %}</a>
   </nav>
-  <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="아이디어, 고객, 문제, 결과물 검색  ( / )"></div>
-  <select class="select sm" name="category" data-autosubmit>
-    <option value="">분류 전체</option>
-    {% for value, label in categories %}
-    <option value="{{ value }}" {% if value == category %}selected{% endif %}>{{ label }}</option>
-    {% endfor %}
-  </select>
-  <button class="btn sm" type="submit">적용</button>
-  {% if q or category %}<a class="btn ghost sm" href="?date={{ selected_date }}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
-</form>
+
+  <form method="get" class="cal-tools">
+    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+    {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+    <input class="input sm" type="date" name="date" value="{% if not show_all %}{{ selected_date }}{% endif %}" max="{{ calendar.today }}" data-autosubmit title="날짜 고르기" aria-label="날짜 고르기">
+    {% if calendar.latest %}<a class="btn sm{% if selected_date == calendar.latest %} on{% endif %}" href="?date={{ calendar.latest }}{{ keep }}">최신</a>{% endif %}
+    <a class="btn sm{% if show_all %} on{% endif %}" href="?date=all{{ keep }}">전체 기간</a>
+  </form>
+</div>
 {% endblock %}
 
 {% block content %}
-<div class="lead">
-  <div><b>날짜별 조사 후보</b> · 여기에 있는 항목은 검토 전 원장입니다. 실제로 진행하고 싶은 것만 내 아이디어에 담으세요.</div>
-  {% if groups %}
-  <details class="lead-more">
-    <summary>조사 범위와 한계</summary>
-    <p>{{ groups.0.method }}</p>
-  </details>
-  {% endif %}
-</div>
+<div class="stack">
+  {# 검색·분류: 분류 옆 숫자는 지금 보는 날짜(와 검색어)에 해당하는 개수 #}
+  <form method="get" class="il-filter">
+    <input type="hidden" name="date" value="{{ selected_date }}">
+    {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+    <div class="seg">
+      <a class="{% if not category %}on{% endif %}" href="?date={{ selected_date }}{{ keep_q }}">전체 <span class="cnt">{{ category_total }}</span></a>
+      {% for value, label, n in categories %}
+      <a class="{% if category == value %}on{% endif %}" href="?date={{ selected_date }}&category={{ value }}{{ keep_q }}">{{ label }} <span class="cnt">{{ n }}</span></a>
+      {% endfor %}
+    </div>
+    <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="아이디어, 고객, 문제 검색  ( / )"></div>
+    {% if is_filtered %}<a class="btn ghost sm" href="?date={{ selected_date }}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
+    {% if total %}<button class="btn ghost sm il-toggle" type="button" data-toggle-details=".il-row" data-label-open="모두 펼치기" data-label-close="모두 접기">모두 펼치기</button>{% endif %}
+  </form>
 
-{% for group in groups %}
-<section class="card daily-group">
-  <div class="card-head">
-    <h2 class="card-title">{% include "includes/ic.html" with name="calendar" %}<span class="num">{{ group.date }}</span> <span class="cnt">{{ group.items|length }}개</span></h2>
-    <span class="hint ellipsis" title="{{ group.summary }}">{{ group.summary }}</span>
-    <div class="page-actions"><a class="btn ghost sm" href="{% url 'docs:detail' group.source_doc %}">{% include "includes/ic.html" with name="file" %}상세 조사 문서</a></div>
-  </div>
-  <div class="card-body flush scroll-x">
-    <table class="grid wrap daily-table" style="min-width:1480px">
-      <thead>
-        <tr>
-          <th style="width:72px">번호</th>
-          <th style="width:240px">아이디어</th>
-          <th style="width:270px">고객과 문제</th>
-          <th style="width:280px">최소 결과물</th>
-          <th style="width:230px">돈의 흐름</th>
-          <th style="width:300px">근거와 반대 이유</th>
-          <th style="width:136px">선택</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in group.items %}
-        <tr>
-          <td class="mono small nowrap muted">{{ item.id|slice:"9:" }}</td>
-          <td>
-            <strong>{{ item.title }}</strong>
-            <div class="daily-meta"><span class="tag">{{ item.category_label }}</span> <span>{{ item.decision }}</span></div>
-          </td>
-          <td class="small">
-            <strong>{{ item.audience }}</strong>
-            <p class="muted">{{ item.problem }}</p>
-          </td>
-          <td class="small">
-            <strong>{{ item.min_product }}</strong>
-            <p class="muted"><span class="daily-label">첫 검증</span>{{ item.first_test }}</p>
-          </td>
-          <td class="small">
-            {{ item.money_flow }}
-            <p class="muted"><span class="daily-label">경로</span>{{ item.channel }}</p>
-          </td>
-          <td class="small">
-            <details class="ev-more">
-              <summary>{{ item.evidence|truncatechars:84 }}</summary>
-              <div class="ev-more-body">
-                <p><strong>확인된 신호</strong><br>{{ item.evidence }}</p>
-                <p><strong>가장 큰 반대 이유</strong><br>{{ item.risk }}</p>
-                <ul class="source-list">
-                  {% for source in item.sources %}
-                  <li><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a></li>
-                  {% endfor %}
-                </ul>
-              </div>
-            </details>
-          </td>
-          <td class="nowrap">
+  {% for group in groups %}
+  <section class="card il" id="day-{{ group.date }}">
+    <div class="il-day">
+      <div class="grow">
+        <h2 class="card-title">{% if show_all %}<a href="?date={{ group.date }}{{ keep }}">{{ group.day|date:"n월 j일" }} {{ group.weekday }}요일</a>{% else %}{{ group.title|default:"조사 결과" }}{% endif %} <span class="cnt">{{ group.items|length }}개</span></h2>
+        {% if show_all %}<p class="il-summary">{{ group.title }}</p>{% elif group.summary %}<p class="il-summary">{{ group.summary }}</p>{% endif %}
+        {% if group.method and not show_all %}
+        <details class="il-method"><summary>조사 범위와 한계</summary><p>{{ group.method }}</p></details>
+        {% endif %}
+      </div>
+      <a class="btn ghost sm" href="{% url 'docs:detail' group.source_doc %}">{% include "includes/ic.html" with name="file" %}상세 조사 문서</a>
+    </div>
+
+    {% if group.items %}
+    <div class="il-head"><span>번호</span><span>아이디어</span><span>세부내용</span><span></span></div>
+    {% for item in group.items %}
+    <details class="il-row" id="idea-{{ item.id }}">
+      <summary>
+        <span class="il-no">{{ item.no }}</span>
+        <span class="il-main">
+          <span class="il-title">{{ item.title }}</span>
+          <span class="il-meta"><span class="tag">{{ item.category_label }}</span><span>{{ item.decision }}</span>{% if item.adopted_idea %}<span class="badge green"><svg class="ic"><use href="#i-check"/></svg>{{ item.adopted_idea.code }} 담음</span>{% endif %}</span>
+        </span>
+        <span class="il-desc">
+          <span class="il-problem"><b>{{ item.audience }}</b> — {{ item.problem }}</span>
+          <span class="il-make"><svg class="ic"><use href="#i-chevron-right"/></svg><span>{{ item.min_product }}</span></span>
+        </span>
+        <span class="il-open"><span class="lbl">구현 계획</span><svg class="ic"><use href="#i-chevron-down"/></svg></span>
+      </summary>
+      <div class="il-plan">
+        <div>
+          <h3 class="sub-h"><svg class="ic"><use href="#i-flag"/></svg>구현 계획</h3>
+          <ol class="plan-steps">
+            {% for step in item.plan_steps %}
+            <li><div>{% if step.title %}<b>{{ step.title }}</b>{% endif %}{% if step.detail %}<p>{{ step.detail }}</p>{% endif %}</div></li>
+            {% endfor %}
+          </ol>
+        </div>
+        <div class="plan-side">
+          <h3 class="sub-h"><svg class="ic"><use href="#i-search"/></svg>검토 근거</h3>
+          <dl class="plan-facts">
+            <dt>확인된 신호</dt><dd>{{ item.evidence }}</dd>
+            <dt class="warn">가장 큰 반대 이유</dt><dd>{{ item.risk }}</dd>
+          </dl>
+          {% if item.sources %}
+          <ul class="source-list">
+            {% for source in item.sources %}
+            <li><a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.label }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+          <div class="plan-act">
             {% if item.adopted_idea %}
-            <a class="btn sm" href="{{ item.adopted_idea.get_absolute_url }}">{% include "includes/ic.html" with name="check" %}{{ item.adopted_idea.code }} 보기</a>
+            <a class="btn sm" href="{{ item.adopted_idea.get_absolute_url }}"><svg class="ic"><use href="#i-check"/></svg>{{ item.adopted_idea.code }} 보기</a>
             {% else %}
             <form method="post" action="{% url 'daily_ideas:adopt' item.id %}" class="inline-form">{% csrf_token %}
-              <button class="btn sm primary" type="submit">{% include "includes/ic.html" with name="plus" %}내 아이디어에 담기</button>
+              <button class="btn sm primary" type="submit"><svg class="ic"><use href="#i-plus"/></svg>내 아이디어에 담기</button>
             </form>
             {% endif %}
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="7" class="grid-empty">조건에 맞는 아이디어가 없습니다.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
-{% empty %}
-<div class="empty">{% include "includes/ic.html" with name="sparkles" %}<div class="empty-title">아직 날짜별 아이디어 조사가 없습니다.</div></div>
-{% endfor %}
+            {% if item.tags %}<span class="tags">{% for t in item.tags %}<span class="tag">{{ t }}</span>{% endfor %}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+    </details>
+    {% endfor %}
+    {% else %}
+    <div class="empty">조건에 맞는 아이디어가 없습니다.</div>
+    {% endif %}
+  </section>
+  {% empty %}
+  <section class="card">
+    <div class="empty">
+      {% include "includes/ic.html" with name="calendar" %}
+      {% if not calendar.latest %}
+      <div class="empty-title">아직 날짜별 아이디어 조사가 없습니다.</div>
+      {% elif not has_research %}
+      <div class="empty-title">{{ selected_day|date:"n월 j일" }} {{ selected_weekday }}요일에는 조사한 아이디어가 없습니다.</div>
+      <p class="row" style="justify-content:center;margin-top:10px">
+        {% if calendar.prev_date %}<a class="btn sm" href="?date={{ calendar.prev_date }}{{ keep }}">{% include "includes/ic.html" with name="chevron-left" %}{{ calendar.prev_date }}</a>{% endif %}
+        {% if calendar.next_date %}<a class="btn sm" href="?date={{ calendar.next_date }}{{ keep }}">{{ calendar.next_date }}{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
+        <a class="btn sm primary" href="?date={{ calendar.latest }}{{ keep }}">최신 조사 보기</a>
+      </p>
+      {% else %}
+      <div class="empty-title">조건에 맞는 아이디어가 없습니다.</div>
+      <p style="margin-top:10px"><a class="btn sm" href="?date={{ selected_date }}">검색·분류 초기화</a></p>
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
 {% endblock %}

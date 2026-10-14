@@ -2,7 +2,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from . import gitstate
-from .menus import get_menus
+from .menus import build_nav, get_menus
 
 
 def _asset_version() -> str:
@@ -19,13 +19,15 @@ def _asset_version() -> str:
 def navigation(request):
     """모든 템플릿에 메뉴 목록, 현재 활성 메뉴 키, 오늘 날짜, 배포 정보를 넣는다."""
     match = getattr(request, "resolver_match", None)
-    active = match.app_name if match else ""
+    # 뷰가 request.nav_key 로 하위 메뉴를 지정했으면 그것을, 아니면 앱 이름을 현재 메뉴로 본다.
+    active = getattr(request, "nav_key", "") or (match.app_name if match else "")
     try:
         status = gitstate.deploy_status()
     except Exception:  # git 이 없거나 저장소 밖이어도 화면은 떠야 한다
         status = None
     return {
         "MENUS": get_menus(),
+        "NAV": build_nav(active),
         "ACTIVE_MENU": active or "home",
         "today": timezone.localdate(),
         "ASSET_VER": _asset_version(),

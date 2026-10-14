@@ -8,11 +8,28 @@ from django.views.decorators.http import require_POST
 
 from apps.content.tree import decorate_tree, subtree_ids
 from apps.content.navigation import list_return
+from apps.core.menus import find_menu
 from .forms import DiscussionForm, QuickForm
 from .models import Discussion, DiscussionHistory
 
 
 SNAPSHOT_FIELDS = ["summary", "next_action", "status", "amount", "partner"]
+
+
+def _nav(request, area):
+    """블로그·카페·영상 콘텐츠의 논의는 그 메뉴 아래 '논의 현황'으로, 그 밖에는 '진행현황'으로 강조한다.
+
+    하위 메뉴가 있는 area 면 그 메뉴(Menu)를 돌려준다. key 규칙: "<area>_discussions" (apps/core/menus.py).
+    """
+    menu = find_menu(f"{area}_discussions") if area else None
+    if menu:
+        request.nav_key = menu.key
+    return menu
+
+
+def _list_url(area=""):
+    url = reverse("discussions:list")
+    return f"{url}?area={area}" if find_menu(f"{area}_discussions") else url
 
 
 def save_form(form):
@@ -42,14 +59,16 @@ def discussion_list(request):
     entries = list(qs)
     for entry in entries:
         entry.path = by_id[entry.pk].path
-    return render(request, "discussions/list.html", {"page_title": "논의 현황", "entries": entries, "topics": [node for node in nodes if not area or node.area == area], "selected": selected, "q": q, "area": area, "status": status, "areas": Discussion.AREA_CHOICES, "statuses": Discussion.Status.choices})
+    scope = _nav(request, area)
+    scope_label = dict(Discussion.AREA_CHOICES)[area] if scope else ""
+    return render(request, "discussions/list.html", {"page_title": f"{scope_label} 논의 현황" if scope else "진행현황", "scope": scope, "scope_label": scope_label, "entries": entries, "topics": [node for node in nodes if not area or node.area == area], "selected": selected, "q": q, "area": area, "status": status, "areas": Discussion.AREA_CHOICES, "statuses": Discussion.Status.choices})
 
 
 def discussion_detail(request, pk):
     item = get_object_or_404(Discussion.objects.select_related("idea", "content"), pk=pk)
     nodes = decorate_tree(Discussion.objects.all())
     path = next(node.path for node in nodes if node.pk == pk)
-    return render(request, "discussions/detail.html", {"page_title": item.name, "item": item, "path": path, "history": item.history.all(), "children": item.children.all()})
+    return render(request, "discussions/detail.html", {"page_title": item.name, "scope": _nav(request, item.area), "list_url": _list_url(item.area), "item": item, "path": path, "history": item.history.all(), "children": item.children.all()})
 
 
 def discussion_form(request, pk=None):
@@ -63,10 +82,12 @@ def discussion_form(request, pk=None):
             elif request.GET.get("area") in dict(Discussion.AREA_CHOICES):
                 initial["area"] = request.GET["area"]
         form = DiscussionForm(request.POST if request.method == "POST" else None, instance=item, initial=initial)
+        area = item.area if pk else initial.get("area", "")
+        _nav(request, area)
         if request.method == "POST" and form.is_valid():
             messages.success(request, "핵심을 저장했습니다.")
             return redirect(save_form(form))
-    return render(request, "content/form.html", {"page_title": "논의 수정" if pk else "새 논의 주제", "form": form, "cancel_url": item.get_absolute_url() if pk else "/discussions/"})
+    return render(request, "content/form.html", {"page_title": "논의 수정" if pk else "새 논의 주제", "form": form, "cancel_url": item.get_absolute_url() if pk else _list_url(area)})
 
 
 @require_POST
@@ -83,11 +104,13 @@ def quick_update(request, pk):
 
 def discussion_delete(request, pk):
     item = get_object_or_404(Discussion, pk=pk)
+    _nav(request, item.area)
     if request.method == "POST":
+        back = _list_url(item.area)
         try:
             item.delete()
         except ProtectedError:
             messages.error(request, "하위 주제를 먼저 옮기거나 삭제하세요.")
             return redirect(item)
-        return redirect("discussions:list")
+        return redirect(back)
     return render(request, "content/delete.html", {"page_title": "논의 삭제", "object_title": item.name, "cancel_url": item.get_absolute_url()})

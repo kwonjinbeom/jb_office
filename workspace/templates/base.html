@@ -21,10 +21,27 @@
       <a class="nav-item{% if ACTIVE_MENU == 'home' or ACTIVE_MENU == 'core' and request.resolver_match.url_name != 'settings' %} active{% endif %}" href="{% url 'core:home' %}">
         <svg class="ic"><use href="#i-home"/></svg><span>홈</span>
       </a>
-      {% for m in MENUS %}
-      <a class="nav-item{% if ACTIVE_MENU == m.key %} active{% endif %}" href="{{ m.url }}">
-        <svg class="ic"><use href="#i-{{ m.icon }}"/></svg><span>{{ m.title }}</span>
+      {% for n in NAV %}
+      {% if n.children %}
+      {# 하위 메뉴가 있는 항목: 누르면 그 화면으로 가면서 아래가 펼쳐진다. 옆 화살표는 이동 없이 펼치기만 한다. #}
+      <div class="nav-group{% if n.open %} open{% endif %}" data-nav-group="{{ n.menu.key }}">
+        <div class="nav-row">
+          <a class="nav-item{% if n.active %} active{% endif %}" href="{{ n.menu.url }}">
+            <svg class="ic"><use href="#i-{{ n.menu.icon }}"/></svg><span>{{ n.menu.title }}</span>
+          </a>
+          <button type="button" class="nav-caret" data-nav-toggle aria-label="{{ n.menu.title }} 하위 메뉴" aria-expanded="{% if n.open %}true{% else %}false{% endif %}"><svg class="ic"><use href="#i-chevron-down"/></svg></button>
+        </div>
+        <div class="nav-sub">
+          {% for c in n.children %}
+          <a class="nav-item sub{% if c.active %} active{% endif %}" href="{{ c.menu.url }}"><span>{{ c.menu.title }}</span></a>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <a class="nav-item{% if n.active %} active{% endif %}" href="{{ n.menu.url }}">
+        <svg class="ic"><use href="#i-{{ n.menu.icon }}"/></svg><span>{{ n.menu.title }}</span>
       </a>
+      {% endif %}
       {% endfor %}
     </nav>
 

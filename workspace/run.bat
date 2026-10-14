@@ -14,9 +14,8 @@ if not exist ".venv\Scripts\python.exe" (
     ".venv\Scripts\python.exe" -m pip install --quiet -r requirements.txt || goto :fail
 )
 
-rem 2) DB 마이그레이션과 초기 데이터
+rem 2) DB 마이그레이션 ('내 아이디어'는 일일 아이디어에서 직접 담은 것만 두므로 초기 데이터는 넣지 않는다)
 ".venv\Scripts\python.exe" manage.py migrate --noinput || goto :fail
-".venv\Scripts\python.exe" manage.py seed_ideas || goto :fail
 
 rem 3) 서버 실행 (127.0.0.1:8000). 끄려면 Ctrl+C.
 echo.

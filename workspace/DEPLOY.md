@@ -38,11 +38,10 @@ DEPLOY_RELOAD_TOUCH_FILE=/var/www/<아이디>_pythonanywhere_com_wsgi.py
 python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
-이어서 DB 를 만들고 초기 데이터와 로그인 계정을 넣는다.
+이어서 DB 를 만들고 로그인 계정을 넣는다. ('내 아이디어'는 일일 아이디어에서 직접 담은 것만 두므로 초기 데이터는 넣지 않는다.)
 
 ```bash
 .venv/bin/python manage.py migrate
-.venv/bin/python manage.py seed_ideas
 .venv/bin/python manage.py createsuperuser
 .venv/bin/python manage.py collectstatic --noinput
 ```
