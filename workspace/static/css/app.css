@@ -627,6 +627,9 @@ a.mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; w
 .il-problem b { color: var(--text); font-weight: 600; }
 .il-make { display: flex; gap: 5px; color: var(--text-3); }
 .il-make .ic { width: 13px; height: 13px; margin-top: 3px; color: var(--accent); }
+/* 수익 경로: 아이디어마다 '어디서 돈이 들어오는지' 한 줄 */
+.il-money { display: flex; gap: 6px; font-size: 12px; color: var(--text-2); }
+.il-money b { flex: none; font-size: 11px; font-weight: 700; color: var(--ok); background: var(--ok-weak); border-radius: 4px; padding: 0 5px; height: 18px; line-height: 18px; margin-top: 1px; }
 .il-open { justify-self: end; display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; color: var(--text-3); white-space: nowrap; padding-top: 1px; }
 .il-open .ic { width: 14px; height: 14px; transition: transform .12s; }
 .il-row > summary:hover .il-open, .il-row[open] .il-open { color: var(--accent); }

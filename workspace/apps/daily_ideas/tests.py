@@ -1,3 +1,8 @@
+import shutil
+import tempfile
+from pathlib import Path
+
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 
@@ -6,6 +11,16 @@ from apps.ideas.models import Idea
 
 
 class DailyIdeasTests(TestCase):
+    """10-13 조사 파일 하나만 있는 폴더로 본다. 매일 새 날짜가 쌓여도 테스트가 흔들리지 않게."""
+
+    def setUp(self):
+        folder = Path(tempfile.mkdtemp(prefix="daily-"))
+        self.addCleanup(shutil.rmtree, folder, True)
+        shutil.copy(Path(settings.DAILY_IDEAS_DIR) / "2026-10-13.json", folder / "2026-10-13.json")
+        override = self.settings(DAILY_IDEAS_DIR=folder)
+        override.enable()
+        self.addCleanup(override.disable)
+
     def test_daily_grid_loads_tracked_research(self):
         response = self.client.get(reverse("daily_ideas:list"))
 
