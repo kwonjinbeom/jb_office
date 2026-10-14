@@ -8,9 +8,11 @@ from django.contrib import messages
 from django.db import transaction
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.core.inplace import answer
 from apps.ideas.models import Idea
 
 from .data import CATEGORY_LABELS, find_item, load_batches
@@ -192,9 +194,13 @@ def adopt(request, item_id: str):
         ),
         None,
     )
+    # 담아도 화면은 그대로 둔다 (사용자 요청 2026-10-14): 제자리 요청이면 JSON, 아니면 보던 목록으로 돌아간다.
+    back_to = f"{reverse('daily_ideas:list')}?date={item['date']}#idea-{item['id']}"
     if existing:
-        messages.info(request, f"{existing.code}에 이미 담긴 아이디어입니다.")
-        return redirect(existing)
+        message = f"{existing.code}에 이미 담긴 아이디어입니다."
+        if request.headers.get("X-Requested-With") != "fetch":
+            messages.info(request, message)
+        return answer(request, back_to, code=existing.code, url=existing.get_absolute_url(), message=message)
 
     source_lines = "\n".join(f"- {source['label']}: {source['url']}" for source in item["sources"])
     evidence = f"{item['evidence']}\n\n원문 근거\n{source_lines}"
@@ -222,8 +228,10 @@ def adopt(request, item_id: str):
             tags=tags[:200],
         )
 
-    messages.success(request, f"{idea.code}로 내 아이디어에 담았습니다.")
-    return redirect(idea)
+    message = f"{idea.code}로 내 아이디어에 담았습니다."
+    if request.headers.get("X-Requested-With") != "fetch":
+        messages.success(request, message)
+    return answer(request, back_to, code=idea.code, url=idea.get_absolute_url(), message=message)
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,10 @@
 from django.contrib import messages
-from django.db.models import Max, Q
+from django.db.models import Max, Prefetch, Q
+from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+
+from apps.core.inplace import answer, wants_json
 
 from .forms import IdeaForm, LogForm, QuickStageForm, StageForm
 from .models import Idea, IdeaLog, Stage
@@ -42,7 +45,9 @@ def idea_list(request):
         )
     if category:
         qs = qs.filter(category=category)
-    qs = qs.order_by(order, "code").prefetch_related("stages")
+    # 목록에서 펼쳐 보는 작업 로그 (최근 것부터). 단계 이름까지 한 번에 읽는다.
+    logs = IdeaLog.objects.select_related("stage").order_by("-created_at")
+    qs = qs.order_by(order, "code").prefetch_related("stages", Prefetch("logs", queryset=logs))
 
     context = {
         "page_title": "내 아이디어",
@@ -201,13 +206,20 @@ def stage_delete(request, pk, stage_pk):
 def log_add(request, pk):
     idea = get_object_or_404(Idea, pk=pk)
     form = LogForm(request.POST, idea=idea)
-    if form.is_valid():
-        log = form.save(commit=False)
-        log.idea = idea
-        log.save()
-    else:
-        messages.error(request, "로그 내용이 비어 있습니다.")
-    return redirect(f"{idea.get_absolute_url()}#logs")
+    fallback = f"{idea.get_absolute_url()}#logs"
+    if not form.is_valid():
+        if not wants_json(request):
+            messages.error(request, "로그 내용이 비어 있습니다.")
+        return answer(request, fallback, status=400, error="로그 내용이 비어 있습니다.")
+    log = form.save(commit=False)
+    log.idea = idea
+    log.save()
+    when = timezone.localtime(log.created_at)
+    return answer(
+        request, fallback,
+        log={"body": log.body, "date": f"{when:%Y-%m-%d}", "time": f"{when:%H:%M}", "stage": f"{log.stage.order}. {log.stage.title}" if log.stage else ""},
+        count=idea.logs.count(),
+    )
 
 
 @require_POST

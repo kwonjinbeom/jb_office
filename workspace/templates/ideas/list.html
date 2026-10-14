@@ -17,6 +17,7 @@
   </select>
   <input type="hidden" name="sort" value="{{ sort }}">
   <button class="btn sm" type="submit">적용</button>
+  {% if ideas %}<button class="btn ghost sm" type="button" data-toggle-rows=".log-row" data-label-open="작업 로그 모두 펼치기" data-label-close="작업 로그 모두 접기">작업 로그 모두 펼치기</button>{% endif %}
   {% if is_filtered %}<a class="btn ghost sm" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
 </form>
 {% endblock %}
@@ -25,7 +26,7 @@
 
 {% block content %}
 <div class="grid-wrap">
-  <table class="grid clickable" style="min-width:1000px">
+  <table class="grid clickable ideas-grid" style="min-width:1100px">
     <thead>
       <tr>
         {% for key, label in columns %}
@@ -35,6 +36,7 @@
           </a>
         </th>
         {% endfor %}
+        <th style="width:120px">작업 로그</th>
       </tr>
     </thead>
     <tbody>
@@ -46,9 +48,39 @@
         <td title="{{ idea.customer }}">{{ idea.customer|default:"-" }}</td>
         <td class="text-2" title="{{ idea.min_product }}">{{ idea.min_product|default:"-" }}</td>
         <td class="small muted num">{{ idea.updated_at|date:"Y-m-d H:i" }}</td>
+        {% with logs=idea.logs.all %}
+        <td>
+          <button type="button" class="log-toggle" data-toggle-row="#logs-{{ idea.pk }}" aria-expanded="false" title="작업 로그 펼치기">
+            <svg class="ic"><use href="#i-chevron-down"/></svg>
+            <span class="n" data-log-count>{{ logs|length }}</span>
+            <span class="d">{% if logs %}{{ logs.0.created_at|date:"m-d" }}{% else %}적기{% endif %}</span>
+          </button>
+        </td>
       </tr>
+      {# 접고 펼치는 작업 로그: 최근 5개 + 그 자리에서 짧게 적기 #}
+      <tr class="log-row" id="logs-{{ idea.pk }}" hidden>
+        <td colspan="{{ columns|length|add:1 }}">
+          <div class="log-panel">
+            <form method="post" action="{% url 'ideas:log_add' idea.pk %}" class="log-quick" data-ajax="log">{% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}#logs-{{ idea.pk }}">
+              <textarea class="input" name="body" rows="1" data-autogrow required placeholder="오늘 한 일 한 줄 — Enter 로 기록, 줄바꿈은 Shift+Enter"></textarea>
+              {% if idea.stages.all %}<select class="select sm" name="stage" aria-label="단계"><option value="">단계 없음</option>{% for st in idea.stages.all %}<option value="{{ st.pk }}">{{ st.order }}. {{ st.title|truncatechars:20 }}</option>{% endfor %}</select>{% endif %}
+              <button class="btn sm primary" type="submit">기록</button>
+            </form>
+            <ul class="rows log-list" data-log-list>
+              {% for log in logs|slice:":5" %}
+              <li class="log"><div class="log-date"><b>{{ log.created_at|date:"m-d" }}</b>{{ log.created_at|date:"H:i" }}</div><div>{% if log.stage %}<div class="log-meta">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</div>{% endif %}<div class="log-body">{{ log.body|linebreaksbr }}</div></div></li>
+              {% empty %}
+              <li class="empty-line" data-log-empty>아직 작업 로그가 없습니다. 오늘 한 일을 한 줄 남겨 보세요.</li>
+              {% endfor %}
+            </ul>
+            {% if logs|length > 5 %}<a class="small" href="{{ idea.get_absolute_url }}#logs">전체 {{ logs|length }}개 보기</a>{% endif %}
+          </div>
+        </td>
+      </tr>
+        {% endwith %}
       {% empty %}
-      <tr><td colspan="{{ columns|length }}" class="grid-empty">
+      <tr><td colspan="{{ columns|length|add:1 }}" class="grid-empty">
         {% if total == 0 %}아직 내 아이디어가 없습니다. <a href="{% url 'daily_ideas:list' %}">일일 아이디어</a>에서 필요한 후보를 담거나 직접 추가하세요.
         {% else %}조건에 맞는 아이디어가 없습니다.{% endif %}
       </td></tr>

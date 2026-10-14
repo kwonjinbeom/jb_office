@@ -205,10 +205,111 @@
     });
   });
 
-  // 주소 끝의 #idea-… 처럼 접힌 항목을 가리키면 펴서 보여 준다.
+  // ---- 표 안의 접는 줄: data-toggle-row="#줄" (한 줄), data-toggle-rows=".줄들" (모두)
+  function setRowOpen(row, open) {
+    if (!row) return;
+    row.hidden = !open;
+    var button = document.querySelector('[data-toggle-row="#' + row.id + '"]');
+    if (button) {
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      var owner = button.closest("tr");
+      if (owner) owner.classList.toggle("open-row", open);
+    }
+    if (open) all("#" + row.id + " textarea[data-autogrow]").forEach(autogrow);
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest) return;
+    var one = e.target.closest("[data-toggle-row]");
+    if (one) {
+      var row = $(one.getAttribute("data-toggle-row"));
+      var open = row && row.hidden;
+      setRowOpen(row, open);
+      if (open) { var box = row.querySelector("textarea, input[type=text]"); if (box) box.focus(); }
+      return;
+    }
+    var many = e.target.closest("[data-toggle-rows]");
+    if (many) {
+      var rows = all(many.getAttribute("data-toggle-rows"));
+      var openAll = rows.some(function (r) { return r.hidden; });
+      rows.forEach(function (r) { setRowOpen(r, openAll); });
+      many.textContent = openAll ? many.getAttribute("data-label-close") : many.getAttribute("data-label-open");
+    }
+  });
+
+  // ---- 화면을 옮기지 않는 폼: form[data-ajax="log" | "adopt"]
+  // 서버는 X-Requested-With: fetch 이면 JSON 으로 답한다 (apps/core/inplace.py). 실패하면 원래대로 제출한다.
+  var AJAX_DONE = {
+    log: function (form, data) {
+      var panel = form.closest(".log-panel") || form.parentNode;
+      var list = panel.querySelector("[data-log-list]");
+      var empty = list && list.querySelector("[data-log-empty]");
+      if (empty) empty.remove();
+      if (list) {
+        var li = document.createElement("li");
+        li.className = "log fresh";
+        li.innerHTML = '<div class="log-date"><b>' + esc(data.log.date.slice(5)) + "</b>" + esc(data.log.time) + "</div><div>" +
+          (data.log.stage ? '<div class="log-meta">' + esc(data.log.stage) + "</div>" : "") +
+          '<div class="log-body">' + esc(data.log.body).replace(/\n/g, "<br>") + "</div></div>";
+        list.insertBefore(li, list.firstChild);
+      }
+      var row = form.closest("tr.log-row");
+      var button = row && document.querySelector('[data-toggle-row="#' + row.id + '"]');
+      if (button) {
+        var n = button.querySelector("[data-log-count]");
+        var d = button.querySelector(".d");
+        if (n) n.textContent = data.count;
+        if (d) d.textContent = data.log.date.slice(5);
+      }
+      var box = form.querySelector("textarea");
+      if (box) { box.value = ""; autogrow(box); box.focus(); }
+      toast("기록했습니다.", "ok");
+    },
+    adopt: function (form, data) {
+      var link = document.createElement("a");
+      link.className = "btn sm";
+      link.href = data.url;
+      link.innerHTML = '<svg class="ic"><use href="#i-check"/></svg>' + esc(data.code) + " 보기";
+      form.replaceWith(link);
+      var row = link.closest(".il-row");
+      var meta = row && row.querySelector(".il-meta");
+      if (meta && !meta.querySelector(".badge.green")) {
+        meta.insertAdjacentHTML("beforeend", '<span class="badge green"><svg class="ic"><use href="#i-check"/></svg>' + esc(data.code) + " 담음</span>");
+      }
+      toast(data.message, "ok");
+    },
+  };
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    var kind = form.getAttribute && form.getAttribute("data-ajax");
+    if (!kind || !AJAX_DONE[kind] || !window.fetch) return;
+    e.preventDefault();
+    if (form.dataset.busy) return;  // 보내는 중에 다시 눌러도 한 번만
+    form.dataset.busy = "1";
+    var buttons = all("button").filter(function (b) { return b.form === form; });
+    buttons.forEach(function (b) { b.disabled = true; });
+    fetch(form.action, { method: "POST", body: new FormData(form), headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+      .then(function (res) {
+        if (res.ok && res.data.ok) AJAX_DONE[kind](form, res.data);
+        else toast(res.data.error || "저장하지 못했습니다.", "error");
+      })
+      .catch(function () { toast("연결이 끊겨 저장하지 못했습니다. 다시 눌러 주세요.", "error"); })
+      .then(function () { delete form.dataset.busy; buttons.forEach(function (b) { b.disabled = false; }); });
+  });
+  // 짧은 기록 칸: Enter = 기록, Shift+Enter = 줄바꿈 (한글 조합 중에는 보내지 않는다)
+  document.addEventListener("keydown", function (e) {
+    var t = e.target;
+    if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey || e.isComposing || e.keyCode === 229) return;
+    if (!t || t.tagName !== "TEXTAREA" || !t.form || t.form.getAttribute("data-ajax") !== "log") return;
+    e.preventDefault();
+    if (t.value.trim()) { if (t.form.requestSubmit) t.form.requestSubmit(); else t.form.submit(); }
+  });
+
+  // 주소 끝의 #idea-… · #logs-… 처럼 접힌 항목을 가리키면 펴서 보여 준다.
   if (location.hash.length > 1) {
     var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
     if (target && target.tagName === "DETAILS") { target.open = true; target.scrollIntoView({ block: "center" }); }
+    if (target && target.classList.contains("log-row")) { setRowOpen(target, true); target.scrollIntoView({ block: "center" }); }
   }
 
   document.addEventListener("keydown", function (e) {

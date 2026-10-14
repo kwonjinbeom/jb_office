@@ -627,6 +627,25 @@ a.mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; w
 .il-problem b { color: var(--text); font-weight: 600; }
 .il-make { display: flex; gap: 5px; color: var(--text-3); }
 .il-make .ic { width: 13px; height: 13px; margin-top: 3px; color: var(--accent); }
+/* 내 아이디어 목록: 접고 펼치는 작업 로그 */
+.log-toggle { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text-2); font-size: 12px; cursor: pointer; }
+.log-toggle:hover { border-color: var(--accent-line); color: var(--accent); }
+.log-toggle .ic { width: 13px; height: 13px; transition: transform .12s; }
+.log-toggle[aria-expanded="true"] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); }
+.log-toggle[aria-expanded="true"] .ic { transform: rotate(180deg); }
+.log-toggle .n { font-weight: 700; font-variant-numeric: tabular-nums; }
+.log-toggle .d { color: var(--text-3); font-variant-numeric: tabular-nums; }
+.ideas-grid tr.open-row td { background: #f8fbff; }
+.ideas-grid .log-row td { height: auto; white-space: normal; padding: 0; background: var(--panel-2); border-bottom: 1px solid var(--border); }
+.ideas-grid tbody tr.log-row:hover td { background: var(--panel-2); }
+.log-panel { padding: 12px var(--gutter) 14px 106px; display: flex; flex-direction: column; gap: 8px; max-width: 980px; }
+.log-quick { display: flex; gap: 6px; align-items: flex-start; margin: 0; }
+.log-quick textarea.input { flex: 1; min-height: 32px; padding-top: 6px; padding-bottom: 6px; resize: none; overflow: hidden; }
+.log-quick .select { width: auto; max-width: 200px; }
+.log-list .log { grid-template-columns: 62px minmax(0, 1fr); padding: 6px 0; }
+.log-list .log.fresh { animation: fresh 1.6s ease; }
+@keyframes fresh { from { background: var(--ok-weak); } }
+
 /* 수익 경로: 아이디어마다 '어디서 돈이 들어오는지' 한 줄 */
 .il-money { display: flex; gap: 6px; font-size: 12px; color: var(--text-2); }
 .il-money b { flex: none; font-size: 11px; font-weight: 700; color: var(--ok); background: var(--ok-weak); border-radius: 4px; padding: 0 5px; height: 18px; line-height: 18px; margin-top: 1px; }
@@ -799,4 +818,6 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
   .il-desc { grid-column: 2 / -1; grid-row: 2; margin-top: 4px; }
   .il-open .lbl { display: none; }
   .il-plan { grid-template-columns: minmax(0, 1fr); padding: 14px 16px 16px; }
+  .log-panel { padding-left: var(--gutter); }
+  .log-quick { flex-wrap: wrap; }
 }

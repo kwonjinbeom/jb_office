@@ -171,3 +171,53 @@ class SearchMethodTests(TestCase):
         self.assertIn("시장조사/00_아이디어_조사방법.md", text)
         self.assertIn("## 2. 조사 방식", text)
         self.assertIn("수익 경로가 서지 않으면", text)
+
+
+class StayOnPageTests(TestCase):
+    """담기·로그 기록은 화면을 옮기지 않는다 (사용자 요청 2026-10-14)."""
+
+    def setUp(self):
+        folder = Path(tempfile.mkdtemp(prefix="daily-"))
+        self.addCleanup(shutil.rmtree, folder, True)
+        shutil.copy(Path(settings.DAILY_IDEAS_DIR) / "2026-10-13.json", folder / "2026-10-13.json")
+        override = self.settings(DAILY_IDEAS_DIR=folder)
+        override.enable()
+        self.addCleanup(override.disable)
+
+    def test_adopt_answers_in_place_and_falls_back_to_the_same_list(self):
+        url = reverse("daily_ideas:adopt", args=["20261013-01"])
+        response = self.client.post(url, HTTP_X_REQUESTED_WITH="fetch")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        idea = Idea.objects.get()
+        self.assertEqual((data["ok"], data["code"], data["url"]), (True, idea.code, idea.get_absolute_url()))
+
+        # 다시 담으면 '이미 담김' 을 알려 주고 새로 만들지 않는다
+        again = self.client.post(url, HTTP_X_REQUESTED_WITH="fetch").json()
+        self.assertIn("이미 담긴", again["message"])
+        self.assertEqual(Idea.objects.count(), 1)
+
+        # 자바스크립트가 없을 때: 보던 목록으로 돌아간다 (내 아이디어 화면으로 가지 않는다)
+        back = self.client.post(reverse("daily_ideas:adopt", args=["20261013-02"]), {"next": "/daily-ideas/?date=2026-10-13#idea-20261013-02"})
+        self.assertEqual(back["Location"], "/daily-ideas/?date=2026-10-13#idea-20261013-02")
+        evil = self.client.post(reverse("daily_ideas:adopt", args=["20261013-03"]), {"next": "https://evil.example/"})
+        self.assertTrue(evil["Location"].startswith("/daily-ideas/?date=2026-10-13#idea-20261013-03"))
+
+    def test_idea_list_folds_out_logs_and_takes_a_quick_log(self):
+        from apps.ideas.models import IdeaLog
+
+        idea = Idea.objects.create(code="C01", title="로그 점검")
+        IdeaLog.objects.create(idea=idea, body="첫 기록")
+        page = self.client.get(reverse("ideas:list"))
+        self.assertContains(page, 'id="logs-%d"' % idea.pk)
+        self.assertContains(page, "첫 기록")
+        self.assertContains(page, 'data-ajax="log"')
+
+        add = reverse("ideas:log_add", args=[idea.pk])
+        data = self.client.post(add, {"body": "목록에서 적음"}, HTTP_X_REQUESTED_WITH="fetch").json()
+        self.assertEqual((data["ok"], data["count"], data["log"]["body"]), (True, 2, "목록에서 적음"))
+        bad = self.client.post(add, {"body": ""}, HTTP_X_REQUESTED_WITH="fetch")
+        self.assertEqual(bad.status_code, 400)
+        fallback = self.client.post(add, {"body": "폼으로 적음", "next": "/ideas/#logs-%d" % idea.pk})
+        self.assertEqual(fallback["Location"], "/ideas/#logs-%d" % idea.pk)
+        self.assertEqual(idea.logs.count(), 3)
