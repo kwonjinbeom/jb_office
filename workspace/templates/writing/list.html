@@ -1,16 +1,79 @@
 {% extends "base.html" %}
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
-{% block actions %}<a class="btn" href="{% url 'writing:import' %}">백업 가져오기</a><a class="btn primary" href="{% url 'writing:create' %}">{% include "includes/ic.html" with name="plus" %}새 원고</a>{% endblock %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'writing:list' %}">티스토리 글쓰기</a></div>{% endblock %}
+
+{% block heading %}{{ page_title }} <span class="cnt">{{ posts|length }}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}{% if stage == 'post' %}새 포스트{% else %}새 템플릿{% endif %}</a>
+{% endblock %}
+
 {% block toolbar %}
 {% include "writing/_tabs.html" %}
-<form class="filter-bar" method="get"><div class="search-box"><input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목·검색어·본문 검색" aria-label="원고 검색"></div><select class="select sm" name="status" aria-label="작성 상태" data-autosubmit><option value="">상태 전체</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn sm">검색</button>{% if q or status %}<a class="btn ghost sm" href="{% url 'writing:list' %}">초기화</a>{% endif %}<span class="muted small">전체 {{ total }}편</span></form>
+<div class="filter-bar">
+  <form method="get" class="inline-form">
+    <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용 검색  ( / )"></div>
+    <button class="btn sm" type="submit">검색</button>
+    {% if q %}<a class="btn ghost sm" href="{{ request.path }}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
+  </form>
+  {% if posts %}
+  <span class="wr-bulk">
+    <span class="muted small">체크한 것을</span>
+    {% if prev_label %}<button class="btn sm" form="wr-bulk" name="to" value="{% if stage == 'review' %}temp{% else %}review{% endif %}">{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+    {% if next_label %}<button class="btn sm" form="wr-bulk" name="to" value="{% if stage == 'temp' %}review{% else %}post{% endif %}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+  </span>
+  {% endif %}
+</div>
+<form id="wr-bulk" method="post" action="{% url 'writing:move' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 {% endblock %}
+
 {% block body_class %}fill{% endblock %}
+
 {% block content %}
-{% if not total %}
-<div class="wr-welcome"><span class="badge blue">TISTORY WRITING</span><h2>자료에서 원고까지,<br>글 한 편을 차근차근.</h2><p>독자의 질문을 정하고, 글 틀로 구성하고, 확인한 자료로 채우세요.<br>완성한 본문은 티스토리에 맞게 복사할 수 있습니다.</p><div class="wr-roadmap"><span>1 · 기획·자료</span><span>2 · 원고 작성</span><span>3 · 검수</span><span>4 · 티스토리에 옮기기</span></div><a class="btn primary lg" href="{% url 'writing:create' %}">첫 원고 시작</a><a class="btn" href="{% url 'writing:templates' %}">글 형식 둘러보기</a></div>
-{% else %}
-<div class="grid-wrap"><table class="grid clickable" style="min-width:800px"><thead><tr><th>제목</th><th style="width:160px">검색어</th><th style="width:180px">작성 규칙</th><th style="width:110px">상태</th><th style="width:150px">마지막 저장</th></tr></thead><tbody>{% for draft in page %}<tr data-href="{{ draft.get_absolute_url }}"><td class="title-cell"><a href="{{ draft.get_absolute_url }}">{{ draft.content.title }}</a><span class="sub">{{ draft.answer }}</span></td><td>{{ draft.keyword|default:'-' }}</td><td>{{ draft.profile.name|default:'기본 규칙' }}</td><td><span class="badge">{{ draft.content.get_status_display }}</span></td><td class="small muted num">{{ draft.content.updated_at|date:'m-d H:i' }}</td></tr>{% empty %}<tr><td class="grid-empty" colspan="5">조건에 맞는 원고가 없습니다.</td></tr>{% endfor %}</tbody></table></div>
-{% if page.has_other_pages %}<div class="wr-pagination">{% if page.has_previous %}<a class="btn sm" href="?q={{ q|urlencode }}&status={{ status }}&page={{ page.previous_page_number }}">이전</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?q={{ q|urlencode }}&status={{ status }}&page={{ page.next_page_number }}">다음</a>{% endif %}</div>{% endif %}
-{% endif %}
+<div class="grid-wrap">
+  <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}1080{% else %}880{% endif %}px">
+    <thead>
+      <tr>
+        <th style="width:58px"><input type="checkbox" class="checkbox" data-check-all="ids" form="wr-bulk" title="모두 선택" aria-label="모두 선택"></th>
+        <th style="width:26%">제목</th>
+        <th>내용</th>
+        {% if stage == 'review' %}<th style="width:220px">검토</th>{% endif %}
+        {% if stage == 'post' %}<th style="width:220px">작성</th><th style="width:150px">발행</th>{% endif %}
+        <th style="width:96px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>
+        <th style="width:{% if stage == 'review' %}190{% else %}110{% endif %}px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for post in posts %}
+      <tr data-href="{{ post.get_absolute_url }}">
+        <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ post.pk }}" form="wr-bulk" aria-label="{{ post.title }} 선택"></td>
+        <td class="title-cell mid"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></td>
+        <td class="mid small muted"><span class="wr-excerpt">{{ post.excerpt|default:"-" }}</span></td>
+        {% if stage == 'review' %}
+        <td class="mid">{% include "writing/_status.html" with field="review_status" current=post.review_status choices=review_choices %}</td>
+        {% endif %}
+        {% if stage == 'post' %}
+        <td class="mid">{% include "writing/_status.html" with field="write_status" current=post.write_status choices=write_choices %}</td>
+        <td class="mid">{% include "writing/_status.html" with field="publish_status" current=post.publish_status choices=publish_choices %}{% if post.published_url %} <a class="btn ghost sm icon" href="{{ post.published_url }}" target="_blank" rel="noopener" title="발행한 글 열기" aria-label="발행한 글 열기"><svg class="ic"><use href="#i-external"/></svg></a>{% endif %}</td>
+        {% endif %}
+        <td class="mid small muted num">{% if stage == 'temp' %}{{ post.created_at|date:"m-d H:i" }}{% else %}{{ post.updated_at|date:"m-d H:i" }}{% endif %}</td>
+        <td class="mid r">
+          <form method="post" action="{% url 'writing:move' %}" class="inline-form">
+            {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+            {% if next_label %}<button class="btn sm primary" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="{% if stage == 'post' %}7{% elif stage == 'review' %}6{% else %}5{% endif %}" class="grid-empty">
+        {% if q %}검색 결과가 없습니다.
+        {% elif stage == 'temp' %}아직 임시 템플릿이 없습니다. 오른쪽 위 <strong>새 템플릿</strong>으로 추가하세요.
+        {% elif stage == 'review' %}검토할 템플릿이 없습니다. 임시 템플릿에서 <strong>검토로</strong> 보내면 여기에 모입니다.
+        {% else %}관리할 포스트가 없습니다. 검토 템플릿에서 <strong>포스트로</strong> 보내면 여기에 모입니다.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

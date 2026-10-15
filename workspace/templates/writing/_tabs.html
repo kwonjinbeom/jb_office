@@ -1,5 +1,4 @@
-<nav class="wr-tabs" aria-label="글쓰기 공간">
-  <a href="{% url 'writing:list' %}" {% if tab == 'drafts' %}class="on" aria-current="page"{% endif %}>내 원고</a>
-  <a href="{% url 'writing:templates' %}" {% if tab == 'templates' %}class="on" aria-current="page"{% endif %}>템플릿</a>
-  <a href="{% url 'writing:settings' %}" {% if tab == 'settings' %}class="on" aria-current="page"{% endif %}>작성 설정</a>
+{# 세 화면 탭. 글은 임시 템플릿 → 검토 템플릿 → 포스트 관리 순서로 옮겨간다. 컨텍스트: tabs #}
+<nav class="wr-tabs" aria-label="티스토리 글쓰기 화면">
+  {% for t in tabs %}<a href="{% url t.url_name %}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
 </nav>

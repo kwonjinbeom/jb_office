@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ post.get_absolute_url }}">{{ post.title|truncatechars:30 }}</a></div>{% endblock %}
+
+{% block content %}
+<div class="confirm">
+  <div class="confirm-head">{% include "includes/ic.html" with name="alert" %}정말 삭제할까요?</div>
+  <div class="confirm-body">
+    <p>{{ post.get_stage_display }}의 <strong>{{ post.title }}</strong>을(를) 삭제합니다. 되돌릴 수 없습니다.</p>
+  </div>
+  <form method="post" class="confirm-foot">
+    {% csrf_token %}
+    <a class="btn" href="{{ post.get_absolute_url }}">취소</a>
+    <button class="btn danger solid" type="submit">{% include "includes/ic.html" with name="trash" %}삭제</button>
+  </form>
+</div>
+{% endblock %}
