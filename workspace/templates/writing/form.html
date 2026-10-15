@@ -1,17 +1,19 @@
 {% extends "base.html" %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}</div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}{% if post %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ post.get_absolute_url }}">{{ post.title|truncatechars:30 }}</a>{% endif %}</div>{% endblock %}
+
+{% block heading %}{% if post %}글 수정{% else %}{{ page_title }}{% endif %}{% endblock %}
 
 {% block actions %}
 {% if post %}<a class="btn ghost danger" href="{% url 'writing:delete' post.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
-{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">{% include "includes/ic.html" with name="list" %}목록</a>{% endif %}{% endfor %}
+{% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
 <button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}
 
 {% block toolbar %}{% include "writing/_tabs.html" %}{% endblock %}
 
 {% block content %}
-<form id="post-form" method="post" class="form-page" action="{% if post %}{% url 'writing:edit' post.pk %}{% else %}{% url 'writing:create' %}{% endif %}">
+<form id="post-form" method="post" class="form-page" data-dirty-warn action="{% if post %}{% url 'writing:edit' post.pk %}{% else %}{% url 'writing:create' %}{% endif %}">
   {% csrf_token %}
   {% if not post %}<input type="hidden" name="stage" value="{{ stage }}">{% endif %}
   {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
@@ -32,12 +34,31 @@
     <div class="card-body form-grid">
       {% include "includes/field.html" with field=form.title cls="span-2" %}
       {% include "includes/field.html" with field=form.summary cls="span-2" %}
+      {% include "includes/field.html" with field=form.tags cls="span-2" %}
       {% include "includes/field.html" with field=form.body cls="span-2" %}
+      <details class="wr-guide span-2" open>
+        <summary>본문 쓰는 법 — 저장하면 '글 보기'에서 블로그에 올라간 모습으로 보이고, 그대로 복사해 붙여넣을 수 있어요</summary>
+        <table>
+          <tr><td>빈 줄</td><td>문단 나누기. 줄바꿈 한 번은 그대로 줄바꿈이에요.</td></tr>
+          <tr><td>## 소제목</td><td>큰 소제목 (### 은 작은 소제목)</td></tr>
+          <tr><td>**굵게**</td><td>강조</td></tr>
+          <tr><td>- 항목 / 1. 항목</td><td>점 목록 / 번호 목록</td></tr>
+          <tr><td>&gt; 문장</td><td>인용 상자</td></tr>
+          <tr><td>| 칸 | 칸 |<br>|---|---|</td><td>표 (첫 줄이 머리글)</td></tr>
+          <tr><td>[사진] 설명</td><td>빨간 점선 상자: 붙여넣은 뒤 내 사진을 올릴 자리</td></tr>
+          <tr><td>[그림] 파일명</td><td>파란 점선 상자: 준비한 그림을 올릴 자리</td></tr>
+          <tr><td>[캡션] 문장</td><td>사진·그림 아래 가운데 회색 한 줄</td></tr>
+          <tr><td>![설명](https://주소)</td><td>인터넷 주소가 있는 이미지. 파일 이름(그림1.png)이면 파란 상자</td></tr>
+          <tr><td>*캡션 문장*</td><td>이미지 바로 다음 줄에 쓰면 캡션</td></tr>
+          <tr><td>[글자](주소)</td><td>링크</td></tr>
+          <tr><td>---</td><td>구분선</td></tr>
+        </table>
+      </details>
     </div>
   </section>
   <div class="form-foot">
     {% if post %}<span class="muted small" style="margin-right:auto">만든 날 {{ post.created_at|date:"Y-m-d H:i" }} · 수정일 {{ post.updated_at|date:"Y-m-d H:i" }}</span>{% endif %}
-    {% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}
+    {% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
     <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
   </div>
 </form>

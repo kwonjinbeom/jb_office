@@ -90,9 +90,27 @@
     document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(); });
   }
 
+  // ---- 글 보기 폭 (티스토리 글쓰기)
+  function setPaperWidth(mode) {
+    var paper = document.getElementById("wr-paper");
+    if (!paper) return;
+    paper.classList.toggle("mobile", mode === "mobile");
+    document.querySelectorAll("[data-paper-width]").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-paper-width") === mode);
+    });
+  }
+  try { if (localStorage.getItem("wr.paperWidth") === "mobile") setPaperWidth("mobile"); } catch (err) {}
+
   // ---- 클릭
   function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    if (navigator.clipboard && window.isSecureContext) {
+      // 창에 초점이 없을 때 등 브라우저가 거절하면 예전 방식으로 한 번 더 시도한다.
+      return navigator.clipboard.writeText(text).catch(function () { return copyTextBySelection(text); });
+    }
+    return copyTextBySelection(text);
+  }
+
+  function copyTextBySelection(text) {
     return new Promise(function (resolve, reject) {
       var ta = document.createElement("textarea");
       ta.value = text;
@@ -104,20 +122,71 @@
     });
   }
 
+  function copyRich(htmlText, plainText) {
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write && window.isSecureContext) {
+      return navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([htmlText], { type: "text/html" }),
+        "text/plain": new Blob([plainText], { type: "text/plain" })
+      })]).catch(function () { return copyRichBySelection(htmlText); });
+    }
+    return copyRichBySelection(htmlText);
+  }
+
+  // 예비: 화면 밖에 HTML 을 그려 놓고 선택해서 복사한다 (선택 영역 복사는 서식이 함께 간다).
+  function copyRichBySelection(htmlText) {
+    return new Promise(function (resolve, reject) {
+      var box = document.createElement("div");
+      box.innerHTML = htmlText;
+      box.style.cssText = "position:fixed;left:-10000px;top:0;width:720px;background:#fff";
+      document.body.appendChild(box);
+      var range = document.createRange();
+      range.selectNodeContents(box);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      try { document.execCommand("copy") ? resolve() : reject(); } catch (err) { reject(err); }
+      sel.removeAllRanges();
+      document.body.removeChild(box);
+    });
+  }
+
   document.addEventListener("click", function (e) {
     if (!e.target.closest) return;
+
+    // 글 보기 폭: PC / 모바일. 고른 것은 이 브라우저에 기억한다.
+    var pw = e.target.closest("[data-paper-width]");
+    if (pw) {
+      setPaperWidth(pw.getAttribute("data-paper-width"));
+      try { localStorage.setItem("wr.paperWidth", pw.getAttribute("data-paper-width")); } catch (err) {}
+      return;
+    }
 
     // 토스트 닫기
     var x = e.target.closest(".toast .x");
     if (x) { hideToast(x.closest(".toast")); return; }
 
-    // 복사 버튼: data-copy="#입력칸" 의 값을 복사한다.
+    // 서식 그대로 복사: data-copy-rich="#HTML원본" (+ data-copy-plain="#글원본").
+    // 블로그 에디터에 붙여넣으면 소제목·굵게·표·상자 서식이 따라간다.
+    var rich = e.target.closest("[data-copy-rich]");
+    if (rich) {
+      var hsrc = $(rich.getAttribute("data-copy-rich"));
+      var psrc = $(rich.getAttribute("data-copy-plain") || "");
+      if (hsrc) {
+        copyRich(hsrc.value, psrc ? psrc.value : hsrc.value).then(
+          function () { toast(rich.getAttribute("data-copy-msg") || "복사했습니다.", "ok"); },
+          function () { toast("복사하지 못했습니다. 본문을 직접 드래그해 복사하세요.", "warn"); }
+        );
+      }
+      return;
+    }
+
+    // 복사 버튼: data-copy="#입력칸" 의 값을 복사한다. data-copy-msg 가 있으면 그 문구로 알린다.
     var cp = e.target.closest("[data-copy]");
     if (cp) {
       var src = $(cp.getAttribute("data-copy"));
       if (src) {
         copyText(src.value != null ? src.value : src.textContent).then(
-          function () { toast("복사했습니다.", "ok"); },
+          function () { toast(cp.getAttribute("data-copy-msg") || "복사했습니다.", "ok"); },
           function () { src.select && src.select(); toast("복사하지 못했습니다. 직접 선택해 복사하세요.", "warn"); }
         );
       }

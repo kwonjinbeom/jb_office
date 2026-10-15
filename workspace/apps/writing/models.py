@@ -32,6 +32,7 @@ class Post(models.Model):
     title = models.CharField("제목", max_length=200)
     summary = models.CharField("내용 요약", max_length=300, blank=True, help_text="목록에 보이는 한두 줄")
     body = models.TextField("내용", blank=True)
+    tags = models.CharField("태그", max_length=300, blank=True, help_text="쉼표로 구분 (예: 단풍절정, 가을여행)")
     review_status = models.CharField("검토", max_length=10, choices=Review.choices, default=Review.TODO)
     write_status = models.CharField("작성", max_length=10, choices=Write.choices, default=Write.TODO)
     publish_status = models.CharField("발행", max_length=10, choices=Publish.choices, default=Publish.TODO)
@@ -47,7 +48,13 @@ class Post(models.Model):
         return self.title
 
     def get_absolute_url(self):
-        return reverse("writing:edit", args=[self.pk])
+        return reverse("writing:detail", args=[self.pk])
+
+    @property
+    def tag_list(self):
+        """쉼표·줄바꿈으로 나눈 태그. 앞의 # 은 떼어 낸다."""
+        parts = (t.strip().lstrip("#").strip() for t in self.tags.replace("\n", ",").split(","))
+        return [t for t in parts if t]
 
     @property
     def excerpt(self):
