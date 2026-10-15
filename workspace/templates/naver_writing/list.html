@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'naver_writing:list' %}">네이버 글쓰기</a></div>{% endblock %}
+
+{% block heading %}{{ page_title }} <span class="cnt">{{ posts|length }}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn primary" href="{% url 'naver_writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}{% if stage == 'post' %}새 포스트{% else %}새 템플릿{% endif %}</a>
+{% endblock %}
+
+{% block toolbar %}
+{% include "naver_writing/_tabs.html" %}
+<div class="filter-bar">
+  <form method="get" class="inline-form">
+    <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용 검색  ( / )"></div>
+    <button class="btn sm" type="submit">검색</button>
+    {% if q %}<a class="btn ghost sm" href="{{ request.path }}">{% include "includes/ic.html" with name="x" %}초기화</a>{% endif %}
+  </form>
+  {% if posts %}
+  <span class="wr-bulk">
+    <span class="muted small">체크한 것을</span>
+    {% if prev_label %}<button class="btn sm" form="wr-bulk" name="to" value="{% if stage == 'review' %}temp{% else %}review{% endif %}">{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+    {% if next_label %}<button class="btn sm" form="wr-bulk" name="to" value="{% if stage == 'temp' %}review{% else %}post{% endif %}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+  </span>
+  {% endif %}
+</div>
+<form id="wr-bulk" method="post" action="{% url 'naver_writing:move' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
+{% endblock %}
+
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+<div class="grid-wrap">
+  <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}1080{% else %}880{% endif %}px">
+    <thead>
+      <tr>
+        <th style="width:58px"><input type="checkbox" class="checkbox" data-check-all="ids" form="wr-bulk" title="모두 선택" aria-label="모두 선택"></th>
+        <th style="width:26%">제목</th>
+        <th>내용</th>
+        {% if stage == 'review' %}<th style="width:220px">검토</th>{% endif %}
+        {% if stage == 'post' %}<th style="width:220px">작성</th><th style="width:150px">발행</th>{% endif %}
+        <th style="width:96px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>
+        <th style="width:{% if stage == 'review' %}190{% else %}110{% endif %}px"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for post in posts %}
+      <tr data-href="{{ post.get_absolute_url }}">
+        <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ post.pk }}" form="wr-bulk" aria-label="{{ post.title }} 선택"></td>
+        <td class="title-cell mid"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></td>
+        <td class="mid small muted"><span class="wr-excerpt">{{ post.excerpt|default:"-" }}</span></td>
+        {% if stage == 'review' %}
+        <td class="mid">{% include "naver_writing/_status.html" with field="review_status" current=post.review_status choices=review_choices %}</td>
+        {% endif %}
+        {% if stage == 'post' %}
+        <td class="mid">{% include "naver_writing/_status.html" with field="write_status" current=post.write_status choices=write_choices %}</td>
+        <td class="mid">{% include "naver_writing/_status.html" with field="publish_status" current=post.publish_status choices=publish_choices %}{% if post.published_url %} <a class="btn ghost sm icon" href="{{ post.published_url }}" target="_blank" rel="noopener" title="발행한 글 열기" aria-label="발행한 글 열기"><svg class="ic"><use href="#i-external"/></svg></a>{% endif %}</td>
+        {% endif %}
+        <td class="mid small muted num">{% if stage == 'temp' %}{{ post.created_at|date:"m-d H:i" }}{% else %}{{ post.updated_at|date:"m-d H:i" }}{% endif %}</td>
+        <td class="mid r">
+          <form method="post" action="{% url 'naver_writing:move' %}" class="inline-form">
+            {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+            {% if next_label %}<button class="btn sm primary" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="{% if stage == 'post' %}7{% elif stage == 'review' %}6{% else %}5{% endif %}" class="grid-empty">
+        {% if q %}검색 결과가 없습니다.
+        {% elif stage == 'temp' %}아직 임시 템플릿이 없습니다. 오른쪽 위 <strong>새 템플릿</strong>으로 추가하세요.
+        {% elif stage == 'review' %}검토할 템플릿이 없습니다. 임시 템플릿에서 <strong>검토로</strong> 보내면 여기에 모입니다.
+        {% else %}관리할 포스트가 없습니다. 검토 템플릿에서 <strong>포스트로</strong> 보내면 여기에 모입니다.{% endif %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -8,7 +8,7 @@ from .menus import build_nav, get_menus
 def _asset_version() -> str:
     """app.css·app.js 의 수정 시각. 주소 뒤 ?v= 로 붙여, 파일이 바뀌면 폰 브라우저도 새로 받게 한다."""
     latest = 0
-    for rel in ("css/app.css", "js/app.js", "js/editor.js"):
+    for rel in ("css/app.css", "js/app.js", "js/editor.js", "js/naver-editor.js"):
         try:
             latest = max(latest, int((settings.BASE_DIR / "static" / rel).stat().st_mtime))
         except OSError:
