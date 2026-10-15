@@ -250,3 +250,82 @@ class EditorTests(TestCase):
         text = self.client.post(url, {"kind": "text", "content": "첫 줄\n둘째 줄\n\n새 문단 <b>"}).json()["html"]
         self.assertEqual(text, "<p>첫 줄<br>둘째 줄</p><p>새 문단 &lt;b&gt;</p>")
         self.assertEqual(self.client.get(url).status_code, 405)
+
+
+DRAFT_MD = """# [원고] T99 · 시험
+
+| 항목 | 내용 |
+|---|---|
+| 형식 | 시험 |
+
+---
+
+<!-- 본문 시작 -->
+
+# 시험 원고 제목
+
+> 제목 대안: 다른 제목
+
+첫 문단이에요.
+
+## 소제목
+
+[사진] 사진 자리
+
+<!-- 본문 끝 -->
+
+---
+
+태그: 가, 나, 다
+
+소개: 시험 원고 소개 한 줄.
+"""
+
+
+class DraftImportTests(TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        (root / "T99_시험").mkdir()
+        (root / "T99_시험" / "원고.md").write_text(DRAFT_MD, encoding="utf-8")
+        (root / "T98_본문없음").mkdir()
+        (root / "T98_본문없음" / "원고.md").write_text("# 메모만 있는 파일\n", encoding="utf-8")
+        self.settings_ctx = self.settings(WRITING_DRAFTS_DIR=root)
+        self.settings_ctx.enable()
+
+    def tearDown(self):
+        self.settings_ctx.disable()
+        self.tmp.cleanup()
+
+    def test_parse_takes_body_tags_summary(self):
+        from .drafts import parse
+
+        d = parse(DRAFT_MD, "T99_시험")
+        self.assertEqual(d.title, "시험 원고 제목")
+        self.assertTrue(d.body.startswith("첫 문단이에요."))
+        self.assertNotIn("제목 대안", d.body)
+        self.assertNotIn("본문 끝", d.body)
+        self.assertEqual((d.tags, d.summary, d.code), ("가, 나, 다", "시험 원고 소개 한 줄.", "T99"))
+        self.assertIsNone(parse("# 메모만\n"))
+
+    def test_import_page_lists_only_real_drafts(self):
+        res = self.client.get(reverse("writing:import"))
+        self.assertContains(res, "시험 원고 제목")
+        self.assertNotContains(res, "메모만 있는 파일")
+        self.assertContains(res, "새 원고")
+
+    def test_import_creates_temp_post_once(self):
+        url = reverse("writing:import")
+        res = self.client.post(url, {"keys": ["T99_시험"]})
+        self.assertRedirects(res, reverse("writing:list"))
+        post = Post.objects.get(title="시험 원고 제목")
+        self.assertEqual((post.stage, post.tags, post.summary), (Stage.TEMP, "가, 나, 다", "시험 원고 소개 한 줄."))
+        self.assertIn("<h2>소제목</h2>", render_body(post.body))
+        self.client.post(url, {"keys": ["T99_시험"]})  # 두 번 가져와도 한 편
+        self.assertEqual(Post.objects.filter(title="시험 원고 제목").count(), 1)
+        self.assertContains(self.client.get(url), "이미 있음")

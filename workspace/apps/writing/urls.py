@@ -9,6 +9,7 @@ urlpatterns = [
     path("review/", views.post_list, {"stage": Post.Stage.REVIEW}, name="review"),
     path("posts/", views.post_list, {"stage": Post.Stage.POST}, name="posts"),
     path("new/", views.create, name="create"),
+    path("import/", views.import_drafts, name="import"),
     path("move/", views.move, name="move"),
     path("convert/", views.convert, name="convert"),
     path("<int:pk>/", views.detail, name="detail"),
