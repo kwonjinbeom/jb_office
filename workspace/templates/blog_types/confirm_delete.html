@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'blog_types:index' %}">타입·카테고리</a></div>{% endblock %}
+
+{% block content %}
+<div class="confirm">
+  <div class="confirm-head">{% include "includes/ic.html" with name="alert" %}정말 삭제할까요?</div>
+  <div class="confirm-body">
+    <p>{{ kind_label }} <strong>{{ obj.name }}</strong>을(를) 삭제합니다.{% if inside %} 안에 있는 {{ inside|join:", " }}도 함께 지워집니다.{% endif %} 되돌릴 수 없습니다.</p>
+  </div>
+  <form method="post" class="confirm-foot">
+    {% csrf_token %}
+    <a class="btn" href="{{ back }}">취소</a>
+    <button class="btn danger solid" type="submit">{% include "includes/ic.html" with name="trash" %}삭제</button>
+  </form>
+</div>
+{% endblock %}

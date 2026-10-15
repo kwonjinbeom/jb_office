@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}타입·카테고리 <span class="cnt">카테고리 {{ counts.category }} · 타입 {{ counts.type }} · 하위 {{ counts.sub }}</span>{% endblock %}
+
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+<div class="bt-layout{% if obj %} has-sel{% endif %}">
+
+  {# 왼쪽: 한눈에 보는 계층. 이름과 개수만. #}
+  <nav class="bt-tree" aria-label="카테고리 › 타입 › 하위">
+    {% for c in categories %}
+    <div class="bt-group">
+      <a class="bt-node lv1{% if sel == c.sel %} on{% endif %}" href="?sel={{ c.sel }}">
+        <span class="bt-code">{{ c.code }}</span>
+        <span class="nm">{{ c.name }}</span>
+        {% if c.platform != 'all' %}<span class="bt-plat">{{ c.get_platform_display }}</span>{% endif %}
+        <span class="ct">{{ c.types.all|length }}</span>
+      </a>
+      {% for t in c.types.all %}
+      <a class="bt-node lv2{% if sel == t.sel %} on{% endif %}" href="?sel={{ t.sel }}">
+        <span class="nm">{{ t.name }}</span>
+        {% if t.subs.all %}<span class="ct">{{ t.subs.all|length }}</span>{% endif %}
+      </a>
+      {% for s in t.subs.all %}
+      <a class="bt-node lv3{% if sel == s.sel %} on{% endif %}" href="?sel={{ s.sel }}"><span class="nm">{{ s.name }}</span></a>
+      {% endfor %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <form class="bt-quickadd lv1" method="post" action="{% url 'blog_types:add' 'category' %}">
+      {% csrf_token %}
+      <input class="input sm" name="name" placeholder="+ 새 카테고리 (이름 입력 후 Enter)" aria-label="새 카테고리 이름" autocomplete="off">
+    </form>
+  </nav>
+
+  {# 오른쪽: 고른 것의 자세한 내용 · 고치기 · 바로 아래 단계 정리 #}
+  <section class="bt-panel">
+    {% if obj %}
+    <div class="bt-path">
+      {% for label, s in path %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="?sel={{ s }}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}
+    </div>
+    <div class="bt-panel-head">
+      <span class="badge {% if kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ kind_label }}</span>
+      <h2>{% if kind == 'category' %}{{ obj.code }}. {% endif %}{{ obj.name }}</h2>
+    </div>
+    {% if kind == 'category' and obj.question %}<p class="bt-lead">“{{ obj.question }}”</p>{% endif %}
+    {% if kind == 'type' and obj.example_list %}<ul class="bt-examples">{% for e in obj.example_list %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+
+    {% if child_kind %}
+    <div class="card bt-kids">
+      <div class="card-head"><h3 class="card-title">{{ child_label }} <span class="cnt">{{ children|length }}</span></h3><span class="hint">↑↓ 로 순서, 이름을 누르면 그 {{ child_label }}로 이동</span></div>
+      <ol class="bt-kid-list">
+        {% for k in children %}
+        <li>
+          <a href="?sel={{ k.sel }}">{{ k.name }}</a>
+          {% if child_kind == 'type' and k.subs.all %}<span class="muted small">하위 {{ k.subs.all|length }}</span>{% elif k.note %}<span class="muted small bt-kid-note">{{ k.note|truncatechars:40 }}</span>{% endif %}
+          <form method="post" action="{% url 'blog_types:move' child_kind k.pk %}" class="inline-form bt-kid-move">
+            {% csrf_token %}<input type="hidden" name="back" value="{{ sel }}">
+            <button class="btn ghost sm icon" name="dir" value="up" {% if forloop.first %}disabled{% endif %} title="위로" aria-label="위로">{% include "includes/ic.html" with name="arrow-up" %}</button>
+            <button class="btn ghost sm icon" name="dir" value="down" {% if forloop.last %}disabled{% endif %} title="아래로" aria-label="아래로">{% include "includes/ic.html" with name="arrow-down" %}</button>
+          </form>
+        </li>
+        {% empty %}
+        <li class="muted small">아직 없어요. 아래에 이름을 적고 Enter.</li>
+        {% endfor %}
+      </ol>
+      <form class="bt-quickadd" method="post" action="{% url 'blog_types:add' child_kind %}">
+        {% csrf_token %}<input type="hidden" name="parent" value="{{ sel }}">
+        <input class="input sm" name="name" placeholder="+ {{ child_label }} 추가 (이름 입력 후 Enter)" aria-label="{{ child_label }} 이름" autocomplete="off" {% if not children %}autofocus{% endif %}>
+      </form>
+    </div>
+    {% endif %}
+
+    <details class="card bt-edit"{% if form.errors or kind == 'sub' %} open{% endif %}>
+      <summary class="card-head"><h3 class="card-title">{% include "includes/ic.html" with name="edit" %}자세한 내용 · 고치기</h3><span class="hint">{% if kind == 'category' %}방향·질문·플랫폼·설명{% elif kind == 'type' %}쓰는 뼈대·예시 제목·설명{% else %}이 하위로 쓸 때의 품목·대상·주의점{% endif %}</span></summary>
+      <form method="post" action="{% url 'blog_types:save' kind obj.pk %}">
+        {% csrf_token %}
+        <div class="card-body form-grid">
+          {% for field in form %}
+          {% if field.name == 'note' or field.name == 'examples' or field.name == 'question' or field.name == 'direction' %}
+          {% include "includes/field.html" with field=field cls="span-2" %}
+          {% else %}
+          {% include "includes/field.html" with field=field %}
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="form-foot bt-edit-foot">
+          <a class="btn ghost danger sm" href="{% url 'blog_types:delete' kind obj.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>
+          <span style="margin-left:auto"></span>
+          <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+        </div>
+      </form>
+    </details>
+
+    {% else %}
+    <div class="bt-welcome">
+      <h2>왼쪽에서 하나를 고르세요</h2>
+      <p><strong>카테고리</strong>는 사게 만드는 방향이에요. 나누는 기준은 <em>글을 연 사람의 질문</em>이에요.</p>
+      <p><strong>타입</strong>은 그 안에서 같은 틀로 물건만 바꿔 쓰는 글 모양, <strong>하위</strong>는 타입을 실제로 나눠 쓰는 단위(품목군·대상·변형)예요.</p>
+      <p class="muted small">고르면 오른쪽에서 그 아래 단계를 바로 추가하고 순서를 바꿀 수 있어요. 자세한 설명은 '자세한 내용 · 고치기'를 펼쳐서 봐요.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -116,6 +116,7 @@ INSTALLED_APPS = [
     "apps.discussions",
     "apps.writing",
     "apps.naver_writing",
+    "apps.blog_types",
 ]
 
 MIDDLEWARE = [
