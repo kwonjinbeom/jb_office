@@ -71,6 +71,8 @@ python3.12 -c "import secrets; print(secrets.token_urlsafe(50))"
 - **자동**: GitHub `main` 에 push 되면 GitHub 가 서버의 `/deploy/webhook/` 을 호출하고 서버가 스스로 반영한다.
 - **수동**: 서버 홈 화면의 **서버 코드 갱신** 버튼. 웹훅이 실패했거나 바로 확인하고 싶을 때.
 
+> **웹훅은 켜져 있다 (2026-10-15 확인, 최근 응답 모두 200).** 평소에는 버튼도 콘솔 `migrate` 도 필요 없다. 에이전트는 사용자에게 이것을 시키지 않고, push 뒤 `gh api repos/kwonjinbeom/jb_office/hooks/<id>/deliveries` 로 `deployed <커밋>` 응답을 직접 확인한다.
+
 ### 3-1. 자동 반영 처음 한 번 켜기 (화면에서)
 
 1. 작업서버 좌측 메뉴 **설정** → **비밀값 만들기** 를 누른다. 비밀값과 Payload URL 이 화면에 나온다.

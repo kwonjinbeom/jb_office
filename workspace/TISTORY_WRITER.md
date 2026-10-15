@@ -26,5 +26,5 @@
 ## 데이터
 
 - 모델 하나: `Post` (`stage` = temp/review/post, `review_status`, `write_status`, `publish_status`, `published_url`, `published_on`).
-- migration `0002_post_pipeline` 이 예전 표(Draft·DraftRevision·WritingTemplate·WritingProfile)를 지우고 AppSetting 의 `writing_*` 설정(AI 키·모델)도 지운다. **서버에서 `migrate` 필요.**
+- migration `0002_post_pipeline` 이 예전 표(Draft·DraftRevision·WritingTemplate·WritingProfile)를 지우고 AppSetting 의 `writing_*` 설정(AI 키·모델)도 지운다. (2026-10-15 main 병합 때 서버에 자동 적용됨, 웹훅 응답 `deployed f9ed190`)
 - 예전 원고와 연결돼 있던 블로그·카페 콘텐츠(`content.Content`)는 지우지 않는다. 사용자가 직접 쓴 글일 수 있어서다.

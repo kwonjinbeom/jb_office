@@ -39,7 +39,7 @@ Use the existing checkout at `/workspace/jb_office`; do not create a Git worktre
 
 Read `/workspace/jb_office/AGENTS.md` before making changes. As Codex Cloud, never commit or push directly to `main`; use a short `codex/<task>` branch and a pull request. Avoid editing files covered by active Claude work, and never run the repository's automatic Git synchronization in the Cloud checkout.
 
-This is a Django 5.2 + SQLite application with separate `dev` and `server` roles. The source of truth is the PythonAnywhere database at `~/data/db.sqlite3`; it is not in Git. Never access or copy that production database in Codex Cloud. Cloud development must use only `/tmp/jb_office_cloud/db.sqlite3`, which may be migrated and seeded as disposable test data. Migration source files may be proposed in a PR, with a note that the user must apply them on PythonAnywhere.
+This is a Django 5.2 + SQLite application with separate `dev` and `server` roles. The source of truth is the PythonAnywhere database at `~/data/db.sqlite3`; it is not in Git. Never access or copy that production database in Codex Cloud. Cloud development must use only `/tmp/jb_office_cloud/db.sqlite3`, which may be migrated and seeded as disposable test data. Migration source files may be proposed in a PR. Once merged to `main`, the GitHub webhook deploys to PythonAnywhere and runs `migrate` automatically — never tell the user to apply migrations or press the server update button.
 
 Before starting, verify readiness:
 
