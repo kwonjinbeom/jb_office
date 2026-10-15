@@ -36,7 +36,8 @@ class Category(TrashableModel):
     section = models.ForeignKey(Section, verbose_name="대분류", on_delete=models.CASCADE, related_name="categories")
     code = models.CharField("기호", max_length=4, help_text="A, B, C …")
     name = models.CharField("카테고리", max_length=40)
-    direction = models.CharField("사게 만드는 방향", max_length=120, blank=True, help_text="예: 불편 → 해결템")
+    direction = models.CharField("방향", max_length=120, blank=True,
+                                 help_text="판매 수익: 사게 만드는 방향 (불편 → 해결템) · 광고 수익: 사람들이 찾아오는 이유")
     question = models.CharField("독자의 질문", max_length=160, blank=True,
                                 help_text="글을 연 사람이 검색창에 치는 질문. 이 질문으로 카테고리가 갈린다")
     platform = models.CharField("플랫폼", max_length=10, choices=Platform.choices, default=Platform.ALL)

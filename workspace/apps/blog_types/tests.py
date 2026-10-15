@@ -12,15 +12,20 @@ class BlogTypesTests(TestCase):
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
 
+    @staticmethod
+    def cat(code):
+        """판매 수익 (커넥트)의 카테고리. 기호는 대분류마다 A 부터라 대분류를 함께 지정한다."""
+        return Category.objects.get(section__name="판매 수익 (커넥트)", code=code)
+
     def test_seed_from_08(self):
         # 0002 migration 이 08 문서 표를 넣는다 (테스트 DB 도 migrate 로 만든다)
-        self.assertEqual(list(Category.objects.values_list("code", flat=True)), list("ABCDEFG"))
         # 0004: A~G 는 첫 대분류 '판매 수익 (커넥트)' 아래로 간다
-        connect = Section.objects.get()
+        connect = Section.objects.get(name="판매 수익 (커넥트)")
+        self.assertEqual(list(connect.categories.values_list("code", flat=True)), list("ABCDEFG"))
         self.assertEqual(connect.name, "판매 수익 (커넥트)")
         self.assertEqual(connect.categories.count(), 7)
-        self.assertEqual(PostType.objects.count(), 14)
-        self.assertEqual(Category.objects.get(code="G").platform, Category.Platform.NAVER)
+        self.assertEqual(PostType.objects.filter(category__section=connect).count(), 14)
+        self.assertEqual(self.cat("G").platform, Category.Platform.NAVER)
         season = PostType.objects.get(name="시즌 달력")
         self.assertEqual([s.name for s in season.subs.all()], ["세일 행사", "계절 품목", "기념일·시험"])
 
@@ -75,13 +80,12 @@ class BlogTypesTests(TestCase):
         last = season.subs.last()
         self.client.post(reverse("blog_types:move", args=["sub", last.pk]), {"dir": "up", "back": season.sel})
         self.assertEqual([s.name for s in season.subs.all()], ["세일 행사", "기념일·시험", "계절 품목"])
-        first_cat = Category.objects.get(code="A")
+        first_cat = self.cat("A")
         self.client.post(reverse("blog_types:move", args=["category", first_cat.pk]), {"dir": "up"})
-        self.assertEqual(Category.objects.first().code, "A")  # 맨 위는 더 못 올라간다
-        Section.objects.create(name="일상·브이로그", order=2)
-        daily = Section.objects.get(name="일상·브이로그")
+        self.assertEqual(first_cat.section.categories.first().code, "A")  # 맨 위는 더 못 올라간다
+        daily = Section.objects.create(name="일상·브이로그", order=9)
         self.client.post(reverse("blog_types:move", args=["section", daily.pk]), {"dir": "up"})
-        self.assertEqual(Section.objects.first(), daily)
+        self.assertEqual([g.name for g in Section.objects.all()], ["판매 수익 (커넥트)", "일상·브이로그", "광고 수익 (조회수)"])
 
     def test_save_detail(self):
         sub = SubType.objects.get(name="세일 행사")
@@ -94,18 +98,33 @@ class BlogTypesTests(TestCase):
         self.assertTrue(res.context["form"].errors)
 
     def test_delete_category_removes_children(self):
-        c = Category.objects.get(code="C")
+        c = self.cat("C")
         res = self.client.get(reverse("blog_types:delete", args=["category", c.pk]))
         self.assertContains(res, "타입 2개, 하위 3개")
         self.client.post(reverse("blog_types:delete", args=["category", c.pk]))
         self.assertFalse(SubType.objects.filter(name="세일 행사").exists())
 
     def test_delete_section_removes_everything_inside(self):
-        connect = Section.objects.get()
+        connect = Section.objects.get(name="판매 수익 (커넥트)")
         res = self.client.get(reverse("blog_types:delete", args=["section", connect.pk]))
         self.assertContains(res, "카테고리 7개, 타입 14개, 하위 6개")
         self.client.post(reverse("blog_types:delete", args=["section", connect.pk]))
-        self.assertFalse(Category.objects.exists())
+        self.assertFalse(Category.objects.filter(name="문제 해결").exists())
+        self.assertEqual(Category.objects.count(), 8)  # 다른 대분류는 그대로
+
+    def test_views_section_from_09(self):
+        views = Section.objects.get(name="광고 수익 (조회수)")
+        self.assertEqual(list(views.categories.values_list("code", flat=True)), list("ABCDEFGH"))
+        finance = views.categories.get(name="금융·시장")
+        daily = finance.types.get(name="일일 시황 · 오늘 ○○ 왜")
+        self.assertEqual(daily.example_list, ["오늘 코스피 하락 이유", "나스닥 상승 이유"])
+        self.assertIn("투자 권유 금지", finance.note)
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        import_module("apps.blog_types.migrations.0006_views_section").forward(django_apps, None)
+        self.assertEqual(Section.objects.filter(name="광고 수익 (조회수)").count(), 1)  # 두 번 넣지 않는다
 
     def test_seed_does_not_overwrite(self):
         from importlib import import_module
@@ -113,7 +132,8 @@ class BlogTypesTests(TestCase):
         from django.apps import apps as django_apps
 
         seed = import_module("apps.blog_types.migrations.0002_seed_08").seed
-        Category.objects.filter(code="A").update(name="내가 바꾼 이름")
+        before = Category.objects.count()
+        Category.objects.filter(section__name="판매 수익 (커넥트)", code="A").update(name="내가 바꾼 이름")
         seed(django_apps, None)
-        self.assertEqual(Category.objects.count(), 7)
-        self.assertEqual(Category.objects.get(code="A").name, "내가 바꾼 이름")
+        self.assertEqual(Category.objects.count(), before)
+        self.assertEqual(self.cat("A").name, "내가 바꾼 이름")
