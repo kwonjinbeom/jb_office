@@ -1,0 +1,10 @@
+<dialog id="trash-dialog" class="trash-dialog" aria-labelledby="trash-dialog-title">
+  <form method="dialog"><button class="btn ghost sm icon trash-dialog-close" aria-label="닫기" value="cancel">{% include "includes/ic.html" with name="x" %}</button></form>
+  <h2 id="trash-dialog-title">휴지통으로 이동할까요?</h2>
+  <p data-trash-description></p>
+  <p class="muted small">7일 안에 복원할 수 있어요. 이후에는 자동으로 영구 삭제돼요.</p>
+  <p class="muted small" data-trash-source-note hidden>Git 원본 파일은 유지되며, 이 화면에서 제외돼요.</p>
+  <p class="tone-danger small" data-trash-error role="alert" hidden></p>
+  <div class="trash-dialog-actions"><button class="btn" type="button" data-trash-cancel>취소</button><button class="btn primary" type="button" data-trash-confirm disabled>휴지통으로 이동</button></div>
+</dialog>
+<div class="trash-selection" role="toolbar" aria-label="선택 항목 작업" hidden><span data-trash-selection-count></span><button class="btn ghost sm" type="button" data-trash-clear>선택 해제</button><button class="btn sm" type="button" data-trash-bulk>삭제</button></div>

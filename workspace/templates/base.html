@@ -18,7 +18,7 @@
       <span class="brand-text">Office</span>
     </a>
     <nav class="nav">
-      <a class="nav-item{% if ACTIVE_MENU == 'home' or ACTIVE_MENU == 'core' and request.resolver_match.url_name != 'settings' %} active{% endif %}" href="{% url 'core:home' %}">
+      <a class="nav-item{% if request.resolver_match.url_name == 'home' and request.resolver_match.app_name == 'core' %} active{% endif %}" href="{% url 'core:home' %}">
         <svg class="ic"><use href="#i-home"/></svg><span>홈</span>
       </a>
       {% for n in NAV %}
@@ -120,11 +120,17 @@
 </div>
 <script>
   window.APP = {
+    trashListUrl: "{% url 'core:trash' %}",
+    trashPreviewUrl: "{% url 'core:trash_preview' %}",
+    trashMoveUrl: "{% url 'core:trash_move' %}",
+    trashRestoreUrl: "{% url 'core:trash_restore' %}",
     gitStatusUrl: "{% url 'core:api_git_status' %}",
     csrfToken: "{{ csrf_token }}"
   };
 </script>
 <script src="{% static 'js/app.js' %}?v={{ ASSET_VER }}"></script>
+{% include "includes/trash_ui.html" %}
+<script src="{% static 'js/trash.js' %}?v={{ ASSET_VER }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

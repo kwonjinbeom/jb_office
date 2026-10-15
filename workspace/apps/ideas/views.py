@@ -217,7 +217,7 @@ def log_add(request, pk):
     when = timezone.localtime(log.created_at)
     return answer(
         request, fallback,
-        log={"body": log.body, "date": f"{when:%Y-%m-%d}", "time": f"{when:%H:%M}", "stage": f"{log.stage.order}. {log.stage.title}" if log.stage else ""},
+        log={"id": log.pk, "body": log.body, "date": f"{when:%Y-%m-%d}", "time": f"{when:%H:%M}", "stage": f"{log.stage.order}. {log.stage.title}" if log.stage else ""},
         count=idea.logs.count(),
     )
 

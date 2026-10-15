@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block heading %}내 아이디어 <span class="cnt">{{ ideas|length }}{% if is_filtered %} / {{ total }}{% endif %}</span>{% endblock %}
 
@@ -46,7 +47,7 @@
     </thead>
     <tbody>
       {% for idea in ideas %}
-      <tr data-href="{{ idea.get_absolute_url }}">
+      <tr {% trash_attrs idea %} data-href="{{ idea.get_absolute_url }}">
         {% with logs=idea.logs.all %}
         <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
         <td>
@@ -74,7 +75,7 @@
             </form>
             <ul class="rows log-list" data-log-list>
               {% for log in logs|slice:":5" %}
-              <li class="log"><div class="log-date"><b>{{ log.created_at|date:"m-d" }}</b>{{ log.created_at|date:"H:i" }}</div><div>{% if log.stage %}<div class="log-meta">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</div>{% endif %}<div class="log-body">{{ log.body|linebreaksbr }}</div></div></li>
+              <li {% trash_attrs log %} class="log"><div class="log-date"><b>{{ log.created_at|date:"m-d" }}</b>{{ log.created_at|date:"H:i" }}</div><div>{% if log.stage and not log.stage.deleted_at %}<div class="log-meta">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</div>{% endif %}<div class="log-body">{{ log.body|linebreaksbr }}</div></div></li>
               {% empty %}
               <li class="empty-line" data-log-empty>아직 작업 로그가 없습니다. 오늘 한 일을 한 줄 남겨 보세요.</li>
               {% endfor %}

@@ -4,10 +4,10 @@
 
 {% block content %}
 <div class="confirm">
-  <div class="confirm-head">{% include "includes/ic.html" with name="alert" %}정말 삭제할까요?</div>
+  <div class="confirm-head">{% include "includes/ic.html" with name="alert" %}휴지통으로 이동할까요?</div>
   <div class="confirm-body">
-    <p><span class="code">{{ idea.code }}</span> <strong>{{ idea.title }}</strong> 아이디어를 삭제합니다. 되돌릴 수 없습니다.</p>
-    <p class="muted small">삭제하면 이 아이디어에 연결된 단계와 작업 로그도 함께 없어집니다.</p>
+    <p><span class="code">{{ idea.code }}</span> <strong>{{ idea.title }}</strong> 아이디어를 삭제합니다. 휴지통에서 7일 동안 복원할 수 있습니다.</p>
+    <p class="muted small">이 아이디어의 단계·작업 로그·할 일·증거도 함께 이동하며 복원할 수 있습니다.</p>
   </div>
   <form method="post" class="confirm-foot">
     {% csrf_token %}

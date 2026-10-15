@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}</div>{% endblock %}
 

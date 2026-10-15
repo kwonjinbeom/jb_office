@@ -337,6 +337,9 @@
       if (list) {
         var li = document.createElement("li");
         li.className = "log fresh";
+        li.dataset.trashModel = "ideas.idealog";
+        li.dataset.trashId = data.log.id;
+        li.dataset.trashTitle = data.log.body.slice(0, 200);
         li.innerHTML = '<div class="log-date"><b>' + esc(data.log.date.slice(5)) + "</b>" + esc(data.log.time) + "</div><div>" +
           (data.log.stage ? '<div class="log-meta">' + esc(data.log.stage) + "</div>" : "") +
           '<div class="log-body">' + esc(data.log.body).replace(/\n/g, "<br>") + "</div></div>";

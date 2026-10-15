@@ -1,9 +1,10 @@
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 from django.utils import timezone
 
 
-class Task(models.Model):
+class Task(TrashableModel):
     """아이디어(또는 그 단계)에 달린 다음 행동 하나."""
 
     title = models.CharField("할 일", max_length=200)

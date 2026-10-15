@@ -1,5 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 
 
@@ -8,7 +9,7 @@ class Workspace(models.TextChoices):
     VIDEO = "video", "영상 콘텐츠"
 
 
-class Folder(models.Model):
+class Folder(TrashableModel):
     workspace = models.CharField("공간", max_length=10, choices=Workspace.choices)
     name = models.CharField("폴더 이름", max_length=80)
     parent = models.ForeignKey("self", verbose_name="상위 폴더", null=True, blank=True, on_delete=models.PROTECT, related_name="children")
@@ -39,7 +40,7 @@ class Folder(models.Model):
         return reverse(f"{self.workspace}:list") + f"?folder={self.pk}"
 
 
-class Content(models.Model):
+class Content(TrashableModel):
     class Kind(models.TextChoices):
         TOPIC = "topic", "소재"
         TEMPLATE = "template", "템플릿"
@@ -82,7 +83,7 @@ class Content(models.Model):
         return reverse(f"{self.workspace}:detail", args=[self.pk])
 
 
-class Publication(models.Model):
+class Publication(TrashableModel):
     content = models.ForeignKey(Content, on_delete=models.CASCADE, related_name="publications")
     channel = models.CharField("플랫폼·채널", max_length=80, help_text="예: 네이버 블로그 / 카페 이름 / YouTube Shorts / Instagram / TikTok")
     title = models.CharField("게시용 제목", max_length=160, blank=True)

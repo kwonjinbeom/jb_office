@@ -121,7 +121,7 @@ def add(request, kind):
         messages.warning(request, "이름을 입력하세요.")
         return redirect(_url(parent_sel))
     if kind == "category":
-        used = set(Category.objects.values_list("code", flat=True))
+        used = set(Category.all_objects.values_list("code", flat=True))
         code = next((c for c in string.ascii_uppercase if c not in used), "?")
         order = (Category.objects.aggregate(m=Max("order"))["m"] or 0) + 1
         obj = Category.objects.create(code=code, name=name[:40], order=order)

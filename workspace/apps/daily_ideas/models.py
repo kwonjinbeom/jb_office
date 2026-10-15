@@ -1,10 +1,11 @@
 from django.db import models
+from apps.core.models import TrashableModel
 from django.utils import timezone
 
 from .standard import FIELDS
 
 
-class SearchStandard(models.Model):
+class SearchStandard(TrashableModel):
     """아이디어 검색 표준의 한 버전. 저장할 때마다 새 줄이 생기고, version 이 가장 큰 것이 현재 표준이다."""
 
     version = models.PositiveIntegerField("버전", unique=True)

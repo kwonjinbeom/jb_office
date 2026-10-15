@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'memos:list' %}">메모</a></div>{% endblock %}
 {% block heading %}{% if memo.pinned %}<svg class="ic"><use href="#i-pin"/></svg> {% endif %}{{ memo.title }}{% endblock %}
 
 {% block actions %}
-<a class="btn ghost danger" href="{% url 'memos:delete' memo.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>
+<a {% trash_attrs memo %} data-trash-trigger  class="btn ghost danger" href="{% url 'memos:delete' memo.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>
 <a class="btn" href="{% url 'memos:list' %}">{% include "includes/ic.html" with name="list" %}목록</a>
 <a class="btn primary" href="{% url 'memos:edit' memo.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>
 {% endblock %}

@@ -1,10 +1,11 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 from django.utils import timezone
 
 
-class Discussion(models.Model):
+class Discussion(TrashableModel):
     # 대구분 = 메뉴 이름 (사용자 지시 2026-10-14). 중구분은 상위 주제(parent)로 나눈다.
     AREA_CHOICES = [("daily_ideas", "일일 아이디어"), ("ideas", "내 아이디어"), ("blog", "블로그·카페"), ("video", "영상 콘텐츠")]
 
@@ -70,7 +71,7 @@ class Discussion(models.Model):
             raise ValidationError({"content": "관련 콘텐츠와 같은 메뉴를 선택하세요."})
 
 
-class DiscussionHistory(models.Model):
+class DiscussionHistory(TrashableModel):
     discussion = models.ForeignKey(Discussion, on_delete=models.CASCADE, related_name="history")
     summary = models.CharField(max_length=140, blank=True)
     next_action = models.CharField(max_length=80, blank=True)

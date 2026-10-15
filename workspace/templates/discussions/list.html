@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 {# scope 가 있으면 각 메뉴 아래의 '논의 현황'(그 대구분만), 없으면 전체를 보는 '진행현황'.
    목록은 한 줄 제목만 — 누르면 정리한 글(논의/**/*.md)과 핵심·다음 행동이 있는 상세로 들어간다. 최근 변경이 위, 날짜별로 묶는다. #}
 {% block breadcrumb %}{% if scope %}<div class="crumb">{{ scope_label }}</div>{% endif %}{% endblock %}
@@ -42,7 +43,7 @@
     <tbody>
       <tr class="day-row"><td colspan="{% if scope %}5{% else %}6{% endif %}"><b>{{ group.label }}</b>{% if group.label == "오늘" or group.label == "어제" %} <span class="muted">{{ group.day|date:"n월 j일" }}</span>{% endif %} <span class="cnt">{{ group.entries|length }}건</span></td></tr>
       {% for entry in group.entries %}
-      <tr data-href="{{ entry.get_absolute_url }}">
+      <tr {% trash_attrs entry %} data-href="{{ entry.get_absolute_url }}">
         <td class="small num muted" title="최근 변경 {{ entry.updated_at|date:'Y-m-d H:i' }} · 등록 {{ entry.created_at|date:'Y-m-d' }}">{{ entry.updated_at|date:"H:i" }}</td>
         {% if not scope %}<td class="small">{{ entry.get_area_display }}</td>{% endif %}
         <td class="small text-2" title="{{ entry.group_path }}">{{ entry.group_path|default:"-" }}</td>

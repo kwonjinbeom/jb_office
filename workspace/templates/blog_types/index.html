@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
@@ -13,19 +14,19 @@
   <nav class="bt-tree" aria-label="카테고리 › 타입 › 하위">
     {% for c in categories %}
     <div class="bt-group">
-      <a class="bt-node lv1{% if sel == c.sel %} on{% endif %}" href="?sel={{ c.sel }}">
+      <a {% trash_attrs c %} class="bt-node lv1{% if sel == c.sel %} on{% endif %}" href="?sel={{ c.sel }}">
         <span class="bt-code">{{ c.code }}</span>
         <span class="nm">{{ c.name }}</span>
         {% if c.platform != 'all' %}<span class="bt-plat">{{ c.get_platform_display }}</span>{% endif %}
         <span class="ct">{{ c.types.all|length }}</span>
       </a>
       {% for t in c.types.all %}
-      <a class="bt-node lv2{% if sel == t.sel %} on{% endif %}" href="?sel={{ t.sel }}">
+      <a {% trash_attrs t %} class="bt-node lv2{% if sel == t.sel %} on{% endif %}" href="?sel={{ t.sel }}">
         <span class="nm">{{ t.name }}</span>
         {% if t.subs.all %}<span class="ct">{{ t.subs.all|length }}</span>{% endif %}
       </a>
       {% for s in t.subs.all %}
-      <a class="bt-node lv3{% if sel == s.sel %} on{% endif %}" href="?sel={{ s.sel }}"><span class="nm">{{ s.name }}</span></a>
+      <a {% trash_attrs s %} class="bt-node lv3{% if sel == s.sel %} on{% endif %}" href="?sel={{ s.sel }}"><span class="nm">{{ s.name }}</span></a>
       {% endfor %}
       {% endfor %}
     </div>
@@ -54,7 +55,7 @@
       <div class="card-head"><h3 class="card-title">{{ child_label }} <span class="cnt">{{ children|length }}</span></h3><span class="hint">↑↓ 로 순서, 이름을 누르면 그 {{ child_label }}로 이동</span></div>
       <ol class="bt-kid-list">
         {% for k in children %}
-        <li>
+        <li {% trash_attrs k %}>
           <a href="?sel={{ k.sel }}">{{ k.name }}</a>
           {% if child_kind == 'type' and k.subs.all %}<span class="muted small">하위 {{ k.subs.all|length }}</span>{% elif k.note %}<span class="muted small bt-kid-note">{{ k.note|truncatechars:40 }}</span>{% endif %}
           <form method="post" action="{% url 'blog_types:move' child_kind k.pk %}" class="inline-form bt-kid-move">

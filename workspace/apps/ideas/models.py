@@ -1,8 +1,9 @@
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 
 
-class Idea(models.Model):
+class Idea(TrashableModel):
     """시장조사에서 나온 후보 하나. 02_후보원장.md / 11_통합시장지도.md 의 행 하나에 대응한다."""
 
     class Category(models.TextChoices):
@@ -96,7 +97,7 @@ class Idea(models.Model):
         return done, len(stages)
 
 
-class Stage(models.Model):
+class Stage(TrashableModel):
     """아이디어를 실현하는 세부 단계 하나. 순서대로 진행한다."""
 
     class Status(models.TextChoices):
@@ -137,7 +138,7 @@ class Stage(models.Model):
         return bool(self.due and self.status not in {self.Status.DONE, self.Status.HOLD} and self.due < timezone.localdate())
 
 
-class IdeaLog(models.Model):
+class IdeaLog(TrashableModel):
     """아이디어 작업 로그. 날짜순으로 쌓이는 짧은 기록."""
 
     idea = models.ForeignKey(Idea, verbose_name="아이디어", on_delete=models.CASCADE, related_name="logs")

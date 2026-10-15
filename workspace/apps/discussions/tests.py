@@ -68,9 +68,13 @@ class DiscussionTests(TestCase):
         self.assertEqual(self.deep.history.count(), 0)
         self.assertEqual(Client(enforce_csrf_checks=True).post(url, {"summary": "변경", "status": "talk"}).status_code, 403)
 
-    def test_delete_parent_is_protected(self):
+    def test_delete_parent_hides_and_restores_the_same_rows(self):
         self.client.post(reverse("discussions:delete", args=[self.root.pk]))
-        self.assertTrue(Discussion.objects.filter(pk=self.root.pk).exists())
+        self.assertFalse(Discussion.objects.filter(pk=self.root.pk).exists())
+        self.assertTrue(Discussion.all_objects.filter(pk=self.root.pk).exists())
+        from apps.core.models import TrashEntry
+        from apps.core.trash import restore
+        restore(TrashEntry.objects.get(model_label="discussions.discussion", object_key=str(self.root.pk)))
         form = DiscussionForm(instance=self.root)
         choices = [value for value, _ in form.fields["parent"].choices]
         self.assertNotIn(self.deep.pk, choices)

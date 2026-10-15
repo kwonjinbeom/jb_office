@@ -1,8 +1,9 @@
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 
 
-class Memo(models.Model):
+class Memo(TrashableModel):
     title = models.CharField("제목", max_length=200)
     body = models.TextField("내용", blank=True)
     pinned = models.BooleanField("상단 고정", default=False)

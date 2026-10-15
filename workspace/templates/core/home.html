@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block subtitle %}
 <span class="page-sub">{{ today|date:"n월 j일 l" }}</span>
@@ -60,7 +61,7 @@
         <thead><tr><th style="width:68px">코드</th><th>제목</th><th style="width:104px">상태</th><th style="width:28%">현재 단계</th><th style="width:132px">진행</th><th style="width:64px">할 일</th></tr></thead>
         <tbody>
           {% for idea in active_ideas %}
-          <tr data-href="{{ idea.get_absolute_url }}">
+          <tr {% trash_attrs idea %} data-href="{{ idea.get_absolute_url }}">
             <td><a class="code" href="{{ idea.get_absolute_url }}">{{ idea.code }}</a></td>
             <td class="title-cell" title="{{ idea.title }}"><a href="{{ idea.get_absolute_url }}">{{ idea.title }}</a></td>
             <td><span class="badge {{ idea.status_tone }}">{{ idea.get_status_display }}</span></td>
@@ -99,10 +100,10 @@
         {% if recent_logs %}
         <ul class="rows">
           {% for log in recent_logs %}
-          <li class="log">
+          <li {% trash_attrs log %} class="log">
             <div class="log-date">{{ log.created_at|date:"m-d H:i" }}</div>
             <div>
-              <div class="log-meta"><a class="code" href="{{ log.idea.get_absolute_url }}#logs" title="{{ log.idea.title }}">{{ log.idea.code }}</a>{% if log.stage %}<span>{{ log.stage.title|truncatechars:20 }}</span>{% endif %}</div>
+              <div class="log-meta"><a class="code" href="{{ log.idea.get_absolute_url }}#logs" title="{{ log.idea.title }}">{{ log.idea.code }}</a>{% if log.stage and not log.stage.deleted_at %}<span>{{ log.stage.title|truncatechars:20 }}</span>{% endif %}</div>
               <div class="log-body small">{{ log.body|truncatechars:140 }}</div>
             </div>
           </li>
