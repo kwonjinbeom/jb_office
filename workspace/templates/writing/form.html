@@ -1,5 +1,44 @@
 {% extends "base.html" %}
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'writing:list' %}">티스토리 글쓰기</a></div>{% endblock %}
-{% block actions %}<a class="btn" href="{{ cancel_url }}">취소</a><button class="btn primary" form="writing-create">저장</button>{% endblock %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}</div>{% endblock %}
+
+{% block actions %}
+{% if post %}<a class="btn ghost danger" href="{% url 'writing:delete' post.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
+{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">{% include "includes/ic.html" with name="list" %}목록</a>{% endif %}{% endfor %}
+<button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
+{% endblock %}
+
 {% block toolbar %}{% include "writing/_tabs.html" %}{% endblock %}
-{% block content %}<form method="post" enctype="multipart/form-data" class="form-page" id="writing-create">{% csrf_token %}<section class="card"><div class="card-body form-grid">{% if form.non_field_errors %}<div class="notice danger span-2">{{ form.non_field_errors }}</div>{% endif %}{% for field in form %}{% if field.name == 'body' or field.name == 'rules' %}{% include "includes/field.html" with field=field cls="span-2" %}{% else %}{% include "includes/field.html" with field=field %}{% endif %}{% endfor %}</div></section><div class="form-foot"><a class="btn" href="{{ cancel_url }}">취소</a><button class="btn primary">저장</button></div></form>{% endblock %}
+
+{% block content %}
+<form id="post-form" method="post" class="form-page" action="{% if post %}{% url 'writing:edit' post.pk %}{% else %}{% url 'writing:create' %}{% endif %}">
+  {% csrf_token %}
+  {% if not post %}<input type="hidden" name="stage" value="{{ stage }}">{% endif %}
+  {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.review_status or form.write_status %}
+  <section class="card">
+    <div class="card-body form-grid">
+      {% if form.review_status %}{% include "includes/field.html" with field=form.review_status %}{% endif %}
+      {% if form.write_status %}
+      {% include "includes/field.html" with field=form.write_status %}
+      {% include "includes/field.html" with field=form.publish_status %}
+      {% include "includes/field.html" with field=form.published_url %}
+      {% include "includes/field.html" with field=form.published_on %}
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+  <section class="card">
+    <div class="card-body form-grid">
+      {% include "includes/field.html" with field=form.title cls="span-2" %}
+      {% include "includes/field.html" with field=form.summary cls="span-2" %}
+      {% include "includes/field.html" with field=form.body cls="span-2" %}
+    </div>
+  </section>
+  <div class="form-foot">
+    {% if post %}<span class="muted small" style="margin-right:auto">만든 날 {{ post.created_at|date:"Y-m-d H:i" }} · 수정일 {{ post.updated_at|date:"Y-m-d H:i" }}</span>{% endif %}
+    {% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}
+    <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+  </div>
+</form>
+{% endblock %}

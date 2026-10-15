@@ -142,6 +142,16 @@
     el.form.submit();
   });
 
+  // 표 머리글의 '모두 선택' 체크박스: 같은 폼(form 속성)·같은 name 의 체크박스를 한꺼번에 켜고 끈다.
+  document.addEventListener("change", function (e) {
+    var all = e.target;
+    if (!all.matches || !all.matches("input[data-check-all]")) return;
+    var sel = 'input[type="checkbox"][name="' + all.getAttribute("data-check-all") + '"]';
+    var formId = all.getAttribute("form");
+    if (formId) sel += '[form="' + formId + '"]';
+    document.querySelectorAll(sel).forEach(function (box) { box.checked = all.checked; });
+  });
+
   // 좌측 트리 메뉴: 화살표로 접었다 펴고, 편 것은 이 브라우저에 기억한다.
   var NAV_STORE = "nav.open";
   function navState() {

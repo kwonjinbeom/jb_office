@@ -227,90 +227,21 @@ pre code { background: none; padding: 0; }
 .btn .kbd { margin-left: 2px; }
 .inline-form { display: inline-flex; gap: 4px; align-items: center; margin: 0; }
 
-/* 티스토리 글쓰기: 같은 원고를 기획·작성·검수·옮기기에서 다룬다. */
-.wr-tabs, .wr-steps { display: flex; gap: 4px; padding: 8px var(--gutter); border-bottom: 1px solid var(--border); background: var(--panel); flex-wrap: wrap; }
-.wr-tabs a, .wr-steps button { border: 0; border-radius: 6px; padding: 8px 14px; color: var(--text-2); font-size: 13px; cursor: pointer; background: transparent; }
-.wr-tabs .on, .wr-steps .on { color: var(--accent); background: var(--accent-weak); font-weight: 700; }
-.wr-tabs a:hover, .wr-steps button:hover { background: var(--hover); text-decoration: none; }
-.wr-welcome { max-width: 860px; padding: 7vh var(--gutter); margin: 0 auto; width: 100%; }
-.wr-welcome h2 { font-size: 32px; line-height: 1.4; margin: 18px 0; letter-spacing: -.6px; }
-.wr-welcome p { color: var(--text-2); line-height: 1.8; }
-.wr-roadmap { display: flex; flex-wrap: wrap; gap: 8px; margin: 26px 0; }
-.wr-roadmap span { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); font-weight: 600; }
-.wr-section-heading { display: flex; justify-content: space-between; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
-.wr-section-heading h2 { margin: 0 0 5px; font-size: 20px; }
-.wr-section-heading p { margin: 0; color: var(--text-3); font-size: 12.5px; }
-.wr-pane { max-width: 1500px; margin: 0 auto; }
-.wr-pane[hidden], .wr-alert[hidden], .wr-recovery[hidden] { display: none; }
-.wr-editor-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
-.wr-form .input, .wr-form .select { max-width: 100%; }
-.wr-form input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
-.wr-form .field.check { align-items: center; }
-.wr-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.wr-source { padding: 14px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; gap: 10px; }
-.wr-source .wr-inline { justify-content: space-between; }
-.wr-source label span { font-size: 12px; color: var(--text-2); }
-.wr-source-verified { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-.wr-help-list { padding-left: 18px; color: var(--text-2); font-size: 12.5px; line-height: 1.9; }
-.wr-paper { overflow: hidden; }
-.wr-paper .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
-.wr-editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; padding: 8px; border-bottom: 1px solid var(--border); }
-.wr-editor-tools #wr-count { margin-left: auto; padding: 0 8px; }
-.wr-paper textarea { border: 0; border-radius: 0; min-height: 520px; width: 100%; height: calc(100dvh - 320px); padding: 22px 24px; font-size: 14px; line-height: 1.85; font-family: var(--sans); resize: vertical; }
-.wr-paper textarea:focus { box-shadow: inset 0 0 0 2px var(--accent-weak); }
-.wr-paper-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 11.5px; }
-.wr-title-list { display: flex; flex-direction: column; gap: 8px; }
-.wr-title-choice { text-align: left; font-size: 12px; line-height: 1.55; border: 1px solid var(--border); background: var(--panel-2); border-radius: 6px; padding: 10px; cursor: pointer; overflow-wrap: anywhere; color: var(--text); }
-.wr-title-choice:hover { border-color: var(--accent); background: var(--accent-weak); }
-.wr-preview { width: 100%; min-height: 650px; border: 0; display: block; background: white; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
-.wr-check-result { margin-bottom: 12px; }
-.wr-check-result strong { font-size: 12px; }
-.wr-check-result p { font-size: 11.5px; color: var(--text-3); margin: 3px 0 0; }
-.wr-check-result.ok strong { color: var(--ok); }
-.wr-check-result.warn strong { color: var(--warn); }
-.wr-checks label { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.55; margin-bottom: 12px; cursor: pointer; }
-.wr-checks input { margin-top: 3px; }
-.wr-transfer-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.wr-transfer-row:first-child { padding-top: 0; }
-.wr-transfer-row p { margin: 6px 0; }
-.wr-transfer-row:last-of-type { margin-bottom: 14px; }
-.wr-downloads { display: flex; flex-wrap: wrap; gap: 6px; }
-.wr-template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.wr-template .ic { color: var(--accent); width: 24px; height: 24px; }
-.wr-template h2 { font-size: 17px; margin: 12px 0 8px; }
-.wr-template p { font-size: 12.5px; color: var(--text-2); min-height: 36px; }
-.wr-template details { margin: 16px 0; font-size: 12px; }
-.wr-template summary { cursor: pointer; }
-.wr-template pre { margin-top: 10px; white-space: pre-wrap; }
-.wr-saved-item { display: flex; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.wr-saved-item > div { flex: 1; min-width: 180px; }
-.wr-saved-item p { margin: 5px 0 0; }
-.wr-settings { max-width: 1000px; margin: 0 auto; }
-.wr-version { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
-.wr-version-list { max-height: 360px; overflow: auto; }
-.wr-form .field.check label { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; }
-.wr-pagination { display: flex; justify-content: center; gap: 12px; align-items: center; padding: 12px; }
-.wr-alert, .wr-recovery { margin-bottom: 16px; }
-.wr-save-state.pending { color: var(--warn); }
-.wr-busy { cursor: progress; }
-.wr-dialog { max-width: 900px; width: calc(100% - 32px); border: 1px solid var(--border); border-radius: 12px; padding: 22px; box-shadow: var(--shadow); }
-.wr-dialog::backdrop { background: rgba(15,23,42,.35); }
-.wr-dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.wr-dialog-head h3 { margin: 0; }
-.wr-dialog textarea { margin: 12px 0; }
-@media (max-width: 1100px) {
-  .wr-editor-grid { grid-template-columns: minmax(0, 1fr); }
-  .wr-editor-grid > aside { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
-}
+/* 티스토리 글쓰기: 임시 템플릿 → 검토 템플릿 → 포스트 관리 세 화면 탭 */
+.wr-tabs { display: flex; align-items: center; gap: 2px; padding: 8px var(--gutter); border-bottom: 1px solid var(--border); background: var(--panel); flex: none; overflow-x: auto; scrollbar-width: none; }
+.wr-tabs a { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 7px 12px; color: var(--text-2); font-size: 13px; white-space: nowrap; }
+.wr-tabs a:hover { background: var(--hover); text-decoration: none; }
+.wr-tabs a.on { color: var(--accent); background: var(--accent-weak); font-weight: 700; }
+.wr-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--muted-weak); color: var(--text-3); font-size: 11px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.wr-tabs a.on .wr-count { background: var(--panel); color: var(--accent); }
+.wr-arrow { color: var(--text-3); display: inline-flex; }
+.wr-bulk { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.wr-excerpt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wr-grid .status-seg { flex-wrap: nowrap; }
 @media (max-width: 620px) {
-  .wr-tabs, .wr-steps { padding: 8px 12px; gap: 2px; }
-  .wr-tabs a, .wr-steps button { padding: 8px 10px; font-size: 12px; }
-  .wr-welcome { padding: 30px 16px; }
-  .wr-welcome h2 { font-size: 26px; }
-  .wr-paper textarea { min-height: 400px; padding: 16px; font-size: 16px; }
-  .wr-editor-grid > aside { display: flex; }
-  .wr-preview { min-height: 500px; }
-  .wr-section-heading h2 { font-size: 18px; }
+  .wr-tabs { padding: 8px 12px; }
+  .wr-tabs a { padding: 7px 9px; font-size: 12px; }
+  .wr-bulk { margin-left: 0; }
 }
 
 /* 콘텐츠 폴더와 간결한 논의 표. 기존 표·폼 스타일을 사용한다. */

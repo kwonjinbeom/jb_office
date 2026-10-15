@@ -1,111 +1,70 @@
-from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 
 
-class WritingProfile(models.Model):
-    name = models.CharField("작성 규칙 이름", max_length=80)
-    blog_url = models.URLField(
-        "티스토리 블로그 주소",
-        blank=True,
-        max_length=300,
-        help_text="예: https://내블로그.tistory.com",
-    )
-    audience = models.CharField("주 독자", max_length=200, blank=True)
-    tone = models.CharField(
-        "말투·분위기",
-        max_length=200,
-        default="쉽고 담백한 존댓말. 과장 없이 구체적으로.",
-    )
-    rules = models.TextField(
-        "작성 기준",
-        blank=True,
-        help_text="피할 표현, 문단 구성, 출처 기준 등을 적으세요.",
-    )
-    closing = models.CharField("기본 마무리 방향", max_length=300, blank=True)
-    disclosure = models.CharField(
-        "제휴·광고 표시 문구",
-        max_length=500,
-        blank=True,
-        help_text="실제 해당하는 원고에서만 사용합니다.",
-    )
-    target_length = models.PositiveIntegerField(
-        "목표 글자 수",
-        default=1600,
-        validators=[MinValueValidator(200), MaxValueValidator(20000)],
-        help_text="작성 분량을 가늠하는 기준이며 검색 노출 기준이 아닙니다.",
-    )
+class Post(models.Model):
+    """티스토리 글 한 편. 임시 템플릿 → 검토 템플릿 → 포스트 관리 세 화면을 오간다.
+
+    화면(stage)마다 그 화면에서 하는 일의 상태가 따로 있다.
+    다른 화면으로 옮겨도 상태값은 지우지 않는다 (되돌아오면 하던 데서 이어간다).
+    """
+
+    class Stage(models.TextChoices):
+        TEMP = "temp", "임시 템플릿"
+        REVIEW = "review", "검토 템플릿"
+        POST = "post", "포스트 관리"
+
+    class Review(models.TextChoices):
+        TODO = "todo", "미검토"
+        DOING = "doing", "검토 중"
+        DONE = "done", "검토 완료"
+
+    class Write(models.TextChoices):
+        TODO = "todo", "미작성"
+        DOING = "doing", "작성 중"
+        DONE = "done", "작성 완료"
+
+    class Publish(models.TextChoices):
+        TODO = "todo", "미발행"
+        DONE = "done", "발행 완료"
+
+    stage = models.CharField("화면", max_length=10, choices=Stage.choices, default=Stage.TEMP)
+    title = models.CharField("제목", max_length=200)
+    summary = models.CharField("내용 요약", max_length=300, blank=True, help_text="목록에 보이는 한두 줄")
+    body = models.TextField("내용", blank=True)
+    review_status = models.CharField("검토", max_length=10, choices=Review.choices, default=Review.TODO)
+    write_status = models.CharField("작성", max_length=10, choices=Write.choices, default=Write.TODO)
+    publish_status = models.CharField("발행", max_length=10, choices=Publish.choices, default=Publish.TODO)
+    published_url = models.URLField("발행 주소", max_length=500, blank=True)
+    published_on = models.DateField("발행일", null=True, blank=True)
+    created_at = models.DateTimeField("만든 날", auto_now_add=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
 
     class Meta:
-        ordering = ["name", "pk"]
+        ordering = ["-updated_at", "-pk"]
 
     def __str__(self):
-        return self.name
-
-
-class WritingTemplate(models.Model):
-    name = models.CharField("템플릿 이름", max_length=80)
-    description = models.CharField("용도", max_length=200, blank=True)
-    body = models.TextField(
-        "본문 틀",
-        help_text="Markdown으로 작성. {{answer}}, {{question}}, {{experience}}, {{closing}}을 사용할 수 있습니다. 미작성 부분은 [[작성할 내용]]으로 표시하세요.",
-    )
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["name", "pk"]
-
-    def __str__(self):
-        return self.name
-
-
-class Draft(models.Model):
-    content = models.OneToOneField(
-        "content.Content", on_delete=models.CASCADE, related_name="writing_draft"
-    )
-    profile = models.ForeignKey(
-        WritingProfile,
-        verbose_name="작성 규칙",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-    )
-    template_key = models.CharField("글 형식", max_length=60, default="howto")
-    keyword = models.CharField("중심 검색어", max_length=100, blank=True)
-    tags = models.CharField(
-        "태그", max_length=300, blank=True, help_text="쉼표로 구분, 최대 10개"
-    )
-    question = models.TextField("독자가 궁금한 것", blank=True)
-    answer = models.CharField("답·핵심 한 줄", max_length=300, blank=True)
-    experience = models.TextField("직접 확인·경험한 것", blank=True)
-    description = models.CharField(
-        "글 소개",
-        max_length=300,
-        blank=True,
-        help_text="검색 결과와 공유에서 보여줄 내용을 짧게 작성",
-    )
-    commercial = models.BooleanField("광고·제휴가 있는 글", default=False)
-    sources = models.JSONField(default=list, blank=True)
-    checks = models.JSONField(default=list, blank=True)
-    revision = models.PositiveIntegerField(default=1)
-    published_url = models.URLField("게시 URL", blank=True, max_length=500)
-    published_on = models.DateField("게시일", null=True, blank=True)
-
-    class Meta:
-        ordering = ["-content__updated_at", "-pk"]
-
-    def __str__(self):
-        return self.content.title
+        return self.title
 
     def get_absolute_url(self):
-        return reverse("writing:editor", args=[self.pk])
+        return reverse("writing:edit", args=[self.pk])
 
+    @property
+    def excerpt(self):
+        return self.summary or " ".join(self.body.split())[:140]
 
-class DraftRevision(models.Model):
-    draft = models.ForeignKey(Draft, on_delete=models.CASCADE, related_name="versions")
-    label = models.CharField(max_length=80)
-    payload = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    @property
+    def is_published(self):
+        return self.publish_status == self.Publish.DONE
 
-    class Meta:
-        ordering = ["-created_at", "-pk"]
+    # 화면 사이 이동: 임시 ↔ 검토 ↔ 포스트. 한 번에 한 칸씩만 옮긴다.
+    def next_stage(self):
+        return {self.Stage.TEMP: self.Stage.REVIEW, self.Stage.REVIEW: self.Stage.POST}.get(self.stage)
+
+    def prev_stage(self):
+        if self.is_published:  # 발행한 글은 포스트 관리에 남긴다
+            return None
+        return {self.Stage.REVIEW: self.Stage.TEMP, self.Stage.POST: self.Stage.REVIEW}.get(self.stage)
+
+    def can_move_to(self, stage):
+        return stage is not None and stage in (self.next_stage(), self.prev_stage())

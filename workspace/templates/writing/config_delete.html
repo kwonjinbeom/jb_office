@@ -1,2 +1,0 @@
-{% extends "base.html" %}
-{% block content %}<form method="post" class="confirm">{% csrf_token %}<div class="card-body"><h2>{{ item.name }}</h2><p>삭제할까요? 기존 원고의 내용은 유지됩니다. {% if kind == 'profile' %}연결된 원고는 기본 작성 규칙을 사용합니다.{% else %}이 템플릿으로 만든 원고에서 새 구성을 만들면 기본 틀을 사용합니다.{% endif %}</p><a class="btn" href="{{ cancel_url }}">취소</a> <button class="btn danger" type="submit">삭제</button></div></form>{% endblock %}
