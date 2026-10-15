@@ -1,4 +1,4 @@
-/* 모든 목록이 공유하는 작은 삭제 버튼, 선택 작업, 복원. */
+/* 목록의 작은 삭제 버튼과 휴지통의 선택 복원. 기존 선택 기능에는 관여하지 않는다. */
 (function () {
   "use strict";
   var cfg = window.APP || {};
@@ -51,15 +51,6 @@
     var controls = document.createElement("span");
     controls.className = "trash-row-controls";
     var label = record.dataset.trashTitle || "항목";
-    var check = record.querySelector('input[type="checkbox"][name="ids"]');
-    if (!check) {
-      check = document.createElement("input");
-      check.type = "checkbox";
-      check.setAttribute("aria-label", label + " 선택");
-      controls.appendChild(check);
-    }
-    check.setAttribute("data-trash-select", "");
-    check._trashRecord = record;
     var remove = button(label + " 삭제");
     remove.setAttribute("data-trash-single", "");
     remove._trashRecord = record;
@@ -75,15 +66,8 @@
           th.className = "trash-action-cell";
           var headerLabel = document.createElement("span");
           headerLabel.className = "sr-only";
-          headerLabel.textContent = "선택 및 삭제";
+          headerLabel.textContent = "삭제";
           th.appendChild(headerLabel);
-          if (!head.querySelector('input[type="checkbox"]')) {
-            var checkAll = document.createElement("input");
-            checkAll.type = "checkbox";
-            checkAll.setAttribute("data-trash-check-all", "");
-            checkAll.setAttribute("aria-label", "모두 선택");
-            th.appendChild(checkAll);
-          }
           head.appendChild(th);
         }
         table.querySelectorAll("td[colspan]").forEach(function (td) { td.colSpan += 1; });
@@ -116,25 +100,16 @@
     });
   }).observe(body, {childList: true, subtree: true});
 
-  function selected() {
-    var unique = new Map();
-    document.querySelectorAll("[data-trash-select]:checked").forEach(function (box) {
-      var data = recordData(box._trashRecord);
-      unique.set(data.model + ":" + data.id, data);
-    });
-    return Array.from(unique.values());
-  }
   function restoreIds() {
     return Array.from(document.querySelectorAll("[data-trash-restore-check]:checked")).map(function (box) { return box.value; });
   }
   function syncSelection() {
-    var ids = restoreIds(), count = ids.length || selected().length;
+    var count = restoreIds().length;
     bar.hidden = !count;
     bar.querySelector("[data-trash-selection-count]").textContent = count + "개 선택";
-    bar.querySelector("[data-trash-bulk]").textContent = ids.length ? "선택 복원" : "선택 삭제";
     document.querySelectorAll("[data-trash-check-all]").forEach(function (all) {
       var scope = all.closest("table") || document;
-      var boxes = Array.from(scope.querySelectorAll("[data-trash-select], [data-trash-restore-check]"));
+      var boxes = Array.from(scope.querySelectorAll("[data-trash-restore-check]"));
       var n = boxes.filter(function (b) { return b.checked; }).length;
       all.checked = boxes.length > 0 && n === boxes.length;
       all.indeterminate = n > 0 && n < boxes.length;
@@ -200,14 +175,13 @@
   document.addEventListener("change", function (event) {
     if (event.target.matches("[data-trash-check-all]")) {
       var scope = event.target.closest("table") || document;
-      scope.querySelectorAll("[data-trash-select], [data-trash-restore-check]").forEach(function (box) { box.checked = event.target.checked; });
+      scope.querySelectorAll("[data-trash-restore-check]").forEach(function (box) { box.checked = event.target.checked; });
     }
-    if (event.target.matches('[data-trash-select], [data-trash-restore-check], [data-trash-check-all], [data-check-all]')) syncSelection();
+    if (event.target.matches('[data-trash-restore-check], [data-trash-check-all]')) syncSelection();
   });
   document.addEventListener("click", function (event) {
     var target = event.target.closest && event.target.closest("[data-trash-single], [data-trash-trigger], [data-trash-restore], [data-trash-bulk], [data-trash-clear], .trash-row-controls");
     if (!target) return;
-    // A checkbox in a details summary must not toggle the details, but keep its native checked action.
     if (target.classList.contains("trash-row-controls")) { event.stopPropagation(); return; }
     event.preventDefault();
     event.stopPropagation();
@@ -215,12 +189,11 @@
     else if (target.hasAttribute("data-trash-trigger")) openDelete([recordData(target)], target);
     else if (target.hasAttribute("data-trash-restore")) doRestore([target.dataset.trashRestore], target);
     else if (target.hasAttribute("data-trash-clear")) {
-      document.querySelectorAll("[data-trash-select], [data-trash-restore-check], [data-check-all]").forEach(function (b) { b.checked = false; });
+      document.querySelectorAll("[data-trash-restore-check], [data-trash-check-all]").forEach(function (b) { b.checked = false; });
       syncSelection();
     } else if (target.hasAttribute("data-trash-bulk")) {
       var ids = restoreIds();
       if (ids.length) doRestore(ids, target);
-      else openDelete(selected(), target);
     }
   }, true);
   try {
