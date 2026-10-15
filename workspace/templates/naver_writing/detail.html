@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}</div>{% endblock %}
+
+{% block heading %}글 보기{% endblock %}
+
+{% block actions %}
+<span class="inline-form" style="gap:2px">
+  {% if above %}<a class="btn icon" href="{{ above.get_absolute_url }}" title="위 글: {{ above.title }}" aria-label="위 글">{% include "includes/ic.html" with name="arrow-up" %}</a>{% else %}<span class="btn icon" aria-disabled="true">{% include "includes/ic.html" with name="arrow-up" %}</span>{% endif %}
+  {% if below %}<a class="btn icon" href="{{ below.get_absolute_url }}" title="아래 글: {{ below.title }}" aria-label="아래 글">{% include "includes/ic.html" with name="arrow-down" %}</a>{% else %}<span class="btn icon" aria-disabled="true">{% include "includes/ic.html" with name="arrow-down" %}</span>{% endif %}
+</span>
+<form method="post" action="{% url 'naver_writing:move' %}" class="inline-form">
+  {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.path }}">
+  {% if prev_label %}<button class="btn" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+  {% if next_label %}<button class="btn" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+</form>
+<a class="btn primary" href="{% url 'naver_writing:edit' post.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>
+{% endblock %}
+
+{% block toolbar %}
+{% include "naver_writing/_tabs.html" %}
+<div class="filter-bar wr-copybar">
+  <span class="wr-copy-label">복사해서 붙여넣기</span>
+  <button type="button" class="btn sm" data-copy="#wr-copy-title" data-copy-msg="제목을 복사했습니다." title="블로그 글쓰기 화면의 제목 칸에 붙여넣기">{% include "includes/ic.html" with name="copy" %}제목</button>
+  <button type="button" class="btn sm primary" data-copy-rich="#wr-copy-html" data-copy-plain="#wr-copy-text" data-copy-msg="본문을 서식 그대로 복사했습니다. 네이버 블로그·카페 본문에 붙여넣으세요." title="네이버 스마트에디터 본문에 붙여넣기" {% if not post.body %}disabled{% endif %}>{% include "includes/ic.html" with name="copy" %}본문 (서식 그대로)</button>
+  <button type="button" class="btn sm" data-copy="#wr-copy-tags" data-copy-msg="태그를 복사했습니다." title="태그 칸에 붙여넣기 (쉼표로 구분)" {% if not post.tag_list %}disabled{% endif %}>{% include "includes/ic.html" with name="tag" %}태그</button>
+  <span class="wr-copy-meta">
+    <span class="muted small num" title="사진·그림 자리 상자는 빼고 센 본문 글자 수">본문 {{ chars }}자 · 공백 제외 {{ chars_no_space }}자</span>
+    <span class="seg" role="group" aria-label="보기 폭">
+      <button type="button" class="on" data-paper-width="pc">PC</button>
+      <button type="button" data-paper-width="mobile">모바일</button>
+    </span>
+  </span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="wr-read nv-read">
+  {% if stage != 'temp' or post.summary or slots %}
+  <div class="wr-read-info">
+    {% if stage == 'review' %}
+    <div class="wr-info-row"><span class="k">검토</span>{% include "naver_writing/_status.html" with field="review_status" current=post.review_status choices=review_choices %}</div>
+    {% elif stage == 'post' %}
+    <div class="wr-info-row"><span class="k">작성</span>{% include "naver_writing/_status.html" with field="write_status" current=post.write_status choices=write_choices %}</div>
+    <div class="wr-info-row"><span class="k">발행</span>{% include "naver_writing/_status.html" with field="publish_status" current=post.publish_status choices=publish_choices %}
+      {% if post.published_url %}<a class="btn ghost sm" href="{{ post.published_url }}" target="_blank" rel="noopener">{% include "includes/ic.html" with name="external" %}발행한 글 열기</a>{% elif post.is_published %}<a class="small" href="{% url 'naver_writing:edit' post.pk %}">발행 주소 적기</a>{% endif %}
+    </div>
+    {% endif %}
+    {% if post.summary %}
+    <div class="wr-info-row"><span class="k">요약</span><span class="wr-info-text">{{ post.summary }}</span><button type="button" class="btn ghost sm icon" data-copy="#wr-copy-summary" data-copy-msg="요약을 복사했습니다." title="요약 복사" aria-label="요약 복사">{% include "includes/ic.html" with name="copy" %}</button></div>
+    {% endif %}
+    {% if slots %}
+    <div class="wr-info-row wr-info-slot"><span class="k">이미지</span><span class="wr-info-text">점선 상자 {{ slots }}곳은 붙여넣은 뒤 그 자리에 사진·그림을 올리고 상자를 지우세요.</span></div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <article class="wr-paper nv-document" id="wr-paper">
+    <header class="wr-post-head">
+      <div class="wr-post-cat">{{ post.get_stage_display }}</div>
+      <h1 class="wr-post-title">{{ post.title }}</h1>
+      <div class="wr-post-meta">
+        {% if post.is_published and post.published_on %}{{ post.published_on|date:"Y. n. j." }} 발행{% elif stage == 'temp' %}{{ post.created_at|date:"Y. n. j. H:i" }}{% else %}{{ post.updated_at|date:"Y. n. j. H:i" }}{% endif %}
+      </div>
+      <div class="nv-read-actions"><span>네이버 본문 미리보기</span></div>
+    </header>
+    {% if body_html %}
+    <div class="wr-article nv-body">{{ body_html|safe }}</div>
+    {% else %}
+    <div class="wr-article wr-article-empty">아직 본문이 없습니다. 오른쪽 위 <a href="{% url 'naver_writing:edit' post.pk %}">수정</a>에서 본문을 쓰세요.</div>
+    {% endif %}
+    {% if post.tag_list %}
+    <footer class="wr-post-tags">{% for t in post.tag_list %}<span>#{{ t }}</span>{% endfor %}</footer>
+    {% endif %}
+  </article>
+
+  {% if above or below %}
+  <nav class="wr-post-nav" aria-label="같은 화면의 다른 글">
+    {% if above %}<a href="{{ above.get_absolute_url }}"><span class="k">{% include "includes/ic.html" with name="arrow-up" %}위 글</span>{{ above.title }}</a>{% endif %}
+    {% if below %}<a href="{{ below.get_absolute_url }}"><span class="k">{% include "includes/ic.html" with name="arrow-down" %}아래 글</span>{{ below.title }}</a>{% endif %}
+  </nav>
+  {% endif %}
+</div>
+
+{# 복사 원본: 화면에는 안 보인다 #}
+<textarea id="wr-copy-title" hidden>{{ post.title }}</textarea>
+<textarea id="wr-copy-html" hidden>{{ paste_html }}</textarea>
+<textarea id="wr-copy-text" hidden>{{ body_text }}</textarea>
+<textarea id="wr-copy-tags" hidden>{{ post.tag_list|join:", " }}</textarea>
+<textarea id="wr-copy-summary" hidden>{{ post.summary }}</textarea>
+{% endblock %}

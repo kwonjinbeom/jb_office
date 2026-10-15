@@ -1,0 +1,19 @@
+<dialog id="nv-insert-dialog" class="wr-dialog nv-dialog" aria-labelledby="nv-dialog-title">
+  <form method="dialog" id="nv-insert-form">
+    <div class="wr-dialog-head"><h3 id="nv-dialog-title">넣기</h3><button class="btn ghost sm" value="cancel" aria-label="닫기">닫기</button></div>
+    <p class="muted small" data-nv-dialog-help></p>
+    <label class="field" data-nv-label-wrap><span data-nv-label>설명</span><input class="input" data-nv-label-input maxlength="300" autocomplete="off"></label>
+    <label class="field" data-nv-url-wrap>주소<input class="input" type="url" data-nv-url placeholder="https://" autocomplete="off"></label>
+    <label class="field" data-nv-text-wrap>내용<textarea class="input" rows="8" data-nv-text></textarea></label>
+    <div class="nv-table-size" data-nv-table-wrap><label>열<input class="input" type="number" min="1" max="10" value="3" data-nv-cols></label><label>행<input class="input" type="number" min="1" max="30" value="3" data-nv-rows></label></div>
+    <div class="nv-symbol-grid" data-nv-symbols>{% for symbol in symbols %}<button type="button" data-nv-symbol="{{ symbol }}">{{ symbol }}</button>{% endfor %}</div>
+    <p class="nv-field-error" role="alert" data-nv-dialog-error></p>
+    <div class="form-foot"><button class="btn" value="cancel">취소</button><button class="btn primary" value="insert" data-nv-dialog-insert>넣기</button></div>
+  </form>
+</dialog>
+<dialog id="nv-preview" class="nv-preview-dialog" aria-labelledby="nv-preview-title">
+  <div class="nv-preview-toolbar"><strong id="nv-preview-title">미리보기</strong><span class="seg"><button type="button" class="on" data-nv-preview-width="pc">PC</button><button type="button" data-nv-preview-width="mobile">모바일</button></span><button type="button" class="btn sm" data-nv-preview-close>닫기</button></div>
+  <article class="nv-preview-paper nv-document"><header class="wr-post-head"><div class="wr-post-cat">{{ stage_label }}</div><h1 class="wr-post-title" data-nv-preview-title></h1><div class="wr-post-meta">저장 전 미리보기</div></header><div class="wr-article nv-body" data-nv-preview-body></div><footer class="wr-post-tags" data-nv-preview-tags></footer></article>
+</dialog>
+<input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden id="nv-photo-input">
+{{ editor_config|json_script:"nv-editor-config" }}

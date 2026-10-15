@@ -51,6 +51,7 @@ MENUS: list[Menu] = [
         "blog", "블로그·카페", "카테고리별 소재·템플릿·글과 게시 기록", "blog:list", "file", "#2f6bd8",
         children=(
             Menu("writing", "티스토리 글쓰기", "임시 템플릿 → 검토 템플릿 → 포스트 관리", "writing:list", "edit"),
+            Menu("naver_writing", "네이버 글쓰기", "임시 템플릿 → 검토 템플릿 → 포스트 관리", "naver_writing:list", "edit"),
             Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),
         ),
     ),

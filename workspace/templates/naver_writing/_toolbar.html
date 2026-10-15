@@ -1,0 +1,46 @@
+<div class="nv-toolbar" data-editor-toolbar>
+  <div class="nv-insertbar" role="toolbar" aria-label="첨부 도구">
+    <button type="button" data-nv="photos"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 5 5 3-3 4 4"/></svg>사진</button>
+    <button type="button" data-nv="photo-slot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg>사진 자리</button>
+    <button type="button" data-nv="figure"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 5 5 3-3 4 4"/></svg>그림 자리</button>
+    <button type="button" data-nv="image"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 5 5 3-3 4 4"/></svg>이미지 주소</button>
+    <details class="nv-picker"><summary><span class="nv-symbol">❞</span>인용구⌄</summary><div class="nv-popover nv-quotes" role="group" aria-label="인용구 모양">
+      {% for label in quote_labels %}<button type="button" data-nv="quote" data-value="{{ forloop.counter0 }}" class="nv-q{{ forloop.counter }}" aria-label="인용구 {{ forloop.counter }}">{{ label }}</button>{% endfor %}
+    </div></details>
+    <details class="nv-picker"><summary><span class="nv-symbol">―</span>구분선⌄</summary><div class="nv-popover" role="group" aria-label="구분선 모양">
+      {% for label in divider_labels %}<button type="button" data-nv="divider" data-value="{{ forloop.counter0 }}" aria-label="구분선 {{ forloop.counter }}">{{ label }}</button>{% endfor %}
+    </div></details>
+    <button type="button" data-nv="link"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 15 6-6m-7 3-2 2a4 4 0 0 0 6 6l3-3m1-5 2-2a4 4 0 0 0-6-6L9 7"/></svg>링크</button>
+    <button type="button" data-nv="code"><span class="nv-symbol">{ }</span>소스코드</button>
+    <button type="button" data-nv="table"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>표</button>
+    <button type="button" data-nv="caption"><span class="nv-symbol">T̲</span>캡션</button>
+    <button type="button" data-nv="undo"><span class="nv-symbol">↶</span>실행 취소</button>
+    <button type="button" data-nv="redo"><span class="nv-symbol">↷</span>다시 실행</button>
+    <span class="nv-insert-spacer"></span>
+    <button type="button" data-nv="markdown"><svg><use href="#i-file"/></svg>마크다운</button>
+    <button type="button" data-nv="preview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>미리보기</button>
+  </div>
+  <div class="nv-formatbar" role="toolbar" aria-label="본문 서식">
+    <select data-nv-select="block" aria-label="문단 서식"><option value="p">본문</option><option value="h2">소제목</option><option value="blockquote">인용구</option></select>
+    <select data-nv-select="font" aria-label="서체">{% for label, font in fonts.items %}<option value="{{ font }}">{{ label }}</option>{% endfor %}</select>
+    <select data-nv-select="size" aria-label="글자 크기">{% for size in font_sizes %}<option value="{{ size }}"{% if size == 15 %} selected{% endif %}>{{ size }}</option>{% endfor %}</select>
+    <span class="nv-separator"></span>
+    <button type="button" data-nv="bold" aria-label="굵게" title="굵게 (Ctrl+B)"><b>B</b></button>
+    <button type="button" data-nv="italic" aria-label="기울이기" title="기울이기 (Ctrl+I)"><i>I</i></button>
+    <button type="button" data-nv="underline" aria-label="밑줄" title="밑줄 (Ctrl+U)"><u>U</u></button>
+    <button type="button" data-nv="strikeThrough" aria-label="취소선" title="취소선"><s>T</s></button>
+    <label class="nv-color" title="글자색"><span>T</span><input type="color" value="#000000" data-nv-color="color" aria-label="글자색"></label>
+    <label class="nv-color nv-highlight" title="글자 배경색"><span>T</span><input type="color" value="#fff3b0" data-nv-color="background-color" aria-label="글자 배경색"></label>
+    <span class="nv-separator"></span>
+    <select data-nv-select="align" aria-label="정렬"><option value="left">왼쪽 정렬</option><option value="center">가운데 정렬</option><option value="right">오른쪽 정렬</option><option value="justify">양쪽 정렬</option></select>
+    <select data-nv-select="line" aria-label="줄간격">{% for line in line_heights %}<option value="{{ line }}"{% if line == 180 %} selected{% endif %}>{{ line }}%</option>{% endfor %}</select>
+    <button type="button" data-nv="insertUnorderedList" aria-label="점 목록" title="점 목록">☷</button>
+    <button type="button" data-nv="insertOrderedList" aria-label="번호 목록" title="번호 목록">1≡</button>
+    <span class="nv-separator"></span>
+    <button type="button" data-nv="superscript" aria-label="위첨자" title="위첨자">T¹</button>
+    <button type="button" data-nv="subscript" aria-label="아래첨자" title="아래첨자">T₁</button>
+    <button type="button" data-nv="symbols" aria-label="특수문자" title="특수문자">※</button>
+    <button type="button" data-nv="removeFormat" aria-label="서식 지우기" title="서식 지우기">T×</button>
+    <span class="nv-table-tools" hidden><button type="button" data-nv="row">+줄</button><button type="button" data-nv="col">+칸</button><button type="button" data-nv="removeRow">−줄</button><button type="button" data-nv="removeCol">−칸</button></span>
+  </div>
+</div>

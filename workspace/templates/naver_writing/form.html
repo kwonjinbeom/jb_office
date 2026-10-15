@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}{% if post %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ post.get_absolute_url }}">{{ post.title|truncatechars:30 }}</a>{% endif %}</div>{% endblock %}
+
+{% block heading %}{% if post %}글쓰기{% else %}{{ page_title }}{% endif %}{% endblock %}
+
+{% block actions %}
+{% if post %}<a class="btn ghost danger" href="{% url 'naver_writing:delete' post.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
+{% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
+<button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
+{% endblock %}
+
+{% block toolbar %}{% include "naver_writing/_toolbar.html" %}{% endblock %}
+{% block body_class %}nv-editor-page{% endblock %}
+
+{% block content %}
+<form id="post-form" method="post" class="wr-edit nv-edit" data-dirty-warn data-editor-form
+      data-convert-url="{% url 'naver_writing:convert' %}"
+      action="{% if post %}{% url 'naver_writing:edit' post.pk %}{% else %}{% url 'naver_writing:create' %}{% endif %}">
+  {% csrf_token %}
+  {% if not post %}<input type="hidden" name="stage" value="{{ stage }}">{% endif %}
+  {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
+  {{ form.body }}
+  {% if form.body.errors %}<div class="notice danger">{{ form.body.errors|join:" " }}</div>{% endif %}
+  <div class="nv-editor-identity"><span class="nv-brand">N</span><strong>네이버 글쓰기</strong><span data-nv-save-state>저장 전</span><button type="button" data-nv-width="pc" class="on">PC</button><button type="button" data-nv-width="mobile">모바일</button></div>
+
+  <div class="wr-paper wr-edit-paper nv-document" id="nv-editor-paper">
+    <div class="wr-post-cat">{% for t in tabs %}{% if t.on %}{{ t.label }}{% endif %}{% endfor %}</div>
+    <label for="id_title" class="sr-only">제목</label>
+    {{ form.title }}
+    {% if form.title.errors %}<div class="wr-field-error">{{ form.title.errors|join:" " }}</div>{% endif %}
+    <div class="wr-edit-rule"></div>
+    <div id="wr-editor" class="wr-article wr-editable nv-body" role="textbox" aria-label="본문" aria-multiline="true" contenteditable="true" spellcheck="false"
+         data-placeholder="글감과 함께 나의 일상을 기록해보세요!">{{ editor_html|safe }}</div>
+    <div class="wr-tag-line">{{ form.tags }}</div>
+  </div>
+
+  <section class="card wr-edit-meta">
+    <div class="card-body form-grid">
+      {% include "includes/field.html" with field=form.summary cls="span-2" %}
+      {% if form.review_status %}{% include "includes/field.html" with field=form.review_status %}{% endif %}
+      {% if form.write_status %}
+      {% include "includes/field.html" with field=form.write_status %}
+      {% include "includes/field.html" with field=form.publish_status %}
+      {% include "includes/field.html" with field=form.published_url %}
+      {% include "includes/field.html" with field=form.published_on %}
+      {% endif %}
+    </div>
+  </section>
+</form>
+
+<div class="wr-editfoot nv-editfoot">
+  <span class="muted small num" data-ed-count>본문 0자</span>
+  <span class="muted small" style="margin-right:auto">저장 <span class="kbd">Ctrl+S</span></span>
+  {% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
+  <button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
+</div>
+
+<dialog class="wr-dialog" id="wr-md-dialog" aria-labelledby="wr-md-title">
+  <form method="dialog">
+    <div class="wr-dialog-head"><h3 id="wr-md-title">마크다운 넣기</h3><button class="btn ghost sm icon" value="cancel" aria-label="닫기">{% include "includes/ic.html" with name="x" %}</button></div>
+    <p class="muted small">마크다운으로 쓴 원고를 붙여 넣으면 블로그 서식으로 바뀌어 들어가요.</p>
+    <textarea class="input" rows="14" data-md-input spellcheck="false" placeholder="## 소제목&#10;&#10;본문 문단…&#10;&#10;[사진] 직접 찍은 사진&#10;[그림] 그림1.png&#10;[캡션] 캡션 한 줄&#10;&#10;| 칸 | 칸 |&#10;|---|---|&#10;| 값 | 값 |"></textarea>
+    <details class="wr-guide">
+      <summary>쓰는 법</summary>
+      <table>
+        <tr><td>## 소제목 / ### 작은 소제목</td><td>소제목 / 작은 소제목</td></tr>
+        <tr><td>**굵게**, - 목록, 1. 번호, &gt; 인용, ---</td><td>그대로</td></tr>
+        <tr><td>| 칸 | 칸 |</td><td>표 (둘째 줄 |---|)</td></tr>
+        <tr><td>[사진] 설명 · 📷 설명</td><td>사진 자리 (빨간 상자)</td></tr>
+        <tr><td>[그림] 파일명 · ![설명](그림1.png)</td><td>그림 자리 (파란 상자)</td></tr>
+        <tr><td>[캡션] 문장 · 이미지 다음 줄 *문장*</td><td>캡션</td></tr>
+      </table>
+    </details>
+    <div class="form-foot" style="margin-top:12px">
+      <button class="btn" value="cancel">취소</button>
+      <button class="btn" value="insert" data-md-action="insert">커서 위치에 넣기</button>
+      <button class="btn primary" value="replace" data-md-action="replace">본문 전체 바꾸기</button>
+    </div>
+  </form>
+</dialog>
+{% include "naver_writing/_dialogs.html" %}
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/naver-editor.js' %}?v={{ ASSET_VER }}"></script>{% endblock %}
