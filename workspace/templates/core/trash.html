@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block heading %}휴지통 <span class="cnt">{{ total }}</span>{% endblock %}
+{% block subtitle %}<span class="page-sub">삭제 후 7일간 복원 · 기간이 지나면 자동으로 영구 삭제</span>{% endblock %}
+{% block toolbar %}
+<form method="get" class="filter-bar">
+  <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" aria-label="휴지통 검색" placeholder="이름·원래 위치 검색"></div>
+  <select class="select sm" name="section" aria-label="원래 위치" data-autosubmit><option value="">위치 전체</option>{% for location in sections %}<option{% if section == location %} selected{% endif %}>{{ location }}</option>{% endfor %}</select>
+  <button class="btn sm">검색</button>
+  {% if q or section %}<a class="btn ghost sm" href="{% url 'core:trash' %}">초기화</a>{% endif %}
+</form>
+{% endblock %}
+{% block body_class %}fill{% endblock %}
+{% block content %}
+<div class="grid-wrap"><table class="grid trash-grid" style="min-width:620px">
+  <thead><tr><th style="width:36px"><input type="checkbox" data-trash-check-all aria-label="모두 선택"></th><th>이름</th><th>원래 위치</th><th style="width:130px">삭제한 때</th><th style="width:150px">영구 삭제 예정</th><th style="width:76px"></th></tr></thead>
+  <tbody>{% for item in page %}<tr data-trash-entry="{{ item.pk }}">
+    <td><input type="checkbox" data-trash-restore-check value="{{ item.pk }}" aria-label="{{ item.title }} 선택"></td>
+    <td class="title-cell">{{ item.title }}{% if item.item_count > 1 %}<span class="muted small"> · 연결 {{ item.item_count|add:'-1' }}개</span>{% endif %}</td>
+    <td class="small muted">{{ item.section }}</td><td class="small num muted">{{ item.deleted_at|date:'m-d H:i' }}</td>
+    <td class="small num" title="{{ item.expires_at|date:'Y-m-d H:i:s' }}">{{ item.expires_at|date:'m-d H:i' }}</td>
+    <td><button class="btn ghost sm" type="button" data-trash-restore="{{ item.pk }}" aria-label="{{ item.title }} 복원">복원</button></td>
+  </tr>{% empty %}<tr><td colspan="6" class="grid-empty">{% if q or section %}조건에 맞는 항목이 없습니다.{% else %}휴지통이 비어 있습니다.{% endif %}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% if page.has_other_pages %}<nav class="trash-pagination" aria-label="휴지통 페이지">{% if page.has_previous %}<a class="btn sm" href="?page={{ page.previous_page_number }}&q={{ q|urlencode }}&section={{ section|urlencode }}">이전</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a class="btn sm" href="?page={{ page.next_page_number }}&q={{ q|urlencode }}&section={{ section|urlencode }}">다음</a>{% endif %}</nav>{% endif %}
+{% endblock %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'writing:list' %}">티스토리 글쓰기</a></div>{% endblock %}
 
@@ -46,7 +47,7 @@
     </thead>
     <tbody>
       {% for post in posts %}
-      <tr data-href="{{ post.get_absolute_url }}">
+      <tr {% trash_attrs post %} data-href="{{ post.get_absolute_url }}">
         <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ post.pk }}" form="wr-bulk" aria-label="{{ post.title }} 선택"></td>
         <td class="title-cell mid"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></td>
         <td class="mid small muted"><span class="wr-excerpt">{{ post.excerpt|default:"-" }}</span></td>

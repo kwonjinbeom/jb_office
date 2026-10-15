@@ -1,10 +1,11 @@
 from urllib.parse import urlparse
 
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 
 
-class Evidence(models.Model):
+class Evidence(TrashableModel):
     """조사 중 발견한 링크 하나. 어느 아이디어·실험의 근거인지 연결한다."""
 
     class Kind(models.TextChoices):

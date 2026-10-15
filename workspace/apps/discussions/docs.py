@@ -110,11 +110,17 @@ def sync() -> int:
     """논의 폴더의 글을 DB 에 맞춘다. 바뀐 글만 다시 읽는다. 바꾼 개수를 돌려준다."""
     changed = 0
     repo = Path(settings.REPO_ROOT)
+    from apps.core.trash import hidden_keys
+    hidden = hidden_keys("discussion")
     for path in _files():
         rel = path.relative_to(repo).as_posix()
         raw = path.read_bytes()
         digest = hashlib.sha1(raw).hexdigest()
-        item = Discussion.objects.filter(doc=rel).first()
+        if rel in hidden:
+            continue
+        item = Discussion.all_objects.filter(doc=rel).first()
+        if item and item.deleted_at:
+            continue
         if item and item.doc_hash == digest:
             continue
         meta, _ = parse(raw.decode("utf-8", errors="replace"))

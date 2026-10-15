@@ -70,10 +70,14 @@ class ContentTests(TestCase):
         self.assertEqual(self.client.get(reverse("blog:detail", args=[self.work.pk])).status_code, 404)
         self.assertEqual(self.client.get(reverse("blog:create"), {"template": self.work.pk}).status_code, 404)
 
-    def test_delete_protects_folder_and_get_never_changes_status(self):
+    def test_folder_trash_is_restorable_and_get_never_changes_status(self):
         self.assertEqual(self.client.get(reverse("blog:status", args=[self.template.pk])).status_code, 405)
         self.client.post(reverse("blog:folder_delete", args=[self.root.pk]))
-        self.assertTrue(Folder.objects.filter(pk=self.root.pk).exists())
+        self.assertFalse(Folder.objects.filter(pk=self.root.pk).exists())
+        self.assertTrue(Folder.all_objects.filter(pk=self.root.pk).exists())
+        from apps.core.models import TrashEntry
+        from apps.core.trash import restore
+        restore(TrashEntry.objects.get(model_label="content.folder", object_key=str(self.root.pk)))
         self.client.post(reverse("blog:status", args=[self.template.pk]), {"status": "invalid"})
         self.template.refresh_from_db()
         self.assertEqual(self.template.status, "topic")

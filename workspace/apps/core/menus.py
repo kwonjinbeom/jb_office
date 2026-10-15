@@ -64,6 +64,7 @@ MENUS: list[Menu] = [
     ),
     Menu("discussions", "진행현황", "전체 주제별 현재 핵심과 다음 행동을 한곳에서", "discussions:list", "list", "#0f766e"),
     Menu("memos", "메모", "떠오른 생각, 참고 사항을 빠르게 기록", "memos:list", "memo", "#64748b"),
+    Menu("trash", "휴지통", "모든 화면의 삭제 항목 · 7일간 복원", "core:trash", "trash", "#64748b"),
     Menu("docs", "문서", "시장조사 폴더의 문서를 화면에서 읽기 (읽기 전용)", "docs:list", "book", "#475569"),
 ]
 

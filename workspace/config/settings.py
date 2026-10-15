@@ -127,6 +127,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.core.trash_cleanup.TrashCleanupMiddleware",
 ]
 if REQUIRE_LOGIN:
     # 모든 화면에 로그인을 요구한다. 로그인/로그아웃/관리자 로그인 화면은 Django 가 예외 처리한다.
@@ -175,6 +176,8 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+TRASH_CLEANUP_ENABLED = _env_bool("TRASH_CLEANUP_ENABLED", True)
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 

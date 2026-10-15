@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'daily_ideas:list' %}">일일 아이디어</a></div>{% endblock %}
 {% block heading %}아이디어 검색 표준{% if latest %} <span class="cnt">v{{ latest.version }}</span>{% endif %}{% endblock %}
@@ -70,7 +71,7 @@
         {% if history %}
         <ul class="rows std-history">
           {% for h in history %}
-          <li>
+          <li {% trash_attrs h %}>
             <a href="?v={{ h.version }}" class="{% if viewing.version == h.version %}on{% endif %}">
               <span class="code">v{{ h.version }}</span>
               <span class="grow"><span class="small num muted">{{ h.saved_label }}</span>{% if h.note %}<span class="std-note">{{ h.note }}</span>{% endif %}</span>

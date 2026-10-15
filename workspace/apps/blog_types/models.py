@@ -8,9 +8,10 @@
 처음 값과 짠 이유: 콘텐츠/블로그_카페/포스팅자동화/08_수익형_카테고리.md
 """
 from django.db import models
+from apps.core.models import TrashableModel
 
 
-class Section(models.Model):
+class Section(TrashableModel):
     name = models.CharField("대분류", max_length=40)
     note = models.TextField("설명", blank=True, help_text="이 대분류가 무엇을 위한 분류인지")
     order = models.PositiveIntegerField("순서", default=0)
@@ -26,7 +27,7 @@ class Section(models.Model):
         return f"g{self.pk}"
 
 
-class Category(models.Model):
+class Category(TrashableModel):
     class Platform(models.TextChoices):
         ALL = "all", "공통"
         NAVER = "naver", "네이버"
@@ -54,7 +55,7 @@ class Category(models.Model):
         return f"c{self.pk}"
 
 
-class PostType(models.Model):
+class PostType(TrashableModel):
     category = models.ForeignKey(Category, verbose_name="카테고리", on_delete=models.CASCADE, related_name="types")
     name = models.CharField("타입", max_length=60)
     skeleton = models.CharField("쓰는 뼈대", max_length=80, blank=True,
@@ -78,7 +79,7 @@ class PostType(models.Model):
         return [line.strip() for line in self.examples.splitlines() if line.strip()]
 
 
-class SubType(models.Model):
+class SubType(TrashableModel):
     post_type = models.ForeignKey(PostType, verbose_name="타입", on_delete=models.CASCADE, related_name="subs")
     name = models.CharField("하위", max_length=80)
     note = models.TextField("설명", blank=True, help_text="이 하위로 쓸 때의 품목·대상·주의점 등")

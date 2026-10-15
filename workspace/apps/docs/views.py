@@ -26,11 +26,15 @@ def _doc_dirs() -> list[Path]:
 
 
 def _list_docs() -> list[dict]:
+    from apps.core.trash import hidden_keys
+    hidden = hidden_keys("docs")
     docs: list[dict] = []
     root = Path(settings.REPO_ROOT)
     for d in _doc_dirs():
         for f in sorted(d.glob("*.md")):
             rel = f.relative_to(root).as_posix()
+            if rel in hidden:
+                continue
             docs.append({"slug": rel, "name": f.stem, "group": d.name if d != root else "루트", "path": f})
     return docs
 
@@ -144,6 +148,9 @@ def doc_list(request):
 
 
 def doc_detail(request, slug):
+    from apps.core.trash import hidden_keys
+    if slug in hidden_keys("docs"):
+        raise Http404
     path = _resolve(slug)
     body, toc = _render(path.read_text(encoding="utf-8"))
     return render(

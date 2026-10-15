@@ -1,8 +1,9 @@
 from django.db import models
+from apps.core.models import TrashableModel
 from django.urls import reverse
 
 
-class Post(models.Model):
+class Post(TrashableModel):
     """티스토리 글 한 편. 임시 템플릿 → 검토 템플릿 → 포스트 관리 세 화면을 오간다.
 
     화면(stage)마다 그 화면에서 하는 일의 상태가 따로 있다.

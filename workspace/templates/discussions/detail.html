@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 {# 논의 하나를 게시글처럼: 위에 상태·날짜·핵심, 가운데 정리한 글(md), 옆에 목차·빠른 수정·하위 주제·요약 이력 #}
 {% block breadcrumb %}<div class="crumb">{% if scope %}{{ item.get_area_display }}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ list_url }}">논의 현황</a>{% else %}<a href="{% url 'discussions:list' %}">진행현황</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'discussions:list' %}?area={{ item.area }}">{{ item.get_area_display }}</a>{% endif %}{% if item.parent %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ item.parent.get_absolute_url }}">{{ item.parent.name }}</a>{% endif %}</div>{% endblock %}
 {% block actions %}<a class="btn ghost danger" href="{% url 'discussions:delete' item.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a><a class="btn" href="{% url 'discussions:create' %}?parent={{ item.pk }}">{% include "includes/ic.html" with name="plus" %}하위 주제</a><a class="btn primary" href="{% url 'discussions:edit' item.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>{% endblock %}
@@ -29,7 +30,7 @@
     <div class="post-body"><p class="empty-line">아직 정리한 글이 없습니다. 저장소 <code>논의/</code> 폴더에 md 로 정리하면 여기에 글로 보입니다.</p></div>
     {% endif %}
     {% if item.idea or item.content %}
-    <div class="post-links">{% if item.idea %}<a class="tag" href="{{ item.idea.get_absolute_url }}">{{ item.idea }}</a>{% endif %}{% if item.content %}<a class="tag" href="{{ item.content.get_absolute_url }}">{{ item.content.title }}</a>{% endif %}</div>
+    <div class="post-links">{% if item.idea and not item.idea.deleted_at %}<a class="tag" href="{{ item.idea.get_absolute_url }}">{{ item.idea }}</a>{% endif %}{% if item.content and not item.content.deleted_at %}<a class="tag" href="{{ item.content.get_absolute_url }}">{{ item.content.title }}</a>{% endif %}</div>
     {% endif %}
   </article>
 
@@ -53,7 +54,7 @@
     {% if children %}
     <section class="card">
       <div class="card-head"><h2 class="card-title">{% include "includes/ic.html" with name="layers" %}하위 주제</h2><span class="cnt">{{ children|length }}</span></div>
-      <div class="card-body"><ul class="rows">{% for child in children %}<li><a class="mrow" href="{{ child.get_absolute_url }}"><span class="nm">{{ child.name }}</span><span class="badge st-{{ child.status }}">{{ child.get_status_display }}</span></a></li>{% endfor %}</ul></div>
+      <div class="card-body"><ul class="rows">{% for child in children %}<li {% trash_attrs child %}><a class="mrow" href="{{ child.get_absolute_url }}"><span class="nm">{{ child.name }}</span><span class="badge st-{{ child.status }}">{{ child.get_status_display }}</span></a></li>{% endfor %}</ul></div>
     </section>
     {% endif %}
 
@@ -62,7 +63,7 @@
       <div class="card-body">
         <ul class="rows">
           {% for record in history %}
-          <li class="log" style="grid-template-columns:78px minmax(0,1fr)">
+          <li {% trash_attrs record %} class="log" style="grid-template-columns:78px minmax(0,1fr)">
             <div class="log-date"><b>{{ record.created_at|date:"Y-m-d" }}</b>{{ record.created_at|date:"H:i" }}</div>
             <div><div class="log-meta">{{ record.get_status_display }} · {{ record.get_partner_display }}</div><div class="log-body small">{{ record.summary|default:"-" }}{% if record.next_action %}<br><span class="muted">다음: {{ record.next_action }}</span>{% endif %}</div></div>
           </li>

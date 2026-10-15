@@ -12,7 +12,7 @@
     <div class="card-body" style="padding-top:8px;padding-bottom:8px">
       <ul class="rows">
         {% for d in docs %}
-        <li><a class="mrow" href="{% url 'docs:detail' d.slug %}"><svg class="ic"><use href="#i-file"/></svg><span class="nm">{{ d.name }}</span></a></li>
+        <li data-trash-model="source.docs" data-trash-id="{{ d.slug }}" data-trash-title="{{ d.name }}"><a class="mrow" href="{% url 'docs:detail' d.slug %}"><svg class="ic"><use href="#i-file"/></svg><span class="nm">{{ d.name }}</span></a></li>
         {% endfor %}
       </ul>
     </div>

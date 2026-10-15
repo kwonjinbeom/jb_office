@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'ideas:list' %}">내 아이디어</a>{% include "includes/ic.html" with name="chevron-right" %}{{ idea.code }}</div>{% endblock %}
 {% block heading %}<span class="code lg">{{ idea.code }}</span>{{ idea.title }}{% endblock %}
@@ -6,7 +7,7 @@
 {% block actions %}
 {% if prev_idea %}<a class="btn ghost" href="{{ prev_idea.get_absolute_url }}" title="{{ prev_idea.title }}">{% include "includes/ic.html" with name="chevron-left" %}{{ prev_idea.code }}</a>{% endif %}
 {% if next_idea %}<a class="btn ghost" href="{{ next_idea.get_absolute_url }}" title="{{ next_idea.title }}">{{ next_idea.code }}{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
-<a class="btn ghost danger" href="{% url 'ideas:delete' idea.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>
+<a {% trash_attrs idea %} data-trash-trigger  class="btn ghost danger" href="{% url 'ideas:delete' idea.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>
 <a class="btn" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="list" %}목록</a>
 <a class="btn primary" href="{% url 'ideas:edit' idea.pk %}">{% include "includes/ic.html" with name="edit" %}개요 수정</a>
 {% endblock %}
@@ -36,7 +37,7 @@
       <div class="card-body flush">
         <ol class="stages">
           {% for st in stages %}
-          <li class="stage {{ st.status }}{% if st.is_overdue %} overdue{% endif %}">
+          <li {% trash_attrs st %} class="stage {{ st.status }}{% if st.is_overdue %} overdue{% endif %}">
             <div class="stage-num">{% if st.status == 'done' %}<svg class="ic"><use href="#i-check"/></svg>{% else %}{{ st.order }}{% endif %}</div>
             <div class="stage-body">
               <div class="stage-row">
@@ -94,10 +95,10 @@
         {% if logs %}
         <ul class="rows">
           {% for log in logs %}
-          <li class="log">
+          <li {% trash_attrs log %} class="log">
             <div class="log-date"><b>{{ log.created_at|date:"Y-m-d" }}</b>{{ log.created_at|date:"H:i" }}</div>
             <div>
-              {% if log.stage %}<div class="log-meta">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</div>{% endif %}
+              {% if log.stage and not log.stage.deleted_at %}<div class="log-meta">{{ log.stage.order }}. {{ log.stage.title|truncatechars:24 }}</div>{% endif %}
               <div class="log-body">{{ log.body|linebreaksbr }}</div>
             </div>
             <form method="post" action="{% url 'ideas:log_delete' idea.pk log.pk %}" class="inline-form" onsubmit="return confirm('이 로그를 삭제할까요?')">{% csrf_token %}<button class="btn ghost sm icon log-del" title="삭제" aria-label="삭제"><svg class="ic"><use href="#i-x"/></svg></button></form>

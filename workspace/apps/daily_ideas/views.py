@@ -94,7 +94,9 @@ def _calendar(day: date, selected: str, counts: dict[str, int], today: date) -> 
 
 
 def daily_list(request):
-    batches = load_batches()
+    from apps.core.trash import hidden_keys
+    hidden = hidden_keys("daily")
+    batches = [{**batch, "items": [item for item in batch["items"] if item["id"] not in hidden]} for batch in load_batches()]
     counts = {batch["date"]: len(batch["items"]) for batch in batches}
     latest = max(counts) if counts else ""
     today = timezone.localdate()
@@ -173,7 +175,7 @@ def daily_list(request):
 
 def _next_code() -> str:
     highest = 0
-    for code in Idea.objects.values_list("code", flat=True):
+    for code in Idea.all_objects.values_list("code", flat=True):
         match = re.fullmatch(r"C(\d+)", code)
         if match:
             highest = max(highest, int(match.group(1)))
@@ -183,7 +185,8 @@ def _next_code() -> str:
 @require_POST
 def adopt(request, item_id: str):
     item = find_item(item_id)
-    if item is None:
+    from apps.core.trash import hidden_keys
+    if item is None or item_id in hidden_keys("daily"):
         raise Http404("일일 아이디어를 찾을 수 없습니다.")
 
     existing = next(
@@ -251,7 +254,7 @@ def standard(request):
                 messages.info(request, f"바뀐 내용이 없어 v{latest.version} 을 그대로 둡니다.")
                 return redirect("daily_ideas:standard")
             item = form.save(commit=False)
-            item.version = (latest.version if latest else 0) + 1
+            item.version = (SearchStandard.all_objects.order_by("-version").values_list("version", flat=True).first() or 0) + 1
             item.save()
             messages.success(request, f"검색 표준 v{item.version} 을 저장했습니다. 오른쪽 요청문을 복사해 조사를 맡기세요.")
             return redirect("daily_ideas:standard")

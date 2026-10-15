@@ -79,7 +79,7 @@
     {% if group.items %}
     <div class="il-head"><span>번호</span><span>아이디어</span><span>세부내용</span><span></span></div>
     {% for item in group.items %}
-    <details class="il-row" id="idea-{{ item.id }}">
+    <details class="il-row" data-trash-model="source.daily" data-trash-id="{{ item.id }}" data-trash-title="{{ item.title }}" id="idea-{{ item.id }}">
       <summary>
         <span class="il-no">{{ item.no }}</span>
         <span class="il-main">

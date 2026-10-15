@@ -138,7 +138,7 @@ def add(request, kind):
             return redirect(_url())
         order = (_children(parent_kind, parent).aggregate(m=Max("order"))["m"] or 0) + 1
         if kind == "category":
-            used = set(parent.categories.values_list("code", flat=True))
+            used = set(Category.all_objects.filter(section=parent).values_list("code", flat=True))
             code = next((c for c in string.ascii_uppercase if c not in used), "?")
             obj = Category.objects.create(section=parent, code=code, name=name[:40], order=order)
         elif kind == "type":
