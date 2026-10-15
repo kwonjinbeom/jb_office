@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}{% if post %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ post.get_absolute_url }}">{{ post.title|truncatechars:30 }}</a>{% endif %}</div>{% endblock %}
 
-{% block heading %}{% if post %}글 수정{% else %}{{ page_title }}{% endif %}{% endblock %}
+{% block heading %}{% if post %}글쓰기{% else %}{{ page_title }}{% endif %}{% endblock %}
 
 {% block actions %}
 {% if post %}<a class="btn ghost danger" href="{% url 'writing:delete' post.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
@@ -10,16 +11,76 @@
 <button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}
 
-{% block toolbar %}{% include "writing/_tabs.html" %}{% endblock %}
+{% block toolbar %}
+{# 티스토리 글쓰기 툴바 순서: 첨부 · 문단모양 · 굵게… · 정렬 · 인용 · 표 · 링크 · 리스트 · 구분선 · 모드 #}
+<div class="wr-editbar" role="toolbar" aria-label="본문 서식" data-editor-toolbar>
+  <div class="wr-tools">
+    <span class="wr-tgroup">
+      <button type="button" class="wr-tbtn wide" data-ed="photo" title="내 사진을 올릴 자리 (빨간 점선 상자)">📷 사진</button>
+      <button type="button" class="wr-tbtn wide" data-ed="figure" title="준비한 그림을 올릴 자리 (파란 점선 상자)">🖼 그림</button>
+      <button type="button" class="wr-tbtn" data-ed="image" title="인터넷 주소가 있는 이미지 넣기">이미지</button>
+      <button type="button" class="wr-tbtn" data-ed="caption" title="사진·그림 아래 캡션 한 줄">캡션</button>
+    </span>
+    <span class="wr-tgroup">
+      <select class="wr-tselect" data-ed-block aria-label="문단모양" title="문단모양">
+        <option value="p">본문</option>
+        <option value="h2">제목1</option>
+        <option value="h3">제목2</option>
+        <option value="h4">제목3</option>
+      </select>
+    </span>
+    <span class="wr-tgroup">
+      <button type="button" class="wr-tbtn b" data-ed="bold" title="굵게 (Ctrl+B)" aria-label="굵게">B</button>
+      <button type="button" class="wr-tbtn i" data-ed="italic" title="기울임꼴 (Ctrl+I)" aria-label="기울임꼴">I</button>
+      <button type="button" class="wr-tbtn u" data-ed="underline" title="밑줄 (Ctrl+U)" aria-label="밑줄">U</button>
+      <button type="button" class="wr-tbtn s" data-ed="strikeThrough" title="취소선" aria-label="취소선">S</button>
+    </span>
+    <span class="wr-tgroup">
+      <button type="button" class="wr-tbtn" data-ed="justifyLeft" title="왼쪽 정렬" aria-label="왼쪽 정렬"><svg class="wr-al" viewBox="0 0 16 16"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8"/></svg></button>
+      <button type="button" class="wr-tbtn" data-ed="justifyCenter" title="가운데 정렬" aria-label="가운데 정렬"><svg class="wr-al" viewBox="0 0 16 16"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8"/></svg></button>
+    </span>
+    <span class="wr-tgroup">
+      <button type="button" class="wr-tbtn" data-ed="quote" title="인용">인용</button>
+      <button type="button" class="wr-tbtn" data-ed="table" title="표 넣기 (3칸)">표</button>
+      <button type="button" class="wr-tbtn" data-ed="addRow" title="표에 줄 추가 (표 안에 커서가 있을 때)" disabled>+줄</button>
+      <button type="button" class="wr-tbtn" data-ed="addCol" title="표에 칸 추가 (표 안에 커서가 있을 때)" disabled>+칸</button>
+      <button type="button" class="wr-tbtn" data-ed="link" title="링크">링크</button>
+      <button type="button" class="wr-tbtn" data-ed="insertUnorderedList" title="점 목록" aria-label="점 목록">•</button>
+      <button type="button" class="wr-tbtn" data-ed="insertOrderedList" title="번호 목록" aria-label="번호 목록">1.</button>
+      <button type="button" class="wr-tbtn" data-ed="hr" title="구분선" aria-label="구분선">―</button>
+    </span>
+  </div>
+  <button type="button" class="btn sm" data-ed="markdown" title="Claude 원고 같은 마크다운을 붙여 넣어 서식으로 바꾸기">마크다운 넣기</button>
+  <span class="seg wr-mode" role="group" aria-label="편집 모드">
+    <button type="button" class="on" data-ed-mode="visual">기본모드</button>
+    <button type="button" data-ed-mode="html">HTML</button>
+  </span>
+</div>
+{% endblock %}
 
 {% block content %}
-<form id="post-form" method="post" class="form-page" data-dirty-warn action="{% if post %}{% url 'writing:edit' post.pk %}{% else %}{% url 'writing:create' %}{% endif %}">
+<form id="post-form" method="post" class="wr-edit" data-dirty-warn data-editor-form
+      data-convert-url="{% url 'writing:convert' %}"
+      action="{% if post %}{% url 'writing:edit' post.pk %}{% else %}{% url 'writing:create' %}{% endif %}">
   {% csrf_token %}
   {% if not post %}<input type="hidden" name="stage" value="{{ stage }}">{% endif %}
   {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
-  {% if form.review_status or form.write_status %}
-  <section class="card">
+  {{ form.body }}
+
+  <div class="wr-paper wr-edit-paper">
+    <div class="wr-post-cat">{% for t in tabs %}{% if t.on %}{{ t.label }}{% endif %}{% endfor %}</div>
+    {{ form.title }}
+    {% if form.title.errors %}<div class="wr-field-error">{{ form.title.errors|join:" " }}</div>{% endif %}
+    <div class="wr-edit-rule"></div>
+    <div id="wr-editor" class="wr-article wr-editable" contenteditable="true" spellcheck="false"
+         data-placeholder="본문을 입력하세요. 마크다운(## 소제목, **굵게**, | 표 |)을 붙여넣으면 서식으로 바뀌어요.">{{ editor_html|safe }}</div>
+    <textarea id="wr-html-src" class="wr-html-src" hidden spellcheck="false" aria-label="본문 HTML"></textarea>
+    <div class="wr-tag-line">{{ form.tags }}</div>
+  </div>
+
+  <section class="card wr-edit-meta">
     <div class="card-body form-grid">
+      {% include "includes/field.html" with field=form.summary cls="span-2" %}
       {% if form.review_status %}{% include "includes/field.html" with field=form.review_status %}{% endif %}
       {% if form.write_status %}
       {% include "includes/field.html" with field=form.write_status %}
@@ -29,37 +90,38 @@
       {% endif %}
     </div>
   </section>
-  {% endif %}
-  <section class="card">
-    <div class="card-body form-grid">
-      {% include "includes/field.html" with field=form.title cls="span-2" %}
-      {% include "includes/field.html" with field=form.summary cls="span-2" %}
-      {% include "includes/field.html" with field=form.tags cls="span-2" %}
-      {% include "includes/field.html" with field=form.body cls="span-2" %}
-      <details class="wr-guide span-2" open>
-        <summary>본문 쓰는 법 — 저장하면 '글 보기'에서 블로그에 올라간 모습으로 보이고, 그대로 복사해 붙여넣을 수 있어요</summary>
-        <table>
-          <tr><td>빈 줄</td><td>문단 나누기. 줄바꿈 한 번은 그대로 줄바꿈이에요.</td></tr>
-          <tr><td>## 소제목</td><td>큰 소제목 (### 은 작은 소제목)</td></tr>
-          <tr><td>**굵게**</td><td>강조</td></tr>
-          <tr><td>- 항목 / 1. 항목</td><td>점 목록 / 번호 목록</td></tr>
-          <tr><td>&gt; 문장</td><td>인용 상자</td></tr>
-          <tr><td>| 칸 | 칸 |<br>|---|---|</td><td>표 (첫 줄이 머리글)</td></tr>
-          <tr><td>[사진] 설명</td><td>빨간 점선 상자: 붙여넣은 뒤 내 사진을 올릴 자리</td></tr>
-          <tr><td>[그림] 파일명</td><td>파란 점선 상자: 준비한 그림을 올릴 자리</td></tr>
-          <tr><td>[캡션] 문장</td><td>사진·그림 아래 가운데 회색 한 줄</td></tr>
-          <tr><td>![설명](https://주소)</td><td>인터넷 주소가 있는 이미지. 파일 이름(그림1.png)이면 파란 상자</td></tr>
-          <tr><td>*캡션 문장*</td><td>이미지 바로 다음 줄에 쓰면 캡션</td></tr>
-          <tr><td>[글자](주소)</td><td>링크</td></tr>
-          <tr><td>---</td><td>구분선</td></tr>
-        </table>
-      </details>
-    </div>
-  </section>
-  <div class="form-foot">
-    {% if post %}<span class="muted small" style="margin-right:auto">만든 날 {{ post.created_at|date:"Y-m-d H:i" }} · 수정일 {{ post.updated_at|date:"Y-m-d H:i" }}</span>{% endif %}
-    {% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
-    <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
-  </div>
 </form>
+
+<div class="wr-editfoot">
+  <span class="muted small num" data-ed-count>본문 0자</span>
+  <span class="muted small" style="margin-right:auto">저장 <span class="kbd">Ctrl+S</span></span>
+  {% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
+  <button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
+</div>
+
+<dialog class="wr-dialog" id="wr-md-dialog" aria-labelledby="wr-md-title">
+  <form method="dialog">
+    <div class="wr-dialog-head"><h3 id="wr-md-title">마크다운 넣기</h3><button class="btn ghost sm icon" value="cancel" aria-label="닫기">{% include "includes/ic.html" with name="x" %}</button></div>
+    <p class="muted small">Claude 원고(원고.md 의 본문)처럼 마크다운으로 쓴 글을 붙여 넣으면 블로그 서식으로 바뀌어 들어가요.</p>
+    <textarea class="input" rows="14" data-md-input spellcheck="false" placeholder="## 소제목&#10;&#10;본문 문단…&#10;&#10;[사진] 직접 찍은 사진&#10;[그림] 그림1.png&#10;[캡션] 캡션 한 줄&#10;&#10;| 칸 | 칸 |&#10;|---|---|&#10;| 값 | 값 |"></textarea>
+    <details class="wr-guide">
+      <summary>쓰는 법</summary>
+      <table>
+        <tr><td>## 소제목 / ### 작은 소제목</td><td>제목1 / 제목2</td></tr>
+        <tr><td>**굵게**, - 목록, 1. 번호, &gt; 인용, ---</td><td>그대로</td></tr>
+        <tr><td>| 칸 | 칸 |</td><td>표 (둘째 줄 |---|)</td></tr>
+        <tr><td>[사진] 설명 · 📷 설명</td><td>사진 자리 (빨간 상자)</td></tr>
+        <tr><td>[그림] 파일명 · ![설명](그림1.png)</td><td>그림 자리 (파란 상자)</td></tr>
+        <tr><td>[캡션] 문장 · 이미지 다음 줄 *문장*</td><td>캡션</td></tr>
+      </table>
+    </details>
+    <div class="form-foot" style="margin-top:12px">
+      <button class="btn" value="cancel">취소</button>
+      <button class="btn" value="insert" data-md-action="insert">커서 위치에 넣기</button>
+      <button class="btn primary" value="replace" data-md-action="replace">본문 전체 바꾸기</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
+
+{% block scripts %}<script src="{% static 'js/editor.js' %}?v={{ ASSET_VER }}"></script>{% endblock %}

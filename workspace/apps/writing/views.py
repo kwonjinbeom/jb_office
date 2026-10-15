@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import PostForm
 from .models import Post
-from .render import plain_text, render_body
+from .render import clean_html, plain_text, render_body, text_to_html
 
 Stage = Post.Stage
 
@@ -76,7 +77,7 @@ def create(request):
         request,
         "writing/form.html",
         {"page_title": "새 포스트" if stage == Stage.POST else "새 템플릿", "form": form, "post": None,
-         "stage": stage, "tabs": _tabs(stage)},
+         "stage": stage, "tabs": _tabs(stage), "editor_html": _editor_html(form)},
     )
 
 
@@ -132,8 +133,28 @@ def edit(request, pk):
     return render(
         request,
         "writing/form.html",
-        {"page_title": post.title, "form": form, "post": post, "stage": post.stage, "tabs": _tabs(post.stage)},
+        {"page_title": post.title, "form": form, "post": post, "stage": post.stage, "tabs": _tabs(post.stage),
+         "editor_html": _editor_html(form)},
     )
+
+
+def _editor_html(form):
+    """편집기(기본모드)에 처음 띄울 본문. 예전 마크다운 본문도 블로그 모양 HTML 로 바꿔서 연다."""
+    body = form["body"].value() or ""
+    return render_body(body) if body else ""
+
+
+@require_POST
+def convert(request):
+    """편집기에 붙여넣은 것을 블로그 본문 HTML 로 바꾼다. kind: markdown | html | text"""
+    kind, content = request.POST.get("kind", "text"), request.POST.get("content", "")
+    if kind == "markdown":
+        out = render_body(content)
+    elif kind == "html":
+        out = render_body(clean_html(content) or text_to_html(content))
+    else:
+        out = text_to_html(content)
+    return JsonResponse({"html": out})
 
 
 def delete(request, pk):

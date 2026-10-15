@@ -1,6 +1,7 @@
 from django import forms
 
 from .models import Post
+from .render import clean_html, is_html
 
 # 화면마다 고칠 수 있는 상태 칸. 임시 템플릿에는 상태가 없다.
 STAGE_FIELDS = {
@@ -18,10 +19,11 @@ class PostForm(forms.ModelForm):
             "review_status", "write_status", "publish_status", "published_url", "published_on",
         ]
         widgets = {
-            "title": forms.TextInput(attrs={"class": "input", "autofocus": True}),
-            "summary": forms.TextInput(attrs={"class": "input"}),
-            "tags": forms.TextInput(attrs={"class": "input", "placeholder": "단풍절정, 가을여행, 설악산단풍"}),
-            "body": forms.Textarea(attrs={"class": "input wr-body-input", "rows": 24, "data-autogrow": "", "spellcheck": "false"}),
+            "title": forms.Textarea(attrs={"class": "wr-title-input", "rows": 1, "placeholder": "제목을 입력하세요",
+                                           "maxlength": 200}),  # 높이는 editor.js 가 맞춘다
+            "summary": forms.TextInput(attrs={"class": "input", "placeholder": "목록과 검색 설명에 쓰는 한두 줄"}),
+            "tags": forms.TextInput(attrs={"class": "wr-tag-input", "placeholder": "#태그입력 (쉼표로 구분)"}),
+            "body": forms.Textarea(attrs={"hidden": True}),  # 편집기(contenteditable) 내용을 저장 직전에 옮겨 담는다
             "review_status": forms.Select(attrs={"class": "input"}),
             "write_status": forms.Select(attrs={"class": "input"}),
             "publish_status": forms.Select(attrs={"class": "input"}),
@@ -36,3 +38,11 @@ class PostForm(forms.ModelForm):
         for name in list(self.fields):
             if name not in keep:
                 del self.fields[name]
+
+    def clean_title(self):
+        return " ".join(self.cleaned_data["title"].split())
+
+    def clean_body(self):
+        """편집기에서 온 HTML 은 허용한 태그·속성만 남긴다. 마크다운은 그대로 둔다 (글 보기에서 변환)."""
+        body = (self.cleaned_data.get("body") or "").strip()
+        return clean_html(body) if is_html(body) else body

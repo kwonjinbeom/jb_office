@@ -15,6 +15,7 @@
 """
 import html
 import re
+from html.parser import HTMLParser
 
 import markdown
 
@@ -50,7 +51,7 @@ def _mark_lines(text: str) -> str:
         elif kind == "사진":
             block = f'<p class="wr-slot" style="{SLOT_STYLE["photo"]}">📷 {body or "여기에 내 사진 올리기"}</p>'
         else:
-            block = f'<p class="wr-slot" style="{SLOT_STYLE["figure"]}">🖼 여기에 그림 올리기{": <b>" + body + "</b>" if body else ""}</p>'
+            block = f'<p class="wr-slot" style="{SLOT_STYLE["figure"]}">🖼 여기에 그림 올리기{": <strong>" + body + "</strong>" if body else ""}</p>'
         out.extend(["", block, ""])
     return "\n".join(out)
 
@@ -58,6 +59,23 @@ def _mark_lines(text: str) -> str:
 def _cell(tag: str, align: str | None) -> str:
     base = HEAD_STYLE if tag == "th" else CELL_STYLE
     return f'<{tag} style="{base};text-align:{align or "left"}">'
+
+
+def _flatten_header(out: str) -> str:
+    """머리글 줄(<thead>·<th>)을 굵은 글씨 + 회색 바탕의 보통 칸으로 바꾼다.
+    티스토리 기본 모드에 붙여넣으면 <thead>/<th> 줄이 통째로 표 밖 한 줄 글로 빠진다 (2026-10-15 실제 편집기로 확인).
+    보통 칸(td) + <strong> + background 는 그대로 남는다."""
+    out = re.sub(r"<thead>\s*", "<tbody>", out)
+    out = re.sub(r"\s*</thead>\s*<tbody>", "", out)
+    out = out.replace("</thead>", "</tbody>")
+
+    def head_cell(m: re.Match) -> str:
+        inner = m.group(2)
+        if not re.fullmatch(r"\s*<strong>.*</strong>\s*", inner, re.S) and inner.strip():
+            inner = f"<strong>{inner}</strong>"
+        return f"<td{m.group(1)}>{inner}</td>"
+
+    return re.sub(r"<th(\s[^>]*)?>(.*?)</th>", head_cell, out, flags=re.S)
 
 
 # 문단 하나에 이미지만 있는 것 + 바로 뒤 기울임(*문장*) 한 줄 = 이미지와 캡션
@@ -75,27 +93,151 @@ def _image(m: re.Match) -> str:
     else:
         # 인터넷 주소가 아닌 파일 이름(그림1.png) → 붙여넣은 뒤 그 파일을 올릴 자리
         name = src.rsplit("/", 1)[-1]
-        out = f'<p class="wr-slot" style="{SLOT_STYLE["figure"]}">🖼 여기에 그림 올리기: <b>{name}</b></p>'
+        out = f'<p class="wr-slot" style="{SLOT_STYLE["figure"]}">🖼 여기에 그림 올리기: <strong>{name}</strong></p>'
     if caption:
         out += f'\n<p style="{CAPTION_STYLE}">{caption}</p>'
     return out
 
 
-def render_body(text: str) -> str:
-    text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = markdown.markdown(_mark_lines(text), extensions=["tables", "sane_lists", "nl2br"])
+# ---------------------------------------------------------------------------
+# 글쓰기 편집기(기본모드)가 저장하는 HTML. 붙여넣은 웹 문서의 찌꺼기·위험한 것을 걸러 낸다.
+# ---------------------------------------------------------------------------
+HTML_START = re.compile(r"^\s*<(p|h[1-6]|ul|ol|table|blockquote|hr|div|img|figure|br)\b", re.I)
+ALLOWED_TAGS = {"p", "br", "h2", "h3", "h4", "strong", "em", "u", "s", "ul", "ol", "li", "blockquote",
+                "table", "thead", "tbody", "tr", "th", "td", "hr", "a", "img", "code"}
+RENAME_TAGS = {"b": "strong", "i": "em", "strike": "s", "del": "s", "h1": "h2", "h5": "h4", "h6": "h4", "div": "p"}
+BLOCK_TAGS = {"p", "h2", "h3", "h4", "ul", "ol", "table", "blockquote", "hr"}
+DROP_WITH_CONTENT = {"script", "style", "iframe", "object", "embed", "head", "title", "noscript", "template", "svg"}
+VOID_TAGS = {"br", "hr", "img"}
+STYLED_TAGS = {"p", "h2", "h3", "h4", "blockquote", "table", "th", "td", "hr", "img"}
+ALIGN_STYLE = re.compile(r"^\s*text-align:\s*(left|center|right|justify)\s*;?\s*$")
+
+
+def _known_styles() -> set[str]:
+    """이 도구가 직접 다는 style 만 남긴다. 웹 문서에서 붙여 온 글꼴·색 같은 꾸밈은 버린다."""
+    base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
+            "text-align:center;margin:18px 0"}
+    cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE) for a in ("left", "center", "right")}
+    return {s.replace(" ", "") for s in base | cells | {CELL_STYLE, HEAD_STYLE}}
+
+
+KNOWN_STYLES = _known_styles()
+
+
+def _style_ok(value: str) -> bool:
+    return bool(ALIGN_STYLE.match(value)) or value.replace(" ", "").rstrip(";") in KNOWN_STYLES
+SAFE_URL = re.compile(r"^(https?:|mailto:|#|/)", re.I)
+
+
+def is_html(text: str) -> bool:
+    """편집기에서 저장한 본문(HTML)인지, 예전·Claude 원고(마크다운)인지."""
+    return bool(HTML_START.match(text or ""))
+
+
+class _Cleaner(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.out: list[str] = []
+        self.stack: list[str] = []
+        self.skip = 0  # DROP_WITH_CONTENT 안에 있는 깊이
+
+    def handle_starttag(self, tag, attrs):
+        tag = RENAME_TAGS.get(tag, tag)
+        if tag in DROP_WITH_CONTENT:
+            self.skip += 1
+            return
+        if self.skip or tag not in ALLOWED_TAGS:
+            return  # 모르는 태그(span, font …)는 벗기고 안의 글만 남긴다
+        if tag in BLOCK_TAGS and "p" in self.stack and "li" not in self.stack and "td" not in self.stack and "th" not in self.stack:
+            # 문단 안에 문단·표가 열리면(div 를 p 로 바꾼 경우 등) 앞 문단을 먼저 닫는다
+            self.handle_endtag("p")
+        kept = []
+        for name, value in attrs:
+            value = value or ""
+            if name == "style" and tag in STYLED_TAGS and _style_ok(value):
+                kept.append((name, value))
+            elif name == "class" and tag == "p" and value == "wr-slot":
+                kept.append((name, value))
+            elif name == "href" and tag == "a" and SAFE_URL.match(value.strip()):
+                kept.append((name, value.strip()))
+            elif name == "src" and tag == "img" and re.match(r"^(https?:)?//", value.strip()):
+                kept.append((name, value.strip()))
+            elif name == "alt" and tag == "img":
+                kept.append((name, value))
+            elif name in ("colspan", "rowspan") and tag in ("th", "td") and value.isdigit():
+                kept.append((name, value))
+        if tag == "img" and not any(n == "src" for n, _ in kept):
+            return  # 주소가 없거나 위험한 이미지는 뺀다
+        attr_text = "".join(f' {n}="{html.escape(v, quote=True)}"' for n, v in kept)
+        if tag == "a":
+            attr_text += ' target="_blank" rel="noopener"'
+        self.out.append(f"<{tag}{attr_text}>")
+        if tag not in VOID_TAGS:
+            self.stack.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+    def handle_endtag(self, tag):
+        tag = RENAME_TAGS.get(tag, tag)
+        if tag in DROP_WITH_CONTENT:
+            self.skip = max(0, self.skip - 1)
+            return
+        if self.skip or tag not in ALLOWED_TAGS or tag in VOID_TAGS or tag not in self.stack:
+            return
+        while self.stack:  # 안 닫힌 안쪽 태그까지 같이 닫는다
+            open_tag = self.stack.pop()
+            self.out.append(f"</{open_tag}>")
+            if open_tag == tag:
+                break
+
+    def handle_data(self, data):
+        if not self.skip:
+            self.out.append(html.escape(data, quote=False))
+
+    def result(self) -> str:
+        while self.stack:
+            self.out.append(f"</{self.stack.pop()}>")
+        return "".join(self.out)
+
+
+def clean_html(text: str) -> str:
+    cleaner = _Cleaner()
+    cleaner.feed(re.sub(r"<!--.*?-->", "", text or "", flags=re.S))
+    cleaner.close()
+    return re.sub(r"<p>\s*</p>", "", cleaner.result()).strip()
+
+
+def text_to_html(text: str) -> str:
+    """서식 없는 글: 빈 줄은 문단, 줄바꿈 한 번은 <br>."""
+    blocks = [b for b in re.split(r"\n\s*\n", (text or "").replace("\r\n", "\n").strip()) if b.strip()]
+    return "".join("<p>" + html.escape(b).replace("\n", "<br>") + "</p>" for b in blocks)
+
+
+def _decorate(out: str) -> str:
+    """꾸밈 없는 표·인용·구분선·이미지에 붙여넣기용 인라인 style 을 단다. 이미 style 이 있으면 그대로 둔다."""
     out = out.replace("<table>", f'<table style="{TABLE_STYLE}">')
     out = re.sub(r'<(th|td)(?: style="text-align: (\w+);")?>', lambda m: _cell(m.group(1), m.group(2)), out)
+    out = _flatten_header(out)
     out = out.replace("<blockquote>", f'<blockquote style="{QUOTE_STYLE}">')
     out = re.sub(r"<hr\s*/?>", f'<hr style="{HR_STYLE}">', out)
     out = IMAGE_BLOCK.sub(_image, out)
     return out
 
 
+def render_body(text: str) -> str:
+    """본문 → 블로그에 붙여넣을 HTML. 편집기 HTML 이면 걸러 내고, 마크다운이면 변환한다."""
+    if is_html(text):
+        return _decorate(clean_html(text))
+    text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
+    out = _decorate(markdown.markdown(_mark_lines(text), extensions=["tables", "sane_lists", "nl2br"]))
+    return clean_html(out)  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+
+
 def plain_text(body_html: str, drop_slots: bool = False) -> str:
     """서식 없는 글. drop_slots 면 사진·그림 자리 상자는 뺀다 (글자 수 셀 때)."""
     if drop_slots:
-        body_html = re.sub(r'<p class="wr-slot"[^>]*>.*?</p>', "", body_html, flags=re.S)
+        body_html = re.sub(r'<p[^>]*class="wr-slot"[^>]*>.*?</p>', "", body_html, flags=re.S)
     body_html = re.sub(r"<br\s*/?>\n?", "\n", body_html)
     body_html = re.sub(r"</t[hd]>\s*(?=<t[hd])", "\t", body_html)  # 표 한 줄은 탭으로 이어 붙인다
     body_html = re.sub(r"</(p|h\d|li|tr|blockquote)>", "\n", body_html)
