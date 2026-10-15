@@ -6,10 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blog_types', '0002_seed_08'),
+        ('blog_types', '0004_connect_section'),
     ]
 
     operations = [
+        migrations.AddField(
+            model_name="section",
+            name="deleted_at",
+            field=models.DateTimeField(blank=True, db_index=True, editable=False, null=True, verbose_name="삭제 시각"),
+        ),
         migrations.AddField(
             model_name='category',
             name='deleted_at',

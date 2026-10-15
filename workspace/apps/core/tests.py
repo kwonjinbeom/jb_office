@@ -11,7 +11,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.blog_types.models import Category, PostType, SubType
+from apps.blog_types.models import Category, PostType, Section, SubType
 from apps.content.models import Content, Folder, Publication
 from apps.daily_ideas.models import SearchStandard
 from apps.discussions.models import Discussion, DiscussionHistory
@@ -260,7 +260,7 @@ class TrashTests(TestCase):
         SearchStandard.objects.create(version=1)
         Post.objects.create(title="티스토리")
         NaverPost.objects.create(title="네이버")
-        category = Category.objects.create(code="Z", name="카테고리")
+        category = Category.objects.create(section=Section.objects.first(), code="Z", name="카테고리")
         post_type = PostType.objects.create(category=category, name="타입")
         SubType.objects.create(post_type=post_type, name="하위")
         paths = ["/", "/ideas/", f"/ideas/{idea.pk}/", "/memos/", "/blog/", "/video/", "/blog/writing/", "/blog/writing/review/", "/blog/writing/posts/", "/blog/naver-writing/", "/blog/naver-writing/review/", "/blog/naver-writing/posts/", "/blog/types/", "/daily-ideas/", "/daily-ideas/standard/", "/discussions/", f"/discussions/{discussion.pk}/", "/tasks/", "/evidence/", "/docs/", "/trash/"]
@@ -272,6 +272,21 @@ class TrashTests(TestCase):
         for route,label in [("ideas:list","ideas.idea"),("memos:list","memos.memo"),("writing:list","writing.post"),("naver_writing:list","naver_writing.post"),("blog:list","content.content"),("tasks:list","tasks.task"),("evidence:list","evidence.evidence"),("blog_types:index","blog_types.category")]:
             with self.subTest(route=route):
                 self.assertContains(self.client.get(reverse(route)), f'data-trash-model="{label}"')
+
+    def test_section_flags_all_four_levels_and_restores_same_rows(self):
+        section = Section.objects.create(name="새 대분류")
+        category = Category.objects.create(section=section, code="A", name="카테고리")
+        post_type = PostType.objects.create(category=category, name="타입")
+        sub = SubType.objects.create(post_type=post_type, name="하위")
+        entry = move_to_trash(section)
+        self.assertEqual(entry.item_count, 4)
+        for obj in (section, category, post_type, sub):
+            self.assertFalse(type(obj).objects.filter(pk=obj.pk).exists())
+            self.assertTrue(type(obj).all_objects.filter(pk=obj.pk).exists())
+        restore(entry)
+        sub.refresh_from_db()
+        self.assertEqual(sub.post_type.category.section_id, section.pk)
+        self.assertIsNone(sub.deleted_at)
 
     @override_settings(REQUIRE_LOGIN=True)
     def test_server_authentication_covers_trash_api(self):

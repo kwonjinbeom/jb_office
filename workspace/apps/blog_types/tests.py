@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Category, PostType, SubType
+from .models import Category, PostType, Section, SubType
 
 INDEX = reverse("blog_types:index")
 
@@ -15,6 +15,10 @@ class BlogTypesTests(TestCase):
     def test_seed_from_08(self):
         # 0002 migration 이 08 문서 표를 넣는다 (테스트 DB 도 migrate 로 만든다)
         self.assertEqual(list(Category.objects.values_list("code", flat=True)), list("ABCDEFG"))
+        # 0004: A~G 는 첫 대분류 '판매 수익 (커넥트)' 아래로 간다
+        connect = Section.objects.get()
+        self.assertEqual(connect.name, "판매 수익 (커넥트)")
+        self.assertEqual(connect.categories.count(), 7)
         self.assertEqual(PostType.objects.count(), 14)
         self.assertEqual(Category.objects.get(code="G").platform, Category.Platform.NAVER)
         season = PostType.objects.get(name="시즌 달력")
@@ -23,6 +27,7 @@ class BlogTypesTests(TestCase):
     def test_tree_shows_names_only_and_menu(self):
         res = self.client.get(INDEX)
         self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "판매 수익 (커넥트)")
         self.assertContains(res, "문제 해결")
         self.assertContains(res, "시즌 달력")
         self.assertContains(res, "세일 행사")  # 3단계까지 트리에 보인다
@@ -33,7 +38,9 @@ class BlogTypesTests(TestCase):
     def test_select_shows_path_children_and_detail(self):
         season = PostType.objects.get(name="시즌 달력")
         res = self.client.get(INDEX, {"sel": season.sel})
-        self.assertEqual(res.context["path"], [("C. 타이밍", season.category.sel), ("시즌 달력", season.sel)])
+        self.assertEqual(res.context["path"], [("판매 수익 (커넥트)", season.category.section.sel),
+                                               ("C. 타이밍", season.category.sel), ("시즌 달력", season.sel)])
+        self.assertEqual(res.context["open"], {season.category.section.sel, season.category.sel, season.sel})
         self.assertEqual(res.context["child_kind"], "sub")
         self.assertContains(res, "+ 하위 추가")
         sub = season.subs.first()
@@ -42,7 +49,13 @@ class BlogTypesTests(TestCase):
         self.assertIsNone(res.context["child_kind"])
 
     def test_quick_add_each_level(self):
-        res = self.client.post(reverse("blog_types:add", args=["category"]), {"name": "구독"})
+        res = self.client.post(reverse("blog_types:add", args=["section"]), {"name": "일상·브이로그"})
+        daily = Section.objects.get(name="일상·브이로그")
+        self.assertRedirects(res, f"{INDEX}?sel={daily.sel}", fetch_redirect_response=False)
+        self.client.post(reverse("blog_types:add", args=["category"]), {"name": "카페", "parent": daily.sel})
+        self.assertEqual(daily.categories.get().code, "A")  # 기호는 대분류마다 A 부터
+        connect = Section.objects.get(name="판매 수익 (커넥트)")
+        res = self.client.post(reverse("blog_types:add", args=["category"]), {"name": "구독", "parent": connect.sel})
         h = Category.objects.get(name="구독")
         self.assertEqual(h.code, "H")
         self.assertRedirects(res, f"{INDEX}?sel={h.sel}", fetch_redirect_response=False)
@@ -51,9 +64,11 @@ class BlogTypesTests(TestCase):
         self.client.post(reverse("blog_types:add", args=["sub"]), {"name": "OTT", "parent": t.sel})
         self.client.post(reverse("blog_types:add", args=["sub"]), {"name": "멤버십", "parent": t.sel})
         self.assertEqual([s.name for s in t.subs.all()], ["OTT", "멤버십"])
-        # 단계가 안 맞으면(카테고리 밑에 하위) 넣지 않는다
+        # 단계가 안 맞으면(카테고리 밑에 하위, 부모 없는 카테고리) 넣지 않는다
         self.client.post(reverse("blog_types:add", args=["sub"]), {"name": "잘못", "parent": h.sel})
+        self.client.post(reverse("blog_types:add", args=["category"]), {"name": "고아"})
         self.assertFalse(SubType.objects.filter(name="잘못").exists())
+        self.assertFalse(Category.objects.filter(name="고아").exists())
 
     def test_move_reorders_siblings(self):
         season = PostType.objects.get(name="시즌 달력")
@@ -63,6 +78,10 @@ class BlogTypesTests(TestCase):
         first_cat = Category.objects.get(code="A")
         self.client.post(reverse("blog_types:move", args=["category", first_cat.pk]), {"dir": "up"})
         self.assertEqual(Category.objects.first().code, "A")  # 맨 위는 더 못 올라간다
+        Section.objects.create(name="일상·브이로그", order=2)
+        daily = Section.objects.get(name="일상·브이로그")
+        self.client.post(reverse("blog_types:move", args=["section", daily.pk]), {"dir": "up"})
+        self.assertEqual(Section.objects.first(), daily)
 
     def test_save_detail(self):
         sub = SubType.objects.get(name="세일 행사")
@@ -80,6 +99,13 @@ class BlogTypesTests(TestCase):
         self.assertContains(res, "타입 2개, 하위 3개")
         self.client.post(reverse("blog_types:delete", args=["category", c.pk]))
         self.assertFalse(SubType.objects.filter(name="세일 행사").exists())
+
+    def test_delete_section_removes_everything_inside(self):
+        connect = Section.objects.get()
+        res = self.client.get(reverse("blog_types:delete", args=["section", connect.pk]))
+        self.assertContains(res, "카테고리 7개, 타입 14개, 하위 6개")
+        self.client.post(reverse("blog_types:delete", args=["section", connect.pk]))
+        self.assertFalse(Category.objects.exists())
 
     def test_seed_does_not_overwrite(self):
         from importlib import import_module

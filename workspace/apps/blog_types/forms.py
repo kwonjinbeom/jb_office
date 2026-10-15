@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Category, PostType, SubType
+from .models import Category, PostType, Section, SubType
 
 
 class _Styled(forms.ModelForm):
@@ -9,6 +9,13 @@ class _Styled(forms.ModelForm):
         self.label_suffix = ""
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "input")
+
+
+class SectionForm(_Styled):
+    class Meta:
+        model = Section
+        fields = ["name", "note"]
+        widgets = {"note": forms.Textarea(attrs={"rows": 4})}
 
 
 class CategoryForm(_Styled):
@@ -35,4 +42,4 @@ class SubTypeForm(_Styled):
         widgets = {"note": forms.Textarea(attrs={"rows": 8})}
 
 
-FORMS = {"category": CategoryForm, "type": PostTypeForm, "sub": SubTypeForm}
+FORMS = {"section": SectionForm, "category": CategoryForm, "type": PostTypeForm, "sub": SubTypeForm}

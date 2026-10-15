@@ -1,6 +1,6 @@
-"""타입·카테고리 화면: 왼쪽 트리(카테고리 › 타입 › 하위) + 오른쪽 상세.
+"""타입·카테고리 화면: 왼쪽 트리(대분류 › 카테고리 › 타입 › 하위) + 오른쪽 상세.
 
-한 화면에서 고른다: ?sel=c3 (카테고리) · t5 (타입) · s9 (하위).
+한 화면에서 고른다: ?sel=g1 (대분류) · c3 (카테고리) · t5 (타입) · s9 (하위).
 트리에는 이름과 하위 개수만, 설명은 고른 뒤 오른쪽에서 본다.
 """
 import string
@@ -12,12 +12,12 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .forms import FORMS
-from .models import Category, PostType, SubType
+from .models import Category, PostType, Section, SubType
 
-MODELS = {"category": Category, "type": PostType, "sub": SubType}
-PREFIX = {"c": "category", "t": "type", "s": "sub"}
-KIND_LABEL = {"category": "카테고리", "type": "타입", "sub": "하위"}
-CHILD = {"category": "type", "type": "sub"}
+MODELS = {"section": Section, "category": Category, "type": PostType, "sub": SubType}
+PREFIX = {"g": "section", "c": "category", "t": "type", "s": "sub"}
+KIND_LABEL = {"section": "대분류", "category": "카테고리", "type": "타입", "sub": "하위"}
+CHILD = {"section": "category", "category": "type", "type": "sub"}
 
 
 def _nav(request):
@@ -38,6 +38,8 @@ def _find(sel):
 
 
 def _parent(kind, obj):
+    if kind == "category":
+        return obj.section
     if kind == "type":
         return obj.category
     if kind == "sub":
@@ -51,19 +53,23 @@ def _path(kind, obj):
     while obj is not None:
         chain.append(obj)
         obj = _parent(kind, obj)
-        kind = {"sub": "type", "type": "category"}.get(kind)
+        kind = {"sub": "type", "type": "category", "category": "section"}.get(kind)
     return [(f"{o.code}. {o.name}" if isinstance(o, Category) else o.name, o.sel) for o in reversed(chain)]
 
 
 def _siblings(kind, obj):
+    if kind == "section":
+        return Section.objects.all()
     if kind == "category":
-        return Category.objects.all()
+        return obj.section.categories.all()
     if kind == "type":
         return obj.category.types.all()
     return obj.post_type.subs.all()
 
 
 def _children(kind, obj):
+    if kind == "section":
+        return obj.categories.all()
     if kind == "category":
         return obj.types.all()
     if kind == "type":
@@ -81,7 +87,8 @@ def index(request, form=None):
         form = FORMS[kind](instance=obj)
     return render(request, "blog_types/index.html", {
         "page_title": "타입·카테고리",
-        "categories": Category.objects.prefetch_related("types__subs"),
+        "sections": Section.objects.prefetch_related("categories__types__subs"),
+        "open": {s for _, s in (_path(kind, obj) if obj else [])},  # 고른 것의 윗단계는 펼쳐 둔다
         "sel": sel,
         "kind": kind,
         "obj": obj,
@@ -92,6 +99,7 @@ def index(request, form=None):
         "child_kind": CHILD.get(kind),
         "child_label": KIND_LABEL.get(CHILD.get(kind), ""),
         "counts": {
+            "section": Section.objects.count(),
             "category": Category.objects.count(),
             "type": PostType.objects.count(),
             "sub": SubType.objects.count(),
@@ -120,18 +128,20 @@ def add(request, kind):
     if not name or kind not in MODELS:
         messages.warning(request, "이름을 입력하세요.")
         return redirect(_url(parent_sel))
-    if kind == "category":
-        used = set(Category.all_objects.values_list("code", flat=True))
-        code = next((c for c in string.ascii_uppercase if c not in used), "?")
-        order = (Category.objects.aggregate(m=Max("order"))["m"] or 0) + 1
-        obj = Category.objects.create(code=code, name=name[:40], order=order)
+    if kind == "section":
+        order = (Section.objects.aggregate(m=Max("order"))["m"] or 0) + 1
+        obj = Section.objects.create(name=name[:40], order=order)
     else:
         parent_kind, parent = _find(parent_sel)
         if parent is None or CHILD.get(parent_kind) != kind:
             messages.warning(request, "어디에 추가할지 먼저 고르세요.")
             return redirect(_url())
         order = (_children(parent_kind, parent).aggregate(m=Max("order"))["m"] or 0) + 1
-        if kind == "type":
+        if kind == "category":
+            used = set(Category.all_objects.filter(section=parent).values_list("code", flat=True))
+            code = next((c for c in string.ascii_uppercase if c not in used), "?")
+            obj = Category.objects.create(section=parent, code=code, name=name[:40], order=order)
+        elif kind == "type":
             obj = PostType.objects.create(category=parent, name=name[:60], order=order)
         else:
             obj = SubType.objects.create(post_type=parent, name=name[:80], order=order)
@@ -164,7 +174,10 @@ def delete(request, kind, pk):
         messages.success(request, f"{KIND_LABEL[kind]} '{label}'을(를) 삭제했습니다.")
         return redirect(_url(parent.sel if parent else ""))
     inside = []
-    if kind == "category":
+    if kind == "section":
+        inside = [f"카테고리 {obj.categories.count()}개", f"타입 {PostType.objects.filter(category__section=obj).count()}개",
+                  f"하위 {SubType.objects.filter(post_type__category__section=obj).count()}개"]
+    elif kind == "category":
         inside = [f"타입 {obj.types.count()}개", f"하위 {SubType.objects.filter(post_type__category=obj).count()}개"]
     elif kind == "type":
         inside = [f"하위 {obj.subs.count()}개"]
