@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import Post
+from .render import plain_text, render_body
 
 Stage = Post.Stage
 
@@ -36,6 +37,10 @@ class PostPipelineTests(TestCase):
         self.client.post(reverse("writing:create"), {"stage": "post", "title": "새 포스트",
                                                      "write_status": "todo", "publish_status": "todo"})
         self.assertEqual(Post.objects.get(title="새 포스트").stage, Stage.POST)
+
+    def test_create_opens_detail(self):
+        res = self.client.post(reverse("writing:create"), {"stage": "temp", "title": "새 글", "body": "본문"})
+        self.assertRedirects(res, Post.objects.get(title="새 글").get_absolute_url())
 
     def test_move_one_step_each_way(self):
         post = Post.objects.create(title="글")
@@ -93,9 +98,76 @@ class PostPipelineTests(TestCase):
     def test_edit_and_delete(self):
         post = Post.objects.create(title="글", stage=Stage.REVIEW)
         res = self.client.post(reverse("writing:edit", args=[post.pk]),
-                               {"title": "고친 글", "summary": "", "body": "본문", "review_status": "doing"})
-        self.assertRedirects(res, reverse("writing:review"))
+                               {"title": "고친 글", "summary": "", "body": "본문", "tags": "가, 나",
+                                "review_status": "doing"})
+        self.assertRedirects(res, reverse("writing:detail", args=[post.pk]))
         post.refresh_from_db()
-        self.assertEqual((post.title, post.review_status), ("고친 글", Post.Review.DOING))
+        self.assertEqual((post.title, post.review_status, post.tags), ("고친 글", Post.Review.DOING, "가, 나"))
         self.client.post(reverse("writing:delete", args=[post.pk]))
         self.assertFalse(Post.objects.exists())
+
+    def test_detail_reads_like_a_blog_post(self):
+        body = (
+            "첫 문단\n\n## 소제목\n\n[사진] 단풍 사진\n[그림] 그림1.png\n[캡션] 남쪽으로 내려와요\n\n"
+            "| 산 | 날짜 |\n|---|---|\n| 설악산 | 10/20 |"
+        )
+        post = Post.objects.create(title="단풍 절정", body=body, tags="#단풍절정, 가을여행", stage=Stage.REVIEW)
+        res = self.client.get(reverse("writing:detail", args=[post.pk]))
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "<h2>소제목</h2>")
+        self.assertContains(res, "#단풍절정")
+        self.assertContains(res, "#가을여행")
+        self.assertContains(res, "점선 상자 2곳")
+        self.assertContains(res, 'data-copy-rich="#wr-copy-html"')
+        self.assertContains(res, "검토 완료")  # 글 보기에서 바로 상태를 바꾼다
+
+    def test_detail_neighbors_follow_list_order(self):
+        older = Post.objects.create(title="먼저 쓴 글")
+        newer = Post.objects.create(title="나중 쓴 글")
+        res = self.client.get(reverse("writing:detail", args=[newer.pk]))
+        self.assertEqual(res.context["below"], older)
+        self.assertIsNone(res.context["above"])
+
+    def test_list_rows_open_detail(self):
+        post = Post.objects.create(title="글")
+        res = self.client.get(reverse("writing:list"))
+        self.assertContains(res, reverse("writing:detail", args=[post.pk]))
+
+
+class RenderTests(TestCase):
+    def test_paste_html_has_inline_styles(self):
+        out = render_body("| a | b |\n|---|:-:|\n| 1 | 2 |\n\n> 인용\n\n---")
+        self.assertIn('<table style="border-collapse:collapse', out)
+        self.assertIn("text-align:center", out)  # 가운데 정렬 칸
+        self.assertIn('<blockquote style="', out)
+        self.assertIn('<hr style="', out)
+
+    def test_slots_and_captions(self):
+        out = render_body("📷 사진 1: 직접 찍은 사진\n[그림] 그림1.png\n[캡션] 설명 <b>")
+        self.assertIn("📷 사진 1: 직접 찍은 사진", out)
+        self.assertIn("<b>그림1.png</b>", out)
+        self.assertIn("설명 &lt;b&gt;", out)  # 표시 줄의 글은 이스케이프한다
+        self.assertEqual(out.count('class="wr-slot"'), 2)
+
+    def test_single_newline_is_line_break(self):
+        self.assertIn("<br", render_body("한 줄\n다음 줄"))
+
+    def test_image_with_italic_caption(self):
+        out = render_body("![단풍 사진](https://example.com/a.jpg)\n\n*북쪽에서 내려와요.*")
+        self.assertIn('style="max-width:100%;height:auto"', out)
+        self.assertIn("margin-top:-8px\">북쪽에서 내려와요.</p>", out)
+        self.assertNotIn("<em>", out)
+
+    def test_local_image_file_becomes_figure_slot(self):
+        out = render_body("![시기표](그림1_단풍.png)\n*캡션*")
+        self.assertIn('class="wr-slot"', out)
+        self.assertIn("<b>그림1_단풍.png</b>", out)
+        self.assertNotIn("<img", out)
+        self.assertIn(">캡션</p>", out)
+
+    def test_char_count_skips_slots_and_comments(self):
+        out = render_body("가나다\n\n[사진] 아주 긴 사진 설명\n\n<!-- 메모 -->")
+        self.assertEqual(plain_text(out, drop_slots=True), "가나다")
+
+    def test_tag_list(self):
+        self.assertEqual(Post(tags="#가, 나\n다,, ").tag_list, ["가", "나", "다"])

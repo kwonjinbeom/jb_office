@@ -14,13 +14,14 @@ class PostForm(forms.ModelForm):
     class Meta:
         model = Post
         fields = [
-            "title", "summary", "body",
+            "title", "summary", "tags", "body",
             "review_status", "write_status", "publish_status", "published_url", "published_on",
         ]
         widgets = {
             "title": forms.TextInput(attrs={"class": "input", "autofocus": True}),
             "summary": forms.TextInput(attrs={"class": "input"}),
-            "body": forms.Textarea(attrs={"class": "input", "rows": 18, "data-autogrow": ""}),
+            "tags": forms.TextInput(attrs={"class": "input", "placeholder": "단풍절정, 가을여행, 설악산단풍"}),
+            "body": forms.Textarea(attrs={"class": "input wr-body-input", "rows": 24, "data-autogrow": "", "spellcheck": "false"}),
             "review_status": forms.Select(attrs={"class": "input"}),
             "write_status": forms.Select(attrs={"class": "input"}),
             "publish_status": forms.Select(attrs={"class": "input"}),
@@ -31,7 +32,7 @@ class PostForm(forms.ModelForm):
     def __init__(self, *args, stage=Post.Stage.TEMP, **kwargs):
         super().__init__(*args, **kwargs)
         self.label_suffix = ""
-        keep = {"title", "summary", "body", *STAGE_FIELDS[stage]}
+        keep = {"title", "summary", "tags", "body", *STAGE_FIELDS[stage]}
         for name in list(self.fields):
             if name not in keep:
                 del self.fields[name]

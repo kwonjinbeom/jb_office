@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 
 from .forms import PostForm
 from .models import Post
+from .render import plain_text, render_body
 
 Stage = Post.Stage
 
@@ -70,12 +71,54 @@ def create(request):
         post.stage = stage
         post.save()
         messages.success(request, f"{Stage(stage).label}에 추가했습니다.")
-        return redirect(LIST_URLS[stage])
+        return redirect(post)
     return render(
         request,
         "writing/form.html",
         {"page_title": "새 포스트" if stage == Stage.POST else "새 템플릿", "form": form, "post": None,
          "stage": stage, "tabs": _tabs(stage)},
+    )
+
+
+def _neighbors(post):
+    """같은 화면 목록(만든 순서, 최신이 위)에서 바로 위·아래 글."""
+    same = Post.objects.filter(stage=post.stage)
+    above = same.filter(
+        Q(created_at__gt=post.created_at) | Q(created_at=post.created_at, pk__gt=post.pk)
+    ).order_by("created_at", "pk").first()
+    below = same.filter(
+        Q(created_at__lt=post.created_at) | Q(created_at=post.created_at, pk__lt=post.pk)
+    ).order_by("-created_at", "-pk").first()
+    return above, below
+
+
+def detail(request, pk):
+    """글 보기: 블로그에 올라간 모습 그대로 보여 주고, 그대로 복사해 붙여넣게 한다."""
+    post = get_object_or_404(Post, pk=pk)
+    body_html = render_body(post.body)
+    counted = plain_text(body_html, drop_slots=True)
+    above, below = _neighbors(post)
+    return render(
+        request,
+        "writing/detail.html",
+        {
+            "page_title": post.title,
+            "post": post,
+            "stage": post.stage,
+            "tabs": _tabs(post.stage),
+            "body_html": body_html,
+            "body_text": plain_text(body_html),
+            "chars": len(counted),
+            "chars_no_space": len("".join(counted.split())),
+            "slots": body_html.count('class="wr-slot"'),
+            "above": above,
+            "below": below,
+            "next_label": {Stage.TEMP: "검토로", Stage.REVIEW: "포스트로"}.get(post.stage),
+            "prev_label": {Stage.REVIEW: "임시로", Stage.POST: "검토로"}.get(post.stage),
+            "review_choices": Post.Review.choices,
+            "write_choices": Post.Write.choices,
+            "publish_choices": Post.Publish.choices,
+        },
     )
 
 
@@ -85,7 +128,7 @@ def edit(request, pk):
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "저장했습니다.")
-        return redirect(LIST_URLS[post.stage])
+        return redirect(post)
     return render(
         request,
         "writing/form.html",
