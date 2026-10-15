@@ -3,7 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import Post
-from .render import plain_text, render_body
+from .render import clean_html, is_html, plain_text, render_body
 
 Stage = Post.Stage
 
@@ -145,7 +145,7 @@ class RenderTests(TestCase):
     def test_slots_and_captions(self):
         out = render_body("📷 사진 1: 직접 찍은 사진\n[그림] 그림1.png\n[캡션] 설명 <b>")
         self.assertIn("📷 사진 1: 직접 찍은 사진", out)
-        self.assertIn("<b>그림1.png</b>", out)
+        self.assertIn("<strong>그림1.png</strong>", out)
         self.assertIn("설명 &lt;b&gt;", out)  # 표시 줄의 글은 이스케이프한다
         self.assertEqual(out.count('class="wr-slot"'), 2)
 
@@ -161,7 +161,7 @@ class RenderTests(TestCase):
     def test_local_image_file_becomes_figure_slot(self):
         out = render_body("![시기표](그림1_단풍.png)\n*캡션*")
         self.assertIn('class="wr-slot"', out)
-        self.assertIn("<b>그림1_단풍.png</b>", out)
+        self.assertIn("<strong>그림1_단풍.png</strong>", out)
         self.assertNotIn("<img", out)
         self.assertIn(">캡션</p>", out)
 
@@ -171,3 +171,82 @@ class RenderTests(TestCase):
 
     def test_tag_list(self):
         self.assertEqual(Post(tags="#가, 나\n다,, ").tag_list, ["가", "나", "다"])
+
+    def test_clean_html_keeps_blog_markup_only(self):
+        out = clean_html(
+            '<p>가<b>굵게</b><span style="color:red">빨강</span></p><script>alert(1)</script>'
+            '<h1>큰제목</h1><p onclick="x()" style="text-align: center;">가운데</p>'
+            '<p class="wr-slot" style="border:1px dashed #fca5a5">📷 사진</p><p class="evil">x</p>'
+            '<a href="javascript:alert(1)">나쁜</a><img src="javascript:x"><img src="https://i.com/a.jpg" alt="a">'
+            '<p style="background:url(http://x)">배경</p><div>디브</div>'
+        )
+        self.assertNotIn("script", out)
+        self.assertNotIn("alert", out)
+        self.assertNotIn("onclick", out)
+        self.assertNotIn("span", out)
+        self.assertNotIn("url(", out)
+        self.assertNotIn('class="evil"', out)
+        self.assertIn("<strong>굵게</strong>", out)
+        self.assertIn("<h2>큰제목</h2>", out)
+        self.assertIn('<p style="text-align: center;">가운데</p>', out)
+        self.assertIn('<p class="wr-slot"', out)
+        self.assertIn('<img src="https://i.com/a.jpg" alt="a">', out)
+        self.assertIn("<p>디브</p>", out)
+        self.assertEqual(out.count("<img"), 1)
+
+    def test_editor_html_gets_paste_styles(self):
+        self.assertTrue(is_html("<p>가</p>"))
+        self.assertFalse(is_html("## 소제목"))
+        out = render_body("<p>가</p><table><tbody><tr><td>칸</td></tr></tbody></table><blockquote><p>인용</p></blockquote><hr>")
+        self.assertIn('<table style="border-collapse:collapse', out)
+        self.assertIn('<td style="border:1px solid', out)
+        self.assertIn('<blockquote style="', out)
+        self.assertIn('<hr style="', out)
+
+    def test_table_header_survives_tistory_paste(self):
+        # 티스토리 기본 모드는 <thead>/<th> 줄을 표 밖으로 빼므로, 머리글도 굵은 보통 칸으로 만든다
+        out = render_body("| 산 | 날짜 |\n|---|---|\n| 설악산 | 10/20 |")
+        self.assertNotIn("<th", out)
+        self.assertNotIn("<thead", out)
+        self.assertIn("<strong>산</strong></td>", out)
+        self.assertIn("background:#f3f4f6", out)
+
+    def test_markdown_raw_html_is_cleaned_too(self):
+        out = render_body('본문 <a href="javascript:alert(1)">링크</a> <img src=x onerror="alert(1)">')
+        self.assertNotIn("javascript", out)
+        self.assertNotIn("onerror", out)
+
+
+class EditorTests(TestCase):
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+
+    def test_editor_opens_markdown_body_as_blog_html(self):
+        post = Post.objects.create(title="글", body="## 소제목\n\n**굵게**")
+        res = self.client.get(reverse("writing:edit", args=[post.pk]))
+        self.assertContains(res, 'id="wr-editor"')
+        self.assertContains(res, "<h2>소제목</h2>", html=False)
+        self.assertContains(res, "<strong>굵게</strong>", html=False)
+
+    def test_save_from_editor_keeps_clean_html(self):
+        post = Post.objects.create(title="글")
+        self.client.post(reverse("writing:edit", args=[post.pk]), {
+            "title": "줄\n바뀐   제목", "summary": "", "tags": "",
+            "body": '<p>본문<script>x</script></p><h2>소제목</h2><div>디브</div>',
+        })
+        post.refresh_from_db()
+        self.assertEqual(post.title, "줄 바뀐 제목")
+        self.assertEqual(post.body, "<p>본문</p><h2>소제목</h2><p>디브</p>")
+
+    def test_convert_endpoint(self):
+        url = reverse("writing:convert")
+        md = self.client.post(url, {"kind": "markdown", "content": "## 소제목\n\n[사진] 단풍"}).json()["html"]
+        self.assertIn("<h2>소제목</h2>", md)
+        self.assertIn('class="wr-slot"', md)
+        web = self.client.post(url, {"kind": "html", "content": '<div style="font-family:x"><b>굵게</b> 글</div>'}).json()["html"]
+        self.assertIn("<strong>굵게</strong>", web)
+        self.assertNotIn("font-family", web)
+        text = self.client.post(url, {"kind": "text", "content": "첫 줄\n둘째 줄\n\n새 문단 <b>"}).json()["html"]
+        self.assertEqual(text, "<p>첫 줄<br>둘째 줄</p><p>새 문단 &lt;b&gt;</p>")
+        self.assertEqual(self.client.get(url).status_code, 405)
