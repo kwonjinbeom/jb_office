@@ -5,6 +5,7 @@
 {% block heading %}{{ page_title }} <span class="cnt">{{ posts|length }}</span>{% endblock %}
 
 {% block actions %}
+{% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
 <a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}{% if stage == 'post' %}새 포스트{% else %}새 템플릿{% endif %}</a>
 {% endblock %}
 
