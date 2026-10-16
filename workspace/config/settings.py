@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     "apps.naver_writing",
     "apps.blog_types",
     "apps.blog_rules",
+    "apps.blog_ops",
 ]
 
 MIDDLEWARE = [
