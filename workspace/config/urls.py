@@ -1,4 +1,8 @@
 from django.contrib import admin
+
+admin.site.site_header = "JB Office 관리화면"
+admin.site.site_title = "관리화면"
+admin.site.index_title = "데이터 관리"
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 

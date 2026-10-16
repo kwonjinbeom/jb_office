@@ -193,3 +193,37 @@ def api_git_status(request):
 def api_sync(request):
     result = gitstate.run_sync(reason="manual-api")
     return JsonResponse(result, status=200 if result["ok"] else 500)
+
+
+def menu_manage(request):
+    """메뉴 관리: 대메뉴·중메뉴의 이름·순서·보이기. 저장하면 왼쪽 메뉴와 홈 카드에 바로 반영된다."""
+    from .menus import MENUS, _settings, all_menus
+    from .models import MenuSetting
+
+    request.nav_key = "menus"
+    defaults = {}
+    for menu in MENUS:
+        for m in (menu, *menu.children):
+            defaults[m.key] = m.title
+    if request.method == "POST":
+        if request.POST.get("action") == "reset":
+            MenuSetting.objects.all().delete()
+            messages.success(request, "메뉴를 기본값으로 되돌렸습니다.")
+            return redirect("core:menus")
+        keys = [k for k in request.POST.getlist("key") if k in defaults]
+        for order, key in enumerate(keys, start=1):
+            title = " ".join(request.POST.get(f"title_{key}", "").split())[:40]
+            MenuSetting.objects.update_or_create(key=key, defaults={
+                "title": "" if title == defaults[key] else title,
+                "order": order * 10,
+                "hidden": f"show_{key}" not in request.POST,
+            })
+        messages.success(request, "메뉴를 저장했습니다.")
+        return redirect("core:menus")
+    saved = _settings()
+    groups = []
+    for menu in all_menus():
+        rows = [menu, *menu.children]
+        groups.append([{"menu": m, "child": m is not menu, "default": defaults.get(m.key, m.title),
+                        "hidden": bool(saved.get(m.key) and saved[m.key].hidden), "url": m.url} for m in rows])
+    return render(request, "core/menus.html", {"page_title": "메뉴 관리", "groups": groups, "changed": bool(saved)})

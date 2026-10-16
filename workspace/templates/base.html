@@ -77,11 +77,14 @@
     {% endwith %}
 
     <div class="nav-foot">
+      <a class="nav-item{% if request.resolver_match.url_name == 'menus' %} active{% endif %}" href="{% url 'core:menus' %}">
+        <svg class="ic"><use href="#i-list"/></svg><span>메뉴 관리</span>
+      </a>
       <a class="nav-item{% if request.resolver_match.url_name == 'settings' %} active{% endif %}" href="{% url 'core:settings' %}">
         <svg class="ic"><use href="#i-settings"/></svg><span>설정</span>
       </a>
       <a class="nav-item" href="/admin/">
-        <svg class="ic"><use href="#i-shield"/></svg><span>Django 관리자</span>
+        <svg class="ic"><use href="#i-shield"/></svg><span>관리화면</span>
       </a>
       {% if user.is_authenticated %}
       <form method="post" action="{% url 'logout' %}" class="user-row">

@@ -325,10 +325,11 @@ class SideNavTests(TestCase):
         self.client.force_login(user)
 
     def test_parent_menus_only_expand_and_list_child_keeps_old_page(self):
-        res = self.client.get(reverse("blog:list"))
-        self.assertContains(res, "블로그·카페 리스트")
+        res = self.client.get(reverse("video:list"))
+        self.assertContains(res, "영상 콘텐츠 리스트")  # 블로그·카페 리스트는 뺐다 (listing=False)
+        self.assertNotContains(res, "블로그·카페 리스트")
         self.assertContains(res, 'class="nav-item nav-toggle" data-nav-toggle')
-        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")
+        group = next(n for n in res.context["NAV"] if n["menu"].key == "video")
         self.assertTrue(group["open"])
         self.assertTrue(group["children"][0]["active"])  # 리스트 중메뉴가 강조된다
         memos = next(n for n in res.context["NAV"] if n["menu"].key == "memos")

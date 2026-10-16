@@ -1,0 +1,12 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{# 관리화면: Django 관리자를 앱과 같은 글꼴·색으로 (static/css/admin.css). 이름은 config/urls.py 의 admin.site.* #}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title }}{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="{% static 'css/admin.css' %}">
+{% endblock %}
+{% block branding %}
+<div id="site-name"><a href="{% url 'core:home' %}" class="jb-brand" title="JB Office 로"><span class="jb-mark">JB</span><span>Office</span></a><a class="jb-admin" href="{% url 'admin:index' %}">관리화면</a></div>
+{% endblock %}
+{% block nav-global %}{% endblock %}
