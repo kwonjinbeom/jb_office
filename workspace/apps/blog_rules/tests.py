@@ -7,7 +7,7 @@ from django.urls import reverse
 from apps.blog_ops.models import Plan
 from apps.core.models import TrashEntry
 
-from .models import Blog, Rule
+from .models import Blog, Rule, SiteDay
 
 INDEX = reverse("blog_rules:index")
 
@@ -56,18 +56,33 @@ class BlogRulesTests(TestCase):
         Plan.objects.create(blog=nunip, title="손질 중", planned_on=day, status="edit")
         Plan.objects.create(blog=naver, title="다음 날 원고", planned_on=day + timedelta(days=1))
         res = self.client.get(INDEX, {"date": "2026-10-14"})
-        rows = {b.name: (b.published, b.target, b.drafts) for b in res.context["blogs"]}
-        self.assertEqual(rows["눈잎"], (1, 1, 1))
-        self.assertEqual(rows["black_lukey"], (0, 1, 0))
-        self.assertEqual([d["count"] for d in res.context["strip"]], [0, 0, 1, 0, 0, 0, 0])  # 월~일, 14일은 수요일
+        rows = {b.name: (b.published, b.target, b.drafts, b.state) for b in res.context["blogs"]}
+        self.assertEqual(rows["눈잎"], (1, 1, 1, "done"))
+        self.assertEqual(rows["black_lukey"], (0, 1, 0, "todo"))
+        self.assertEqual(rows["밤밤"][3], "")  # 준비 중인 사이트는 상태 없음
+        self.assertEqual([c["state"] for c in res.context["bar"]["cells"]][:3], ["todo", "todo", "todo"])  # 모두 채워야 완료
+        self.assertContains(res, "미완료")
         res = self.client.get(INDEX, {"month": "2026-10"})
-        rows = {b.name: (b.published, b.target, b.drafts) for b in res.context["blogs"]}
+        rows = {b.name: (b.published, b.drafts) for b in res.context["blogs"]}
         self.assertEqual(res.context["mode"], "month")
-        self.assertEqual(rows["눈잎"], (1, 31, 1))
-        self.assertEqual(rows["black_lukey"], (0, 31, 1))
-        self.assertEqual(rows["밤밤"][1], 0)  # 준비 중인 사이트는 목표 없음
-        self.assertEqual(len(res.context["strip"]), 12)
-        self.assertEqual(res.context["nav"]["prev"], "?month=2026-09")
+        self.assertEqual(rows["눈잎"], (1, 1))
+        self.assertEqual(rows["black_lukey"], (0, 1))
+        self.assertEqual(len(res.context["bar"]["cells"]), 12)
+        self.assertEqual(res.context["bar"]["nav"]["prev"], "?month=2026-09")
+
+    def test_edit_counts_then_clear_back_to_auto(self):
+        memorily = Blog.objects.get(name="memorily")
+        url = reverse("blog_rules:count")
+        res = self.client.post(url, {"blog": memorily.pk, "day": "2026-10-14", "field": "published", "value": "1",
+                                     "keep": "date=2026-10-14"})
+        self.assertEqual(res["Location"], f"{INDEX}?date=2026-10-14#site-{memorily.pk}")
+        self.client.post(url, {"blog": memorily.pk, "day": "2026-10-14", "field": "drafts", "value": "2"})
+        res = self.client.get(INDEX, {"date": "2026-10-14"})
+        row = next(b for b in res.context["blogs"] if b.pk == memorily.pk)
+        self.assertEqual((row.published, row.drafts, row.state, row.fixed["published"]), (1, 2, "done", True))
+        self.client.post(url, {"blog": memorily.pk, "day": "2026-10-14", "field": "published", "value": ""})
+        self.client.post(url, {"blog": memorily.pk, "day": "2026-10-14", "field": "drafts", "value": ""})
+        self.assertFalse(SiteDay.objects.exists())  # 둘 다 비우면 자동 값으로
 
     def test_quick_add_edit_delete_check(self):
         blog = Blog.objects.get(name="밤밤")

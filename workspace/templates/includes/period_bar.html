@@ -1,0 +1,34 @@
+{# 위쪽 달력 띠 (apps/core/period.py): 좌우 ← → 로 하루·한 달씩, 가운데 날짜를 누르면 그 자리에 캘린더. 칸마다 완료/미완료. #}
+<div class="cal">
+  <div class="cal-nav">
+    <a class="btn icon" href="{{ bar.nav.prev }}" data-hotkey="ArrowLeft" title="{{ bar.nav.prev_label }} (←)" aria-label="{{ bar.nav.prev_label }}">{% include "includes/ic.html" with name="chevron-left" %}</a>
+    <div class="cal-pick">
+      <button class="cal-title" type="button" data-open-picker title="{% if bar.mode == 'day' %}날짜{% else %}달{% endif %} 고르기">
+        {% if bar.mode == 'day' %}<strong>{{ bar.sel|date:"n월 j일" }} <em>{{ bar.weekday }}요일</em></strong><span>{{ bar.sel|date:"Y년" }}{% if bar.is_now %} · 오늘{% endif %}</span>
+        {% else %}<strong>{{ bar.sel|date:"Y년 n월" }}</strong><span>{{ bar.sel|date:"t" }}일{% if bar.is_now %} · 이번 달{% endif %}</span>{% endif %}
+      </button>
+      <form method="get">
+        {% if bar.mode == 'day' %}<input class="cal-pick-input" type="date" name="date" value="{{ bar.sel|date:'Y-m-d' }}" data-autosubmit tabindex="-1" aria-hidden="true">
+        {% else %}<input class="cal-pick-input" type="month" name="month" value="{{ bar.month_value }}" data-autosubmit tabindex="-1" aria-hidden="true">{% endif %}
+      </form>
+    </div>
+    <a class="btn icon" href="{{ bar.nav.next }}" data-hotkey="ArrowRight" title="{{ bar.nav.next_label }} (→)" aria-label="{{ bar.nav.next_label }}">{% include "includes/ic.html" with name="chevron-right" %}</a>
+  </div>
+
+  <nav class="cal-week" aria-label="기간 띠">
+    <a class="btn ghost sm icon" href="{{ bar.nav.strip_prev }}" title="{{ bar.nav.strip_prev_label }}" aria-label="{{ bar.nav.strip_prev_label }}">{% include "includes/ic.html" with name="chevron-left" %}</a>
+    {% for d in bar.cells %}
+    <a class="cal-day{% if d.on %} on{% endif %}{% if d.today %} today{% endif %}{% if d.weekend %} weekend{% endif %}" href="{{ d.href }}" title="{{ d.title }}{% if d.state == 'done' %} · 완료{% elif d.state == 'todo' %} · 미완료{% endif %}"{% if d.on %} aria-current="date"{% endif %}>
+      <span class="wd">{{ d.top }}</span>
+      <span class="dd">{{ d.main }}</span>
+      <span class="st {{ d.state }}">{% if d.state == 'done' %}완료{% elif d.state == 'todo' %}미완료{% else %}·{% endif %}</span>
+    </a>
+    {% endfor %}
+    <a class="btn ghost sm icon" href="{{ bar.nav.strip_next }}" title="{{ bar.nav.strip_next_label }}" aria-label="{{ bar.nav.strip_next_label }}">{% include "includes/ic.html" with name="chevron-right" %}</a>
+  </nav>
+
+  <div class="cal-tools">
+    <a class="btn sm{% if bar.mode == 'day' %} on{% endif %}" href="?date={% if bar.mode == 'day' %}{{ bar.sel|date:'Y-m-d' }}{% else %}{{ bar.month_value }}-01{% endif %}">일별</a>
+    <a class="btn sm{% if bar.mode == 'month' %} on{% endif %}" href="?month={{ bar.month_value }}">월별</a>
+  </div>
+</div>

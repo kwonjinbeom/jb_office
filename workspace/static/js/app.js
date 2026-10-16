@@ -207,15 +207,15 @@
   document.addEventListener("change", function (e) {
     var el = e.target;
     if (!el.matches || !el.matches("select[data-autosubmit], input[data-autosubmit]") || !el.form) return;
-    if (el.tagName === "INPUT" && !el.value) return;  // 날짜를 지운 것은 이동이 아니다
+    if (el.tagName === "INPUT" && el.type !== "number" && !el.value) return;  // 날짜를 지운 것은 이동이 아니다 (숫자 칸을 비우면 자동 값으로)
     el.form.submit();
   });
 
-  // 달력 띠 가운데 날짜를 누르면 오른쪽 날짜 칸의 캘린더를 연다.
+  // 달력 띠 가운데 날짜를 누르면 그 자리(바로 아래)에 캘린더를 연다. 입력칸은 .cal-pick 안에 숨어 있다.
   document.addEventListener("click", function (e) {
     var btn = e.target.closest && e.target.closest("[data-open-picker]");
     if (!btn) return;
-    var input = btn.closest(".cal") && btn.closest(".cal").querySelector(".cal-tools input[type=date], .cal-tools input[type=month]");
+    var input = btn.parentNode.querySelector(".cal-pick-input");
     if (!input) return;
     try { input.showPicker(); } catch (err) { input.focus(); }
   });

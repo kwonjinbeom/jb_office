@@ -58,8 +58,8 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     )
 
 
-def list_drafts() -> list[Draft]:
-    root = drafts_dir()
+def list_drafts(root: Path | None = None) -> list[Draft]:
+    root = root or drafts_dir()
     if not root.is_dir():
         return []
     out = []

@@ -227,3 +227,30 @@ def set_status(request, pk):
         update.append("published_on")
     post.save(update_fields=update)
     return _back(request, post.stage)
+
+
+def import_drafts(request):
+    """저장소 네이버원고 폴더(일일루틴이 쓴 원고.md)를 골라 임시 템플릿으로 가져온다. 같은 제목이 있으면 건너뛴다."""
+    from apps.routines.views import naver_drafts_dir
+    from apps.writing import drafts as drafts_mod
+
+    folder = naver_drafts_dir()
+    drafts = drafts_mod.list_drafts(folder)
+    existing = set(Post.all_objects.values_list("title", flat=True))
+    if request.method == "POST":
+        chosen = set(request.POST.getlist("keys"))
+        added = 0
+        for d in drafts:
+            if d.key in chosen and d.title not in existing:
+                Post.objects.create(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary)
+                existing.add(d.title)
+                added += 1
+        if added:
+            messages.success(request, f"원고 {added}편을 임시 템플릿으로 가져왔습니다.")
+        else:
+            messages.warning(request, "가져올 원고를 고르세요. (이미 있는 원고는 건너뜁니다)")
+        return redirect("naver_writing:list")
+    rows = [{"draft": d, "exists": d.title in existing,
+             "chars": len("".join(plain_text(render_body(d.body), drop_slots=True).split()))} for d in drafts]
+    return render(request, "naver_writing/import.html",
+                  {"page_title": "원고 가져오기", "rows": rows, "folder": folder, "stage": Stage.TEMP, "tabs": _tabs(Stage.TEMP)})
