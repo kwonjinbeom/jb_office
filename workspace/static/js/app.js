@@ -265,8 +265,26 @@
     // 현재 화면이 속한 가지는 서버가 이미 펴 두었다. 그 밖에는 기억해 둔 대로.
     if (!group.classList.contains("open") && saved[group.getAttribute("data-nav-group")]) setNavOpen(group, true);
   });
+  // 왼쪽 메뉴 접기: 아이콘만 남긴다. 처음 그릴 때의 접힘은 <head> 의 짧은 스크립트가 먼저 붙인다.
+  var root = document.documentElement;
+  function setMini(mini) {
+    root.classList.toggle("nav-mini", mini);
+    all("[data-nav-mini]").forEach(function (b) {
+      b.setAttribute("aria-expanded", mini ? "false" : "true");
+      b.title = mini ? "메뉴 펼치기" : "메뉴 접기";
+    });
+    try { localStorage.setItem("nav.mini", mini ? "1" : "0"); } catch (err) { /* 기억 못 해도 동작은 한다 */ }
+  }
+  if (root.classList.contains("nav-mini")) setMini(true);
   document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest("[data-nav-mini]")) { setMini(!root.classList.contains("nav-mini")); return; }
     var caret = e.target.closest && e.target.closest("[data-nav-toggle]");
+    if (caret && root.classList.contains("nav-mini") && window.matchMedia("(min-width: 761px)").matches) {
+      // 접힌 메뉴에서 하위 메뉴가 있는 항목을 누르면 메뉴를 펴고 그 가지를 연다
+      setMini(false);
+      if (!caret.closest("[data-nav-group]").classList.contains("open")) caret.click();
+      return;
+    }
     if (caret) {
       var group = caret.closest("[data-nav-group]");
       var open = !group.classList.contains("open");

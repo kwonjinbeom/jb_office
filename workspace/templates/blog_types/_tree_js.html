@@ -24,6 +24,30 @@
   });
 })();
 
+/* 트리 전체 접기: 머리의 버튼으로 글 분류 칸을 좁은 띠로 접었다 편다. 이 브라우저에 기억한다 (트리 종류별).
+   처음 그릴 때의 접힘은 트리 안의 짧은 스크립트가 먼저 붙인다 (깜박임 없게). */
+(function () {
+  function sync(layout, btn) {
+    var off = layout.classList.contains("tree-off");
+    btn.setAttribute("aria-expanded", off ? "false" : "true");
+    btn.title = off ? "글 분류 펼치기" : "글 분류 접기";
+  }
+  document.querySelectorAll("[data-bt-hide]").forEach(function (btn) {
+    var layout = btn.closest(".bt-layout");
+    if (layout) sync(layout, btn);
+  });
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-bt-hide]");
+    if (!btn) return;
+    var layout = btn.closest(".bt-layout"), tree = btn.closest("[data-bt-tree]");
+    if (!layout || !tree) return;
+    var off = !layout.classList.contains("tree-off");
+    layout.classList.toggle("tree-off", off);
+    sync(layout, btn);
+    try { localStorage.setItem("bt.hide." + tree.getAttribute("data-bt-tree"), off ? "1" : "0"); } catch (err) {}
+  });
+})();
+
 /* 트리 오른쪽 위 버튼: 추가(+) · 수정(연필) · 삭제(휴지통)를 켜고 끈다. 켠 상태는 이 탭에서 기억한다.
    추가를 켜고 행의 + 를 누르면 그 아래에 이름 칸이 열린다 (Enter 로 추가, Esc 로 닫기). */
 (function () {
