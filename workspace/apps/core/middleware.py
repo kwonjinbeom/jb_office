@@ -29,3 +29,31 @@ class MenuPermissionMiddleware:
         if any(allowed(k, user, saved) for k in keys):
             return None
         raise PermissionDenied("이 메뉴를 볼 권한이 없습니다.")
+
+
+class PcAdminAutoLoginMiddleware:
+    """PC(로그인 없이 쓰는 개발 모드, REQUIRE_LOGIN=False)에서는 관리화면도 따로 로그인하지 않는다 (2026-10-16 사용자).
+
+    관리화면에 들어오면 PC 전용 관리자 계정('pc')으로 자동 로그인한다. 서버(REQUIRE_LOGIN=True)에서는 아무것도 하지 않는다 —
+    서버는 앱에 로그인한 계정(관리자 권한이 있는 계정)으로 관리화면이 바로 열린다.
+    """
+
+    USERNAME = "pc"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.conf import settings
+        from django.urls import reverse
+
+        if not settings.REQUIRE_LOGIN and not request.user.is_authenticated and request.path.startswith(reverse("admin:index")):
+            from django.contrib.auth import get_user_model, login
+
+            user, created = get_user_model().objects.get_or_create(
+                username=self.USERNAME, defaults={"is_staff": True, "is_superuser": True})
+            if created:
+                user.set_unusable_password()
+                user.save(update_fields=["password"])
+            login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        return self.get_response(request)
