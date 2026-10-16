@@ -4,7 +4,9 @@ PC 서버(run.bat)가 꺼져 있어도 된다 (2026-10-16 사용자: "누르면 
 화면은 안내문을 클립보드에 복사한 뒤 링크를 연다. 링크는 run.bat / routine_link.bat 이 Windows 에 한 번 등록한다.
 claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
-링크: jbroutine:<run|update|all>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
+링크: jbroutine:<run|update|all|convert>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
+convert: 사이트별 템플릿의 '변환'·'전체 변환' (2026-10-17 사용자). 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
+루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
 """
 import json
 import os
@@ -23,9 +25,10 @@ from .models import Routine, RoutineRun
 
 WINDOWS = os.name == "nt"
 SCHEME = "jbroutine"
-KINDS = ("run", "update", "all")
+KINDS = ("run", "update", "all", "convert")
 KEY = re.compile(r"[a-z0-9_-]{1,30}")
 PROMPT_HEAD = "# 일일루틴"  # launcher · all_prompt · restore_prompt 가 모두 이렇게 시작한다
+CONVERT_HEAD = "# 사이트 변환"  # apps/site_templates/prompt.LAUNCH_HEAD
 
 # 로컬 실행 claude 에 미리 허용하는 것: 루틴이 늘 하는 일 (저장소 안 읽기·쓰기, 웹 검색, 브라우저, git 올리기, 진행 보고).
 # 묻는 건 권한이 없어 막힐 때만 (2026-10-16 사용자). 방법·선택을 묻는 질문 도구와 크롬 확장(사이트마다 허락을 묻는다)은 막는다.
@@ -150,11 +153,17 @@ def start(link, text):
     """링크와 안내문으로 실행을 시작한다: 안내문 저장 → 로컬 현황 기록 → claude 터미널. 알릴 한 줄을 돌려준다."""
     req = parse_link(link)
     text = text.replace("\r\n", "\n")
-    if not text.startswith(PROMPT_HEAD):
+    kind, key, day = req["kind"], req["key"], req["day"]
+    if kind == "convert":
+        if not text.startswith(CONVERT_HEAD):
+            raise ValueError("클립보드에 사이트 변환 안내문이 없습니다. 사이트별 템플릿에서 '변환'을 다시 누르세요.")
+    elif not text.startswith(PROMPT_HEAD):
         raise ValueError("클립보드에 일일루틴 안내문이 없습니다. 화면에서 '실행'을 다시 누르세요.")
     claude = find_claude() if WINDOWS else "claude"  # 못 찾으면 현황을 남기기 전에 멈춘다
-    kind, key, day = req["kind"], req["key"], req["day"]
-    if kind == "all":
+    if kind == "convert":
+        name, title = f"{key}-{day}.md", "사이트 변환"
+        done = "PC 터미널에서 사이트 변환을 시작했습니다. 끝나면 사이트별 템플릿을 새로고침하세요."
+    elif kind == "all":
         for k in req["keys"]:
             _open_run(_routine_for(k), day, "전체 실행 · 차례를 기다립니다")
         name, title = f"all-{day}.md", "일일루틴 전체 실행"
@@ -166,7 +175,7 @@ def start(link, text):
         name, title = f"{key}-{'update-' if kind == 'update' else ''}{day}.md", f"일일루틴 {routine.name} {label}"
         done = f"PC 터미널에서 {routine.name} {label}을 시작했습니다."
     folder = settings.BASE_DIR / ".routine"
-    folder.mkdir(exist_ok=True)
+    (folder / "convert").mkdir(parents=True, exist_ok=True)  # 변환본 본문 파일 자리 (prompt.launcher)
     (folder / name).write_text(text, encoding="utf-8")
     manual = open_terminal(name, title, claude)
     return f"저장소 폴더에서 실행하세요: {manual}" if manual else done

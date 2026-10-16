@@ -14,7 +14,7 @@
 
 <section class="card bt-list">
   <table class="grid bt-grid">
-    <thead><tr>{% if show_site %}<th style="width:96px">사이트</th>{% endif %}{% if show_cat %}<th style="width:16%">카테고리</th>{% endif %}<th>제목</th><th style="width:200px">상태</th><th style="width:84px">변환</th><th style="width:44px"></th></tr></thead>
+    <thead><tr>{% if show_site %}<th style="width:96px">사이트</th>{% endif %}{% if show_cat %}<th style="width:16%">카테고리</th>{% endif %}<th>제목</th><th style="width:168px">발행</th><th style="width:84px">변환</th><th style="width:44px"></th></tr></thead>
     <tbody>
       {% for pl in placements %}
       <tr>
@@ -24,7 +24,7 @@
         <td>
           <form method="post" action="{% url 'blog_types:place_status' pl.pk %}" class="status-seg">{% csrf_token %}
             <input type="hidden" name="next" value="{{ here }}">
-            {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == pl.status %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
+            {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == pl.status %}class="on" disabled{% endif %} title="{% if value == 'published' %}그 사이트에 올렸으면 발행 완료로 (글의 발행 상태도 같이){% else %}아직 안 올림{% endif %}">{{ label }}</button>{% endfor %}
           </form>
         </td>
         <td><a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></td>
@@ -45,10 +45,9 @@
     {% csrf_token %}<input type="hidden" name="site_category" value="{{ sobj.pk }}"><input type="hidden" name="next" value="{{ here }}">
     {% if candidates %}
     <select class="input sm" name="post" aria-label="넣을 글" required>
-      <option value="">넣을 글 고르기 (발행예정글)</option>
+      <option value="">넣을 글 고르기 (발행예정글, [사이트] 이 사이트 글이 위)</option>
       {% for pk, label in candidates %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
     </select>
-    <select class="input sm" name="status" aria-label="상태">{% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
     <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="plus" %}넣기</button>
     {% else %}
     <span class="muted small">넣을 발행예정글이 없습니다.</span>

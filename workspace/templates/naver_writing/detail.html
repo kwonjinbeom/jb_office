@@ -46,9 +46,11 @@
 <div class="wr-read nv-read">
   {% if stage != 'temp' or post.summary or slots %}
   <div class="wr-read-info">
-    {% if stage == 'review' %}
-    <div class="wr-info-row"><span class="k">검토</span>{% include "naver_writing/_status.html" with field="review_status" current=post.review_status choices=review_choices %}</div>
-    {% elif stage == 'post' %}
+    {% if stage == 'review' or stage == 'post' %}
+    <div class="wr-info-row"><span class="k">사이트</span>{% include "blog_types/_site_pick.html" with ref=post_ref current=post.target label=post.title %}</div>
+    {% endif %}
+    {% if stage == 'post' %}
+    <div class="wr-info-row"><span class="k">넣은 곳</span><span class="wr-info-text">{% for pl in post_placements %}<span class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category }} <a class="badge cv-{{ pl.convert_status }}" href="{% if pl.convert_status == 'none' %}{% url 'site_templates:index' %}?site={{ pl.site_category.sel }}{% else %}{% url 'site_templates:convert' pl.pk %}{% endif %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></span>{% empty %}<a class="small" href="{% url 'blog_types:index' %}?{% if post.target %}psite={{ post.target|urlencode }}&amp;{% endif %}{% if post.bt_category_id %}sel=c{{ post.bt_category_id }}{% else %}sel=u{% endif %}">글 매핑 관리에서 카테고리에 넣기</a>{% endfor %}</span></div>
     <div class="wr-info-row"><span class="k">작성</span>{% include "naver_writing/_status.html" with field="write_status" current=post.write_status choices=write_choices %}</div>
     <div class="wr-info-row"><span class="k">발행</span>{% include "naver_writing/_status.html" with field="publish_status" current=post.publish_status choices=publish_choices %}
       {% if post.published_url %}<a class="btn ghost sm" href="{{ post.published_url }}" target="_blank" rel="noopener">{% include "includes/ic.html" with name="external" %}발행한 글 열기</a>{% elif post.is_published %}<a class="small" href="{% url 'naver_writing:edit' post.pk %}">발행 주소 적기</a>{% endif %}

@@ -6,5 +6,6 @@ app_name = "posts"
 urlpatterns = [
     path("", posts.index, name="index"),
     path("bulk/", posts.bulk, name="bulk"),
+    path("site/", posts.site, name="site"),
     path("view/", posts.view, name="view"),
 ]

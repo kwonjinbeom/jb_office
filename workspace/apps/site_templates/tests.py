@@ -6,6 +6,7 @@ from apps.blog_rules.models import Blog
 from apps.blog_types.models import Placement, SiteCategory
 from apps.writing.models import Post
 
+from . import prompt
 from .models import PlatformFormat, SiteTemplate
 
 
@@ -24,8 +25,62 @@ class SiteTemplateTests(TestCase):
         res = self.client.get(reverse("site_templates:index"))
         self.assertContains(res, "memorily")
         self.assertContains(res, "사이트별 템플릿")  # 메뉴
-        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 발행예정글 · 발행 전 글
-        self.assertContains(res, "눈잎 — 카테고리 먼저")  # 카테고리 없는 사이트는 못 고른다
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 발행예정글 · 발행 전 · 미변환
+        self.assertEqual(res.context["ready_ids"], str(self.pl.pk))  # 넣은 글은 변환 버튼
+        self.assertContains(res, f'href="?site={self.java.sel}"')  # 왼쪽 사이트 카테고리 트리
+
+    def test_category_concept_and_convert_button_scope(self):
+        from apps.writing.models import Post as T
+        unmapped = T.objects.create(title="아직 안 넣은 글", stage="post")
+        T.objects.create(title="발행한 글", stage="post", publish_status="done")
+        other = SiteCategory.objects.get(blog__name="black_lukey", name="낙서장")
+        res = self.client.get(reverse("site_templates:index"), {"site": other.sel})
+        posts = {p.title: p for p in res.context["posts"]}
+        self.assertEqual(set(posts), {"자바 정리", "아직 안 넣은 글"})
+        self.assertEqual(posts["자바 정리"].ready, [])  # 다른 카테고리에 넣은 글은 버튼 없음
+        self.assertEqual(res.context["ready_count"], 0)
+        self.assertContains(res, "다른 카테고리")
+        self.assertContains(res, "매핑 먼저")
+        url = reverse("site_templates:index")
+        res = self.client.post(f"{url}?site={self.java.sel}", {"k-concept": "자바 기초를 예제 하나로"})
+        self.java.refresh_from_db()
+        self.assertEqual(self.java.concept, "자바 기초를 예제 하나로")
+        res = self.client.get(url, {"site": self.java.sel})
+        self.assertEqual(res.context["ready_count"], 1)
+        self.assertContains(res, "자바 기초를 예제 하나로")
+        self.assertIn("## 카테고리 컨셉\n- Java: 자바 기초를 예제 하나로", prompt.build(self.pl))  # 요청문에 카테고리 컨셉
+        self.pl.convert_status = "done"
+        self.pl.save()
+        res = self.client.get(url)
+        self.assertEqual([p.title for p in res.context["posts"]], ["아직 안 넣은 글"])  # 변환한 글은 아래 '변환한 글'로
+        self.assertEqual([pl.pk for pl in res.context["done"]], [self.pl.pk])
+        self.assertTrue(unmapped)
+
+    def test_run_needs_token_then_launches_and_api_saves(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        run = reverse("site_templates:run")
+        res = self.client.post(run, {"ids": str(self.pl.pk)})
+        self.assertEqual(res.status_code, 400)  # 보고 토큰이 없으면 시작하지 않는다
+        self.pl.refresh_from_db()
+        self.assertEqual(self.pl.convert_status, "none")
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok-123")
+        data = self.client.post(run, {"ids": f"{self.pl.pk},999"}).json()
+        self.assertTrue(data["prompt"].startswith("# 사이트 변환"))
+        self.assertTrue(data["key"].startswith("cv-"))
+        self.assertIn("token=tok-123", data["prompt"])
+        self.assertIn(f"workspace/.routine/convert/{self.pl.pk}.md", data["prompt"])
+        self.assertIn("## 원문", data["prompt"])
+        self.pl.refresh_from_db()
+        self.assertEqual(self.pl.convert_status, "requested")
+        api = reverse("site_templates:api_save", args=[self.pl.pk])
+        self.client.logout()
+        self.assertEqual(self.client.post(f"{api}?token=bad", {"body": "x"}).status_code, 403)
+        res = self.client.post(f"{api}?token=tok-123", {"title": "바꾼 제목", "body": "## 바꾼\r\n본문", "tags": "자바, 기초"})
+        self.assertEqual(res.content.decode(), f"ok {self.pl.pk} done")
+        self.pl.refresh_from_db()
+        self.assertEqual((self.pl.convert_status, self.pl.converted_title, self.pl.converted_body, self.pl.converted_tags),
+                         ("done", "바꾼 제목", "## 바꾼\n본문", "자바, 기초"))
+        self.assertIsNotNone(self.pl.converted_at)
 
     def test_site_page_saves_template_and_format(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])
@@ -37,19 +92,7 @@ class SiteTemplateTests(TestCase):
         self.assertEqual(PlatformFormat.objects.get(platform="tistory").guide, "새 포맷")
         res = self.client.get(url)
         self.assertNotContains(res, "자바 정리")  # 상세는 컨셉·템플릿만, 글 변환은 메인에서
-        self.assertContains(res, f'href="{reverse("site_templates:index")}"')  # 뒤로
-
-    def test_request_convert_from_main(self):
-        from apps.writing.models import Post as T
-        new = T.objects.create(title="새 포스트", stage="post")
-        T.objects.create(title="발행한 글", stage="post", publish_status="done")
-        res = self.client.get(reverse("site_templates:index"))
-        self.assertNotIn("발행한 글", [p.title for p in res.context["posts"]])
-        self.client.post(reverse("site_templates:request"), {"post": f"tistory:{new.pk}", "site_category": self.java.pk})
-        pl = Placement.objects.get(tistory_post=new)
-        self.assertEqual((pl.site_category, pl.convert_status), (self.java, "requested"))
-        self.client.post(reverse("site_templates:request"), {"post": f"tistory:{new.pk}", "site_category": self.java.pk})
-        self.assertEqual(Placement.objects.filter(tistory_post=new).count(), 1)  # 이미 넣은 곳이면 요청만 다시
+        self.assertContains(res, f'href="{reverse("site_templates:index")}?site={self.memorily.sel}"')  # 뒤로 (그 사이트를 고른 채)
 
     def test_convert_flow(self):
         url = reverse("site_templates:convert", args=[self.pl.pk])

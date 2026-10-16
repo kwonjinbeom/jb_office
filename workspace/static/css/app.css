@@ -1103,6 +1103,23 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .bt-pane-title { font-size: 15px; }
 .bt-unclassified .nm { color: var(--text-3); }
 .bt-place-pick { width: 100%; }
+.bt-pane-filter { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; flex: none; }
+.bt-pane-filter select { width: 130px; }
+/* 글 관리·글 보기의 사이트 고르기 (검토글·발행예정글) */
+.wr-site-pick { display: inline-flex; min-width: 0; max-width: 100%; }
+.wr-site-pick select { width: 100%; min-width: 110px; }
+/* 사이트별 템플릿: 왼쪽 사이트 카테고리 트리 + 오른쪽 컨셉 · 변환할 글 · 변환한 글 (오른쪽만 스크롤) */
+.st-main { overflow: auto; padding: 12px var(--gutter) 20px; gap: 12px; }
+.st-main > .card { flex: none; }
+.st-concept .k { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.st-concept-site { display: flex; gap: 10px; align-items: baseline; font-size: 13.5px; padding-top: 10px; padding-bottom: 0; }
+.st-concept-site .k { flex: none; min-width: 72px; }
+.st-concept-form { display: grid; gap: 6px; }
+.st-concept-form textarea { width: 100%; }
+.st-concept-foot { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.st-noconcept { color: var(--warn); font-weight: 700; }
+.bt-chip.muted { opacity: .55; }
+.bt-chip.bt-chip-wrap { white-space: normal; flex-wrap: wrap; row-gap: 2px; }
 .badge.cv-none { color: var(--text-3); }
 .badge.cv-requested { background: var(--warn-weak); color: var(--warn); }
 .badge.cv-done { background: var(--accent-weak); color: var(--accent); }
@@ -1492,12 +1509,3 @@ a.br-addr:hover { color: var(--accent); }
 .pk-changes strong { display: block; color: var(--text-2); }
 
 /* 사이트별 템플릿 메인: 사이트 카드(같은 크기) + 변환할 글 */
-.st-sites { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
-.st-site { display: grid; grid-template-rows: auto 40px auto; gap: 6px; padding: 12px 14px; color: var(--text); height: 118px; }
-.st-site:hover { text-decoration: none; border-color: var(--accent); }
-.st-site-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.st-site-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.st-site-concept { font-size: 12.5px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.st-site-cv { display: flex; gap: 4px; flex-wrap: wrap; overflow: hidden; height: 20px; }
-.st-pick { display: flex; gap: 6px; }
-.st-pick select { flex: 1; min-width: 0; }

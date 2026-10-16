@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.blog_types import classify
@@ -314,10 +313,10 @@ def set_status(request, pk):
     if choices is None or value not in choices.values:
         messages.warning(request, "바꿀 수 없는 상태입니다.")
         return _back(request, post.stage)
+    if field == "publish_status":  # 넣은 곳(매핑)의 발행 상태도 같이
+        from apps.blog_types import sites
+        sites.publish(post, value == Post.Publish.DONE)
+        return _back(request, post.stage)
     setattr(post, field, value)
-    update = [field, "updated_at"]
-    if field == "publish_status" and value == Post.Publish.DONE and not post.published_on:
-        post.published_on = timezone.localdate()
-        update.append("published_on")
-    post.save(update_fields=update)
+    post.save(update_fields=[field, "updated_at"])
     return _back(request, post.stage)

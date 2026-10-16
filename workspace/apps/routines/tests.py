@@ -126,6 +126,22 @@ class TempRepoTests(Login):
             call_command("routine_open", "jbroutine:run?key=writing", stdout=StringIO(), stderr=StringIO())
         popen.assert_not_called()
 
+    @patch("apps.routines.local_run.WINDOWS", True)
+    @patch("apps.routines.local_run.find_claude", return_value="claude")
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_convert_link_opens_terminal_without_routine_run(self, popen, _claude):
+        """사이트별 템플릿의 '변환': jbroutine:convert. 루틴 현황은 남기지 않고, 안내문은 '# 사이트 변환' 이어야 한다."""
+        link = "jbroutine:convert?key=cv-101530&day=2026-10-17&name=x"
+        with self.assertRaises(ValueError):
+            start(link, "# 일일루틴 · 글쓰기")
+        self.assertIn("사이트 변환을 시작", start(link, "# 사이트 변환 · 2026-10-17 · 1편\r\n본문"))
+        folder = self.root / "workspace" / ".routine"
+        self.assertEqual((folder / "cv-101530-2026-10-17.md").read_text(encoding="utf-8"), "# 사이트 변환 · 2026-10-17 · 1편\n본문")
+        self.assertTrue((folder / "convert").is_dir())
+        args = popen.call_args[0][0]
+        self.assertEqual(args[args.index("claude") + 1], "workspace/.routine/cv-101530-2026-10-17.md 파일을 읽고 그대로 진행해.")
+        self.assertFalse(RoutineRun.objects.exists())
+
     def test_find_claude_falls_back_to_desktop_app(self):
         with tempfile.TemporaryDirectory() as tmp:
             for ver in ["2.1.9", "2.1.295", "2.1.271"]:

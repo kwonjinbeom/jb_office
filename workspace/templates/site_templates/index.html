@@ -4,53 +4,161 @@
 
 {% block heading %}사이트별 템플릿{% if requested %} <span class="cnt">변환 요청 {{ requested }}</span>{% endif %}{% endblock %}
 
-{% block content %}
-{# 위: 사이트 카드 (같은 크기 격자). 누르면 그 사이트의 컨셉·템플릿 고치기 #}
-<div class="st-sites">
-  {% for b in sites %}
-  <a class="card st-site" href="{% url 'site_templates:site' b.pk %}" title="{{ b.name }} 컨셉·템플릿 고치기">
-    <div class="st-site-head"><span class="br-plat">{{ b.get_platform_display }}</span><strong>{{ b.name }}</strong></div>
-    <div class="st-site-concept">{{ b.content|default:"컨셉 미정" }}</div>
-    <div class="st-site-cv">
-      {% if b.cv.requested %}<span class="badge cv-requested">요청 {{ b.cv.requested }}</span>{% endif %}
-      {% if b.cv.done %}<span class="badge cv-done">완료 {{ b.cv.done }}</span>{% endif %}
-      {% if b.cv.checked %}<span class="badge cv-checked">확인 {{ b.cv.checked }}</span>{% endif %}
-      {% if not b.cv.requested and not b.cv.done and not b.cv.checked %}<span class="muted small">변환 없음</span>{% endif %}
-    </div>
-  </a>
-  {% endfor %}
-</div>
+{% block body_class %}fill{% endblock %}
 
-{# 메인: 발행예정글 단계 · 아직 발행 완료가 아닌 글. 글마다 사이트를 골라 변환 요청 #}
-<section class="card">
-  <div class="card-head"><h3 class="card-title">변환할 글 <span class="cnt">{{ posts|length }}</span></h3><span class="hint">발행예정글 · 발행 전</span></div>
-  <table class="grid bt-grid st-posts">
-    <thead><tr><th>제목</th><th style="width:34%">넣은 곳 · 변환</th><th style="width:300px">사이트 골라 변환</th></tr></thead>
-    <tbody>
-      {% for p in posts %}
-      <tr>
-        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
-        <td class="small">
-          {% for pl in p.placements.all %}<div class="bt-chip"><a href="{% url 'site_templates:convert' pl.pk %}">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }}</a> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a></div>{% empty %}<span class="muted">-</span>{% endfor %}
-        </td>
-        <td>
-          <form class="st-pick" method="post" action="{% url 'site_templates:request' %}">{% csrf_token %}
-            <input type="hidden" name="post" value="{{ p.writer }}:{{ p.pk }}">
-            <select class="input sm" name="site_category" required aria-label="{{ p.title }} 변환할 사이트">
-              <option value="">사이트 고르기</option>
-              {% for g in site_choices %}
-              {% if g.rows %}<optgroup label="{{ g.blog.name }} ({{ g.blog.get_platform_display }})">{% for pk, label in g.rows %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}</optgroup>
-              {% else %}<option disabled>{{ g.blog.name }} — 카테고리 먼저 (글 매핑 관리)</option>{% endif %}
-              {% endfor %}
-            </select>
-            <button class="btn primary sm" type="submit">변환 요청</button>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="3" class="grid-empty">발행예정글 단계의 발행 전 글이 없습니다. 글 관리에서 발행예정으로 보내면 여기에 모입니다.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
+{% block content %}
+<div class="bt-layout">
+  {# 왼쪽: 글 매핑 관리와 같은 사이트 › 카테고리 › 하위 카테고리. 숫자는 변환할 수 있는 글(미변환 매핑) 수. 카테고리 추가·이름은 글 매핑 관리에서 #}
+  <nav class="bt-tree" aria-label="사이트 카테고리" data-bt-tree="stsite">
+  <script>try{if(localStorage.getItem("bt.hide.stsite")==="1"){var l=document.currentScript.closest(".bt-layout");if(l)l.classList.add("tree-off");}}catch(e){}</script>
+    <div class="bt-tree-head">
+      <button type="button" class="bt-hide" data-bt-hide aria-expanded="true" title="사이트 카테고리 접기" aria-label="사이트 카테고리 접기·펼치기">{% include "includes/ic.html" with name="panel-left" %}</button>
+      <span class="bt-tree-title">사이트 카테고리</span>
+      <a class="pl-back" href="{% url 'blog_types:index' %}" title="카테고리 추가·이름 고치기, 글 넣기">글 매핑 관리</a>
+    </div>
+    <div class="bt-row bt-all-row">
+      <span class="bt-tog-gap"></span>
+      <a class="bt-node lv0{% if not sel %} on{% endif %}" href="?"><span class="nm">모든 사이트</span></a>
+    </div>
+    {% for b in sites %}
+    <div class="bt-section" data-bt-branch="st{{ b.sel }}"{% if blog and blog.pk == b.pk %} data-bt-force-open{% endif %}>
+      <div class="bt-row">
+        <button type="button" class="bt-tog" data-bt-toggle aria-label="{{ b.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>
+        <a class="bt-node lv0{% if sel == b.sel %} on{% endif %}" href="?site={{ b.sel }}">
+          <span class="nm">{{ b.name }}</span>
+          <span class="bt-plat">{{ b.get_platform_display }}</span>
+          {% if b.count %}<span class="ct">{{ b.count }}</span>{% endif %}
+        </a>
+      </div>
+      <div class="bt-kids-tree">
+        {% for c in b.top_cats %}
+        <div class="bt-row"><span class="bt-tog-gap"></span>
+          <a class="bt-node lv1{% if sel == c.sel %} on{% endif %}" href="?site={{ c.sel }}"{% if c.concept %} title="{{ c.concept|truncatechars:120 }}"{% endif %}>
+            <span class="nm">{{ c.name }}</span>
+            {% if not c.concept %}<span class="st-noconcept" title="컨셉 없음">·</span>{% endif %}
+            {% if c.count %}<span class="ct">{{ c.count }}</span>{% endif %}
+          </a>
+        </div>
+        {% for s in c.children.all %}
+        <div class="bt-row">
+          <a class="bt-node lv2{% if sel == s.sel %} on{% endif %}" href="?site={{ s.sel }}"{% if s.concept %} title="{{ s.concept|truncatechars:120 }}"{% endif %}>
+            <span class="nm">{{ s.name }}</span>
+            {% if s.count %}<span class="ct">{{ s.count }}</span>{% endif %}
+          </a>
+        </div>
+        {% endfor %}
+        {% empty %}
+        <div class="bt-empty-line">카테고리 없음 (글 매핑 관리에서 추가)</div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </nav>
+
+  <section class="ph-main st-main">
+    {# 위: 고른 것의 컨셉. 카테고리는 여기서 바로 고친다. 사이트는 컨셉·말투·구성·포맷 화면으로 #}
+    <div class="bt-pane-head">
+      {% if obj %}
+      <span class="badge {% if kind == 'site' %}green{% else %}blue{% endif %}">{% if kind == 'site' %}사이트{% else %}카테고리{% endif %}</span>
+      <div class="bt-path">{% for label, url in path %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
+      <span class="br-plat">{{ blog.get_platform_display }}</span>
+      <a class="btn sm" style="margin-left:auto" href="{% url 'site_templates:site' blog.pk %}">{% include "includes/ic.html" with name="edit" %}{{ blog.name }} 컨셉·템플릿</a>
+      {% else %}
+      <span class="badge gray">변환</span><strong class="bt-pane-title">모든 사이트</strong>
+      <span class="muted small">왼쪽에서 카테고리를 고르면 그 컨셉을 보고 고치고, 그 카테고리에 넣은 글을 변환합니다.</span>
+      {% endif %}
+    </div>
+
+    {% if obj %}
+    <section class="card st-concept">
+      <div class="card-body st-concept-site"><span class="k">사이트 컨셉</span><span>{{ blog.content|default:"(없음 — 컨셉·템플릿에서 적기)" }}</span></div>
+      {% if parent_concept %}<div class="card-body st-concept-site"><span class="k">{{ obj.parent.name }}</span><span>{{ parent_concept }}</span></div>{% endif %}
+      {% if concept_form %}
+      <form method="post" class="card-body st-concept-form">{% csrf_token %}
+        <label class="k" for="{{ concept_form.concept.id_for_label }}">{{ obj.name }} 컨셉</label>
+        {{ concept_form.concept }}
+        <div class="st-concept-foot"><span class="muted small">변환 요청문에 사이트 컨셉 다음으로 들어갑니다. 이 카테고리 글의 방향·말투·구성을 적으세요.</span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {# 변환할 글: 발행예정글 · 발행 전 · 미변환. 고른 범위에 넣은(매핑한) 글만 변환 버튼 #}
+    <section class="card">
+      <div class="card-head">
+        <h3 class="card-title">변환할 글 <span class="cnt">{{ posts|length }}</span></h3>
+        <span class="hint">발행예정글 · 미변환 · 변환은 PC 터미널의 claude 가 합니다</span>
+        <span style="margin-left:auto"></span>
+        {% if not has_token %}<a class="small" href="{% url 'core:settings' %}" title="claude 가 변환본을 서버로 보낼 때 쓰는 토큰">보고 토큰 먼저 만들기</a>{% endif %}
+        <button type="button" class="btn sm primary" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" {% if not ready_count %}disabled title="{% if obj %}이 범위에 넣은 미변환 글이 없습니다{% else %}카테고리에 넣은 미변환 글이 없습니다{% endif %}"{% endif %}>{% include "includes/ic.html" with name="server" %}변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>
+      </div>
+      <table class="grid bt-grid st-posts">
+        <thead><tr><th>제목</th><th style="width:96px">사이트</th><th style="width:30%">넣은 곳 (미변환)</th><th style="width:120px"></th></tr></thead>
+        <tbody>
+          {% for p in posts %}
+          <tr>
+            <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
+            <td class="small bt-cut">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
+            <td class="small">{% for pl in p.todo %}<div class="bt-chip{% if pl not in p.ready %} muted{% endif %}">{{ pl.site_category.blog.name }} › {{ pl.site_category }}</div>{% empty %}<a class="muted" href="{% url 'blog_types:index' %}?{% if p.target %}psite={{ p.target|urlencode }}&amp;{% endif %}{% if obj %}site={{ sel }}&amp;{% endif %}{% if p.bt_category_id %}sel=c{{ p.bt_category_id }}{% else %}sel=u{% endif %}">카테고리에 넣기 (글 매핑 관리)</a>{% endfor %}</td>
+            <td class="r">
+              {% if p.ready %}
+              <button type="button" class="btn sm primary" data-st-run="{% for pl in p.ready %}{{ pl.pk }}{% if not forloop.last %},{% endif %}{% endfor %}" title="{% for pl in p.ready %}{{ pl.site_category.blog.name }} › {{ pl.site_category }}{% if not forloop.last %}, {% endif %}{% endfor %}">{% include "includes/ic.html" with name="server" %}변환</button>
+              {% elif p.todo %}<span class="muted small">다른 카테고리</span>
+              {% else %}<span class="muted small">매핑 먼저</span>{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="grid-empty">미변환인 발행예정글이 없습니다.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    {# 변환 요청 · 완료 · 확인한 것 (고른 범위). 누르면 변환 화면 (원문 ↔ 변환본, 붙여넣기 복사) #}
+    <section class="card">
+      <div class="card-head"><h3 class="card-title">변환한 글 <span class="cnt">{{ done|length }}</span></h3><span class="hint">요청 중이면 claude 가 끝낸 뒤 새로고침</span></div>
+      <table class="grid bt-grid clickable">
+        <thead><tr><th>제목</th><th style="width:30%">넣은 곳</th><th style="width:96px">변환</th><th style="width:96px">발행</th><th style="width:92px">수정일</th></tr></thead>
+        <tbody>
+          {% for pl in done %}
+          <tr data-href="{% url 'site_templates:convert' pl.pk %}">
+            <td class="title-cell"><a href="{% url 'site_templates:convert' pl.pk %}">{{ pl.converted_title|default:pl.post.title }}</a></td>
+            <td class="small bt-cut">{{ pl.site_category.blog.name }} › {{ pl.site_category }}</td>
+            <td><span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span></td>
+            <td><span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span></td>
+            <td class="small muted num">{{ pl.updated_at|date:"m-d H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="grid-empty">아직 변환한 글이 없습니다.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </section>
+</div>
+<form id="st-run-form" hidden>{% csrf_token %}</form>
+{% endblock %}
+
+{% block scripts %}
+{% include "blog_types/_tree_js.html" %}
+<script>
+/* 변환 · 전체 변환: 서버가 변환 요청으로 바꾸고 안내문을 돌려주면, 복사하고 jbroutine:convert 링크로 PC 터미널 claude 를 연다.
+   claude 는 변환본을 서버로 보낸다. 몇 초 뒤 새로고침 (요청 중으로 보인다). */
+document.addEventListener("click", function (e) {
+  var go = e.target.closest("[data-st-run]");
+  if (!go || go.disabled) return;
+  var n = Number(go.dataset.stCount || 0);
+  if (n > 1 && !confirm(n + "편을 변환합니다. PC 터미널에서 claude 가 차례로 변환해 서버로 보냅니다.")) return;
+  var data = new FormData(document.getElementById("st-run-form"));
+  data.set("ids", go.dataset.stRun);
+  go.disabled = true;
+  fetch("{% url 'site_templates:run' %}", { method: "POST", body: data, credentials: "same-origin" })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok) { App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); go.disabled = false; return; }
+      App.rtLaunch(res.j.prompt, { kind: "convert", key: res.j.key, day: res.j.day, name: "사이트 변환" }, true);
+    })
+    .catch(function () { App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); go.disabled = false; });
+});
+</script>
 {% endblock %}
