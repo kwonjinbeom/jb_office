@@ -42,9 +42,9 @@ class Menu:
 
 MENUS: list[Menu] = [
     Menu(
-        "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(로컬·클라우드) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
+        "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(매일 아침 예약 · 더 하고 싶으면 실행) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
         children=(
-            Menu("routine_prompts", "프롬프트 관리", "루틴마다 로컬·클라우드 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
+            Menu("routine_prompts", "프롬프트 관리", "루틴마다 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),
     ),
     # 일일 아이디어 + 내 아이디어 (2026-10-16 사용자). 검색 표준은 일일루틴 › 프롬프트 관리의 자료로 옮겨 메뉴에서 뺐다.

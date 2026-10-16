@@ -8,6 +8,7 @@ urlpatterns = [
     path("prompts/", views.prompts, name="prompts"),
     path("new/", views.edit, name="create"),
     path("doc/<path:rel>", views.doc, name="doc"),
+    path("brief/<slug:key>/", views.brief, name="brief"),
     path("<int:pk>/count/", views.count, name="count"),
     path("<int:pk>/picks/", views.picks, name="picks"),
     path("<int:pk>/evaluate/", views.evaluate, name="evaluate"),
