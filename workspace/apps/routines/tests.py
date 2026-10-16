@@ -97,8 +97,14 @@ class TempRepoTests(Login):
             res = self.client.post(LAUNCH, data, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
         self.assertEqual(res.status_code, 302)
         f = self.root / "workspace" / ".routine" / "writing-2026-10-16.md"
+        conf = json.loads((self.root / "workspace" / ".routine" / "settings.json").read_text(encoding="utf-8"))
+        self.assertIn("Bash(git push *)", conf["permissions"]["allow"])
+        self.assertIn("AskUserQuestion", conf["permissions"]["deny"])  # 방법·선택은 묻지 않는다
         self.assertEqual(f.read_text(encoding="utf-8"), "# 안내문\n할 일")
-        self.assertEqual(popen.call_args[0][0][-2:], ["claude", "Read workspace/.routine/writing-2026-10-16.md and follow it exactly."])
+        args = popen.call_args[0][0]
+        self.assertEqual(args[args.index("claude") + 1], "workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.")
+        self.assertIn("--settings", args)
+        self.assertIn("한국어", args[args.index("--append-system-prompt") + 1])
         run = RoutineRun.objects.get()
         self.assertEqual((run.status, run.day), ("running", date(2026, 10, 16)))
         # 실서버에만 있는 루틴이면 PC DB 에 만들어 기록한다
@@ -123,7 +129,7 @@ class TempRepoTests(Login):
         self.assertEqual(res["Referrer-Policy"], "origin-when-cross-origin")
         self.assertEqual(self.client.get(PROMPTS)["Referrer-Policy"], "origin-when-cross-origin")
         self.assertEqual(self.client.get(reverse("core:home"))["Referrer-Policy"], "same-origin")
-        self.assertContains(res, 'action="http://127.0.0.1:8000/routines/launch/" target="_blank"')
+        self.assertContains(res, 'action="http://127.0.0.1:8000/routines/launch/"')
         self.assertContains(res, "PC 화면에서 보기")
 
     def test_naver_import_drafts(self):
@@ -338,3 +344,28 @@ class ClassChangeTests(TestCase):
             self.client.post(reverse("writing:import"), {"keys": ["T20_회의록"]})
         post = Post.objects.get(title="AI 로 회의록 줄이기")
         self.assertEqual((post.bt_category.name, post.summary), ("AI 도구·활용", "짧게"))
+
+
+class LaunchInBackgroundTests(Login):
+    """실행은 새 탭 없이: fmt=json 이면 결과 한 줄(JSON)과 CORS, 브라우저가 먼저 묻는 OPTIONS 도 받는다."""
+
+    @patch("apps.routines.views.subprocess.Popen")
+    def test_json_reply_with_cors_for_server_page(self, popen):
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.views.os.name", "nt"):
+            res = self.client.post(LAUNCH, {"key": "writing", "kind": "run", "day": "2026-10-16", "prompt": "x", "fmt": "json"},
+                                   HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.json()["ok"])
+        self.assertIn("PC 터미널에서", res.json()["message"])
+        self.assertEqual(res["Access-Control-Allow-Origin"], "https://jbkwon.pythonanywhere.com")
+        bad = self.client.post(LAUNCH, {"key": "writing", "prompt": "x", "fmt": "json"}, HTTP_ORIGIN="https://evil.example")
+        self.assertEqual((bad.status_code, bad.json()["ok"]), (403, False))
+        self.assertNotIn("Access-Control-Allow-Origin", bad)
+        pre = self.client.options(LAUNCH, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
+        self.assertEqual((pre.status_code, pre["Access-Control-Allow-Private-Network"]), (204, "true"))
+
+    def test_form_has_no_new_tab(self):
+        with override_settings(IS_SERVER=True):
+            res = self.client.get(INDEX)
+        self.assertNotContains(res, 'target="_blank"><input type="hidden" name="key"')
+        self.assertNotContains(res, 'class="rt-launch" method="post" action="http://127.0.0.1:8000/routines/launch/" target')
