@@ -149,6 +149,7 @@ class Placement(TrashableModel):
                                     help_text="이 글만 다르게 할 것 (예: 첫 문단을 더 짧게)")
     converted_title = models.CharField("변환 제목", max_length=200, blank=True)
     converted_body = models.TextField("변환 본문", blank=True, help_text="그 사이트 에디터에 붙여넣을 원고 (마크다운 또는 HTML)")
+    converted_tags = models.CharField("변환 태그", max_length=500, blank=True, help_text="그 사이트 태그·라벨 칸에 넣을 것")
     converted_at = models.DateTimeField("변환한 때", null=True, blank=True)
     created_at = models.DateTimeField("넣은 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)

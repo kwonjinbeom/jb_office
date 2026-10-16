@@ -1,4 +1,5 @@
-"""글 관리: 티스토리 글쓰기 + 네이버 글쓰기를 한 화면에서 (2026-10-16 사용자).
+"""글 관리: 모든 글을 한 화면에서 (2026-10-16 사용자). 편집기(티스토리·네이버) 구분은 쓰지 않는다 —
+사이트·플랫폼에 맞추는 건 사이트별 템플릿의 변환에서 한다. 새 글은 한 표(writing.Post)에 만든다.
 
 왼쪽은 글 매핑 관리와 같은 글 분류 트리(모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위, 티스토리·네이버 나눔 없음), 오른쪽은 임시 템플릿 → 검토 템플릿 →
 포스트 관리 탭과 그 단계의 글. 트리에서 고르면 그 아래 글만 보인다. 글 보기·쓰기·상태 바꾸기·옮기기는 각 글쓰기 앱의 주소를 그대로 쓴다
@@ -66,7 +67,7 @@ def index(request):
         "path": path,
         "posts": posts,
         "groups": classify.grouped(posts),
-        "cols": 8 if stage == "post" else 6,
+        "cols": 7 if stage == "post" else 5,
         "review_choices": classify.post_model("tistory").Review.choices,
         "write_choices": classify.post_model("tistory").Write.choices,
         "publish_choices": classify.post_model("tistory").Publish.choices,

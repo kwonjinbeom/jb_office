@@ -105,7 +105,7 @@ def _render_for(placement, text):
 class ConvertForm(_Styled):
     class Meta:
         model = Placement
-        fields = ["convert_note", "converted_title", "converted_body"]
+        fields = ["convert_note", "converted_title", "converted_body", "converted_tags"]
         widgets = {"converted_body": forms.Textarea(attrs={"rows": 18, "spellcheck": "false"})}
 
 

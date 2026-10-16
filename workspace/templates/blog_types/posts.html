@@ -6,9 +6,8 @@
 {% block heading %}글 관리{% for label in path %} <span class="cnt">{{ label }}</span>{% endfor %}{% endblock %}
 
 {% block actions %}
-{% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 티스토리 글쓰기로 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
-<a class="btn" href="{% url 'naver_writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}네이버 글</a>
-<a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}티스토리 글</a>
+{% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
+<a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}새 글</a>
 {% endblock %}
 
 {% block body_class %}fill{% endblock %}
@@ -32,7 +31,6 @@
       <span class="wr-bulk">
         <span class="muted small">체크한 것을</span>
         {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시로{% else %}검토로{% endif %}</button>{% endif %}
-        <button class="btn sm" form="ph-bulk" name="send" value="1" title="복사본을 다른 편집기(티스토리 ↔ 네이버) 임시 템플릿에 만든다">다른 편집기로 복사</button>
         {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토로{% else %}포스트로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
       </span>
       {% endif %}
@@ -45,7 +43,6 @@
           <tr>
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
             <th>제목</th>
-            <th style="width:76px" title="글을 쓰는 편집기. 분류와는 상관없다">편집기</th>
             {% if stage == 'temp' %}<th style="width:32%">내용</th>{% endif %}
             {% if stage == 'review' %}<th style="width:220px">검토</th>{% endif %}
             {% if stage == 'post' %}<th style="width:186px">작성</th><th style="width:128px">발행</th><th style="width:150px">넣은 곳 · 변환</th>{% endif %}
@@ -60,7 +57,6 @@
           <tr {% trash_attrs p %} data-href="{{ p.get_absolute_url }}">
             <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
             <td class="title-cell mid"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></td>
-            <td class="mid"><span class="badge {% if p.writer == 'naver' %}green{% else %}blue{% endif %}">{{ p.writer_label }}</span></td>
             {% if stage == 'temp' %}<td class="mid small muted"><span class="wr-excerpt">{{ p.excerpt|default:"-" }}</span></td>{% endif %}
             {% if stage == 'review' %}
             <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="review_status" current=p.review_status choices=review_choices %}{% else %}{% include "writing/_status.html" with post=p field="review_status" current=p.review_status choices=review_choices %}{% endif %}</td>
