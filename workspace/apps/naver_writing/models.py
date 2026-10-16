@@ -46,6 +46,8 @@ class Post(TrashableModel):
                                 on_delete=models.SET_NULL, related_name="%(app_label)s_posts")
     bt_sub = models.ForeignKey("blog_types.SubType", verbose_name="분류 하위", null=True, blank=True,
                                on_delete=models.SET_NULL, related_name="%(app_label)s_posts")
+    # 어느 계정(블로그)을 겨냥해 쓴 글인지 (2026-10-16 사용자: 글 관리에 '타겟' 칸). 원고.md 의 `사이트:` 줄에서 온다.
+    target = models.CharField("타겟", max_length=60, blank=True, help_text="이 글을 쓴 대상 계정 (예: memorily, 눈잎)")
     created_at = models.DateTimeField("만든 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 

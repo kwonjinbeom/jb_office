@@ -257,7 +257,7 @@ def import_drafts(request):
         added = 0
         for d in drafts:
             if d.key in chosen and d.title not in existing:
-                Post.objects.create(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary)
+                Post.objects.create(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site)
                 existing.add(d.title)
                 added += 1
         if added:
