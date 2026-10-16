@@ -133,9 +133,14 @@ class TempRepoTests(Login):
                 d = Path(tmp) / "Claude" / "claude-code" / ver / "abc"
                 d.mkdir(parents=True)
                 (d / "claude.exe").write_text("")
-            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp}):
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp, "LOCALAPPDATA": tmp}):
                 self.assertIn("2.1.295", find_claude())  # PATH 에 없으면 데스크톱 앱의 최신 버전
-            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none"}):
+            store = Path(tmp) / "Packages" / "Claude_pzs8" / "LocalCache" / "Roaming" / "Claude" / "claude-code" / "2.1.300" / "abc"
+            store.mkdir(parents=True)
+            (store / "claude.exe").write_text("")
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none", "LOCALAPPDATA": tmp}):
+                self.assertIn("2.1.300", find_claude())  # 스토어 앱은 실제 파일이 Packages 아래에 있다
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none", "LOCALAPPDATA": tmp + "/none"}):
                 with self.assertRaises(RuntimeError):
                     find_claude()
         with patch("apps.routines.local_run.shutil.which", return_value="/usr/bin/claude"):
