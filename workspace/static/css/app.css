@@ -1390,3 +1390,16 @@ a.br-addr:hover { color: var(--accent); }
 .st-paste .st-paste-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .st-paste .st-after { border-top: 1px solid var(--line-soft); padding-top: 10px; font-size: 13px; color: var(--text-2); }
 .st-paste { margin-bottom: 14px; }
+
+/* 메뉴 관리: 대메뉴 묶음마다 tbody, 중메뉴는 들여쓰기 */
+.mm-table tbody.mm-group + tbody.mm-group tr:first-child td { border-top: 1px solid var(--border-strong); }
+.mm-table td { vertical-align: middle; padding-top: 6px; padding-bottom: 6px; }
+.mm-move { display: inline-flex; gap: 2px; }
+.mm-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mm-name .ic { width: 16px; height: 16px; color: var(--text-2); flex: none; }
+.mm-name .input { flex: 1; min-width: 0; }
+.mm-top .mm-name .input { font-weight: 700; }
+.mm-child .mm-name { padding-left: 8px; }
+.mm-branch { color: var(--text-3); flex: none; width: 16px; text-align: center; }
+.mm-url { color: var(--text-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mm-table tr.is-off .mm-name .input, .mm-table tr.is-off td.muted { color: var(--text-3); text-decoration: line-through; }

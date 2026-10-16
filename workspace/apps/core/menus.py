@@ -13,8 +13,11 @@
   (예: apps/discussions/views.py 의 _nav). 넣지 않으면 앱 이름과 같은 key 가 강조된다.
 - query: 같은 화면을 조건만 달리해 여는 하위 메뉴에 쓴다 (예: "?area=blog").
 - listing=False: '<상위 메뉴명> 리스트' 를 만들지 않는다. 하위 메뉴들이 곧 그 묶음의 화면일 때 (예: 아이디어 = 일일 + 내 아이디어).
+
+메뉴 관리 화면(core:menus)에서 이름·순서·보이기를 고치면 MenuSetting 에 남고, get_menus()·build_nav() 가 그 값을 입힌다.
+주소·하위 구조·새 메뉴는 여기서 고친다.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from django.urls import reverse
 
@@ -55,6 +58,7 @@ MENUS: list[Menu] = [
     ),
     Menu(
         "blog", "블로그·카페", "카테고리별 소재·템플릿·글과 게시 기록", "blog:list", "file", "#2f6bd8",
+        listing=False,  # '블로그·카페 리스트' 중메뉴는 뺐다 (2026-10-16 사용자)
         children=(
             Menu("blog_rules", "운영", "사이트별 컨셉·발행·임시저장 현황과 체크", "blog_rules:index", "check-list"),
             Menu("blog_ops", "모니터링", "이번 주 발행 현황, 발행 계획, RSS", "blog_ops:index", "calendar"),
@@ -77,8 +81,37 @@ MENUS: list[Menu] = [
 ]
 
 
+def _settings() -> dict:
+    from django.db import DatabaseError
+
+    from .models import MenuSetting
+    try:
+        return {s.key: s for s in MenuSetting.objects.all()}
+    except DatabaseError:  # migrate 전
+        return {}
+
+
+def _apply(menus, saved, keep_hidden=False):
+    """기본 순서(코드) 위에 화면에서 고친 순서·이름·숨김을 입힌다."""
+    out = []
+    for i, menu in enumerate(menus):
+        s = saved.get(menu.key)
+        if s and s.hidden and not keep_hidden:
+            continue
+        menu = replace(menu, title=(s.title if s and s.title else menu.title),
+                       children=tuple(_apply(menu.children, saved, keep_hidden)))
+        out.append(((s.order if s else 1000 + i), i, menu))  # 화면에서 아직 안 정한 메뉴(새 메뉴)는 뒤로
+    return [m for _, _, m in sorted(out, key=lambda t: (t[0], t[1]))]
+
+
 def get_menus() -> list[Menu]:
-    return MENUS
+    """화면에 보이는 메뉴 (메뉴 관리에서 고친 이름·순서·숨김을 입힌 것)."""
+    return _apply(MENUS, _settings())
+
+
+def all_menus() -> list[Menu]:
+    """메뉴 관리 화면용: 숨긴 것도 포함해 순서·이름만 입힌 목록."""
+    return _apply(MENUS, _settings(), keep_hidden=True)
 
 
 def find_menu(key: str) -> Menu | None:
@@ -95,7 +128,7 @@ def find_menu(key: str) -> Menu | None:
 def build_nav(active_key: str) -> list[dict]:
     """좌측 메뉴용 트리. 현재 화면이 속한 가지는 펼친 채로 내보낸다."""
     nav = []
-    for menu in MENUS:
+    for menu in get_menus():
         if not menu.children:
             nav.append({"menu": menu, "active": menu.key == active_key, "open": False, "children": []})
             continue
