@@ -94,3 +94,26 @@ class SubType(TrashableModel):
     @property
     def sel(self):
         return f"s{self.pk}"
+
+
+class SiteCategory(TrashableModel):
+    """실제 사이트(규칙 화면의 블로그)에 있는 카테고리 이름. 사이트 › 카테고리 › 하위 카테고리 (티스토리·네이버 모두 2단).
+
+    위의 대분류·카테고리는 글을 나누는 기준이고, 이것은 각 블로그에 지금 실제로 걸려 있는 메뉴 이름이다.
+    """
+    blog = models.ForeignKey("blog_rules.Blog", verbose_name="사이트", on_delete=models.CASCADE, related_name="site_categories")
+    parent = models.ForeignKey("self", verbose_name="상위 카테고리", null=True, blank=True, on_delete=models.CASCADE,
+                               related_name="children")
+    name = models.CharField("카테고리", max_length=60)
+    note = models.TextField("메모", blank=True, help_text="메뉴에 보이는 이름이 다르거나, 숨김·글 수 같은 것")
+    order = models.PositiveIntegerField("순서", default=0)
+
+    class Meta:
+        ordering = ["order", "pk"]
+
+    def __str__(self):
+        return f"{self.parent.name} › {self.name}" if self.parent_id else self.name
+
+    @property
+    def sel(self):
+        return f"k{self.pk}"

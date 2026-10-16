@@ -41,6 +41,11 @@ class Blog(TrashableModel):
     def __str__(self):
         return self.name
 
+    @property
+    def sel(self):
+        """타입·카테고리 화면의 사이트 카테고리 트리에서 고를 때 쓰는 값"""
+        return f"b{self.pk}"
+
 
 class Rule(TrashableModel):
     """사이트에서 까먹지 말고 체크할 것 한 줄. group 은 예전 일반 규칙 묶음이라 화면에서 쓰지 않는다."""

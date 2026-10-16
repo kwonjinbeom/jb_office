@@ -3,7 +3,7 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
-{% block heading %}타입·카테고리 <span class="cnt">대분류 {{ counts.section }} · 카테고리 {{ counts.category }} · 타입 {{ counts.type }} · 하위 {{ counts.sub }}</span>{% endblock %}
+{% block heading %}타입·카테고리 <span class="cnt">대분류 {{ counts.section }} · 카테고리 {{ counts.category }} · 타입 {{ counts.type }} · 하위 {{ counts.sub }} · 사이트 카테고리 {{ counts.sitecat }}</span>{% endblock %}
 
 {% block body_class %}fill{% endblock %}
 
@@ -12,6 +12,7 @@
 
   {# 왼쪽: 한눈에 보는 계층. 이름과 개수만. ▸ 로 접고 펼친다 (브라우저에 기억). #}
   <nav class="bt-tree" aria-label="대분류 › 카테고리 › 타입 › 하위" data-bt-tree>
+    <div class="bt-tree-head">글 분류</div>
     {% for g in sections %}
     <div class="bt-section" data-bt-branch="{{ g.sel }}"{% if g.sel in open %} data-bt-force-open{% endif %}>
       <div class="bt-row">
@@ -57,6 +58,38 @@
     </form>
   </nav>
 
+  {# 가운데: 각 블로그에 실제로 있는 카테고리. 사이트 › 카테고리 › 하위 카테고리 #}
+  <nav class="bt-tree" aria-label="사이트 › 카테고리 › 하위 카테고리" data-bt-tree>
+    <div class="bt-tree-head">사이트 카테고리</div>
+    {% for b in sites %}
+    <div class="bt-section" data-bt-branch="{{ b.sel }}"{% if b.sel in open %} data-bt-force-open{% endif %}>
+      <div class="bt-row">
+        <button type="button" class="bt-tog" data-bt-toggle aria-label="{{ b.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>
+        <a class="bt-node lv0{% if sel == b.sel %} on{% endif %}" href="?sel={{ b.sel }}">
+          <span class="nm">{{ b.name }}</span>
+          <span class="bt-plat">{{ b.get_platform_display }}</span>
+          <span class="ct">{{ b.top_cats|length }}</span>
+        </a>
+      </div>
+      <div class="bt-kids-tree">
+        {% for c in b.top_cats %}
+        <div class="bt-row"><span class="bt-tog-gap"></span>
+          <a {% trash_attrs c %} class="bt-node lv1{% if sel == c.sel %} on{% endif %}" href="?sel={{ c.sel }}">
+            <span class="nm">{{ c.name }}</span>
+            {% if c.children.all %}<span class="ct">{{ c.children.all|length }}</span>{% endif %}
+          </a>
+        </div>
+        {% for s in c.children.all %}
+        <a {% trash_attrs s %} class="bt-node lv2{% if sel == s.sel %} on{% endif %}" href="?sel={{ s.sel }}"><span class="nm">{{ s.name }}</span></a>
+        {% endfor %}
+        {% empty %}
+        <a class="bt-node lv1 bt-empty-node" href="?sel={{ b.sel }}"><span class="nm">카테고리 없음</span></a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </nav>
+
   {# 오른쪽: 고른 것의 자세한 내용 · 고치기 · 바로 아래 단계 정리 #}
   <section class="bt-panel">
     {% if obj %}
@@ -64,11 +97,13 @@
       {% for label, s in path %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="?sel={{ s }}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}
     </div>
     <div class="bt-panel-head">
-      <span class="badge {% if kind == 'section' %}green{% elif kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ kind_label }}</span>
+      <span class="badge {% if kind == 'section' or kind == 'site' %}green{% elif kind == 'category' or kind == 'sitecat' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ kind_label }}</span>
       <h2>{% if kind == 'category' %}{{ obj.code }}. {% endif %}{{ obj.name }}</h2>
     </div>
     {% if kind == 'section' and obj.note %}<p class="bt-lead">{{ obj.note }}</p>{% endif %}
     {% if kind == 'category' and obj.question %}<p class="bt-lead">“{{ obj.question }}”</p>{% endif %}
+    {% if kind == 'site' %}<p class="bt-lead">{{ obj.get_platform_display }}{% if obj.address %} · <a href="{{ obj.address }}" target="_blank" rel="noopener">{{ obj.address }}</a>{% endif %}</p>{% endif %}
+    {% if kind == 'sitecat' and obj.note %}<p class="bt-lead">{{ obj.note }}</p>{% endif %}
     {% if kind == 'type' and obj.example_list %}<ul class="bt-examples">{% for e in obj.example_list %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
 
     {% if child_kind %}
@@ -78,7 +113,7 @@
         {% for k in children %}
         <li {% trash_attrs k %}>
           <a href="?sel={{ k.sel }}">{{ k.name }}</a>
-          {% if child_kind == 'category' %}<span class="muted small">{{ k.code }} · 타입 {{ k.types.all|length }}</span>{% elif child_kind == 'type' and k.subs.all %}<span class="muted small">하위 {{ k.subs.all|length }}</span>{% elif k.note %}<span class="muted small bt-kid-note">{{ k.note|truncatechars:40 }}</span>{% endif %}
+          {% if child_kind == 'category' %}<span class="muted small">{{ k.code }} · 타입 {{ k.types.all|length }}</span>{% elif child_kind == 'sitecat' and kind == 'site' and k.children.all %}<span class="muted small">하위 {{ k.children.all|length }}</span>{% elif child_kind == 'type' and k.subs.all %}<span class="muted small">하위 {{ k.subs.all|length }}</span>{% elif k.note %}<span class="muted small bt-kid-note">{{ k.note|truncatechars:40 }}</span>{% endif %}
           <form method="post" action="{% url 'blog_types:move' child_kind k.pk %}" class="inline-form bt-kid-move">
             {% csrf_token %}<input type="hidden" name="back" value="{{ sel }}">
             <button class="btn ghost sm icon" name="dir" value="up" {% if forloop.first %}disabled{% endif %} title="위로" aria-label="위로">{% include "includes/ic.html" with name="arrow-up" %}</button>
@@ -96,8 +131,9 @@
     </div>
     {% endif %}
 
+    {% if form %}
     <details class="card bt-edit"{% if form.errors or kind == 'sub' %} open{% endif %}>
-      <summary class="card-head"><h3 class="card-title">{% include "includes/ic.html" with name="edit" %}자세한 내용 · 고치기</h3><span class="hint">{% if kind == 'section' %}이름·무엇을 위한 분류인지{% elif kind == 'category' %}방향·질문·플랫폼·설명{% elif kind == 'type' %}쓰는 뼈대·예시 제목·설명{% else %}이 하위로 쓸 때의 품목·대상·주의점{% endif %}</span></summary>
+      <summary class="card-head"><h3 class="card-title">{% include "includes/ic.html" with name="edit" %}자세한 내용 · 고치기</h3><span class="hint">{% if kind == 'section' %}이름·무엇을 위한 분류인지{% elif kind == 'category' %}방향·질문·플랫폼·설명{% elif kind == 'type' %}쓰는 뼈대·예시 제목·설명{% elif kind == 'sitecat' %}이름·메모{% else %}이 하위로 쓸 때의 품목·대상·주의점{% endif %}</span></summary>
       <form method="post" action="{% url 'blog_types:save' kind obj.pk %}">
         {% csrf_token %}
         <div class="card-body form-grid">
@@ -116,13 +152,13 @@
         </div>
       </form>
     </details>
+    {% endif %}
 
     {% else %}
     <div class="bt-welcome">
       <h2>왼쪽에서 하나를 고르세요</h2>
-      <p><strong>대분류</strong>는 분류의 목적이에요. <em>판매 수익 (커넥트)</em>은 블로그에 표시하는 카테고리가 아니라 쇼핑커넥트·쿠팡 수익을 위한 방향이고, 일상·브이로그·맛집 같은 블로그 표시 분류는 다른 대분류로 만들면 돼요.</p>
-      <p><strong>카테고리</strong> › <strong>타입</strong> › <strong>하위</strong> 순서로 좁혀 가요. 판매 수익에서 카테고리는 사게 만드는 방향, 타입은 같은 틀로 물건만 바꿔 쓰는 글 모양, 하위는 실제로 나눠 쓰는 단위예요.</p>
-      <p class="muted small">왼쪽 ▾ 로 접고 펼쳐요. 고르면 오른쪽에서 바로 아래 단계를 추가하고 순서를 바꿀 수 있어요.</p>
+      <p><strong>글 분류</strong>: 대분류 › 카테고리 › 타입 › 하위. 글을 나누는 기준이에요.</p>
+      <p><strong>사이트 카테고리</strong>: 블로그마다 지금 실제로 있는 카테고리 이름이에요.</p>
     </div>
     {% endif %}
   </section>

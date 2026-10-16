@@ -2,7 +2,9 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Category, PostType, Section, SubType
+from apps.blog_rules.models import Blog
+
+from .models import Category, PostType, Section, SiteCategory, SubType
 
 INDEX = reverse("blog_types:index")
 
@@ -137,3 +139,56 @@ class BlogTypesTests(TestCase):
         seed(django_apps, None)
         self.assertEqual(Category.objects.count(), before)
         self.assertEqual(self.cat("A").name, "내가 바꾼 이름")
+
+
+class SiteCategoryTests(TestCase):
+    """사이트 카테고리: 사이트(규칙 화면의 블로그) › 카테고리 › 하위 카테고리"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        self.memorily = Blog.objects.get(name="memorily")
+
+    def add(self, parent_sel, name):
+        return self.client.post(reverse("blog_types:add", args=["sitecat"]), {"parent": parent_sel, "name": name})
+
+    def test_seed_real_categories(self):
+        names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
+        self.assertEqual(names, ["Vue.js, Node.js", "Java", "Database", "Android Studio", "Make",
+                                 "공모전 및 프로젝트", "자격증", "일상생활", "기타"])
+        self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
+        self.assertFalse(SiteCategory.objects.filter(blog__name="눈잎").exists())
+
+    def test_tree_shows_both_grids(self):
+        res = self.client.get(INDEX)
+        self.assertContains(res, "글 분류")
+        self.assertContains(res, "사이트 카테고리")
+        self.assertContains(res, "Android Studio")
+        self.assertContains(res, "카테고리 없음")  # 눈잎·밤밤
+        res = self.client.get(INDEX, {"sel": self.memorily.sel})
+        self.assertContains(res, "https://jinbaam.tistory.com/")
+        self.assertNotContains(res, "자세한 내용 · 고치기")  # 사이트 자체는 규칙 화면에서 고친다
+
+    def test_add_edit_move_delete(self):
+        self.add(self.memorily.sel, "AI 이야기")
+        top = SiteCategory.objects.get(name="AI 이야기")
+        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 10))
+        self.add(top.sel, "Claude Code")
+        sub = SiteCategory.objects.get(name="Claude Code")
+        self.assertEqual(sub.parent, top)
+        res = self.add(sub.sel, "3단")  # 하위 카테고리 아래로는 못 만든다
+        self.assertFalse(SiteCategory.objects.filter(name="3단").exists())
+        self.client.post(reverse("blog_types:save", args=["sitecat", top.pk]), {"name": "AI 개발기", "note": "새 축"})
+        top.refresh_from_db()
+        self.assertEqual((top.name, top.note), ("AI 개발기", "새 축"))
+        self.client.post(reverse("blog_types:move", args=["sitecat", top.pk]), {"dir": "up"})
+        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[8].name, "AI 개발기")
+        res = self.client.get(reverse("blog_types:delete", args=["sitecat", top.pk]))
+        self.assertContains(res, "하위 카테고리 1개")
+        self.client.post(reverse("blog_types:delete", args=["sitecat", top.pk]))
+        self.assertFalse(SiteCategory.objects.filter(name__in=["AI 개발기", "Claude Code"]).exists())
+        self.assertEqual(SiteCategory.all_objects.filter(name="Claude Code").count(), 1)  # 휴지통에서 복원할 수 있다
+
+    def test_site_is_not_editable_here(self):
+        self.assertEqual(self.client.post(reverse("blog_types:save", args=["site", self.memorily.pk])).status_code, 404)
+        self.assertEqual(self.client.get(reverse("blog_types:delete", args=["site", self.memorily.pk])).status_code, 404)

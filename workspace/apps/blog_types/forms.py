@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Category, PostType, Section, SubType
+from .models import Category, PostType, Section, SiteCategory, SubType
 
 
 class _Styled(forms.ModelForm):
@@ -42,4 +42,12 @@ class SubTypeForm(_Styled):
         widgets = {"note": forms.Textarea(attrs={"rows": 8})}
 
 
-FORMS = {"section": SectionForm, "category": CategoryForm, "type": PostTypeForm, "sub": SubTypeForm}
+class SiteCategoryForm(_Styled):
+    class Meta:
+        model = SiteCategory
+        fields = ["name", "note"]
+        widgets = {"note": forms.Textarea(attrs={"rows": 4})}
+
+
+FORMS = {"section": SectionForm, "category": CategoryForm, "type": PostTypeForm, "sub": SubTypeForm,
+         "sitecat": SiteCategoryForm}

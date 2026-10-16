@@ -4,8 +4,24 @@
     {
       "name": "workserver",
       "runtimeExecutable": "workspace\\.venv\\Scripts\\python.exe",
-      "runtimeArgs": ["workspace\\manage.py", "runserver", "127.0.0.1:8000", "--noreload"],
+      "runtimeArgs": [
+        "workspace\\manage.py",
+        "runserver",
+        "127.0.0.1:8000",
+        "--noreload"
+      ],
       "port": 8000
+    },
+    {
+      "name": "workserver-alt",
+      "runtimeExecutable": "workspace\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "workspace\\manage.py",
+        "runserver",
+        "127.0.0.1:8010",
+        "--noreload"
+      ],
+      "port": 8010
     }
   ]
 }
