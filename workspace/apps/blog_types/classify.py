@@ -1,8 +1,11 @@
-"""글 분류 값: 티스토리·네이버 글쓰기의 글(Post)에 붙는 대분류 › 카테고리 › 타입 › 하위.
+"""글 분류 값: 모든 글(Post)에 붙는 대분류 › 카테고리 › 타입 › 하위.
 
 글에는 bt_category · bt_type · bt_sub 세 칸이 있고, 고른 가장 깊은 단계까지 채운다.
 화면과 폼에서는 한 값으로 다룬다: "c3" (카테고리) · "t5" (타입) · "s9" (하위) · "" (미분류).
-글쓰기 화면은 플랫폼에 맞는 카테고리만 고른다 (공통 + 티스토리 / 공통 + 네이버).
+
+2026-10-16 사용자: 글 분류에는 티스토리·네이버 나눔이 없다. 모든 글은 한 분류 트리로 정리되고, 사이트·플랫폼에 맞추는 일은
+마지막 단계(사이트별 템플릿의 변환)에서만 한다. 글은 아직 편집기별로 두 표(writing.Post · naver_writing.Post)에 있어서
+post_model / writer_of 는 그 저장 위치를 고를 때만 쓴다.
 """
 from django.db.models import Q
 
@@ -24,12 +27,25 @@ def writer_of(post):
     return "naver" if post._meta.app_label == "naver_writing" else "tistory"
 
 
-def categories_for(writer):
-    platforms = [Category.Platform.ALL, Category.Platform.NAVER if writer == "naver" else Category.Platform.TISTORY]
-    return Category.objects.filter(platform__in=platforms, section__deleted_at__isnull=True)
+def categories_for(writer=None):
+    """분류에 쓸 카테고리. 글쓰기(편집기)와 상관없이 모두 (writer 는 예전 호출을 위해 받기만 한다)."""
+    return Category.objects.filter(section__deleted_at__isnull=True)
 
 
-def choices(writer):
+def all_posts(qs_filter=None):
+    """두 표의 글을 한 목록으로. 각 글에 writer('tistory' · 'naver')를 붙인다."""
+    out = []
+    for key in WRITERS:
+        qs = post_model(key).objects.all()
+        if qs_filter is not None:
+            qs = qs_filter(qs)
+        for post in qs:
+            post.writer = key
+            out.append(post)
+    return out
+
+
+def choices(writer=None):
     """폼의 <select> 값: 대분류마다 묶고, 카테고리 › 타입 › 하위 순서로 펼친다."""
     cats = categories_for(writer).select_related("section").prefetch_related("types__subs")
     grouped = {}
@@ -162,18 +178,16 @@ def unclassified_q():
 
 
 def class_tree():
-    """글쓰기마다 대분류 › 카테고리 › 타입 › 하위 + 미분류, 그리고 그 아래 글 수 (발행 완료가 아닌 글: 임시·검토·포스트 모두).
-    글 관리(글쓰기)와 글 매핑 관리 두 화면이 같은 트리를 쓴다."""
+    """한 분류 트리: 대분류 › 카테고리 › 타입 › 하위 + 미분류, 그리고 그 아래 글 수 (두 편집기의 글을 합쳐, 발행 완료가 아닌 글).
+    글 관리와 글 매핑 관리 두 화면이 같은 트리를 쓴다."""
     from collections import Counter
 
     from .models import Section
 
     sections = list(Section.objects.prefetch_related("categories__types__subs"))
-    writers = []
-    for key, label in WRITERS.items():
-        allowed = {c.pk for c in categories_for(key)}
+    counts = Counter()
+    for key in WRITERS:
         Post = post_model(key)
-        counts = Counter()
         for post in with_classification(Post.objects.exclude(publish_status=Post.Publish.DONE)):
             counts["all"] += 1
             node = node_of(post)
@@ -187,11 +201,10 @@ def class_tree():
                 counts[post.bt_type.sel] += 1
             if isinstance(node, SubType):
                 counts[post.bt_sub.sel] += 1
-        writers.append({"key": key, "label": label, "count": counts["all"], "unclassified": counts["u"], "sections": [
-            {"obj": g, "count": counts[g.sel], "cats": [
-                {"obj": c, "count": counts[c.sel], "types": [
-                    {"obj": t, "count": counts[t.sel], "subs": [{"obj": s, "count": counts[s.sel]} for s in t.subs.all()]}
-                    for t in c.types.all()]}
-                for c in g.categories.all() if c.pk in allowed]}
-            for g in sections]})
-    return writers
+    return {"count": counts["all"], "unclassified": counts["u"], "sections": [
+        {"obj": g, "count": counts[g.sel], "cats": [
+            {"obj": c, "count": counts[c.sel], "types": [
+                {"obj": t, "count": counts[t.sel], "subs": [{"obj": s, "count": counts[s.sel]} for s in t.subs.all()]}
+                for t in c.types.all()]}
+            for c in g.categories.all()]}
+        for g in sections]}

@@ -2,10 +2,11 @@
 
 - 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 오른쪽 **위** 목록이 그 카테고리에 넣은 글(매핑)로
   바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 미저장 · 임시저장 · 발행, 그리고 변환 상태.
-- 글 분류 (가운데): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 누르면 오른쪽 **아래** 목록이 그 분류의 글
-  (임시 → 검토 → 포스트 전부)로 바뀌고, 포스트 관리 글은 그 자리에서 사이트 카테고리에 넣는다. 숫자는 발행 완료가 아닌 글 수.
+- 글 분류 (가운데): 모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위 (티스토리·네이버 나눔 없음). 누르면 오른쪽 **아래** 목록이
+  그 분류의 글(임시 → 검토 → 포스트 전부)로 바뀌고, 포스트 관리 글은 그 자리에서 아무 사이트 카테고리에나 넣는다.
+  사이트·플랫폼에 맞추는 일은 마지막 단계(사이트별 템플릿의 변환)에서 한다. 숫자는 발행 완료가 아닌 글 수.
 
-주소: ?site=b2|k7 (위) &w=tistory|naver&sel=g1|c3|t5|s9|u (아래) &edit=<고칠 것의 sel>. 두 고르기는 서로 유지된다.
+주소: ?site=b2|k7 (위) &sel=g1|c3|t5|s9|u (아래) &edit=<고칠 것의 sel>. 두 고르기는 서로 유지된다.
 트리를 누르면 화면 전체를 새로 받지 않고 그 목록 칸만 바꾼다 (요청 머리 X-Partial: top|bottom → 그 칸 HTML 만 돌려준다).
 예전 주소 ?sel=k7 (사이트 카테고리) 도 위 목록으로 받는다.
 트리의 추가·수정·삭제는 각 트리 오른쪽 위 버튼으로 켠다 (켜야 행마다 +, 연필, 휴지통이 보인다).
@@ -55,8 +56,8 @@ def _url(sel="", w="", edit=False):
     params = {}
     if _is_site(sel):
         params["site"] = sel
-    else:
-        params.update({k: v for k, v in (("w", w), ("sel", sel)) if v})
+    elif sel:
+        params["sel"] = sel
     if edit and sel:
         params["edit"] = sel
     base = reverse("blog_types:index")
@@ -69,12 +70,12 @@ def _merge(base, sel="", w="", edit=""):
     parts = urlsplit(base or index)
     params = dict(parse_qsl(parts.query)) if parts.path == index else {}
     params.pop("edit", None)
+    params.pop("w", None)  # 예전 주소의 글쓰기 나눔
     if sel:
         if _is_site(sel):
             params["site"] = sel
         else:
             params["sel"] = sel
-            params["w"] = w or params.get("w", "tistory")
     if edit:
         params["edit"] = edit
     return f"{index}?{urlencode(params)}" if params else index
@@ -116,23 +117,26 @@ def _chain(kind, obj):
     return list(reversed(chain))
 
 
-def _path(kind, obj, w):
-    """고른 것까지의 경로: [(이름, 주소)]. 글 분류는 앞에 글쓰기 이름이 붙는다."""
-    if kind == "unclassified":
-        return [(classify.WRITERS[w], _url(w=w)), (obj.name, _url("u", w))]
+ALL_POSTS = "모든 글"
+
+
+def _path(kind, obj, w=""):
+    """고른 것까지의 경로: [(이름, 주소)]. 글 분류는 앞에 '모든 글'이 붙는다."""
     if kind in SITE_KINDS:
         return [(o.name, _url(o.sel)) for o in _chain(kind, obj)]
-    return [(classify.WRITERS[w], _url(w=w))] + [
-        (f"{o.code}. {o.name}" if isinstance(o, Category) else o.name, _url(o.sel, w)) for o in _chain(kind, obj)]
-
-
-def _open_branches(kind, obj, w):
-    """트리에서 펼쳐 둘 가지 (data-bt-branch 값)"""
-    if kind in SITE_KINDS:
-        return {o.sel for o in _chain(kind, obj)}
+    root = [(ALL_POSTS, reverse("blog_types:index") + "?")]
     if kind == "unclassified":
-        return {w}
-    return {w} | {f"{w}-{o.sel}" for o in _chain(kind, obj)}
+        return root + [(obj.name, _url("u"))]
+    if kind not in CLASS_KINDS:
+        return root
+    return root + [(f"{o.code}. {o.name}" if isinstance(o, Category) else o.name, _url(o.sel)) for o in _chain(kind, obj)]
+
+
+def _open_branches(kind, obj, w=""):
+    """트리에서 펼쳐 둘 가지 (data-bt-branch 값)"""
+    if kind in SITE_KINDS or kind in CLASS_KINDS - {"unclassified"}:
+        return {o.sel for o in _chain(kind, obj)}
+    return set()
 
 
 def _child_kind(kind, obj):
@@ -189,24 +193,25 @@ def _placements_qs():
                                             "tistory_post", "naver_post")
 
 
-def _posts(w, kind, obj):
-    """글 분류 한 단계 아래의 글 (임시·검토·포스트 모두) + 각 글을 넣은 사이트 카테고리"""
-    qs = classify.post_model(w).objects.all()
-    if kind in CLASS_KINDS:
-        qs = qs.filter(classify.node_filter(kind, obj))
-    qs = classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements_qs()))
-    posts = sorted(qs.order_by("-updated_at", "-pk"), key=classify.sort_key)
+def _posts(kind, obj):
+    """글 분류 한 단계 아래의 글 (두 편집기의 글 모두, 임시·검토·포스트 모두) + 각 글을 넣은 사이트 카테고리"""
+    def narrow(qs):
+        if kind in CLASS_KINDS:
+            qs = qs.filter(classify.node_filter(kind, obj))
+        return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements_qs()))
+    posts = classify.all_posts(narrow)
+    posts.sort(key=lambda p: (p.updated_at, p.pk), reverse=True)
+    posts.sort(key=classify.sort_key)
     for p in posts:
         p.cls_label = classify.label_of(p)
         p.step = "발행" if p.is_published else {"temp": "임시", "review": "검토", "post": "포스트"}[p.stage]
     return posts
 
 
-def _site_options(w):
-    """글 분류 쪽에서 글을 넣을 사이트 카테고리: 네이버 글은 네이버 사이트에, 티스토리 글은 그 밖의 사이트에"""
-    blogs = Blog.objects.filter(platform=Blog.Platform.NAVER) if w == "naver" else Blog.objects.exclude(platform=Blog.Platform.NAVER)
+def _site_options():
+    """글 분류 쪽에서 글을 넣을 사이트 카테고리: 모든 사이트 (플랫폼에 맞추는 건 사이트별 템플릿의 변환에서)"""
     out = []
-    for c in SiteCategory.objects.filter(blog__in=blogs, parent=None).select_related("blog").prefetch_related("children").order_by("blog__order", "order", "pk"):
+    for c in SiteCategory.objects.filter(parent=None).select_related("blog").prefetch_related("children").order_by("blog__order", "order", "pk"):
         out.append((c.pk, f"{c.blog.name} › {c.name}"))
         out += [(k.pk, f"{c.blog.name} › {c.name} › {k.name}") for k in c.children.all()]
     return out
@@ -216,13 +221,18 @@ def _site_writer(blog):
     return "naver" if blog.platform == Blog.Platform.NAVER else "tistory"
 
 
+FIELD = {"tistory": "tistory_post", "naver": "naver_post"}
+
+
 def _candidates(cat):
-    """이 사이트 카테고리에 넣을 수 있는 글: 맞는 글쓰기의 포스트 관리 글 중 아직 안 넣은 것"""
-    w = _site_writer(cat.blog)
-    field = "naver_post" if w == "naver" else "tistory_post"
-    taken = Placement.objects.filter(site_category=cat, **{f"{field}__isnull": False}).values_list(f"{field}_id", flat=True)
-    posts = classify.with_classification(classify.post_model(w).objects.filter(stage="post").exclude(pk__in=list(taken)))
-    return [(p.pk, f"{p.title} — {classify.label_of(p)}") for p in sorted(posts.order_by("-updated_at"), key=classify.sort_key)]
+    """이 사이트 카테고리에 넣을 수 있는 글: 포스트 관리 글 중 아직 안 넣은 것 (두 편집기의 글 모두). 값은 'tistory:3' 꼴."""
+    taken = {(w, pk) for w in FIELD for pk in Placement.objects.filter(
+        site_category=cat, **{f"{FIELD[w]}__isnull": False}).values_list(f"{FIELD[w]}_id", flat=True)}
+    posts = [p for p in classify.all_posts(lambda qs: classify.with_classification(qs.filter(stage="post")))
+             if (p.writer, p.pk) not in taken]
+    posts.sort(key=lambda p: p.updated_at, reverse=True)
+    posts.sort(key=classify.sort_key)
+    return [(f"{p.writer}:{p.pk}", f"{p.title} — {classify.label_of(p)}") for p in posts]
 
 
 def _top(skind, sobj):
@@ -238,7 +248,7 @@ def _top(skind, sobj):
     ctx.update(placements=list(_placements_qs().filter(site_category__in=cats).order_by(
         "site_category__parent__order", "site_category__order", "created_at")), show_cat=len(cats) > 1)
     if skind == "sitecat":
-        ctx.update(candidates=_candidates(sobj), site_writer=classify.WRITERS[_site_writer(sobj.blog)])
+        ctx.update(candidates=_candidates(sobj))
     return ctx
 
 
@@ -253,7 +263,7 @@ def index(request, form=None, form_sel=""):
         site_sel, skind, sobj = "", None, None
     ckind, cobj = _find(sel)
     if ckind not in CLASS_KINDS or cobj is None:
-        sel, ckind, cobj = "", "writer", None
+        sel, ckind, cobj = "", "all", None
     w = _writer(w_raw)
 
     edit = form_sel or g.get("edit", "")
@@ -270,15 +280,15 @@ def index(request, form=None, form_sel=""):
         "page_title": "글 매핑 관리",
         "site_sel": site_sel, "sel": sel, "w": w, "kind": ckind,
         "site_q": f"site={site_sel}&" if site_sel else "",
-        "class_q": urlencode({k: v for k, v in (("w", w_raw), ("sel", sel)) if v}),
+        "class_q": urlencode({"sel": sel}) if sel else "",
         "here": here,
         "status_choices": Placement.Status.choices,
         # 아래(글 분류)
-        "cobj": cobj, "ckind_label": {"writer": "글쓰기"}.get(ckind, KIND_LABEL.get(ckind, "")),
-        "cpath": [(classify.WRITERS[w], _url(w=w))] if ckind == "writer" else _path(ckind, cobj, w),
+        "cobj": cobj, "ckind_label": {"all": "글 분류"}.get(ckind, KIND_LABEL.get(ckind, "")),
+        "cpath": _path(ckind, cobj),
         "bottom_form": bottom_form,
-        "posts": _posts(w, ckind, cobj),
-        "site_options": _site_options(w),
+        "posts": _posts(ckind, cobj),
+        "site_options": _site_options(),
         # 위(사이트 카테고리)
         "spath": _path(skind, sobj, w) if sobj else [],
         "top_form": top_form,
@@ -288,10 +298,9 @@ def index(request, form=None, form_sel=""):
     if partial in ("top", "bottom"):
         return render(request, f"blog_types/_pane_{partial}.html", ctx)
     ctx.update({
-        "writers": classify.class_tree(),
+        "tree": classify.class_tree(),
         "sites": _site_tree(),
-        "open": ({w} if ckind == "writer" else _open_branches(ckind, cobj, w))
-                | (_open_branches(skind, sobj, w) if sobj else set()),
+        "open": _open_branches(ckind, cobj) | (_open_branches(skind, sobj) if sobj else set()),
     })
     return render(request, "blog_types/index.html", ctx)
 
@@ -409,14 +418,16 @@ def _back(request, fallback):
 @require_POST
 def place_add(request):
     cat = get_object_or_404(SiteCategory, pk=request.POST.get("site_category") or 0)
-    w = _site_writer(cat.blog)
-    post = classify.post_model(w).objects.filter(pk=request.POST.get("post") or 0, stage="post").first()
+    raw = request.POST.get("post", "")
+    w, _, pk = raw.rpartition(":")  # 'tistory:3' · 'naver:5'. 숫자만 오면 사이트 플랫폼의 편집기 글 (예전 폼)
+    w = w if w in FIELD else _site_writer(cat.blog)
+    post = classify.post_model(w).objects.filter(pk=pk if pk.isdigit() else 0, stage="post").first()
     status = request.POST.get("status") or Placement.Status.UNSAVED
     back = _url(cat.sel)
     if post is None or status not in Placement.Status.values:
         messages.warning(request, "넣을 글을 고르세요.")
         return _back(request, back)
-    field = "naver_post" if w == "naver" else "tistory_post"
+    field = FIELD[w]
     if Placement.objects.filter(site_category=cat, **{field: post}).exists():
         messages.warning(request, "이미 넣은 글입니다.")
         return _back(request, back)

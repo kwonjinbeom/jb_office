@@ -45,13 +45,13 @@
     {% csrf_token %}<input type="hidden" name="site_category" value="{{ sobj.pk }}"><input type="hidden" name="next" value="{{ here }}">
     {% if candidates %}
     <select class="input sm" name="post" aria-label="넣을 글" required>
-      <option value="">넣을 글 고르기 ({{ site_writer }} · 포스트 관리)</option>
+      <option value="">넣을 글 고르기 (포스트 관리)</option>
       {% for pk, label in candidates %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
     </select>
     <select class="input sm" name="status" aria-label="상태">{% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
     <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="plus" %}넣기</button>
     {% else %}
-    <span class="muted small">넣을 글이 없습니다 ({{ site_writer }}의 포스트 관리 글).</span>
+    <span class="muted small">넣을 포스트 관리 글이 없습니다.</span>
     {% endif %}
   </form>
   {% endif %}
