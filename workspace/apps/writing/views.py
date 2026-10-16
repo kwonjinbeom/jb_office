@@ -11,7 +11,7 @@ from . import drafts as drafts_mod
 from .forms import PostForm
 from .models import Post
 from .render import clean_html, plain_text, render_body, text_to_html
-from apps.blog_types.posts import tree_for_post
+from apps.blog_types.posts import post_list_for
 
 Stage = Post.Stage
 
@@ -58,8 +58,8 @@ def post_list(request, stage):
             "posts": qs,
             "groups": classify.grouped(classify.with_classification(qs)),
             "q": q,
-            "next_label": {Stage.TEMP: "검토로", Stage.REVIEW: "포스트로"}.get(stage),
-            "prev_label": {Stage.REVIEW: "임시로", Stage.POST: "검토로"}.get(stage),
+            "next_label": {Stage.TEMP: "검토글로", Stage.REVIEW: "발행예정으로"}.get(stage),
+            "prev_label": {Stage.REVIEW: "임시글로", Stage.POST: "검토글로"}.get(stage),
             "review_choices": Post.Review.choices,
             "write_choices": Post.Write.choices,
             "publish_choices": Post.Publish.choices,
@@ -106,7 +106,7 @@ def fill_targets(drafts):
 
 
 def auto_import_drafts():
-    """T26 이후 원고.md 중 아직 없는 것을 임시 템플릿으로 가져온다. 글 관리를 열 때 부른다.
+    """T26 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
 
     같은 제목의 글이 (휴지통 포함, 티스토리·네이버 어느 표든) 있으면 건너뛴다 — 지운 글이 다시 생기지 않게.
     """
@@ -126,7 +126,7 @@ def auto_import_drafts():
 
 
 def import_drafts(request):
-    """저장소 원고 폴더의 원고.md 를 골라 임시 템플릿으로 가져온다. 같은 제목이 이미 있으면 건너뛴다."""
+    """저장소 원고 폴더의 원고.md 를 골라 임시글으로 가져온다. 같은 제목이 이미 있으면 건너뛴다."""
     drafts = drafts_mod.list_drafts()
     existing = set(Post.objects.values_list("title", flat=True))
     if request.method == "POST":
@@ -138,7 +138,7 @@ def import_drafts(request):
                 existing.add(d.title)
                 added += 1
         if added:
-            messages.success(request, f"원고 {added}편을 임시 템플릿으로 가져왔습니다.")
+            messages.success(request, f"원고 {added}편을 임시글으로 가져왔습니다.")
         else:
             messages.warning(request, "가져올 원고를 고르세요. (이미 있는 원고는 건너뜁니다)")
         return redirect("writing:list")
@@ -166,7 +166,7 @@ def create(request):
     return render(
         request,
         "writing/form.html",
-        {"page_title": "새 포스트" if stage == Stage.POST else "새 템플릿", "form": form, "post": None,
+        {"page_title": "새 포스트" if stage == Stage.POST else "새 글", "form": form, "post": None,
          "stage": stage, "tabs": _tabs(stage), "editor_html": _editor_html(form)},
     )
 
@@ -193,7 +193,6 @@ def detail(request, pk):
         request,
         "writing/detail.html",
         {
-            **tree_for_post(post),
             "page_title": post.title,
             "post": post,
             "stage": post.stage,
@@ -205,11 +204,12 @@ def detail(request, pk):
             "slots": body_html.count('class="wr-slot"'),
             "above": above,
             "below": below,
-            "next_label": {Stage.TEMP: "검토로", Stage.REVIEW: "포스트로"}.get(post.stage),
-            "prev_label": {Stage.REVIEW: "임시로", Stage.POST: "검토로"}.get(post.stage),
+            "next_label": {Stage.TEMP: "검토글로", Stage.REVIEW: "발행예정으로"}.get(post.stage),
+            "prev_label": {Stage.REVIEW: "임시글로", Stage.POST: "검토글로"}.get(post.stage),
             "review_choices": Post.Review.choices,
             "write_choices": Post.Write.choices,
             "publish_choices": Post.Publish.choices,
+            **post_list_for(request, post),  # 왼쪽 글 목록 + 그 순서의 위·아래 글
         },
     )
 
@@ -264,14 +264,14 @@ def delete(request, pk):
 
 @require_POST
 def send(request):
-    """한 건(pk) 또는 체크한 여러 건(ids)을 네이버 글쓰기 임시 템플릿으로 복사한다. 원래 글은 그대로."""
+    """한 건(pk) 또는 체크한 여러 건(ids)을 네이버 글쓰기 임시글으로 복사한다. 원래 글은 그대로."""
     from apps.blog_types import transfer
     ids = request.POST.getlist("ids") or [request.POST.get("pk", "")]
     posts = list(Post.objects.filter(pk__in=[i for i in ids if i.isdigit()]))
     for post in posts:
         transfer.send(post)
     if posts:
-        messages.success(request, f"{len(posts)}건을 네이버 글쓰기 임시 템플릿으로 보냈습니다. (원래 글은 그대로)")
+        messages.success(request, f"{len(posts)}건을 네이버 글쓰기 임시글으로 보냈습니다. (원래 글은 그대로)")
     else:
         messages.warning(request, "보낼 항목을 먼저 고르세요.")
     return _back(request, posts[0].stage if posts else Stage.TEMP)
@@ -295,7 +295,7 @@ def move(request):
     if moved:
         messages.success(request, f"{moved}건을 {Stage(to).label}(으)로 옮겼습니다.")
     if skipped:
-        messages.warning(request, f"{skipped}건은 옮길 수 없습니다. (발행 완료한 포스트는 되돌리지 않습니다)")
+        messages.warning(request, f"{skipped}건은 옮길 수 없습니다. (발행 완료한 글은 되돌리지 않습니다)")
     if not moved and not skipped:
         messages.warning(request, "옮길 항목을 먼저 고르세요.")
     return _back(request, came_from or Stage.TEMP)

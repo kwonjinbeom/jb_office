@@ -32,8 +32,8 @@ class PostPipelineTests(TestCase):
         self.assertContains(res, "미발행")
 
     def test_create_goes_to_requested_screen(self):
-        self.client.post(reverse("writing:create"), {"stage": "temp", "title": "새 템플릿", "summary": "요약"})
-        self.assertEqual(Post.objects.get(title="새 템플릿").stage, Stage.TEMP)
+        self.client.post(reverse("writing:create"), {"stage": "temp", "title": "새 글", "summary": "요약"})
+        self.assertEqual(Post.objects.get(title="새 글").stage, Stage.TEMP)
         self.client.post(reverse("writing:create"), {"stage": "post", "title": "새 포스트",
                                                      "write_status": "todo", "publish_status": "todo"})
         self.assertEqual(Post.objects.get(title="새 포스트").stage, Stage.POST)

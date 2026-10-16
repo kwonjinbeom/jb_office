@@ -5,7 +5,7 @@ from apps.blog_types import classify
 from .models import Post
 from .render import clean_html, is_html
 
-# 화면마다 고칠 수 있는 상태 칸. 임시 템플릿에는 상태가 없다.
+# 화면마다 고칠 수 있는 상태 칸. 임시글에는 상태가 없다.
 STAGE_FIELDS = {
     Post.Stage.TEMP: [],
     Post.Stage.REVIEW: ["review_status"],

@@ -24,7 +24,7 @@ class SiteTemplateTests(TestCase):
         res = self.client.get(reverse("site_templates:index"))
         self.assertContains(res, "memorily")
         self.assertContains(res, "사이트별 템플릿")  # 메뉴
-        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 포스트 관리 · 발행 전 글
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 발행예정글 · 발행 전 글
         self.assertContains(res, "눈잎 — 카테고리 먼저")  # 카테고리 없는 사이트는 못 고른다
 
     def test_site_page_saves_template_and_format(self):

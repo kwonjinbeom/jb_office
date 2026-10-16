@@ -281,7 +281,7 @@ class PostManageTests(TestCase):
         post = self.TistoryPost.objects.create(title="자바 정리", stage="post")
         self.TistoryPost.objects.create(title="임시 글", stage="temp")
         res = self.client.get(INDEX, {"sel": java.sel})
-        self.assertEqual([pk for pk, _ in res.context["candidates"]], [f"tistory:{post.pk}"])  # 포스트 관리 글만 넣을 수 있다
+        self.assertEqual([pk for pk, _ in res.context["candidates"]], [f"tistory:{post.pk}"])  # 발행예정글만 넣을 수 있다
         self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": post.pk, "status": "draft"})
         placement = Placement.objects.get()
         self.assertEqual((placement.tistory_post, placement.status), (post, "draft"))
@@ -308,7 +308,7 @@ class PostManageTests(TestCase):
         self.assertEqual(sorted(pk for pk, _ in res.context["candidates"]), sorted([f"naver:{n.pk}", f"tistory:{t.pk}"]))
         draft = self.NaverPost.objects.create(title="네이버 임시", stage="temp")
         self.client.post(reverse("blog_types:place_add"), {"site_category": lukey.pk, "post": f"naver:{draft.pk}"})
-        self.assertFalse(Placement.objects.exists())  # 포스트 관리 글이 아니면 넣지 않는다
+        self.assertFalse(Placement.objects.exists())  # 발행예정글이 아니면 넣지 않는다
         self.client.post(reverse("blog_types:place_add"), {"site_category": lukey.pk, "post": f"tistory:{t.pk}"})
         self.client.post(reverse("blog_types:place_add"), {"site_category": lukey.pk, "post": f"naver:{n.pk}"})
         self.assertEqual({(p.tistory_post_id, p.naver_post_id) for p in Placement.objects.all()}, {(t.pk, None), (None, n.pk)})
@@ -370,19 +370,40 @@ class PostHubTests(TestCase):
         self.T, self.N = TistoryPost, NaverPost
         self.season = PostType.objects.get(name="시즌 달력")
 
-    def test_detail_keeps_class_tree(self):
-        """글을 골라 글 보기로 가도 글 분류 트리가 남고, 그 글의 분류가 골라져 있다. 트리를 누르면 글 관리로 돌아간다."""
-        t = self.T.objects.create(title="티 글", stage="review", bt_category=self.season.category, bt_type=self.season)
-        n = self.N.objects.create(title="네 글", stage="temp")
-        res = self.client.get(t.get_absolute_url())
-        self.assertEqual(res.status_code, 200)
-        self.assertContains(res, 'data-bt-tree="class"')
-        self.assertContains(res, "data-bt-hide")  # 트리 접기 버튼
-        self.assertEqual(res.context["tree_sel"], self.season.sel)
-        self.assertContains(res, f'href="{reverse("posts:index")}?stage=review&amp;sel={self.season.sel}"')
-        res = self.client.get(n.get_absolute_url())
-        self.assertEqual(res.context["tree_sel"], "u")  # 미분류 글은 미분류가 골라진다
-        self.assertContains(res, f'href="{reverse("posts:index")}?stage=temp&amp;sel=u"')
+    def test_detail_shows_post_list_with_same_conditions(self):
+        """글 관리에서 글을 누르면 글 보기로 가고, 왼쪽에는 분류 트리 대신 같은 조건의 글 목록이 나온다."""
+        t1 = self.T.objects.create(title="티 글 하나", stage="temp", bt_category=self.season.category, bt_type=self.season)
+        n1 = self.N.objects.create(title="네 글 둘", stage="temp", bt_category=self.season.category, bt_type=self.season)
+        self.T.objects.create(title="다른 분류 글", stage="temp")
+        res = self.client.get(reverse("posts:index"), {"stage": "temp", "sel": self.season.sel})
+        self.assertContains(res, f'href="{t1.get_absolute_url()}?stage=temp&amp;sel={self.season.sel}"')
+
+        res = self.client.get(t1.get_absolute_url(), {"stage": "temp", "sel": self.season.sel})
+        self.assertNotContains(res, 'data-bt-tree="class"')  # 글 보기에는 분류 트리가 없다
+        self.assertContains(res, 'data-bt-tree="list"')
+        titles = [p.title for p in res.context["pl_items"]]
+        self.assertEqual(sorted(titles), ["네 글 둘", "티 글 하나"])  # 같은 분류, 두 편집기 글을 함께
+        self.assertEqual(res.context["pl_current"].title, "티 글 하나")
+        self.assertIn(n1.get_absolute_url(), res.content.decode())  # 네이버 글도 목록에서 바로 연다
+
+        res = self.client.get(t1.get_absolute_url())  # 조건 없이 열면 그 글의 단계 전체
+        self.assertEqual(len(res.context["pl_items"]), 3)
+
+    def test_today_filter(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        self.T.objects.create(title="오늘 글", stage="temp")
+        old = self.N.objects.create(title="어제 글", stage="temp")
+        self.N.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=1))
+        res = self.client.get(reverse("posts:index"), {"stage": "temp", "today": "1"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["오늘 글"])
+        self.assertEqual(res.context["tabs"][0]["count"], 1)
+        self.assertContains(res, 'aria-pressed="true"')
+        res = self.client.get(old.get_absolute_url(), {"stage": "temp", "today": "1"})
+        self.assertEqual([p.title for p in res.context["pl_items"]], ["오늘 글"])
+        self.assertIsNone(res.context["pl_current"])  # 조건에 안 맞는 글을 열어도 화면은 열린다
 
     def test_side_menu_has_collapse_button(self):
         res = self.client.get(reverse("posts:index"))

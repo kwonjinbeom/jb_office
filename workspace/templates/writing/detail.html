@@ -7,23 +7,28 @@
 
 {% block actions %}
 <span class="inline-form" style="gap:2px">
-  {% if above %}<a class="btn icon" href="{{ above.get_absolute_url }}" title="위 글: {{ above.title }}" aria-label="위 글">{% include "includes/ic.html" with name="arrow-up" %}</a>{% else %}<span class="btn icon" aria-disabled="true">{% include "includes/ic.html" with name="arrow-up" %}</span>{% endif %}
-  {% if below %}<a class="btn icon" href="{{ below.get_absolute_url }}" title="아래 글: {{ below.title }}" aria-label="아래 글">{% include "includes/ic.html" with name="arrow-down" %}</a>{% else %}<span class="btn icon" aria-disabled="true">{% include "includes/ic.html" with name="arrow-down" %}</span>{% endif %}
+  {% if above %}<a class="btn icon" href="{{ above.list_url|default:above.get_absolute_url }}" title="위 글: {{ above.title }}" aria-label="위 글">{% include "includes/ic.html" with name="arrow-up" %}</a>{% else %}<span class="btn icon" aria-disabled="true">{% include "includes/ic.html" with name="arrow-up" %}</span>{% endif %}
+  {% if below %}<a class="btn icon" href="{{ below.list_url|default:below.get_absolute_url }}" title="아래 글: {{ below.title }}" aria-label="아래 글">{% include "includes/ic.html" with name="arrow-down" %}</a>{% else %}<span class="btn icon" aria-disabled="true">{% include "includes/ic.html" with name="arrow-down" %}</span>{% endif %}
 </span>
-<form method="post" action="{% url 'writing:move' %}" class="inline-form">
-  {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.path }}">
-  {% if prev_label %}<button class="btn" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
-  {% if next_label %}<button class="btn" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
-</form>
 <form method="post" action="{% url 'writing:send' %}" class="inline-form">
-  {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.path }}">
-  <button class="btn" title="복사본을 네이버 글쓰기 임시 템플릿에 만든다">네이버로 보내기</button>
+  {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <button class="btn" title="복사본을 네이버 글쓰기 임시글에 만든다">네이버로 보내기</button>
 </form>
 <a class="btn primary" href="{% url 'writing:edit' post.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>
 {% endblock %}
 
 {% block toolbar %}
-{% include "writing/_tabs.html" %}
+<div class="wr-tabs-row">
+  {% include "writing/_tabs.html" %}
+  <div class="wr-tab-actions">
+    <form method="post" action="{% url 'writing:move' %}" class="inline-form">
+      {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.path }}{% if pl_keep %}?{{ pl_keep }}{% endif %}">
+      {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+      {% if next_label %}<button class="btn sm primary" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+    </form>
+    <a {% trash_attrs post %} data-trash-trigger data-trash-next="{% if below %}{{ below.list_url|default:below.get_absolute_url }}{% elif above %}{{ above.list_url|default:above.get_absolute_url }}{% else %}{{ pl_index_url }}{% endif %}" class="btn sm icon ghost danger" href="{% url 'writing:delete' post.pk %}" title="휴지통으로" aria-label="휴지통으로">{% include "includes/ic.html" with name="trash" %}</a>
+  </div>
+</div>
 <div class="filter-bar wr-copybar">
   <span class="wr-copy-label">복사해서 붙여넣기</span>
   <button type="button" class="btn sm" data-copy="#wr-copy-title" data-copy-msg="제목을 복사했습니다." title="블로그 글쓰기 화면의 제목 칸에 붙여넣기">{% include "includes/ic.html" with name="copy" %}제목</button>
@@ -44,7 +49,7 @@
 
 {% block content %}
 <div class="bt-layout">
-  {% include "blog_types/_class_tree.html" with sel=tree_sel open=tree_open q=tree_q base=tree_base tools=False %}
+  {% include "blog_types/_post_list.html" %}
   <section class="ph-main wr-detail-main">
 <div class="wr-read">
   {% if stage != 'temp' or post.summary or slots %}
@@ -86,8 +91,8 @@
 
   {% if above or below %}
   <nav class="wr-post-nav" aria-label="같은 화면의 다른 글">
-    {% if above %}<a href="{{ above.get_absolute_url }}"><span class="k">{% include "includes/ic.html" with name="arrow-up" %}위 글</span>{{ above.title }}</a>{% endif %}
-    {% if below %}<a href="{{ below.get_absolute_url }}"><span class="k">{% include "includes/ic.html" with name="arrow-down" %}아래 글</span>{{ below.title }}</a>{% endif %}
+    {% if above %}<a href="{{ above.list_url|default:above.get_absolute_url }}"><span class="k">{% include "includes/ic.html" with name="arrow-up" %}위 글</span>{{ above.title }}</a>{% endif %}
+    {% if below %}<a href="{{ below.list_url|default:below.get_absolute_url }}"><span class="k">{% include "includes/ic.html" with name="arrow-down" %}아래 글</span>{{ below.title }}</a>{% endif %}
   </nav>
   {% endif %}
 </div>
