@@ -35,7 +35,12 @@ class Menu:
 
 
 MENUS: list[Menu] = [
-    Menu("routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(로컬·클라우드) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e"),
+    Menu(
+        "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(로컬·클라우드) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
+        children=(
+            Menu("routine_prompts", "프롬프트 관리", "루틴마다 로컬·클라우드 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
+        ),
+    ),
     Menu(
         "daily_ideas", "일일 아이디어", "날짜별로 조사한 후보를 비교하고 필요한 것만 담는 곳", "daily_ideas:list", "sparkles", "#334155",
         children=(

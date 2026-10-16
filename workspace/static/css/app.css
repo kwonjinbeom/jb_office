@@ -1294,3 +1294,33 @@ a.br-addr:hover { color: var(--accent); }
 .rt-acts { display: flex; align-items: center; gap: 4px; }
 .rt-acts form { margin: 0; }
 .rt-table td { vertical-align: middle; }
+.rt-table tbody tr { cursor: pointer; }
+.rt-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+.rt-panel { display: flex; flex-direction: column; min-width: 0; height: 300px; overflow: hidden; }
+.rt-panel-head { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; border-bottom: 1px solid var(--border); flex: none; min-width: 0; }
+.rt-panel-head .card-title { margin: 0; }
+.rt-right { margin-left: auto; white-space: nowrap; }
+.rt-view { flex: 1; width: 100%; min-height: 0; margin: 0; padding: 12px 14px; border: 0; resize: none; background: transparent; color: var(--text); font: inherit; font-size: 12.5px; line-height: 1.65; outline: none; }
+.rt-runs { flex: 1; overflow: auto; }
+.rt-run { border-bottom: 1px solid var(--border); }
+.rt-run summary { display: grid; grid-template-columns: 96px 52px minmax(0, 1fr) 44px; align-items: center; gap: 8px; height: 38px; padding: 0 12px; cursor: pointer; list-style: none; font-size: 12.5px; }
+.rt-run summary::-webkit-details-marker { display: none; }
+.rt-run summary:hover { background: var(--hover); }
+.rt-run-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-run-step { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.rt-run-time { color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
+.rt-log { margin: 0; padding: 8px 12px 12px; font: inherit; font-size: 12px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; background: var(--panel-2); }
+.rt-empty { padding: 28px 16px; text-align: center; color: var(--text-3); font-size: 12.5px; line-height: 1.7; }
+@media (max-width: 1000px) { .rt-bottom { grid-template-columns: minmax(0, 1fr); } }
+
+/* 일일루틴 › 프롬프트 관리: 루틴마다 로컬·클라우드 두 줄 */
+.pm-table tr.pm-start td { border-top: 1px solid var(--border-strong); }
+.pm-table tbody tr:first-child td { border-top: 0; }
+.pm-text { width: 100%; height: 150px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; resize: vertical; background: var(--panel-2); color: var(--text); font: inherit; font-size: 12.5px; line-height: 1.6; }
+.pm-refs { margin: 0; padding: 0; list-style: none; }
+.pm-refs li { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 12.5px; min-width: 0; }
+.pm-refs li > a, .pm-refs li > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-refs li.is-missing > span:first-child { color: var(--danger); }
+.pm-note { flex: none; font-size: 11px; color: var(--text-3); }
+.pm-marks { display: flex; flex-wrap: wrap; gap: 4px; }
+.pm-marks code { font-size: 11.5px; }

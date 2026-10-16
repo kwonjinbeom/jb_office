@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a></div>{% endblock %}
+
+{% block heading %}프롬프트 관리 <span class="cnt">프롬프트 {{ rows|length }}개</span>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'routines:create' %}">{% include "includes/ic.html" with name="plus" %}루틴</a>
+{% endblock %}
+
+{% block content %}
+{# 루틴마다 두 줄 (로컬·클라우드): 프롬프트 원문 · 보는 md·자료 · 바뀌는 칸. md 는 저장소 파일이라 고칠 때는 Claude 에게 맡긴다. #}
+<section class="card br-sites">
+  <table class="grid br-table pm-table">
+    <colgroup><col style="width:170px"><col style="width:76px"><col><col style="width:300px"><col style="width:120px"></colgroup>
+    <thead><tr><th>루틴</th><th>구분</th><th>프롬프트 (원문)</th><th>보는 md · 자료</th><th>바뀌는 칸</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr{% if row.first %} id="pm-{{ row.routine.key }}" class="pm-start"{% endif %}>
+        {% if row.first %}
+        <td rowspan="2">
+          <div class="br-site"><strong>{{ row.routine.name }}</strong><a class="br-edit" href="{% url 'routines:edit' row.routine.pk %}" title="루틴·프롬프트 수정" aria-label="{{ row.routine.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a></div>
+          <div class="br-sub">{{ row.routine.key }} · 하루 {{ row.routine.daily }}{{ row.routine.unit }}</div>
+          <div class="br-sub">{{ row.routine.task }}</div>
+        </td>
+        {% endif %}
+        <td>{{ row.label }}</td>
+        <td><textarea class="pm-text" readonly aria-label="{{ row.routine.name }} {{ row.label }} 프롬프트">{{ row.text }}</textarea>{% if row.mode == 'local' %}<div class="br-sub">+ 끝에 진행 보고 부분이 자동으로 붙습니다</div>{% endif %}</td>
+        <td>
+          <ul class="pm-refs">
+            {% for ref in row.refs %}
+            <li class="{% if not ref.ok %}is-missing{% endif %}">{% if ref.url %}<a href="{{ ref.url }}" title="{{ ref.label }}">{{ ref.label }}</a>{% else %}<span title="{{ ref.label }}">{{ ref.label }}</span>{% endif %}{% if not ref.ok %}<span class="badge red">없음</span>{% elif ref.note %}<span class="pm-note">{{ ref.note }}</span>{% endif %}</li>
+            {% empty %}
+            <li class="muted">—</li>
+            {% endfor %}
+          </ul>
+        </td>
+        <td><div class="pm-marks">{% for m in row.marks %}<code>{{ m }}</code>{% empty %}<span class="muted">—</span>{% endfor %}</div></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="grid-empty">루틴이 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

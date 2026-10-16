@@ -5,10 +5,12 @@
 """
 from django.db import models
 
+from apps.core.models import TrashableModel
+
 PLACEHOLDERS = "{날짜} {하루양} {사이트} {기존글} {검색표준}"
 
 
-class Routine(models.Model):
+class Routine(TrashableModel):
     key = models.SlugField("키", max_length=30, unique=True)
     name = models.CharField("메뉴", max_length=40)
     url_name = models.CharField("화면 주소 이름", max_length=60)
@@ -43,3 +45,47 @@ class RoutineDay(models.Model):
 
     def __str__(self):
         return f"{self.routine} {self.day}"
+
+
+class RoutineRun(models.Model):
+    """로컬로 돌린 루틴 한 번. claude 가 단계마다 `manage.py routine_report` 로 상태와 한 줄을 남긴다."""
+
+    class Status(models.TextChoices):
+        RUNNING = "running", "진행"
+        WAITING = "waiting", "대기"
+        BLOCKED = "blocked", "막힘"
+        DONE = "done", "완료"
+        FAILED = "failed", "실패"
+
+    routine = models.ForeignKey(Routine, verbose_name="루틴", on_delete=models.CASCADE, related_name="runs")
+    day = models.DateField("날짜")
+    status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.RUNNING)
+    step = models.CharField("지금 단계", max_length=200, blank=True)
+    log = models.TextField("기록", blank=True)
+    started_at = models.DateTimeField("시작", auto_now_add=True)
+    updated_at = models.DateTimeField("마지막 보고", auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-pk"]
+        verbose_name = "로컬 실행"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return f"{self.routine} {self.day} {self.get_status_display()}"
+
+    BADGES = {"running": "blue", "waiting": "amber", "blocked": "red", "done": "green", "failed": "red"}
+
+    @property
+    def badge(self):
+        return self.BADGES.get(self.status, "gray")
+
+    @property
+    def is_open(self):
+        return self.status in (self.Status.RUNNING, self.Status.WAITING, self.Status.BLOCKED)
+
+    def report(self, status, message, at):
+        self.status = status
+        self.step = message[:200]
+        line = f"{at:%H:%M} {self.Status(status).label} · {message}"
+        self.log = f"{self.log}\n{line}" if self.log else line
+        self.save()
