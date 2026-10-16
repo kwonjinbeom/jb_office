@@ -53,7 +53,7 @@
     {% endfor %}
   </nav>
 
-  {# 가운데: 글 분류 — 글쓰기 › 대분류 › 카테고리 › 타입 › 하위. 숫자는 포스트 관리까지 간 글 수 #}
+  {# 가운데: 글 분류 — 글쓰기 › 대분류 › 카테고리 › 타입 › 하위. 숫자는 그 아래 발행 완료가 아닌 글 수 #}
   <nav class="bt-tree" aria-label="글 분류" data-bt-tree="class">
     <div class="bt-tree-head">
       <span>글 분류</span>
@@ -175,19 +175,19 @@
 
     {% if panel == 'posts' %}
     <section class="card bt-list">
-      <div class="card-head"><h3 class="card-title">포스트 관리 글 <span class="cnt">{{ posts|length }}</span></h3></div>
+      <div class="card-head"><h3 class="card-title">글 <span class="cnt">{{ posts|length }}</span></h3></div>
       <table class="grid bt-grid">
-        <thead><tr><th>제목</th><th style="width:28%">분류</th><th style="width:28%">넣은 곳</th><th style="width:84px">수정일</th></tr></thead>
+        <thead><tr><th>제목</th><th style="width:64px">단계</th><th style="width:28%">분류</th><th style="width:28%">넣은 곳</th></tr></thead>
         <tbody>
           {% for p in posts %}
           <tr>
             <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></td>
+            <td><span class="badge{% if p.step == '발행' %} green{% elif p.step == '포스트' %} blue{% else %} gray{% endif %}">{{ p.step }}</span></td>
             <td class="small muted bt-cut">{{ p.cls_label }}</td>
             <td class="small bt-cut">{% for pl in p.placements.all %}<span class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} <span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span></span>{% empty %}<span class="muted">-</span>{% endfor %}</td>
-            <td class="small muted num">{{ p.updated_at|date:"m-d H:i" }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="grid-empty">이 분류로 포스트 관리까지 간 글이 없습니다.</td></tr>
+          <tr><td colspan="4" class="grid-empty">이 분류의 글이 없습니다.</td></tr>
           {% endfor %}
         </tbody>
       </table>

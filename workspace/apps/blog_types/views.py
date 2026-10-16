@@ -2,8 +2,8 @@
 
 - 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 그 카테고리에 넣은 글(매핑)이 보이고,
   포스트 관리까지 간 글을 골라 넣는다. 매핑마다 미저장 · 임시저장 · 발행.
-- 글 분류 (가운데): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 › 카테고리 › 타입 › 하위. 누르면 그 분류의 글(포스트 관리)이 보인다.
-  글쓰기마다 플랫폼이 맞는 카테고리만 (공통 + 그 플랫폼).
+- 글 분류 (가운데): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 › 카테고리 › 타입 › 하위. 누르면 그 분류의 글(임시 → 검토 → 포스트 전부)이
+  보인다. 숫자는 그 아래 글 중 아직 발행 완료가 아닌 글 수. 글쓰기마다 플랫폼이 맞는 카테고리만 (공통 + 그 플랫폼).
 
 주소: ?sel=b2 (사이트) · k7 (사이트 카테고리) · ?w=tistory&sel=g1 (대분류) · c3 (카테고리) · t5 (타입) · s9 (하위).
 &edit=1 이면 고른 것의 이름·설명을 고치는 칸이 위에 열린다.
@@ -127,13 +127,14 @@ def _children(kind, obj):
 # ── 트리 ──────────────────────────────────────────────────────────
 
 def _class_tree():
-    """글쓰기마다 대분류 › 카테고리 › 타입 › 하위 와 그 아래 포스트 관리 글 수"""
+    """글쓰기마다 대분류 › 카테고리 › 타입 › 하위 와 그 아래 글 수 (발행 완료가 아닌 글: 임시·검토·포스트 모두)"""
     sections = list(Section.objects.prefetch_related("categories__types__subs"))
     writers = []
     for key, label in classify.WRITERS.items():
         allowed = {c.pk for c in classify.categories_for(key)}
         counts = Counter()
-        for cat, sec, t, s in classify.post_model(key).objects.filter(stage="post").values_list(
+        Post = classify.post_model(key)
+        for cat, sec, t, s in Post.objects.exclude(publish_status=Post.Publish.DONE).values_list(
                 "bt_category_id", "bt_category__section_id", "bt_type_id", "bt_sub_id"):
             counts["all"] += 1
             for prefix, pk in (("g", sec), ("c", cat), ("t", t), ("s", s)):
@@ -172,14 +173,15 @@ def _placements_qs():
 
 
 def _posts(w, kind, obj):
-    """글 분류 한 단계 아래의 포스트 관리 글 + 각 글을 넣은 사이트 카테고리"""
-    qs = classify.post_model(w).objects.filter(stage="post")
+    """글 분류 한 단계 아래의 글 (임시·검토·포스트 모두) + 각 글을 넣은 사이트 카테고리"""
+    qs = classify.post_model(w).objects.all()
     if kind in CLASS_KINDS:
         qs = qs.filter(classify.node_filter(kind, obj))
     qs = classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements_qs()))
     posts = sorted(qs.order_by("-updated_at", "-pk"), key=classify.sort_key)
     for p in posts:
         p.cls_label = classify.label_of(p)
+        p.step = "발행" if p.is_published else {"temp": "임시", "review": "검토", "post": "포스트"}[p.stage]
     return posts
 
 

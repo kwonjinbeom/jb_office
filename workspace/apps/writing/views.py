@@ -203,6 +203,21 @@ def delete(request, pk):
 
 
 @require_POST
+def send(request):
+    """한 건(pk) 또는 체크한 여러 건(ids)을 네이버 글쓰기 임시 템플릿으로 복사한다. 원래 글은 그대로."""
+    from apps.blog_types import transfer
+    ids = request.POST.getlist("ids") or [request.POST.get("pk", "")]
+    posts = list(Post.objects.filter(pk__in=[i for i in ids if i.isdigit()]))
+    for post in posts:
+        transfer.send(post)
+    if posts:
+        messages.success(request, f"{len(posts)}건을 네이버 글쓰기 임시 템플릿으로 보냈습니다. (원래 글은 그대로)")
+    else:
+        messages.warning(request, "보낼 항목을 먼저 고르세요.")
+    return _back(request, posts[0].stage if posts else Stage.TEMP)
+
+
+@require_POST
 def move(request):
     """한 건(pk) 또는 체크한 여러 건(ids)을 이웃 화면으로 옮긴다."""
     to = request.POST.get("to", "")

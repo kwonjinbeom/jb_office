@@ -236,10 +236,46 @@ class PostManageTests(TestCase):
         classify.assign(p, self.sale.sel)
         p.save()
         self.TistoryPost.objects.create(title="아직 검토 중", stage="review", bt_category=self.season.category)
+        self.TistoryPost.objects.create(title="발행한 글", stage="post", publish_status="done", bt_category=self.season.category)
         res = self.client.get(INDEX, {"w": "tistory", "sel": self.season.category.sel})
-        self.assertEqual([x.title for x in res.context["posts"]], ["세일 정리"])  # 포스트 관리 글만
+        self.assertEqual(sorted(x.title for x in res.context["posts"]), ["발행한 글", "세일 정리", "아직 검토 중"])  # 모든 단계
         res = self.client.get(INDEX, {"w": "naver", "sel": self.season.category.sel})
         self.assertEqual(res.context["posts"], [])
+
+    def test_tree_counts_unpublished_posts(self):
+        cat = self.season.category
+        self.TistoryPost.objects.create(title="임시", stage="temp", bt_category=cat, bt_type=self.season, bt_sub=self.sale)
+        self.TistoryPost.objects.create(title="검토", stage="review", bt_category=cat, bt_type=self.season)
+        self.TistoryPost.objects.create(title="발행", stage="post", publish_status="done", bt_category=cat)
+        self.NaverPost.objects.create(title="네이버", stage="temp", bt_category=cat)
+        res = self.client.get(INDEX)
+        tistory = next(x for x in res.context["writers"] if x["key"] == "tistory")
+        sec = next(g for g in tistory["sections"] if g["obj"] == cat.section)
+        c = next(x for x in sec["cats"] if x["obj"] == cat)
+        t = next(x for x in c["types"] if x["obj"] == self.season)
+        sub = next(x for x in t["subs"] if x["obj"] == self.sale)
+        self.assertEqual((tistory["count"], sec["count"], c["count"], t["count"], sub["count"]), (2, 2, 2, 2, 1))
+
+    def test_send_between_writers(self):
+        from apps.blog_types import classify
+        post = self.TistoryPost.objects.create(title="블프 달력", stage="post", summary="요약", tags="블프",
+                                               body="## 소제목\n본문")
+        classify.assign(post, self.sale.sel)
+        post.save()
+        res = self.client.post(reverse("writing:send"), {"pk": post.pk, "next": "/blog/writing/posts/"})
+        self.assertRedirects(res, "/blog/writing/posts/", fetch_redirect_response=False)
+        copy = self.NaverPost.objects.get(title="블프 달력")
+        self.assertEqual((copy.stage, copy.summary, copy.tags, copy.body), ("temp", "요약", "블프", "## 소제목\n본문"))
+        self.assertEqual(copy.bt_sub, self.sale)
+        self.assertTrue(self.TistoryPost.objects.filter(pk=post.pk).exists())  # 원래 글은 그대로
+        # 네이버 전용 카테고리(G)는 티스토리로 보내면 미분류
+        g = Category.objects.get(section__name="판매 수익 (커넥트)", code="G")
+        n = self.NaverPost.objects.create(title="단풍 패키지", stage="temp", bt_category=g)
+        a = self.NaverPost.objects.create(title="두 번째", stage="temp")
+        self.client.post(reverse("naver_writing:send"), {"ids": [n.pk, a.pk]})
+        back = self.TistoryPost.objects.get(title="단풍 패키지")
+        self.assertIsNone(back.bt_category)
+        self.assertTrue(self.TistoryPost.objects.filter(title="두 번째", stage="temp").exists())
 
     def test_place_post_in_site_category(self):
         memorily = Blog.objects.get(name="memorily")
@@ -300,3 +336,23 @@ class SideNavTests(TestCase):
         self.assertTrue(group["children"][0]["active"])  # 리스트 중메뉴가 강조된다
         memos = next(n for n in res.context["NAV"] if n["menu"].key == "memos")
         self.assertEqual(memos["children"], [])  # 하위 없는 메뉴는 그대로
+
+
+class ClassifyExistingPostsTests(TestCase):
+    def test_existing_titles_get_classified_once(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post as TistoryPost
+        mig = import_module("apps.blog_types.migrations.0011_classify_existing_posts")
+        flu = TistoryPost.objects.create(title=next(iter(mig.TISTORY)))
+        kept = TistoryPost.objects.create(title=list(mig.TISTORY)[1], bt_category=Category.objects.get(
+            section__name="판매 수익 (커넥트)", code="A"))
+        ssd = NaverPost.objects.create(title=list(mig.NAVER)[1])
+        mig.forward(django_apps, None)
+        flu.refresh_from_db(), kept.refresh_from_db(), ssd.refresh_from_db()
+        self.assertEqual((flu.bt_category.name, flu.bt_type.name), ("정책·내 돈", "대상·신청일 (내 줄 찾기)"))
+        self.assertEqual(kept.bt_category.code, "A")  # 이미 정한 분류는 그대로
+        self.assertEqual(ssd.bt_sub.name, "두 개만 비교")

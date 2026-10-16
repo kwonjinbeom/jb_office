@@ -11,6 +11,7 @@ urlpatterns = [
     path("new/", views.create, name="create"),
     path("import/", views.import_drafts, name="import"),
     path("move/", views.move, name="move"),
+    path("send/", views.send, name="send"),
     path("convert/", views.convert, name="convert"),
     path("<int:pk>/", views.detail, name="detail"),
     path("<int:pk>/edit/", views.edit, name="edit"),
