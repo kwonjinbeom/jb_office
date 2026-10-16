@@ -240,22 +240,22 @@ class RepoTests(Login):
         res = self.client.get(reverse("routines:version_restore", args=[v1.pk]))
         self.assertContains(res, "v1 내용")
 
-    def test_brief_for_scheduled_run_needs_token(self):
-        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
-        url = reverse("routines:brief", args=["writing"])
-        self.client.logout()  # 클라우드 루틴은 로그인하지 않고 토큰으로 받는다
-        self.assertEqual(self.client.get(url, {"token": ""}).status_code, 403)  # 토큰을 만들기 전에는 안 준다
-        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
-        self.assertEqual(self.client.get(url, {"token": "bad"}).status_code, 403)
-        res = self.client.get(url, {"token": "tok", "day": "2026-10-16"})
-        self.assertEqual((res.status_code, res["Content-Type"]), (200, "text/plain; charset=utf-8"))
-        text = res.content.decode()
-        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 — 2026-10-16"))
-        self.assertIn("### 오늘 쓸 분류", text)
-        self.assertNotIn("routine_report", text)  # PC 명령이 아니라 서버 보고 주소로
-        self.assertIn("curl -fsS -X POST", text)
-        self.assertIn("/routines/report/writing/?token=tok&day=2026-10-16&via=schedule", text)
-        self.assertEqual(self.client.get(reverse("routines:brief", args=["nope"]), {"token": "tok"}).status_code, 404)
+    @patch("apps.routines.local_run.find_claude", return_value="claude")
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_all_run_order_update_writing_ideas(self, popen, _claude):
+        res = self.client.get(INDEX, {"date": "2026-10-16"})
+        self.assertContains(res, ">전체 실행<")
+        text = res.context["all_prompt"]
+        self.assertIn("순서: 1. 프롬프트 최신화 → 2. 글쓰기 → 3. 일일 아이디어", text)
+        self.assertLess(text.index("# 일일루틴 · 프롬프트 최신화"), text.index("# 일일루틴 · 글쓰기"))
+        self.assertLess(text.index("# 일일루틴 · 글쓰기"), text.index("# 일일루틴 · 일일 아이디어"))
+        self.assertEqual(text.count("## 진행 보고"), 3)
+        self.assertEqual(res.context["all_keys"], "prompt_update,writing,daily_ideas")
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
+            start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text)
+            self.assertTrue((Path(tmp) / ".routine" / "all-2026-10-16.md").is_file())
+        self.assertEqual(popen.call_count, 1)
+        self.assertEqual(RoutineRun.objects.count(), 3)
 
     def test_report_api_records_run_history(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
@@ -296,7 +296,7 @@ class RepoTests(Login):
         self.assertEqual(self.client.post(url, {"mode": "cats"}).status_code, 400)
         page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
         for html in ['data-ex-mode="cats" class="on"', 'data-ex-mode="comment"', ">추가 실행<", 'id="ex-comment"',
-                     "10월 16일 아침 예약 분량", 'id="pk-morning"']:
+                     "10월 16일 하루 분량", 'id="pk-morning"']:
             self.assertContains(page, html)
         self.assertNotContains(page, 'class="num-in pk-n" type="number" min="0" max="20" name="n_c' + str(it.pk) + '" value')  # 빈 칸으로 시작
 
@@ -315,7 +315,6 @@ class RepoTests(Login):
         index = self.client.get(INDEX)
         self.assertContains(index, ">실행<")  # 예약이 안 돌았을 때 손으로
         self.assertContains(index, f'{reverse("routines:extra_page")}?r=daily_ideas')
-        self.assertNotContains(index, "전체 실행")
 
     def test_capture_version_when_md_changes(self):
         tistory = Routine.objects.get(key="writing")

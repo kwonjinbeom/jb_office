@@ -8,7 +8,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
@@ -75,10 +74,8 @@ def home(request):
 
 
 def app_settings(request):
-    """화면에서 바꾸는 설정: 자동 반영 웹훅 비밀값, 일일루틴 예약 실행 주소의 토큰."""
+    """화면에서 바꾸는 설정: 자동 반영 웹훅 비밀값, 일일루틴 실행 보고 토큰."""
     import secrets
-
-    from apps.routines.models import Routine
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -87,12 +84,8 @@ def app_settings(request):
             messages.success(request, "비밀값을 만들었습니다. GitHub 웹훅의 Secret 에 같은 값을 넣으세요.")
         elif action in {"brief_generate", "brief_regenerate"}:
             AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, secrets.token_urlsafe(32))
-            messages.success(request, "예약 실행 주소를 만들었습니다. 클라우드 루틴 프롬프트의 주소를 이것으로 바꾸세요.")
+            messages.success(request, "실행 보고 토큰을 만들었습니다. 이제부터 여는 일일루틴 안내문에 들어갑니다.")
         return redirect("core:settings")
-    brief_token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
-    briefs = [{"name": r.name, "key": r.key,
-               "url": request.build_absolute_uri(reverse("routines:brief", args=[r.key])) + f"?token={brief_token}"}
-              for r in Routine.objects.all()] if brief_token else []
     return render(
         request,
         "core/settings.html",
@@ -103,8 +96,7 @@ def app_settings(request):
             "is_server": settings.IS_SERVER,
             "git": gitstate.get_status(),
             "reload_file": settings.DEPLOY.get("RELOAD_TOUCH_FILE"),
-            "brief_token": brief_token,
-            "briefs": briefs,
+            "brief_token": AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY),
         },
     )
 

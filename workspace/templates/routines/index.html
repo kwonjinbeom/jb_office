@@ -5,11 +5,11 @@
 {% block toolbar %}{% include "includes/period_bar.html" %}{% endblock %}
 
 {% block content %}
-{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 일일 아이디어·글쓰기는 매일 아침 7시 예약. '실행'은 예약이 안 돌았을 때, 더 하려면 '추가 실행'. #}
+{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(최신화 → 글쓰기 → 아이디어) · '추가 실행'(더). #}
 <section class="card br-sites">
   <table class="grid br-table rt-table">
     <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:230px"><col style="width:80px"></colgroup>
-    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th>실행</th><th class="c">상태</th></tr></thead>
+    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
     <tbody>
       {% for r in routines %}
       <tr id="rt-{{ r.key }}">
@@ -25,9 +25,8 @@
         <td>
           <div class="rt-acts">
             {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt day=run_day label="실행" %}
-            {% if r.key in extra_keys %}<a class="btn sm ghost" href="{% url 'routines:extra_page' %}?r={{ r.key }}" title="아침 예약과 별도로 더 돌리기">{% include "includes/ic.html" with name="plus" %}추가 실행</a>{% endif %}
+            {% if r.key in extra_keys %}<a class="btn sm ghost" href="{% url 'routines:extra_page' %}?r={{ r.key }}" title="하루 분량과 별도로 더 돌리기">{% include "includes/ic.html" with name="plus" %}추가 실행</a>{% endif %}
           </div>
-          {% if r.key in extra_keys %}<div class="br-sub">매일 07:00 예약 · '실행'은 예약이 안 돌았을 때</div>{% endif %}
         </td>
         <td class="c">{% include "includes/state.html" with state=r.state %}</td>
       </tr>
@@ -36,11 +35,11 @@
   </table>
 </section>
 
-{# 모든 루틴의 실행 이력 (매일 아침 예약 · '실행' · 추가 실행). claude 가 단계마다 서버로 보고한다. #}
+{# 모든 루틴의 실행 이력 ('실행' · 전체 실행 · 추가 실행). claude 가 단계마다 서버로 보고한다. #}
 <section class="card rt-panel rt-history" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
   <div class="rt-panel-head">
     <h2 class="card-title">실행 이력 <span class="cnt">{{ runs|length }}</span></h2>
-    <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% else %}모든 루틴 · 예약과 실행{% endif %}</span>
+    <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% else %}모든 루틴{% endif %}</span>
   </div>
   <div class="rt-runs">
     {% for run in runs %}
@@ -50,7 +49,7 @@
 {{ run.log }}</pre>
     </details>
     {% empty %}
-    <div class="rt-empty">이 기간에 실행한 기록이 없습니다.<br>매일 아침 예약 실행과 '실행'·'추가 실행'으로 돌린 claude 가 단계마다 여기에 남깁니다.</div>
+    <div class="rt-empty">이 기간에 실행한 기록이 없습니다.<br>'실행'·'전체 실행'·'추가 실행'으로 돌린 claude 가 단계마다 여기에 남깁니다.</div>
     {% endfor %}
   </div>
 </section>

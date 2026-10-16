@@ -2,10 +2,10 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a></div>{% endblock %}
 
-{% block subtitle %}<span class="page-sub">매일 아침 7시 예약과 별도로 더 돌립니다. 누르면 PC 터미널에서 claude 가 시작합니다.</span>{% endblock %}
+{% block subtitle %}<span class="page-sub">하루 분량과 별도로 더 돌립니다. 누르면 PC 터미널에서 claude 가 시작합니다.</span>{% endblock %}
 
 {% block toolbar %}
-{# 루틴 고르기 · 날짜 (글쓰기 아침 분량은 이 날짜의 것) #}
+{# 루틴 고르기 · 날짜 (글쓰기 하루 분량은 이 날짜의 것) #}
 <div class="ex-bar">
   <div class="seg" role="tablist" aria-label="루틴">{% for r in targets %}<a href="?r={{ r.key }}&date={{ day|date:'Y-m-d' }}"{% if r == routine %} class="on"{% endif %}>{{ r.name }}</a>{% endfor %}</div>
   <form method="get" class="ex-day"><input type="hidden" name="r" value="{{ routine.key }}"><label class="muted small" for="ex-date">날짜</label><input class="input" id="ex-date" type="date" name="date" value="{{ day|date:'Y-m-d' }}" data-autosubmit>{% if day != today %}<a class="btn sm ghost" href="?r={{ routine.key }}">오늘</a>{% endif %}</form>
@@ -16,7 +16,7 @@
 {% if not routine %}
 <section class="card"><div class="rt-empty">추가 실행할 루틴이 없습니다.</div></section>
 {% elif picker %}
-{# 글쓰기: 분류 고르기(기본, 빈 편수로 시작) · 코멘트. 아래는 그날 아침 예약 분량. #}
+{# 글쓰기: 분류 고르기(기본, 빈 편수로 시작) · 코멘트. 아래는 그날 하루 분량. #}
 <section class="card ex-card">
   <div class="ex-head">
     <div class="seg" role="tablist" aria-label="방식"><button type="button" data-ex-mode="cats" class="on">분류 고르기</button><button type="button" data-ex-mode="comment">코멘트</button></div>
@@ -44,14 +44,14 @@
   <div class="ex-comment" data-ex-comment hidden><textarea class="input" id="ex-comment" rows="12" maxlength="2000" aria-label="추가로 쓸 글 코멘트" placeholder="예) IT/AI 로 3편 — 아이폰 18 사전예약·가격 비교, 요즘 많이 쓰는 AI 요약 앱&#10;여행·계절 1편 — 11월 단풍 막바지 명소"></textarea></div>
 </section>
 
-{# 그날 아침 예약 분량: 예약 실행이 쓰는 분류. 위 칸에 불러와 고친 뒤 저장한다. #}
+{# 그날 하루 분량: 리스트의 '실행'·'전체 실행'이 쓰는 분류. 위 칸에 불러와 고친 뒤 저장한다. #}
 <section class="card ex-card" id="ex-morning">
   <div class="ex-head">
-    <h2 class="card-title">{{ day|date:"n월 j일" }} 아침 예약 분량 <span class="cnt">{{ picker.total }}편</span></h2>
+    <h2 class="card-title">{{ day|date:"n월 j일" }} 하루 분량 <span class="cnt">{{ picker.total }}편</span></h2>
     <span class="badge {% if picker.custom %}blue{% else %}gray{% endif %}">{% if picker.custom %}고름{% else %}기본 · 무작위{% endif %}</span>
     <div class="rt-right rt-acts">
       <button class="btn sm ghost" type="button" data-pk-load title="위 칸에 이 분량을 넣어 고칩니다">{% include "includes/ic.html" with name="edit" %}위 칸에 불러오기</button>
-      <button class="btn sm" type="submit" form="pk-form" title="위 칸의 편수를 이 날 아침 예약 분량으로 저장">{% include "includes/ic.html" with name="save" %}위 칸으로 저장</button>
+      <button class="btn sm" type="submit" form="pk-form" title="위 칸의 편수를 이 날 하루 분량으로 저장">{% include "includes/ic.html" with name="save" %}위 칸으로 저장</button>
       <button class="btn sm ghost" type="submit" form="pk-reroll" title="광고 6 · 판매 3 · IT/AI 2 를 새로 무작위로">{% include "includes/ic.html" with name="refresh" %}다시 뽑기</button>
       {% if picker.custom %}<button class="btn sm ghost" type="submit" form="pk-default" title="그날 기본 무작위로">기본값</button>{% endif %}
     </div>
@@ -71,7 +71,7 @@
 <section class="card ex-card">
   <div class="ex-head">
     <h2 class="card-title">{{ routine.name }} 더 하기</h2>
-    <span class="muted small">아침 예약은 하루 {{ routine.daily }}{{ routine.unit }}</span>
+    <span class="muted small">하루 분량은 {{ routine.daily }}{{ routine.unit }}</span>
     <div class="rt-right rt-acts">
       <button class="btn primary" type="button" data-ex-run data-mode="count" data-url="{% url 'routines:extra' routine.pk %}" data-key="{{ routine.key }}" data-name="{{ routine.name }}" data-day="{{ day|date:'Y-m-d' }}">{% include "includes/ic.html" with name="server" %}추가 실행</button>
     </div>

@@ -4,12 +4,10 @@
 날짜·하루 양 + "이 md 를 읽고 따른다" + 오늘의 자료(서버 DB: 사이트·체크, 이미 있는 글, 검색 표준).
 로컬·클라우드 구분은 없다 (2026-10-17 사용자). 진행 보고는 서버의 보고 주소(report_api)로 보내 '실행 이력'에 쌓인다
 (토큰이 없으면 PC 의 manage.py routine_report).
-추가 실행 (중메뉴): 매일 아침 예약으로 도는 루틴(EXTRA_KEYS)을 아침 분량과 별도로 더 돌린다.
-글쓰기는 분류 고르기(기본) · 코멘트, 일일 아이디어는 개수 + 방향. 글쓰기 아침 분량(그날 쓸 분류)도 이 화면에서 고친다.
-리스트의 '실행'은 예약이 제대로 안 돌았을 때 손으로 돌리는 버튼이다.
-
-예약 실행: claude.ai 의 클라우드 루틴이 매일 아침 brief 주소(/routines/brief/<키>/?token=…)에서 그날 안내문을 받아 그대로 한다.
-토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
+모든 실행은 PC 에서 손으로 한다 (2026-10-17 사용자: 클라우드 예약은 지웠다). 리스트의 '실행'(루틴 하나),
+'전체 실행'(ALL_ORDER 순서로 한 터미널에서 차례로), 중메뉴 '추가 실행'(EXTRA_KEYS 를 하루 분량과 별도로 더).
+추가 실행: 글쓰기는 분류 고르기(기본) · 코멘트, 일일 아이디어는 개수 + 방향. 글쓰기 하루 분량(그날 쓸 분류)도 이 화면에서 고친다.
+보고 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
 
 로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
 PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
@@ -40,7 +38,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_POST
 
 from apps.blog_ops.models import FeedEntry
 from apps.blog_rules.models import Blog
@@ -334,11 +332,12 @@ REPORT = """
 REPORT_PC = 'workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}'
 REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --data-urlencode "step=<한 줄>"'
 EXTRA_TITLE = "이번에 할 것 (추가 실행)"
-EXTRA_KEYS = ("writing", "daily_ideas")  # 추가 실행 화면에 나오는 루틴 (매일 아침 예약으로 도는 것)
+EXTRA_KEYS = ("writing", "daily_ideas")  # 추가 실행 화면에 나오는 루틴
+ALL_ORDER = ("prompt_update", "writing", "daily_ideas")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
 
 
 def report_url(request, routine, day, via=RoutineRun.Via.RUN):
-    """진행 보고를 받을 서버 주소. 예약 토큰이 없으면 "" (PC 의 manage.py routine_report 로)."""
+    """진행 보고를 받을 서버 주소. 보고 토큰이 없으면 "" (PC 의 manage.py routine_report 로)."""
     token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
     if not token:
         return ""
@@ -360,7 +359,7 @@ def launcher(routine, day, report=None, extra=""):
     extra 는 추가 실행의 내용: '오늘 쓸 분류'(없으면 맨 끝) 자리에 '이번에 할 것'으로 들어간다."""
     if extra:
         head = [f"# 일일루틴 · {routine.name} (추가 실행) — {day}", "",
-                f"할 일: 아침 예약 실행과 별도로 더 한다 — 아래 '{EXTRA_TITLE}'만큼만."]
+                f"할 일: 하루 분량과 별도로 더 한다 — 아래 '{EXTRA_TITLE}'만큼만."]
     else:
         head = [f"# 일일루틴 · {routine.name} — {day}", "", f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}."]
     lines = head + ["아래 md 를 읽고 그대로 따른다.", ""]
@@ -465,6 +464,24 @@ def _day(request):
         return timezone.localdate()
 
 
+def _in_all_order(routines):
+    return sorted(routines, key=lambda r: ALL_ORDER.index(r.key) if r.key in ALL_ORDER else len(ALL_ORDER))
+
+
+def all_prompt(routines, day, report_for=lambda r: True):
+    """전체 실행 안내문: ALL_ORDER 순서로 각 안내문(진행 보고 포함)을 이어 붙여 한 터미널에서 차례로 돈다."""
+    routines = _in_all_order(routines)
+    head = [f"# 일일루틴 전체 실행 — {day}", "",
+            "아래 루틴을 위에서부터 차례로 끝까지 진행한다. 오래 걸려도 된다.",
+            "- 한 루틴을 끝내고(완료 보고) 다음 루틴으로 넘어간다. 앞 루틴이 고친 프롬프트 md 는 다음 루틴이 새로 읽는다.",
+            "- 한 루틴이 막히면 막힘으로 보고하고 다음 루틴으로 간다. 내가 할 일이 생기면 대기로 보고하고 기다린다.",
+            "- 순서: " + " → ".join(f"{i}. {r.name}" for i, r in enumerate(routines, start=1)), ""]
+    parts = ["\n".join(head)]
+    for i, r in enumerate(routines, start=1):
+        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, day, report=report_for(r)))
+    return "\n".join(parts)
+
+
 # ---- 분류 고르기 (글쓰기)
 
 def _picker(routine, day):
@@ -478,7 +495,7 @@ def _picker(routine, day):
 
 
 def extra_page(request):
-    """추가 실행: 매일 아침 예약으로 도는 루틴을 더 돌린다. 누르면 extra 에서 안내문을 받아 PC 터미널을 연다."""
+    """추가 실행: 일일 아이디어·글쓰기를 하루 분량과 별도로 더 돌린다. 누르면 extra 에서 안내문을 받아 PC 터미널을 연다."""
     _nav(request, "routine_extra")
     targets = [r for r in Routine.objects.all() if r.key in EXTRA_KEYS]
     routine = next((r for r in targets if r.key == request.GET.get("r")), None) or next(
@@ -562,7 +579,7 @@ def index(request):
         r.fixed = (r.pk, sel) in fixed
         r.url = reverse(r.url_name)
         r.prompt = launcher(r, run_day, report=report_url(request, r, run_day))
-    runs = (RoutineRun.objects.select_related("routine")  # 실행 이력: 모든 루틴 (예약 · 실행), 이 기간 + 끝나지 않은 것
+    runs = (RoutineRun.objects.select_related("routine")  # 실행 이력: 모든 루틴, 이 기간 + 끝나지 않은 것
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
                                                                  RoutineRun.Status.BLOCKED]))[:50])
     return render(request, "routines/index.html", {
@@ -576,6 +593,8 @@ def index(request):
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
         "extra_keys": EXTRA_KEYS,
+        "all_prompt": all_prompt(routines, run_day, lambda r: report_url(request, r, run_day)) if routines else "",
+        "all_keys": ",".join(r.key for r in _in_all_order(routines)),
         "on_server": settings.IS_SERVER,
         "keep": request.get_full_path().partition("?")[2],
     })
@@ -684,27 +703,11 @@ def version_restore(request, pk):
         "prompt": restore_prompt(v, today, report=report_url(request, v.routine, today))})
 
 
-@login_not_required
-@require_GET
-def brief(request, key):
-    """예약 실행용 그날 안내문 (text/plain). claude.ai 클라우드 루틴이 매일 아침 받아 간다. 토큰이 맞아야 준다."""
-    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
-    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
-        return HttpResponseForbidden("token")
-    routine = get_object_or_404(Routine, key=key)
-    try:
-        day = date.fromisoformat(request.GET.get("day", ""))
-    except ValueError:
-        day = timezone.localdate()
-    text = launcher(routine, day, report=report_url(request, routine, day, RoutineRun.Via.SCHEDULE) or None)
-    return HttpResponse(text, content_type="text/plain; charset=utf-8")
-
-
 @csrf_exempt
 @login_not_required
 @require_POST
 def report_api(request, key):
-    """진행 보고 한 줄 (예약 실행 · '실행' 터미널의 claude 가 curl 로 보낸다). 토큰이 맞아야 남긴다."""
+    """진행 보고 한 줄 ('실행'·'전체 실행'·'추가 실행' 터미널의 claude 가 curl 로 보낸다). 토큰이 맞아야 남긴다."""
     token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
     if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
         return HttpResponseForbidden("token")
