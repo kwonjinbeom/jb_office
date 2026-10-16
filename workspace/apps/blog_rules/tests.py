@@ -19,6 +19,10 @@ class BlogRulesTests(TestCase):
         self.assertEqual((naver.platform, naver.daily, naver.address), ("naver", 1, "https://blog.naver.com/black_lukey"))
         self.assertEqual(Rule.objects.filter(group="check").count(), 5)
         self.assertTrue(Rule.objects.filter(group="ban", body__contains="기출문제").exists())
+        # 0003: memorily 는 IT 기반, 블로거는 주소가 생겨 '준비'
+        self.assertTrue(Blog.objects.get(name="memorily").content.startswith("IT 기반"))
+        blogger = Blog.objects.get(platform="blogger")
+        self.assertEqual((blogger.address, blogger.status), ("https://bambam2222.blogspot.com/", "ready"))
 
     def test_page_shows_cards_totals_and_groups(self):
         res = self.client.get(INDEX)
