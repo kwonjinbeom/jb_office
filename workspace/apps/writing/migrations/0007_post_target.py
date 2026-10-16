@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("writing", "0005_post_bt_category_post_bt_sub_post_bt_type"),
+        ("writing", "0006_draft_written_at"),
     ]
 
     operations = [
