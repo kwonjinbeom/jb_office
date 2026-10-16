@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}규칙 <span class="cnt">오늘 목표 {{ daily_total }}편</span>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'blog_rules:blog_create' %}">{% include "includes/ic.html" with name="plus" %}블로그</a>
+{% endblock %}
+
+{% block content %}
+<div class="br-page">
+
+  {# 블로그 카드: 어디에 무엇을 하루 몇 편 #}
+  <div class="br-blogs">
+    {% for b in blogs %}
+    <section class="card br-blog{% if b.status != 'active' %} is-{{ b.status }}{% endif %}">
+      <div class="br-blog-head">
+        <span class="br-plat p-{{ b.platform }}">{{ b.get_platform_display }}</span>
+        <h2>{% if b.address %}<a href="{{ b.address }}" target="_blank" rel="noopener">{{ b.name }}</a>{% else %}{{ b.name }}{% endif %}</h2>
+        {% if b.status != 'active' %}<span class="badge gray outline">{{ b.get_status_display }}</span>{% endif %}
+        <a class="btn ghost sm icon br-edit" href="{% url 'blog_rules:blog_edit' b.pk %}" title="수정" aria-label="{{ b.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a>
+      </div>
+      {% if b.status == 'active' %}
+      <div class="br-daily"><strong>{{ b.daily }}</strong>편/일{% if b.daily_note %}<span>{{ b.daily_note }}</span>{% endif %}</div>
+      {% endif %}
+      <dl class="br-kv">
+        {% if b.content %}<dt>글</dt><dd>{{ b.content }}</dd>{% endif %}
+        {% if b.revenue %}<dt>수익</dt><dd>{{ b.revenue }}</dd>{% endif %}
+        {% if b.kpi %}<dt>지표</dt><dd>{{ b.kpi }}</dd>{% endif %}
+      </dl>
+      {% if b.note %}<p class="br-note">{{ b.note }}</p>{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+
+  {% for name, total, items in accounts %}
+  <div class="br-account">{% include "includes/ic.html" with name="info" %}<strong>{{ name }}</strong> {% for b in items %}{{ b.name }}{% if not forloop.last %} + {% endif %}{% endfor %} = 하루 {{ total }}편 <span class="muted">(계정 합계 상한 3편)</span></div>
+  {% endfor %}
+
+  {# 매일 지킬 규칙: 묶음별 한 줄씩 #}
+  <div class="br-rules">
+    {% for key, g in groups.items %}
+    <section class="card br-group g-{{ key }}" id="g-{{ key }}">
+      <div class="card-head"><h3 class="card-title">{{ g.label }}</h3><span class="cnt">{{ g.rules|length }}</span></div>
+      <ol class="br-list{% if key == 'check' %} numbered{% endif %}">
+        {% for r in g.rules %}
+        <li>
+          <span class="br-body">{{ r.body }}</span>
+          {% if r.note %}<span class="br-src" title="{{ r.note }}">{{ r.note }}</span>{% endif %}
+          <span class="br-tools">
+            <a href="{% url 'blog_rules:rule_edit' r.pk %}" title="수정" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</a>
+            <a href="{% url 'blog_rules:delete' 'rule' r.pk %}" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</a>
+          </span>
+        </li>
+        {% endfor %}
+      </ol>
+      <form class="br-add" method="post" action="{% url 'blog_rules:rule_add' %}">
+        {% csrf_token %}<input type="hidden" name="group" value="{{ key }}">
+        <input class="input sm" name="body" placeholder="+ 규칙 추가 (입력 후 Enter)" aria-label="{{ g.label }} 규칙 추가" autocomplete="off">
+      </form>
+    </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
