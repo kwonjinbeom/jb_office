@@ -37,6 +37,7 @@ ROUTINE_ALLOW = [
     "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch", "mcp__playwright",
     "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
     "Bash(git status *)", "Bash(git log *)", "Bash(git diff *)", "Bash(ls *)", "Bash(mkdir *)",
+    "Bash(curl *)",  # 진행 보고를 서버 실행 이력으로 (views.report_api)
     "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_report *)",
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
 ]

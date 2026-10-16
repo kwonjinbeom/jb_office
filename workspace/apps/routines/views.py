@@ -2,7 +2,8 @@
 
 프롬프트는 저장소 md (Routine.prompt_doc). 실행할 때는 짧은 안내문(launcher)만 만든다:
 날짜·하루 양 + "이 md 를 읽고 따른다" + 오늘의 자료(서버 DB: 사이트·체크, 이미 있는 글, 검색 표준).
-로컬·클라우드 구분은 없다 (2026-10-17 사용자). 화면의 '실행'으로 연 터미널에만 진행 보고 부분이 붙는다.
+로컬·클라우드 구분은 없다 (2026-10-17 사용자). 진행 보고는 서버의 보고 주소(report_api)로 보내 '실행 이력'에 쌓인다
+(토큰이 없으면 PC 의 manage.py routine_report). 글쓰기는 '추가로 쓰기'(분류 고르기 · 코멘트)로 아침 분량과 별도로 더 쓴다.
 
 예약 실행: claude.ai 의 클라우드 루틴이 매일 아침 brief 주소(/routines/brief/<키>/?token=…)에서 그날 안내문을 받아 그대로 한다.
 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
@@ -24,16 +25,18 @@ import re
 from collections import Counter
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlencode
 
 from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.db.models import Avg, Max, Q
-from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.blog_ops.models import FeedEntry
@@ -261,7 +264,11 @@ def _node_path(sel):
 
 def _picks_text(routine, day):
     picks, custom = day_picks(routine, day)
-    lines = [f"(총 {sum(picks.values())}편 · {'사용자가 고른 분류' if custom else '기본: 오늘 무작위'})"]
+    return _picks_lines(picks, "사용자가 고른 분류" if custom else "기본: 오늘 무작위")
+
+
+def _picks_lines(picks, how):
+    lines = [f"(총 {sum(picks.values())}편 · {how})"]
     for sel, n in picks.items():
         node, path = _node_path(sel)
         if node is None:
@@ -307,10 +314,10 @@ def data_text(routine, key, day):
 # ---- 안내문
 
 REPORT = """
-## 진행 보고 (화면의 '실행'으로 연 터미널에만 붙는 부분)
-단계가 바뀔 때마다 저장소 폴더에서 아래 명령으로 일일루틴 화면(로컬 현황)에 한 줄을 남긴다.
+## 진행 보고
+단계가 바뀔 때마다 저장소 폴더에서 아래 명령으로 일일루틴 화면의 실행 이력에 한 줄을 남긴다. 보고가 안 되면 넘어가고 일은 계속한다.
 
-    workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}
+    {cmd}
 
 - 시작: 맨 처음, 오늘 할 일 한 줄
 - 진행: 단계가 바뀔 때 (예: "사이트 최근 글 확인", "원고 2/4편 저장")
@@ -321,24 +328,53 @@ REPORT = """
 """
 
 
-def launcher(routine, day, report=False):
-    """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ report 면 진행 보고)."""
-    lines = [f"# 일일루틴 · {routine.name} — {day}", "",
-             f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}.",
-             "아래 md 를 읽고 그대로 따른다.", ""]
+REPORT_PC = 'workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}'
+REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --data-urlencode "step=<한 줄>"'
+EXTRA_TITLE = "이번에 쓸 것 (추가로 쓰기)"
+
+
+def report_url(request, routine, day, via=RoutineRun.Via.RUN):
+    """진행 보고를 받을 서버 주소. 예약 토큰이 없으면 "" (PC 의 manage.py routine_report 로)."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token:
+        return ""
+    query = urlencode({"token": token, "day": day.isoformat(), "via": via})
+    return request.build_absolute_uri(reverse("routines:report", args=[routine.key])) + "?" + query
+
+
+def _report(routine, day, report):
+    """report: None/False = 붙이지 않음, True/"" = PC 명령, 주소 = 서버로 curl."""
+    if report is None or report is False:
+        return ""
+    if report is True or not report:
+        return REPORT.format(cmd=REPORT_PC.format(key=routine.key, day=day))
+    return REPORT.format(cmd=REPORT_URL.format(url=report))
+
+
+def launcher(routine, day, report=None, extra=""):
+    """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ 진행 보고).
+    extra 는 글쓰기 '추가로 쓰기'의 내용: '오늘 쓸 분류' 대신 '이번에 쓸 것'으로 들어간다."""
+    if extra:
+        head = [f"# 일일루틴 · {routine.name} (추가로 쓰기) — {day}", "",
+                f"할 일: 아침 예약 실행과 별도로 더 쓴다 — 아래 '{EXTRA_TITLE}'만큼만."]
+    else:
+        head = [f"# 일일루틴 · {routine.name} — {day}", "", f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}."]
+    lines = head + ["아래 md 를 읽고 그대로 따른다.", ""]
     lines.append(f"- `{routine.prompt_doc}` (이 루틴의 프롬프트)" if routine.prompt_doc else "- (프롬프트 md 가 아직 없습니다)")
     keys = routine.data_keys
     if keys:
         lines += ["", "## 오늘의 자료 (서버에서 가져옴)"]
         for k in keys:
-            lines += ["", f"### {DATA_TITLES.get(k, k)}", data_text(routine, k, day)]
-    text = "\n".join(lines).rstrip() + "\n"
-    if report:
-        text += REPORT.format(key=routine.key, day=day)
-    return text
+            if extra and k == "picks":
+                lines += ["", f"### {EXTRA_TITLE}", extra]
+            else:
+                lines += ["", f"### {DATA_TITLES.get(k, k)}", data_text(routine, k, day)]
+    if extra and "picks" not in keys:
+        lines += ["", f"### {EXTRA_TITLE}", extra]
+    return "\n".join(lines).rstrip() + "\n" + _report(routine, day, report)
 
 
-def restore_prompt(version, day, report=False):
+def restore_prompt(version, day, report=None):
     """좋았던 버전으로 되돌리는 안내문: AI 가 프롬프트 md 를 그 버전 내용으로 고쳐 main 에 올린다."""
     routine = version.routine
     lines = [f"# 일일루틴 프롬프트 되돌리기 · {routine.name} v{version.number} — {day}", "",
@@ -347,10 +383,7 @@ def restore_prompt(version, day, report=False):
              "2. 맨 아래 '평가에서 배운 점'에 되돌린 날짜와 이유를 한 줄 더한다.",
              f"3. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} v{version.number} 로 되돌림`."]
     lines += ["", f"## v{version.number} 내용", "", version.content]
-    text = "\n".join(lines).rstrip() + "\n"
-    if report:
-        text += REPORT.format(key=routine.key, day=day)
-    return text
+    return "\n".join(lines).rstrip() + "\n" + _report(routine, day, report)
 
 
 # ---- 프롬프트가 보는 것: 프롬프트 md, 그 안에서 읽게 하는 md, 오늘의 자료
@@ -428,7 +461,7 @@ def _day(request):
         return timezone.localdate()
 
 
-def all_prompt(routines, day):
+def all_prompt(routines, day, report_for=lambda r: True):
     """전체 실행 안내문: 루틴 순서대로 각 안내문(진행 보고 포함)을 이어 붙인다."""
     head = [f"# 일일루틴 전체 실행 — {day}", "",
             "아래 루틴을 위에서부터 차례로 끝까지 진행한다. 오래 걸려도 된다.",
@@ -437,7 +470,7 @@ def all_prompt(routines, day):
             "- 순서: " + " → ".join(f"{i}. {r.name}" for i, r in enumerate(routines, start=1)), ""]
     parts = ["\n".join(head)]
     for i, r in enumerate(routines, start=1):
-        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, day, report=True))
+        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, day, report=report_for(r)))
     return "\n".join(parts)
 
 
@@ -458,6 +491,16 @@ def _picker(routine, day):
             "changes": list(ClassChange.objects.all()[:3])}
 
 
+def _picked(data):
+    """폼의 n_<sel> 편수 → {sel: 편수} (0·빈칸·잘못된 칸은 뺀다, 한 칸 최대 20)."""
+    value = {}
+    for name, raw in data.items():
+        sel = name[2:]
+        if name.startswith("n_") and re.fullmatch(r"[ct]\d+", sel) and raw.strip().isdigit() and int(raw) > 0:
+            value[sel] = min(int(raw), 20)
+    return value
+
+
 @require_POST
 def picks(request, pk):
     """글쓰기의 그날 분류·편수: 저장 / 다시 뽑기(무작위) / 기본값(그날 무작위)."""
@@ -470,11 +513,7 @@ def picks(request, pk):
         if action == "reroll":
             value = default_picks(day, salt=timezone.now().timestamp())
         else:
-            value = {}
-            for name, raw in request.POST.items():
-                sel = name[2:]
-                if name.startswith("n_") and re.fullmatch(r"[ct]\d+", sel) and raw.strip().isdigit() and int(raw) > 0:
-                    value[sel] = min(int(raw), 20)
+            value = _picked(request.POST)
         RoutinePick.objects.update_or_create(routine=routine, day=day, defaults={"picks": value})
     return _back(request, "#rt-picker")
 
@@ -519,10 +558,10 @@ def index(request):
         r.auto = auto[r.pk][sel]
         r.fixed = (r.pk, sel) in fixed
         r.url = reverse(r.url_name)
-        r.prompt = launcher(r, run_day, report=True)
-    runs = (RoutineRun.objects.select_related("routine")
+        r.prompt = launcher(r, run_day, report=report_url(request, r, run_day))
+    runs = (RoutineRun.objects.select_related("routine")  # 실행 이력: 모든 루틴 (예약 · 실행), 이 기간 + 끝나지 않은 것
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
-                                                                 RoutineRun.Status.BLOCKED]))[:30])
+                                                                 RoutineRun.Status.BLOCKED]))[:50])
     return render(request, "routines/index.html", {
         "page_title": "일일루틴",
         "bar": period.bar(mode, sel, today, state),
@@ -533,11 +572,10 @@ def index(request):
         "done_total": sum(1 for r in routines if r.state == "done"),
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
-        "all_prompt": all_prompt(routines, run_day) if routines else "",
+        "all_prompt": all_prompt(routines, run_day, lambda r: report_url(request, r, run_day)) if routines else "",
         "all_keys": ",".join(r.key for r in routines),
         "picker": next((_picker(r, run_day) for r in routines if "picks" in r.data_keys), None),
         "on_server": settings.IS_SERVER,
-        "local_url": settings.ROUTINE_LOCAL_URL.rstrip("/") + reverse("routines:index"),
         "keep": request.get_full_path().partition("?")[2],
     })
 
@@ -642,7 +680,7 @@ def version_restore(request, pk):
     return render(request, "routines/restore.html", {
         "page_title": f"{v.routine.name} v{v.number} 로 되돌리기", "version": v, "routine": v.routine, "today": today,
         "on_server": settings.IS_SERVER,
-        "prompt": restore_prompt(v, today, report=True)})
+        "prompt": restore_prompt(v, today, report=report_url(request, v.routine, today))})
 
 
 @login_not_required
@@ -657,7 +695,49 @@ def brief(request, key):
         day = date.fromisoformat(request.GET.get("day", ""))
     except ValueError:
         day = timezone.localdate()
-    return HttpResponse(launcher(routine, day), content_type="text/plain; charset=utf-8")
+    text = launcher(routine, day, report=report_url(request, routine, day, RoutineRun.Via.SCHEDULE) or None)
+    return HttpResponse(text, content_type="text/plain; charset=utf-8")
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def report_api(request, key):
+    """진행 보고 한 줄 (예약 실행 · '실행' 터미널의 claude 가 curl 로 보낸다). 토큰이 맞아야 남긴다."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    routine = get_object_or_404(Routine, key=key)
+    word = request.POST.get("status", "").strip()
+    if word not in RoutineRun.WORDS:
+        return HttpResponseBadRequest("status: " + " · ".join(RoutineRun.WORDS))
+    try:
+        day = date.fromisoformat(request.GET.get("day", ""))
+    except ValueError:
+        day = timezone.localdate()
+    via = request.GET.get("via") if request.GET.get("via") in RoutineRun.Via.values else RoutineRun.Via.RUN
+    run = RoutineRun.record(routine, day, word, request.POST.get("step", "").strip()[:500], via)
+    return HttpResponse(f"ok {routine.key} {day} {run.status}", content_type="text/plain; charset=utf-8")
+
+
+@require_POST
+def extra(request, pk):
+    """글쓰기 '추가로 쓰기' 안내문 (JSON). 분류 고르기(n_<sel> 편수) 또는 코멘트. 화면이 받아 '실행'처럼 PC 터미널을 연다."""
+    routine = get_object_or_404(Routine, pk=pk)
+    day = _day(request)
+    if request.POST.get("mode") == "comment":
+        comment = request.POST.get("comment", "").strip()[:2000]
+        if not comment:
+            return JsonResponse({"error": "무엇을 몇 편 쓸지 코멘트를 적으세요."}, status=400)
+        body = (f"사용자 코멘트: {comment}\n"
+                "- 편수·주제·분류는 코멘트를 따른다. 분류가 적혀 있지 않으면 '글 분류 전체'에서 주제에 맞는 중분류를 고른다.\n"
+                "- 편수가 없으면 1편.")
+    else:
+        value = _picked(request.POST)
+        if not value:
+            return JsonResponse({"error": "더 쓸 분류의 편수를 넣으세요."}, status=400)
+        body = _picks_lines(value, "추가로 고른 분류")
+    return JsonResponse({"prompt": launcher(routine, day, report=report_url(request, routine, day), extra=body)})
 
 
 def doc(request, rel):

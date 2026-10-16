@@ -222,22 +222,28 @@
 
   // 일일루틴 '실행': 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (PC 서버 없이).
   // 링크는 PC 에서 workspace\run.bat(또는 routine_link.bat)을 한 번 실행하면 등록된다 (apps/routines/local_run.py).
+  // 글쓰기 '추가로 쓰기'도 서버에서 안내문을 받은 뒤 같은 방법으로 연다 (App.rtLaunch, templates/routines/index.html).
+  function rtLaunch(prompt, f, reload) {
+    var q = new URLSearchParams({ key: f.key, day: f.day, name: f.name || "" });
+    if (f.keys) q.set("keys", f.keys);
+    var link = "jbroutine:" + (f.kind || "run") + "?" + q.toString();
+    copyText(prompt).then(
+      function () {
+        window.location.href = link;
+        toast("PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
+        if (reload) setTimeout(function () { location.reload(); }, 4000);
+      },
+      function () { toast("안내문을 복사하지 못했습니다. 다시 눌러 보세요.", "warn"); }
+    );
+  }
+  window.App.rtLaunch = rtLaunch;
   document.addEventListener("submit", function (e) {
     var form = e.target;
     if (!form.matches || !form.matches("form.rt-launch")) return;
     e.preventDefault();
     var field = function (n) { var el = form.elements.namedItem(n); return el ? el.value : ""; };
-    var q = new URLSearchParams({ key: field("key"), day: field("day"), name: field("name") });
-    if (field("keys")) q.set("keys", field("keys"));
-    var link = "jbroutine:" + field("kind") + "?" + q.toString();
-    copyText(field("prompt")).then(
-      function () {
-        window.location.href = link;
-        toast("PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
-        if (form.hasAttribute("data-reload")) setTimeout(function () { location.reload(); }, 4000);
-      },
-      function () { toast("안내문을 복사하지 못했습니다. 다시 눌러 보세요.", "warn"); }
-    );
+    rtLaunch(field("prompt"), { kind: field("kind"), key: field("key"), day: field("day"), name: field("name"), keys: field("keys") },
+             form.hasAttribute("data-reload"));
   });
 
   // 표 머리글의 '모두 선택' 체크박스: 같은 폼(form 속성)·같은 name 의 체크박스를 한꺼번에 켜고 끈다.

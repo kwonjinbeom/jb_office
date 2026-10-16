@@ -150,7 +150,7 @@ class TempRepoTests(Login):
             res = self.client.get(INDEX)
         self.assertContains(res, '<form class="rt-launch"><input type="hidden" name="key" value="writing">')
         self.assertNotContains(res, "/routines/launch/")  # PC 서버로 보내지 않는다
-        self.assertContains(res, "PC 화면에서 보기")
+        self.assertContains(res, "실행 이력")  # 모든 루틴의 실행 기록 (예약 · 실행)
 
     def test_naver_import_drafts(self):
         folder = self.root.joinpath("콘텐츠", "블로그_카페", "포스팅자동화", "네이버원고", "N01_첫원고")
@@ -252,8 +252,51 @@ class RepoTests(Login):
         text = res.content.decode()
         self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 — 2026-10-16"))
         self.assertIn("### 오늘 쓸 분류", text)
-        self.assertNotIn("routine_report", text)  # 예약 실행은 진행 보고 없음
+        self.assertNotIn("routine_report", text)  # PC 명령이 아니라 서버 보고 주소로
+        self.assertIn("curl -fsS -X POST", text)
+        self.assertIn("/routines/report/writing/?token=tok&day=2026-10-16&via=schedule", text)
         self.assertEqual(self.client.get(reverse("routines:brief", args=["nope"]), {"token": "tok"}).status_code, 404)
+
+    def test_report_api_records_run_history(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        url = reverse("routines:report", args=["writing"])
+        self.assertEqual(self.client.post(url + "?token=x", {"status": "시작"}).status_code, 403)
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.client.logout()
+        q = "?token=tok&day=2026-10-17&via=schedule"
+        self.assertEqual(self.client.post(url + q, {"status": "아무말"}).status_code, 400)
+        self.assertEqual(self.client.post(url + q, {"status": "시작", "step": "오늘 11편"}).status_code, 200)
+        self.client.post(url + q, {"status": "완료", "step": "원고 11편, main push"})
+        run = RoutineRun.objects.get()
+        self.assertEqual((run.via, run.status, run.day, run.log.count("\n")), ("schedule", "done", date(2026, 10, 17), 1))
+        self.client.force_login(get_user_model().objects.get(username="tester"))
+        res = self.client.get(INDEX, {"date": "2026-10-17"})
+        self.assertContains(res, "실행 이력")
+        self.assertContains(res, "원고 11편, main push")
+        self.assertContains(res, ">예약<")
+        # 토큰이 있으면 화면의 '실행' 안내문도 서버로 보고한다 (via=run)
+        row = next(r for r in res.context["routines"] if r.key == "writing")
+        self.assertIn("/routines/report/writing/?token=tok&day=2026-10-17&via=run", row.prompt)
+
+    def test_extra_writing_by_categories_or_comment(self):
+        from apps.blog_types.models import Category
+        writing = Routine.objects.get(key="writing")
+        url = reverse("routines:extra", args=[writing.pk])
+        it = Category.objects.get(section__name="IT/AI", name="AI 도구·활용")
+        res = self.client.post(url, {"day": "2026-10-16", "mode": "cats", f"n_{it.sel}": "2"})
+        text = res.json()["prompt"]
+        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가로 쓰기) — 2026-10-16"))
+        self.assertIn("### 이번에 쓸 것 (추가로 쓰기)\n(총 2편 · 추가로 고른 분류)\n- IT/AI > AI 도구·활용 — 2편", text)
+        self.assertNotIn("### 오늘 쓸 분류", text)
+        self.assertIn("### 이미 있는 글", text)  # 겹침 피하기 자료는 그대로
+        self.assertFalse(RoutinePick.objects.exists())  # 추가로 쓰기는 그날 분류를 저장하지 않는다
+        res = self.client.post(url, {"day": "2026-10-16", "mode": "comment", "comment": "IT/AI 로 3편, 아이폰 18 가격 비교"})
+        self.assertIn("사용자 코멘트: IT/AI 로 3편, 아이폰 18 가격 비교", res.json()["prompt"])
+        self.assertEqual(self.client.post(url, {"mode": "comment", "comment": " "}).status_code, 400)
+        self.assertEqual(self.client.post(url, {"mode": "cats"}).status_code, 400)
+        page = self.client.get(INDEX)
+        for html in ['data-pk-mode="cats" class="on"', 'data-pk-mode="comment"', "추가로 쓰기", 'id="pk-comment"']:
+            self.assertContains(page, html)
 
     def test_capture_version_when_md_changes(self):
         tistory = Routine.objects.get(key="writing")
