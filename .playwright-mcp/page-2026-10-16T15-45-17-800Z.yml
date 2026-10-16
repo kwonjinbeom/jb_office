@@ -1,0 +1,1757 @@
+- generic [ref=f7e1]:
+  - generic:
+    - link "메뉴 영역으로 바로가기" [ref=f7e2] [cursor=pointer]:
+      - /url: "#lnb"
+    - link "본문 영역으로 바로가기" [ref=f7e4] [cursor=pointer]:
+      - /url: "#content"
+  - generic [ref=f7e6]:
+    - generic [ref=f7e8]:
+      - generic [ref=f7e10]:
+        - generic [ref=f7e11]:
+          - text: 현재 PC에 최적화된 브라우저
+          - strong [ref=f7e13]: 웨일을 설치하세요
+          - link "다운로드" [ref=f7e14] [cursor=pointer]:
+            - /url: https://whale.naver.com/ko/?wpid=search_theme1
+        - link "7일 내 다시보지 않기" [ref=f7e16] [cursor=pointer]:
+          - /url: "#"
+        - button "닫기" [ref=f7e17] [cursor=pointer]
+      - generic [ref=f7e21]:
+        - heading [level=1] [ref=f7e22]:
+          - link "NAVER" [ref=f7e23] [cursor=pointer]:
+            - /url: https://www.naver.com
+        - search [ref=f7e25]:
+          - group "검색" [ref=f7e26]:
+            - combobox "검색어를 입력해 주세요." [ref=f7e28]: 준플레이오프 1차전 중계
+            - button "한글 입력기" [ref=f7e30] [cursor=pointer]
+            - button "검색" [ref=f7e32] [cursor=pointer]
+      - generic [ref=f7e34]:
+        - generic [ref=f7e36]:
+          - generic [ref=f7e37]:
+            - tab "AI new" [ref=f7e39] [cursor=pointer]:
+              - text: AI
+              - generic [ref=f7e40]: new
+            - tab "블로그" [ref=f7e43] [cursor=pointer]
+            - tab "카페" [ref=f7e45] [cursor=pointer]
+            - tab "클립" [ref=f7e47] [cursor=pointer]
+            - tab "이미지" [ref=f7e49] [cursor=pointer]
+            - tab "지식iN" [ref=f7e51] [cursor=pointer]
+            - tab "동영상" [ref=f7e53] [cursor=pointer]
+            - tab "쇼핑 새 창 열림" [ref=f7e55] [cursor=pointer]:
+              - text: 쇼핑
+              - generic [ref=f7e56]: 새 창 열림
+            - tab "뉴스" [ref=f7e58] [cursor=pointer]
+            - tab "어학사전 새 창 열림" [ref=f7e60] [cursor=pointer]:
+              - text: 어학사전
+              - generic [ref=f7e61]: 새 창 열림
+          - button "더보기" [ref=f7e63] [cursor=pointer]
+        - list [ref=f7e66]:
+          - listitem [ref=f7e67]:
+            - button "공유" [ref=f7e68] [cursor=pointer]
+    - main [ref=f7e69]:
+      - generic [ref=f7e70]:
+        - heading "준플레이오프 1차전 중계 검색 결과" [level=1] [ref=f7e71]
+        - generic [ref=f7e72]:
+          - generic [ref=f7e74]:
+            - generic [ref=f7e75]:
+              - heading "프로야구 경기정보" [level=2] [ref=f7e76]
+              - link "정보오류 수정요청" [ref=f7e79] [cursor=pointer]:
+                - /url: javascript:csOpenUpaim();
+            - generic [ref=f7e80]:
+              - generic [ref=f7e83]:
+                - generic [ref=f7e84]:
+                  - generic [ref=f7e85]:
+                    - link [ref=f7e86] [cursor=pointer]:
+                      - /url: "?where=nexearch&sm=tab_etc&mra=blow&qvt=0&query=LG%20%ED%8A%B8%EC%9C%88%EC%8A%A4"
+                      - img "LG 트윈스" [ref=f7e87]
+                    - paragraph [ref=f7e88]:
+                      - strong [ref=f7e89]:
+                        - link "LG 트윈스" [ref=f7e90] [cursor=pointer]:
+                          - /url: "?where=nexearch&sm=tab_etc&mra=blow&qvt=0&query=LG%20%ED%8A%B8%EC%9C%88%EC%8A%A4"
+                      - generic [ref=f7e91]:
+                        - text: 선발
+                        - link "톨허스트" [ref=f7e92] [cursor=pointer]:
+                          - /url: "?where=nexearch&sm=tab_etc&mra=bjky&pkid=1&os=37363447&qvt=0&query=%ED%86%A8%ED%97%88%EC%8A%A4%ED%8A%B8"
+                  - generic [ref=f7e93]: VS
+                  - generic [ref=f7e95]:
+                    - link [ref=f7e96] [cursor=pointer]:
+                      - /url: "?where=nexearch&sm=tab_etc&mra=blow&qvt=0&query=KIA%20%ED%83%80%EC%9D%B4%EA%B1%B0%EC%A6%88"
+                      - img "KIA 타이거즈" [ref=f7e97]
+                    - paragraph [ref=f7e98]:
+                      - strong [ref=f7e99]:
+                        - link "KIA 타이거즈" [ref=f7e100] [cursor=pointer]:
+                          - /url: "?where=nexearch&sm=tab_etc&mra=blow&qvt=0&query=KIA%20%ED%83%80%EC%9D%B4%EA%B1%B0%EC%A6%88"
+                      - generic [ref=f7e101]:
+                        - text: 선발
+                        - link "네일" [ref=f7e102] [cursor=pointer]:
+                          - /url: "?where=nexearch&sm=tab_etc&mra=bjky&pkid=1&os=33596963&qvt=0&query=%EB%84%A4%EC%9D%BC"
+                - generic [ref=f7e103]:
+                  - link [ref=f7e104] [cursor=pointer]:
+                    - /url: https://m.sports.naver.com/game/33331017LGHT02026/preview
+                    - img "전력비교" [ref=f7e105]
+                  - link [ref=f7e106] [cursor=pointer]:
+                    - /url: https://m.sports.naver.com/game/33331017LGHT02026/cheer
+                    - img "응원하기" [ref=f7e107]
+                - paragraph [ref=f7e108]:
+                  - generic [ref=f7e109]:
+                    - text: 2026.10.17.(토) 14:00 |
+                    - link "광주" [ref=f7e110] [cursor=pointer]:
+                      - /url: "?where=nexearch&sm=tab_etc&qvt=0&query=%EA%B4%91%EC%A3%BC%EC%95%BC%EA%B5%AC%EC%9E%A5"
+                  - text: "|"
+                  - link "KBS2" [ref=f7e112] [cursor=pointer]:
+                    - /url: "?where=nexearch&sm=tab_etc&qvt=0&query=KBS2%20%ED%8E%B8%EC%84%B1%ED%91%9C"
+              - paragraph [ref=f7e113]: 중계 채널은 변경될 수 있고, 정보 업데이트가 지연될 수 있습니다.
+              - generic [ref=f7e114]:
+                - term [ref=f7e115]: 관련정보
+                - definition [ref=f7e116]:
+                  - link "2026 KBO 포스트시즌" [ref=f7e117] [cursor=pointer]:
+                    - /url: "?where=nexearch&sm=tab_etc&mra=blkw&qvt=0&query=2026%20KBO%20%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C"
+                - definition [ref=f7e118]:
+                  - link "양팀 다음 경기일정" [ref=f7e119] [cursor=pointer]:
+                    - /url: "?where=nexearch&sm=tab_etc&mra=bko2&pkid=175&os=42232387&qvt=0&query=2026%EB%85%84%2010%EC%9B%94%2018%EC%9D%BC%20LG%20%ED%8A%B8%EC%9C%88%EC%8A%A4%20KIA%20%ED%83%80%EC%9D%B4%EA%B1%B0%EC%A6%88"
+          - generic [ref=f7e123]:
+            - generic [ref=f7e124]:
+              - generic [ref=f7e125]:
+                - heading "준플레이오프1차전중계 관련 광고" [level=2] [ref=f7e126]:
+                  - generic [ref=f7e127]: 준플레이오프1차전중계
+                  - generic [ref=f7e128]: 관련 광고
+                - button "이 광고가 표시된 이유" [ref=f7e129] [cursor=pointer]
+              - link "등록 안내" [ref=f7e132] [cursor=pointer]:
+                - /url: //saedu.naver.com/adbiz/searchad/clickChoice.naver
+            - list [ref=f7e134]:
+              - listitem [ref=f7e135]:
+                - generic [ref=f7e136]:
+                  - generic [ref=f7e137]:
+                    - generic [ref=f7e138]:
+                      - link [ref=f7e139] [cursor=pointer]:
+                        - /url: https://ader.naver.com/v1/VE8TjfecVtcjYO4UprbtpvBeMD1RlJygbv2XoqkzWgsFyFvtD6lTLVEjz7n91Qp1yuVsGxtaxi4mOJl88Z-IwXxR0l8OCdXueSXgTozsts4dFYzomLG8pRfp62mvckCJX7uP02tdPkEeDAvFCdd40qN1OriYR5qiyw6PNjow0dlL596Bi5MKq1Z0q3xpN2Zl1rjp1FfDX5tlC3IQljYsEKTVxUf8hNCYOM7xUWSFt61Drg5dhD33XtidKNLfy3LcbW9znT2lFT7DpRIuH5eZ-xmXnF4R-wgwcEg6j3wYm442FoBpV1qZ7xFESxvrxQdkhDxSYkpn7QsQ4DNqD1O1GwAM8ry_nnK0QggsXCfIt1c_deLst8zLoVlSkF0O1np06x0Ht8Rv3lGUY_kQ5uvu4Eh29nshzkVbM27iBS40aUrOWo4Q6KMjjkkxVuWgtfJpLIO-A7uADaPQE8dQ-GIheDrguAOVFAQSIq0rAXthYgJvw0PEw09iZaid3KYZrBEY9k73Ifz1wlXLkYBc7aGeMBubq4oZ0HGZq6gTRAwsuydHal4sRinv_rSuX6GL97Uedi7xs6xxgvT9HhDmLX3-N7qrhnMjRxE9sUYdMBRYtedZG0Qe2-zT2PaVkgUbi2n2aj5wv__MaWSV1AiWSfdQZg==?c=naver.search.pc.plsearch&t=0
+                        - img "favicon" [ref=f7e140]
+                      - img "광고" [ref=f7e141]
+                      - button "네이버 로그인" [ref=f7e147]
+                      - link "TVING" [ref=f7e149] [cursor=pointer]:
+                        - /url: https://ader.naver.com/v1/VE8TjfecVtcjYO4UprbtpvBeMD1RlJygbv2XoqkzWgsFyFvtD6lTLVEjz7n91Qp1yuVsGxtaxi4mOJl88Z-IwXxR0l8OCdXueSXgTozsts4dFYzomLG8pRfp62mvckCJX7uP02tdPkEeDAvFCdd40qN1OriYR5qiyw6PNjow0dlL596Bi5MKq1Z0q3xpN2Zl1rjp1FfDX5tlC3IQljYsEKTVxUf8hNCYOM7xUWSFt61Drg5dhD33XtidKNLfy3LcbW9znT2lFT7DpRIuH5eZ-xmXnF4R-wgwcEg6j3wYm442FoBpV1qZ7xFESxvrxQdkhDxSYkpn7QsQ4DNqD1O1GwAM8ry_nnK0QggsXCfIt1c_deLst8zLoVlSkF0O1np06x0Ht8Rv3lGUY_kQ5uvu4Eh29nshzkVbM27iBS40aUrOWo4Q6KMjjkkxVuWgtfJpLIO-A7uADaPQE8dQ-GIheDrguAOVFAQSIq0rAXthYgJvw0PEw09iZaid3KYZrBEY9k73Ifz1wlXLkYBc7aGeMBubq4oZ0HGZq6gTRAwsuydHal4sRinv_rSuX6GL97Uedi7xs6xxgvT9HhDmLX3-N7qrhnMjRxE9sUYdMBRYtedZG0Qe2-zT2PaVkgUbi2n2aj5wv__MaWSV1AiWSfdQZg==?c=naver.search.pc.plsearch&t=0
+                      - link "tving.com" [ref=f7e151] [cursor=pointer]:
+                        - /url: https://ader.naver.com/v1/VE8TjfecVtcjYO4UprbtpvBeMD1RlJygbv2XoqkzWgsFyFvtD6lTLVEjz7n91Qp1yuVsGxtaxi4mOJl88Z-IwXxR0l8OCdXueSXgTozsts4dFYzomLG8pRfp62mvckCJX7uP02tdPkEeDAvFCdd40qN1OriYR5qiyw6PNjow0dlL596Bi5MKq1Z0q3xpN2Zl1rjp1FfDX5tlC3IQljYsEKTVxUf8hNCYOM7xUWSFt61Drg5dhD33XtidKNLfy3LcbW9znT2lFT7DpRIuH5eZ-xmXnF4R-wgwcEg6j3wYm442FoBpV1qZ7xFESxvrxQdkhDxSYkpn7QsQ4DNqD1O1GwAM8ry_nnK0QggsXCfIt1c_deLst8zLoVlSkF0O1np06x0Ht8Rv3lGUY_kQ5uvu4Eh29nshzkVbM27iBS40aUrOWo4Q6KMjjkkxVuWgtfJpLIO-A7uADaPQE8dQ-GIheDrguAOVFAQSIq0rAXthYgJvw0PEw09iZaid3KYZrBEY9k73Ifz1wlXLkYBc7aGeMBubq4oZ0HGZq6gTRAwsuydHal4sRinv_rSuX6GL97Uedi7xs6xxgvT9HhDmLX3-N7qrhnMjRxE9sUYdMBRYtedZG0Qe2-zT2PaVkgUbi2n2aj5wv__MaWSV1AiWSfdQZg==?c=naver.search.pc.plsearch&t=0
+                    - link "티빙 KBO 포스트시즌 월 5,500원부터" [ref=f7e152] [cursor=pointer]:
+                      - /url: https://ader.naver.com/v1/VE8TjfecVtcjYO4UprbtpvBeMD1RlJygbv2XoqkzWgsFyFvtD6lTLVEjz7n91Qp1yuVsGxtaxi4mOJl88Z-IwXxR0l8OCdXueSXgTozsts4dFYzomLG8pRfp62mvckCJX7uP02tdPkEeDAvFCdd40qN1OriYR5qiyw6PNjow0dlL596Bi5MKq1Z0q3xpN2Zl1rjp1FfDX5tlC3IQljYsEKTVxUf8hNCYOM7xUWSFt61Drg5dhD33XtidKNLfy3LcbW9znT2lFT7DpRIuH5eZ-xmXnF4R-wgwcEg6j3wYm442FoBpV1qZ7xFESxvrxQdkhDxSYkpn7QsQ4DNqD1O1GwAM8ry_nnK0QggsXCfIt1c_deLst8zLoVlSkF0O1np06x0Ht8Rv3lGUY_kQ5uvu4Eh29nshzkVbM27iBS40aUrOWo4Q6KMjjkkxVuWgtfJpLIO-A7uADaPQE8dQ-GIheDrguAOVFAQSIq0rAXthYgJvw0PEw09iZaid3KYZrBEY9k73Ifz1wlXLkYBc7aGeMBubq4oZ0HGZq6gTRAwsuydHal4sRinv_rSuX6GL97Uedi7xs6xxgvT9HhDmLX3-N7qrhnMjRxE9sUYdMBRYtedZG0Qe2-zT2PaVkgUbi2n2aj5wv__MaWSV1AiWSfdQZg==?c=naver.search.pc.plsearch&t=0
+                  - link [ref=f7e155] [cursor=pointer]:
+                    - /url: https://ader.naver.com/v1/VE8TjfecVtcjYO4UprbtpvBeMD1RlJygbv2XoqkzWgsFyFvtD6lTLVEjz7n91Qp1yuVsGxtaxi4mOJl88Z-IwXxR0l8OCdXueSXgTozsts4dFYzomLG8pRfp62mvckCJX7uP02tdPkEeDAvFCdd40qN1OriYR5qiyw6PNjow0dlL596Bi5MKq1Z0q3xpN2Zl1rjp1FfDX5tlC3IQljYsEKTVxUf8hNCYOM7xUWSFt61Drg5dhD33XtidKNLfy3LcbW9znT2lFT7DpRIuH5eZ-xmXnF4R-wgwcEg6j3wYm442FoBpV1qZ7xFESxvrxQdkhDxSYkpn7QsQ4DNqD1O1GwAM8ry_nnK0QggsXCfIt1c_deLst8zLoVlSkF0O1np06x0Ht8Rv3lGUY_kQ5uvu4Eh29nshzkVbM27iBS40aUrOWo4Q6KMjjkkxVuWgtfJpLIO-A7uADaPQE8dQ-GIheDrguAOVFAQSIq0rAXthYgJvw0PEw09iZaid3KYZrBEY9k73Ifz1wlXLkYBc7aGeMBubq4oZ0HGZq6gTRAwsuydHal4sRinv_rSuX6GL97Uedi7xs6xxgvT9HhDmLX3-N7qrhnMjRxE9sUYdMBRYtedZG0Qe2-zT2PaVkgUbi2n2aj5wv__MaWSV1AiWSfdQZg==?c=naver.search.pc.plsearch&t=0
+                    - text: 2026 KBO 리그 포스트시즌 생
+                    - strong [ref=f7e156]: 중계
+                    - text: 부터 하이라이트, 다시보기는 오직 티빙에서!
+                  - link "할인 월5,500원부터 스트리밍 더보기" [ref=f7e157] [cursor=pointer]:
+                    - /url: https://ader.naver.com/v1/v0_ZNqBc-wgqOd8AzpAyWMw7f32yX1QnRqKgVUZXDKHeq4BIJTEmW3CoC9SGAXTAUTSM0B90hwy3cT8NGIV5SAdIIDtakzMqsvrolhWlHlBxuG9ZChG6L6PWgKwb27xJlk9o5zkY9yogQw-xfSrfvHP2n9gWrtrEEDxj7fzCO8ZWM-Bj1_1fV0qzGtMDOS3NdPmj11COyDd5zdAVlRa_S7yTUBIjsmzX8PJiILZtR49oMyQL-BoJkUed8i2sXtx3CDFaOIljjtLD3iLjg2qpPr-AvT-X2OowquUf-QTrqGgPHqCHiqDKB9KLSBANUjqbAuioa22Op2m221lt9UvbNkyDwForjOqc8WGRo1D_8fe2hwHETjGnON2kJ_bULMeDA_N5qSV9dT_CcQ6FRX1K9ecGEbK4-AaqaokBNjPiGXxm48xETrgxWxEDGlfWhGCKnL-1VXiUvD6z3Ya6CctnQYNduGuSFmppYB3JniEux33_E1LcBaXhcvVO8pd708Yova3BBZ0XXA06M1bFlKsCN22qz3szfGOHCEf2QHiKAZxLMFjy4mhW-PoWp53PT6jt3e91et0r-QacmSGuUSB_2DsJko_knYrMgZSB7H0yOyinf1iF6LeDG5TIIeqot5110-4aI7L1IRFYVaWtGjTECQ==?c=naver.search.pc.plsearch&t=0
+                    - generic [ref=f7e167]: 할인
+                    - generic [ref=f7e168]: 월5,500원부터 스트리밍
+                    - img "더보기" [ref=f7e169]
+                - generic [ref=f7e172]:
+                  - link "광고 포스트시즌" [ref=f7e173] [cursor=pointer]:
+                    - /url: https://ader.naver.com/v1/IJNdLVg_vfjNVlPehjTQTYX_F_39MDFk2C9G7t6xv9q8JmSPXdytsM88PELfOLrCEYracj8IYAa9sNNm7wDEfmA-vOxz_kFQUA4XgsXgs3CH0Wji54oMi7ASkzUhTWufFSY2VPA9EKUPykhWHuX8Umj4q0I0oTA8MkwfTNsIfSppfAYRLURWSJdfRNOy5lZxN5au9wDsRjbgEBVOrIVvMQ9r4DEjaG6K-YvtWsy0gPw-W8OizcjQ0QE8mJMK6z2A0OBhRF0PrHeUFDnvx0bZZ01WZ1NJuOGPOmUY66n0rp1Of_2u_pzcMhffa-S2bkU3wp3b9cjd__g68qaorPjqeyWcE_itjeivB7iLrq3mDFb9UVGB5pbfyytcNKU8A0IJpM8hMj77r1p__eBEBWILGbYIX92lkC-bdESF9kBYJm-BMFgKPQUWLZdaSAYrmLbYwXgTZp7p2IMEQ_pG0gkoT9wTFw6W7sq94MSCuSu7KwFaTrJyiFu5tW973sXKUAGzwedsikmW5wJSXJF9ka_MoiVlk-5-h3Dp472fJdvEG2otHtBhHYGQvAas2qS8FkGLFVnl4KUVKXpWZHEzFKWLAIX7QOBS9sInKUSBbEdQe-qIp3dEJ5SDsXhXzYdBJ9iuoWOW3D_XbitdPnt7Xqxzbz1Hh0KrC9ijmhT0gkeL-So=?c=naver.search.pc.plsearch&t=0
+                    - img "광고" [ref=f7e175]
+                    - generic [ref=f7e176]: 포스트시즌
+                  - link "광고 하이라이트" [ref=f7e177] [cursor=pointer]:
+                    - /url: https://ader.naver.com/v1/2mVbP9TCmUP47OlI6AqAoBu9zBGQKytb_cOGTduR8kV5GfxSJYpvxjKOASLYDLUcgr6MUG22itRU2oXr6mUPq5GWrsh5BjLiHVpCsM-zKi9vngdfjM4eIgnGu4uATT1nB8mT2vdUxcQcW9Ss2CrASxMmzkDvJwaORv5G4CAIU2FJMZdAu791CJpu1rotaOLOrterYsWDzT-9USy6xpCtbgm7uf3X9PWzhX-grCMu00ovtDZ7Jhwjz-ZN78dTdvgkSkjHqmMKCCvwm7y-ZAwfDy2YNNLpkyK47l2oFEbGKu-w-FfX2NbYATWgQvLrKiMEw19_KnkQhQeRwK4KWVpuvb0-bMn703ZO75z-yJWRzrAA8S6tm1NvJqaAgTXKX2UnsHAORYDQsoIqNCXBb9K5kshnLwSyju_bhJaT7k4QDFT_iKqvKJyS4X5aPPNbzTRl0SaNG2cWcrRqu8eo4kjil9RoFikElTD9pZpDjj70jH_veU2bjRii-O3pdEVigzniE_ywKmbgXYkMSOOGUhmU-Ij6lXq_xcrQcIi0n5LfKplAcNIIhvDXKuNkPSUfCEtUXWEm8Xh7xHtcuvTom_RDRy4wySgF06QRelf2yWXWawB9RDcSumtwBAwvJr6Qy98TXRrrFp4g5Rd8ZQn7iTEan7I86I1Jl9EY8Pz6L7HZNRg21hV7K9VM-tcHcY4WeYfn?c=naver.search.pc.plsearch&t=0
+                    - img "광고" [ref=f7e179]
+                    - generic [ref=f7e180]: 하이라이트
+                  - link "광고 구단별영상" [ref=f7e181] [cursor=pointer]:
+                    - /url: https://ader.naver.com/v1/pW7UB4rj_TKhK5hikQTH6xXrQgt39U26VkCZHWskedJ0MhFpuFvU2Ktec1wm1gZTWCa0cfDKjYXmPr_Vp-18BnRuH56dh00ShQoAnd8AwklBKOR7nbz631oTor6Z4yrLV97aTPlE3WkU4ESSmbQ1wV6eChiLkSFgzP_uR-eMRcWEarN6ub7NPEvI9CConyJ43RmpBGuc7swX56U9MAJl0-JY7QzfbBh0vhAJlGKTboANgPegfxQ0L-k_UchKIIDMGN148qqwUImwynRHhtHYo0J0CC6IAod7YpAcEOz92sulOUBGBzGLJ6qYM32aSEE07Ac4te_jec_-cUQWL2l9k93Pvzpsv4q-ZA1UL6wvMVvcWbzn2bfgjs4svrXgDWSCP18tjN6_C30niIcvHVKqi0nhsWNtYkvVID-35YwbzOMBUeg0ejyIpcXS5-IYVRETsnkQlw5rghJDWUhSzXRI7GIx4aCdbJ27RMA64IXADOV-rfKl9jHXKlZv8HNtH-BnvXCc8dCyrFcYL21StkXIMYaXfIq4WLTbICpE5js-dKhBjRwiDYRsrYxoUxXtBktKiKWi6EjBJKerjs6Uy_RKibcBp7UvGnr36Cm5QoD759djOcRvtpVce6kAtSx9aC8cJIkF0kpzPUZrQ5asmDiSURYVbYDYuqtVAmgKMUESu6rUk52tWfy8DDvD1Dx3cWh3q42zUUADQpS7Kgk0NXUPvRwgDky2bFEgsmJhAhV1eMoGlcAA7XWJSp_VAEU84FbBz7WrC5sMAYlxj_KFtNeUMQ==?c=naver.search.pc.plsearch&t=0
+                    - img "광고" [ref=f7e183]
+                    - generic [ref=f7e184]: 구단별영상
+          - generic [ref=f7e187]:
+            - generic [ref=f7e189]:
+              - heading "뉴스" [level=2] [ref=f7e191]
+              - generic [ref=f7e193]:
+                - link "관련도순" [ref=f7e194] [cursor=pointer]:
+                  - /url: "?nso=so%3Ar%2Cp%3Aall%2Ca%3Aall&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_smr&sort=0&ssc=tab.news.all"
+                - link "최신순" [ref=f7e199] [cursor=pointer]:
+                  - /url: "?nso=so%3Add%2Cp%3Aall%2Ca%3Aall&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_smr&sort=1&ssc=tab.news.all"
+                - link "모바일 메인 언론사" [ref=f7e205] [cursor=pointer]:
+                  - /url: "?nso=so%3Ar%2Cp%3Aall%2Ca%3Aall&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&service_area=1&sm=tab_smr&sort=0&ssc=tab.news.all"
+                  - switch "모바일 메인 언론사"
+            - generic [ref=f7e206]:
+              - generic [ref=f7e207]:
+                - generic [ref=f7e208]:
+                  - generic [ref=f7e209]:
+                    - generic [ref=f7e210]:
+                      - link "KIA-LG, 10년 만의 가을야구 맞대결…내일 준플레이오프 1차전 새 창 열림" [ref=f7e211] [cursor=pointer]:
+                        - /url: https://news.kbs.co.kr/news/pc/view/view.do?ncd=8687376&ref=A
+                        - generic [ref=f7e212]:
+                          - text: KIA-LG, 10년 만의 가을야구 맞대결…내일
+                          - mark [ref=f7e213]: 준플레이오프 1차전
+                        - generic [ref=f7e214]: 새 창 열림
+                      - 'link "팀 LG가 한국시리즈로 가는 길목에서 일찌감치 만난 가운데, 준플레이오프 첫 경기에서 어느 팀이 기선을 제압할지 주목됩니다. KBS한국방송은 가을야구의 열기가 본격적으로 시작될 KIA와 LG의 준플레이오프 1차전을 내일 오후 1시 40분부터 제2 텔레비전을 통해 생중계합니다. [사진 출처 : 연합뉴스] 새 창 열림" [ref=f7e215] [cursor=pointer]':
+                        - /url: https://news.kbs.co.kr/news/pc/view/view.do?ncd=8687376&ref=A
+                        - generic [ref=f7e216]:
+                          - text: 팀 LG가 한국시리즈로 가는 길목에서 일찌감치 만난 가운데,
+                          - mark [ref=f7e217]: 준플레이오프
+                          - text: 첫 경기에서 어느 팀이 기선을 제압할지 주목됩니다. KBS한국방송은 가을야구의 열기가 본격적으로 시작될 KIA와 LG의
+                          - mark [ref=f7e218]: 준플레이오프 1차전
+                          - text: 을 내일 오후 1시 40분부터 제2 텔레비전을 통해 생
+                          - mark [ref=f7e219]: 중계
+                          - text: "합니다. [사진 출처 : 연합뉴스]"
+                        - generic [ref=f7e220]: 새 창 열림
+                    - generic [ref=f7e222]:
+                      - link "KBS의 프로필 이미지 새 창 열림" [ref=f7e224] [cursor=pointer]:
+                        - /url: https://media.naver.com/press/056
+                        - img "KBS의 프로필 이미지" [ref=f7e227]
+                        - generic [ref=f7e228]: 새 창 열림
+                      - link "KBS 새 창 열림" [ref=f7e231] [cursor=pointer]:
+                        - /url: https://media.naver.com/press/056
+                        - generic [ref=f7e232]: KBS
+                        - generic [ref=f7e233]: 새 창 열림
+                      - generic [ref=f7e234]:
+                        - generic [ref=f7e236]: 15시간 전
+                        - link "네이버뉴스 새 창 열림" [ref=f7e241] [cursor=pointer]:
+                          - /url: https://m.sports.naver.com/kbaseball/article/056/0012274911
+                          - generic [ref=f7e242]: 네이버뉴스
+                          - generic [ref=f7e243]: 새 창 열림
+                  - link "KIA-LG, 10년 만의 가을야구 맞대결…내일 <mark>준플레이오프 1차전</mark>의 이미지 새 창 열림" [ref=f7e244] [cursor=pointer]:
+                    - /url: https://news.kbs.co.kr/news/pc/view/view.do?ncd=8687376&ref=A
+                    - img "KIA-LG, 10년 만의 가을야구 맞대결…내일 <mark>준플레이오프 1차전</mark>의 이미지" [ref=f7e246]
+                    - generic [ref=f7e248]: 새 창 열림
+                - generic [ref=f7e249]:
+                  - generic [ref=f7e250]:
+                    - link "KIA, LG와 준플레이오프…내일 가을야구 첫 승부 새 창 열림" [ref=f7e251] [cursor=pointer]:
+                      - /url: https://news.kbs.co.kr/news/pc/view/view.do?ncd=8687822&ref=A
+                      - generic [ref=f7e252]:
+                        - text: KIA, LG와
+                        - mark [ref=f7e253]: 준플레이오프
+                        - text: …내일 가을야구 첫 승부
+                      - generic [ref=f7e254]: 새 창 열림
+                    - generic [ref=f7e256]:
+                      - generic [ref=f7e257]: KBS
+                      - generic [ref=f7e259]:
+                        - generic [ref=f7e261]: 3시간 전
+                        - link "네이버뉴스 새 창 열림" [ref=f7e266] [cursor=pointer]:
+                          - /url: https://m.sports.naver.com/kbaseball/article/056/0012275348
+                          - generic [ref=f7e267]: 네이버뉴스
+                          - generic [ref=f7e268]: 새 창 열림
+                  - generic [ref=f7e269]:
+                    - link "KIA-LG, 내일 준플레이오프 1차전 새 창 열림" [ref=f7e270] [cursor=pointer]:
+                      - /url: https://news.kbs.co.kr/news/pc/view/view.do?ncd=8687664&ref=A
+                      - generic [ref=f7e271]:
+                        - text: KIA-LG, 내일
+                        - mark [ref=f7e272]: 준플레이오프 1차전
+                      - generic [ref=f7e273]: 새 창 열림
+                    - generic [ref=f7e275]:
+                      - generic [ref=f7e276]: KBS
+                      - generic [ref=f7e278]:
+                        - generic [ref=f7e280]: 11시간 전
+                        - link "네이버뉴스 새 창 열림" [ref=f7e285] [cursor=pointer]:
+                          - /url: https://m.sports.naver.com/kbaseball/article/056/0012275142
+                          - generic [ref=f7e286]: 네이버뉴스
+                          - generic [ref=f7e287]: 새 창 열림
+              - generic [ref=f7e290]:
+                - generic [ref=f7e291]:
+                  - generic [ref=f7e292]:
+                    - link "KBO 준플레이오프 예매 방법…일정·시간은 새 창 열림" [ref=f7e293] [cursor=pointer]:
+                      - /url: https://www.bntnews.co.kr/article/view/bnt202610150048
+                      - generic [ref=f7e294]:
+                        - text: KBO
+                        - mark [ref=f7e295]: 준플레이오프
+                        - text: 예매 방법…일정·시간은
+                      - generic [ref=f7e296]: 새 창 열림
+                    - 'link "생중계 예매 방법: 놀 티켓 홈페이지·앱·고객센터 1차전 티켓팅 시간: 10월 15일 목요일 오후 2시 KBO 준플레이 오프 예매 방법·티켓팅 시간 준플레이 오프 예매는 NOL 티켓 홈페이지와 애플리케이션, 고객센터에서 진행한다. 구매 한도는 1인당 4매이며, 원하는 차전의 판매 시작 시각에 맞춰 좌석을... 새 창 열림" [ref=f7e297] [cursor=pointer]':
+                      - /url: https://www.bntnews.co.kr/article/view/bnt202610150048
+                      - generic [ref=f7e298]:
+                        - text: 생
+                        - mark [ref=f7e299]: 중계
+                        - text: "예매 방법: 놀 티켓 홈페이지·앱·고객센터"
+                        - mark [ref=f7e300]: 1차전
+                        - text: "티켓팅 시간: 10월 15일 목요일 오후 2시 KBO"
+                        - mark [ref=f7e301]: 준플레이 오프
+                        - text: 예매 방법·티켓팅 시간
+                        - mark [ref=f7e302]: 준플레이 오프
+                        - text: 예매는 NOL 티켓 홈페이지와 애플리케이션, 고객센터에서 진행한다. 구매 한도는 1인당 4매이며, 원하는 차전의 판매 시작 시각에 맞춰 좌석을...
+                      - generic [ref=f7e303]: 새 창 열림
+                  - generic [ref=f7e305]:
+                    - link "bnt뉴스의 프로필 이미지 새 창 열림" [ref=f7e307] [cursor=pointer]:
+                      - /url: http://www.bntnews.co.kr
+                      - img "bnt뉴스의 프로필 이미지" [ref=f7e310]
+                      - generic [ref=f7e311]: 새 창 열림
+                    - link "bnt뉴스 새 창 열림" [ref=f7e314] [cursor=pointer]:
+                      - /url: http://www.bntnews.co.kr
+                      - generic [ref=f7e315]: bnt뉴스
+                      - generic [ref=f7e316]: 새 창 열림
+                    - generic [ref=f7e317]: 2일 전
+                - link "KBO <mark>준플레이오프</mark> 예매 방법…일정·시간은의 이미지 새 창 열림" [ref=f7e322] [cursor=pointer]:
+                  - /url: https://www.bntnews.co.kr/article/view/bnt202610150048
+                  - img "KBO <mark>준플레이오프</mark> 예매 방법…일정·시간은의 이미지" [ref=f7e324]
+                  - generic [ref=f7e326]: 새 창 열림
+              - generic [ref=f7e329]:
+                - generic [ref=f7e330]:
+                  - generic [ref=f7e331]:
+                    - link "프로야구 준플레이오프, 1·2차전 시구 원필-김의성→애국가 정동하…경... 새 창 열림" [ref=f7e332] [cursor=pointer]:
+                      - /url: https://www.topstarnews.net/news/articleView.html?idxno=16248991
+                      - generic [ref=f7e333]:
+                        - text: 프로야구
+                        - mark [ref=f7e334]: 준플레이오프
+                        - text: ", 1·2차전 시구 원필-김의성→애국가 정동하…경..."
+                      - generic [ref=f7e335]: 새 창 열림
+                    - link "16일 KIA 타이거즈 측은 데이식스 원필이 준플레이오프 1차전 시구를 맡는다고 밝혔다. 2차전 시구는 배우 김의성이 맡는다. 이날 애국가는 가수... 애플리케이션, NOL(야놀자) 고객센터를 통해 구매할 수 있다. 1인당 최대 4매까지 예매 가능하다. 또한 CGV에서 극장 단독 생중계를 진행한다. 새 창 열림" [ref=f7e336] [cursor=pointer]:
+                      - /url: https://www.topstarnews.net/news/articleView.html?idxno=16248991
+                      - generic [ref=f7e337]:
+                        - text: 16일 KIA 타이거즈 측은 데이식스 원필이
+                        - mark [ref=f7e338]: 준플레이오프 1차전
+                        - text: 시구를 맡는다고 밝혔다. 2차전 시구는 배우 김의성이 맡는다. 이날 애국가는 가수... 애플리케이션, NOL(야놀자) 고객센터를 통해 구매할 수 있다. 1인당 최대 4매까지 예매 가능하다. 또한 CGV에서 극장 단독 생
+                        - mark [ref=f7e339]: 중계
+                        - text: 를 진행한다.
+                      - generic [ref=f7e340]: 새 창 열림
+                  - generic [ref=f7e342]:
+                    - link "톱스타뉴스의 프로필 이미지 새 창 열림" [ref=f7e344] [cursor=pointer]:
+                      - /url: http://www.TopStarNews.Net
+                      - img "톱스타뉴스의 프로필 이미지" [ref=f7e347]
+                      - generic [ref=f7e348]: 새 창 열림
+                    - link "톱스타뉴스 새 창 열림" [ref=f7e351] [cursor=pointer]:
+                      - /url: http://www.TopStarNews.Net
+                      - generic [ref=f7e352]: 톱스타뉴스
+                      - generic [ref=f7e353]: 새 창 열림
+                    - generic [ref=f7e354]: 9시간 전
+                - link "프로야구 <mark>준플레이오프</mark>, 1·2차전 시구 원필-김의성→애국가 정동하…경...의 이미지 새 창 열림" [ref=f7e359] [cursor=pointer]:
+                  - /url: https://www.topstarnews.net/news/articleView.html?idxno=16248991
+                  - img "프로야구 <mark>준플레이오프</mark>, 1·2차전 시구 원필-김의성→애국가 정동하…경...의 이미지" [ref=f7e361]
+                  - generic [ref=f7e363]: 새 창 열림
+            - link "뉴스 더보기" [ref=f7e365] [cursor=pointer]:
+              - /url: "?nso=so%3Ar%2Cp%3Aall%2Ca%3Aall&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_smr&sort=0&ssc=tab.news.all"
+              - generic [ref=f7e370]:
+                - generic [ref=f7e371]: 뉴스
+                - generic [ref=f7e372]: 더보기
+          - generic [ref=f7e378]:
+            - generic [ref=f7e381]:
+              - heading "네이버 클립" [level=2] [ref=f7e382]
+              - button "정보 확인 도움말" [ref=f7e383] [cursor=pointer]
+            - generic [ref=f7e388]:
+              - generic [ref=f7e389]:
+                - generic [ref=f7e390]:
+                  - generic [ref=f7e392]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e393] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%221%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=A392B9276842ADAF1478B393ADDA8C2114D1&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e395]
+                      - generic [ref=f7e397]: 새 창 열림
+                    - link "KIA-LG, 내일 준플레이오프 1차전 새 창 열림" [ref=f7e398] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%221%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=A392B9276842ADAF1478B393ADDA8C2114D1&serviceType=NTV
+                      - generic [ref=f7e400]:
+                        - text: KIA-LG, 내일
+                        - mark [ref=f7e401]: 준플레이오프 1차전
+                      - generic [ref=f7e402]: 새 창 열림
+                  - link "프로필 이미지 KBS 11시간 전 조회 1.1천 새 창 열림" [ref=f7e403] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@kbsmedia_news
+                    - generic [ref=f7e404]:
+                      - img "프로필 이미지" [ref=f7e406]
+                      - generic [ref=f7e407]:
+                        - generic [ref=f7e408]: KBS
+                        - generic [ref=f7e410]:
+                          - generic [ref=f7e411]: 11시간 전
+                          - generic [ref=f7e413]: 조회 1.1천
+                    - generic [ref=f7e414]: 새 창 열림
+                - generic [ref=f7e415]:
+                  - generic [ref=f7e417]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e418] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%222%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=0F9689B509CAC149827C66FB526A2C868B1E&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e420]
+                      - generic [ref=f7e422]: 새 창 열림
+                    - link "준플레이오프 2026... 1차전은 10월 17일(토)... 티켓, 중계는 티빙 전... 새 창 열림" [ref=f7e423] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%222%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=0F9689B509CAC149827C66FB526A2C868B1E&serviceType=CLIP
+                      - generic [ref=f7e425]:
+                        - mark [ref=f7e426]: 준플레이오프
+                        - text: 2026...
+                        - mark [ref=f7e427]: 1차전
+                        - text: 은 10월 17일(토)... 티켓,
+                        - mark [ref=f7e428]: 중계
+                        - text: 는 티빙 전...
+                      - generic [ref=f7e429]: 새 창 열림
+                  - link "프로필 이미지 shinsight 1일 전 조회 580 새 창 열림" [ref=f7e430] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@sojunglog22
+                    - generic [ref=f7e431]:
+                      - img "프로필 이미지" [ref=f7e433]
+                      - generic [ref=f7e434]:
+                        - generic [ref=f7e435]: shinsight
+                        - generic [ref=f7e437]:
+                          - generic [ref=f7e438]: 1일 전
+                          - generic [ref=f7e440]: 조회 580
+                    - generic [ref=f7e441]: 새 창 열림
+                - generic [ref=f7e442]:
+                  - generic [ref=f7e444]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e445] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%223%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=2B9CA9E082CB2EE822989B4AE236E28DA6E2&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e447]
+                      - generic [ref=f7e449]: 새 창 열림
+                    - link "KIA, LG와 준플레이오프…내일 가을야구 첫 승부 새 창 열림" [ref=f7e450] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%223%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=2B9CA9E082CB2EE822989B4AE236E28DA6E2&serviceType=NTV
+                      - generic [ref=f7e452]:
+                        - text: KIA, LG와
+                        - mark [ref=f7e453]: 준플레이오프
+                        - text: …내일 가을야구 첫 승부
+                      - generic [ref=f7e454]: 새 창 열림
+                  - link "프로필 이미지 KBS 2시간 전 조회 132 새 창 열림" [ref=f7e455] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@kbsmedia_news
+                    - generic [ref=f7e456]:
+                      - img "프로필 이미지" [ref=f7e458]
+                      - generic [ref=f7e459]:
+                        - generic [ref=f7e460]: KBS
+                        - generic [ref=f7e462]:
+                          - generic [ref=f7e463]: 2시간 전
+                          - generic [ref=f7e465]: 조회 132
+                    - generic [ref=f7e466]: 새 창 열림
+                - generic [ref=f7e467]:
+                  - generic [ref=f7e469]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e470] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%224%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=AA5B777ECF5A80802D2457707F7CE007402B&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e472]
+                      - generic [ref=f7e474]: 새 창 열림
+                    - link "게다가 1·2차전은 이틀 연속이라... 17일 중계에서는 8회부터 누가... 새 창 열림" [ref=f7e475] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%224%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=AA5B777ECF5A80802D2457707F7CE007402B&serviceType=CLIP
+                      - generic [ref=f7e477]:
+                        - text: 게다가
+                        - mark [ref=f7e478]: "1"
+                        - text: ·2차전은 이틀 연속이라... 17일
+                        - mark [ref=f7e479]: 중계
+                        - text: 에서는 8회부터 누가...
+                      - generic [ref=f7e480]: 새 창 열림
+                  - link "프로필 이미지 magomasil 12시간 전 조회 118 새 창 열림" [ref=f7e481] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@magomasil
+                    - generic [ref=f7e482]:
+                      - img "프로필 이미지" [ref=f7e484]
+                      - generic [ref=f7e485]:
+                        - generic [ref=f7e486]: magomasil
+                        - generic [ref=f7e488]:
+                          - generic [ref=f7e489]: 12시간 전
+                          - generic [ref=f7e491]: 조회 118
+                    - generic [ref=f7e492]: 새 창 열림
+                - generic [ref=f7e493]:
+                  - generic [ref=f7e495]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e496] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%225%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=4386520C02392BA5FED9E300A9B7110B6DD1&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e498]
+                      - generic [ref=f7e500]: 새 창 열림
+                    - link "전황 바꾼 LG ‘경엽볼’…오늘 100% 확률 걸고 3차전 새 창 열림" [ref=f7e501] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%225%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=4386520C02392BA5FED9E300A9B7110B6DD1&serviceType=NTV
+                      - generic [ref=f7e502]: 전황 바꾼 LG ‘경엽볼’…오늘 100% 확률 걸고 3차전
+                      - generic [ref=f7e504]: 새 창 열림
+                  - link "프로필 이미지 KBS 24.10.08 조회 4.4천 새 창 열림" [ref=f7e505] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@kbsmedia_news
+                    - generic [ref=f7e506]:
+                      - img "프로필 이미지" [ref=f7e508]
+                      - generic [ref=f7e509]:
+                        - generic [ref=f7e510]: KBS
+                        - generic [ref=f7e512]:
+                          - generic [ref=f7e513]: 24.10.08
+                          - generic [ref=f7e515]: 조회 4.4천
+                    - generic [ref=f7e516]: 새 창 열림
+                - generic [ref=f7e517]:
+                  - generic [ref=f7e519]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e520] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%226%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=73F28BBF2EC3726656FB909DE1F3D56A1DE7&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e522]
+                      - generic [ref=f7e524]: 새 창 열림
+                    - 'link "[2025.10.9 준플레이오프 1차전] #가을야구... 새 창 열림" [ref=f7e525] [cursor=pointer]':
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%226%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=73F28BBF2EC3726656FB909DE1F3D56A1DE7&serviceType=CLIP
+                      - generic [ref=f7e527]:
+                        - text: "[2025.10.9"
+                        - mark [ref=f7e528]: 준플레이오프 1차전
+                        - text: "] #가을야구..."
+                      - generic [ref=f7e529]: 새 창 열림
+                  - link "프로필 이미지 대구먹짱이 25.10.09 조회 4.1만 새 창 열림" [ref=f7e530] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@seullog_20
+                    - generic [ref=f7e531]:
+                      - img "프로필 이미지" [ref=f7e533]
+                      - generic [ref=f7e534]:
+                        - generic [ref=f7e535]: 대구먹짱이
+                        - generic [ref=f7e537]:
+                          - generic [ref=f7e538]: 25.10.09
+                          - generic [ref=f7e540]: 조회 4.1만
+                    - generic [ref=f7e541]: 새 창 열림
+                - generic [ref=f7e542]:
+                  - generic [ref=f7e544]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e545] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts?serviceType=MOMENT&mediaType=VOD&seedMediaId=F0E88C10A6E155F3EAB53DD040967EAEB87F&recType=CLIP_PC&recId=%7B%22targetProfileId%22%3A%227oLu0kPGRpccrSm1N_RO%22%2C%22open%22%3Atrue%7D
+                      - img "클립 이미지" [ref=f7e547]
+                      - generic [ref=f7e549]: 새 창 열림
+                    - 'link "인천야구 #KBO #준플레이오프 #준플 #준플1차전 #준플레이오프1차전 새 창 열림" [ref=f7e550] [cursor=pointer]':
+                      - /url: https://m.naver.com/shorts?serviceType=MOMENT&mediaType=VOD&seedMediaId=F0E88C10A6E155F3EAB53DD040967EAEB87F&recType=CLIP_PC&recId=%7B%22targetProfileId%22%3A%227oLu0kPGRpccrSm1N_RO%22%2C%22open%22%3Atrue%7D
+                      - generic [ref=f7e552]:
+                        - text: "인천야구 #KBO #"
+                        - mark [ref=f7e553]: 준플레이오프
+                        - text: "#준플 #준플"
+                        - mark [ref=f7e554]: 1차전
+                        - text: "#"
+                        - mark [ref=f7e555]: 준플레이오프1차전
+                      - generic [ref=f7e556]: 새 창 열림
+                  - link "프로필 이미지 놀먹 25.10.12 조회 492 새 창 열림" [ref=f7e557] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@nolmeoklife
+                    - generic [ref=f7e558]:
+                      - img "프로필 이미지" [ref=f7e560]
+                      - generic [ref=f7e561]:
+                        - generic [ref=f7e562]: 놀먹
+                        - generic [ref=f7e564]:
+                          - generic [ref=f7e565]: 25.10.12
+                          - generic [ref=f7e567]: 조회 492
+                    - generic [ref=f7e568]: 새 창 열림
+                - generic [ref=f7e569]:
+                  - generic [ref=f7e571]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e572] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%228%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=3D30C0A20F71AFB8A5B9B9822D7AE024021C&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e574]
+                      - generic [ref=f7e575]: 새 창 열림
+                    - link "'여자부 최초 준 PO!' 한송이 해설도 떨리는 매치! 새 창 열림" [ref=f7e576] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%228%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=3D30C0A20F71AFB8A5B9B9822D7AE024021C&serviceType=NTV
+                      - generic [ref=f7e577]: "'여자부 최초 준 PO!' 한송이 해설도 떨리는 매치!"
+                      - generic [ref=f7e579]: 새 창 열림
+                  - link "프로필 이미지 프로배구 네이버스포츠 03.24 조회 2.2만 새 창 열림" [ref=f7e580] [cursor=pointer]:
+                    - /url: https://tv.naver.com/kovonv
+                    - generic [ref=f7e581]:
+                      - img "프로필 이미지" [ref=f7e583]
+                      - generic [ref=f7e584]:
+                        - generic [ref=f7e585]: 프로배구 네이버스포츠
+                        - generic [ref=f7e587]:
+                          - generic [ref=f7e588]: "03.24"
+                          - generic [ref=f7e590]: 조회 2.2만
+                    - generic [ref=f7e591]: 새 창 열림
+                - generic [ref=f7e592]:
+                  - generic [ref=f7e594]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e595] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%229%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=3D634F19665FFEB547BF56E9BE4B1EE33E3D&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e597]
+                      - generic [ref=f7e599]: 새 창 열림
+                    - 'link "준플레이오프 #랜더스필드 #SSG랜더스 #삼성라이온즈 1차전 승리는!!!... 새 창 열림" [ref=f7e600] [cursor=pointer]':
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%229%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=3D634F19665FFEB547BF56E9BE4B1EE33E3D&serviceType=CLIP
+                      - generic [ref=f7e602]:
+                        - mark [ref=f7e603]: 준플레이오프
+                        - text: "#랜더스필드 #SSG랜더스 #삼성라이온즈"
+                        - mark [ref=f7e604]: 1차전
+                        - text: 승리는!!!...
+                      - generic [ref=f7e605]: 새 창 열림
+                  - link "photon24 02.01 조회 3 새 창 열림" [ref=f7e606] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@photon24
+                    - generic [ref=f7e612]:
+                      - generic [ref=f7e613]: photon24
+                      - generic [ref=f7e615]:
+                        - generic [ref=f7e616]: "02.01"
+                        - generic [ref=f7e618]: 조회 3
+                    - generic [ref=f7e619]: 새 창 열림
+                - generic [ref=f7e620]:
+                  - generic [ref=f7e622]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e623] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2210%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=54DE53BA73990C3A3E8D67F2F9897408C13F&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e625]
+                      - generic [ref=f7e627]: 새 창 열림
+                    - 'link "#랜더스필드 #준플레이오프 새 창 열림" [ref=f7e628] [cursor=pointer]':
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2210%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=54DE53BA73990C3A3E8D67F2F9897408C13F&serviceType=CLIP
+                      - generic [ref=f7e630]:
+                        - text: "#랜더스필드 #"
+                        - mark [ref=f7e631]: 준플레이오프
+                      - generic [ref=f7e632]: 새 창 열림
+                  - link "nyaang8 02.01 조회 9 새 창 열림" [ref=f7e633] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@nya_ang8
+                    - generic [ref=f7e639]:
+                      - generic [ref=f7e640]: nyaang8
+                      - generic [ref=f7e642]:
+                        - generic [ref=f7e643]: "02.01"
+                        - generic [ref=f7e645]: 조회 9
+                    - generic [ref=f7e646]: 새 창 열림
+                - generic [ref=f7e647]:
+                  - generic [ref=f7e649]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e650] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2211%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=4817B10799B20D619860FC00F15DF45674A3&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e652]
+                      - generic [ref=f7e654]: 새 창 열림
+                    - 'link "원태야...나 지금 굉장히 울컥해🥹 #키움히어로즈 #삼성라이온즈... 새 창 열림" [ref=f7e655] [cursor=pointer]':
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2211%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=4817B10799B20D619860FC00F15DF45674A3&serviceType=CLIP
+                      - generic [ref=f7e656]: "원태야...나 지금 굉장히 울컥해🥹 #키움히어로즈 #삼성라이온즈..."
+                      - generic [ref=f7e658]: 새 창 열림
+                  - link "프로필 이미지 jellin 88 25.10.09 조회 12.5만 새 창 열림" [ref=f7e659] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@jellin_88
+                    - generic [ref=f7e660]:
+                      - img "프로필 이미지" [ref=f7e662]
+                      - generic [ref=f7e663]:
+                        - generic [ref=f7e664]: jellin 88
+                        - generic [ref=f7e666]:
+                          - generic [ref=f7e667]: 25.10.09
+                          - generic [ref=f7e669]: 조회 12.5만
+                    - generic [ref=f7e670]: 새 창 열림
+                - generic [ref=f7e671]:
+                  - generic [ref=f7e673]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e674] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2212%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=947A6D3683E8CD5AB736BB276C1D72B5ED0E&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e676]
+                      - generic [ref=f7e678]: 새 창 열림
+                    - link "디테일로 승부하는 가을 야구…'LG vs KT' 가장 두려운 건? 새 창 열림" [ref=f7e679] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2212%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=947A6D3683E8CD5AB736BB276C1D72B5ED0E&serviceType=NTV
+                      - generic [ref=f7e680]: 디테일로 승부하는 가을 야구…'LG vs KT' 가장 두려운 건?
+                      - generic [ref=f7e682]: 새 창 열림
+                  - link "프로필 이미지 JTBC News 24.10.07 조회 8.0천 새 창 열림" [ref=f7e683] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@jtbcnews_official
+                    - generic [ref=f7e684]:
+                      - img "프로필 이미지" [ref=f7e686]
+                      - generic [ref=f7e687]:
+                        - generic [ref=f7e688]: JTBC News
+                        - generic [ref=f7e690]:
+                          - generic [ref=f7e691]: 24.10.07
+                          - generic [ref=f7e693]: 조회 8.0천
+                    - generic [ref=f7e694]: 새 창 열림
+                - generic [ref=f7e695]:
+                  - generic [ref=f7e697]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e698] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2213%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=67248B6BBB9E6DF4DCA6880AE4DB2F78ED65&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e700]
+                      - generic [ref=f7e702]: 새 창 열림
+                    - link "최원태·벤자민 ‘나를 따르라!’ 새 창 열림" [ref=f7e703] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2213%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=67248B6BBB9E6DF4DCA6880AE4DB2F78ED65&serviceType=NTV
+                      - generic [ref=f7e704]: 최원태·벤자민 ‘나를 따르라!’
+                      - generic [ref=f7e706]: 새 창 열림
+                  - link "프로필 이미지 KBS 24.10.08 조회 1.1천 새 창 열림" [ref=f7e707] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@kbsmedia_news
+                    - generic [ref=f7e708]:
+                      - img "프로필 이미지" [ref=f7e710]
+                      - generic [ref=f7e711]:
+                        - generic [ref=f7e712]: KBS
+                        - generic [ref=f7e714]:
+                          - generic [ref=f7e715]: 24.10.08
+                          - generic [ref=f7e717]: 조회 1.1천
+                    - generic [ref=f7e718]: 새 창 열림
+                - generic [ref=f7e719]:
+                  - generic [ref=f7e721]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e722] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2214%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=D5764A5997F3CF4F093ED866E6E84D9666D4&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e724]
+                      - generic [ref=f7e726]: 새 창 열림
+                    - link "SSG 김성욱, 9회말 극적 끝내기 한방 새 창 열림" [ref=f7e727] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2214%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=D5764A5997F3CF4F093ED866E6E84D9666D4&serviceType=NTV
+                      - generic [ref=f7e728]: SSG 김성욱, 9회말 극적 끝내기 한방
+                      - generic [ref=f7e730]: 새 창 열림
+                  - link "chanvnews 25.10.11 조회 2.1천 새 창 열림" [ref=f7e731] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@cha_nv_news
+                    - generic [ref=f7e737]:
+                      - generic [ref=f7e738]: chanvnews
+                      - generic [ref=f7e740]:
+                        - generic [ref=f7e741]: 25.10.11
+                        - generic [ref=f7e743]: 조회 2.1천
+                    - generic [ref=f7e744]: 새 창 열림
+                - generic [ref=f7e745]:
+                  - generic [ref=f7e747]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e748] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2215%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=C9F6C48589B90AECAD132ACA4503FFDF1EAB&serviceType=CLIP
+                      - img "클립 이미지" [ref=f7e750]
+                      - generic [ref=f7e752]: 새 창 열림
+                    - 'link "너무 멋지다👍 #삼성라이온즈 # 준플레이오프 #3차전승리 새 창 열림" [ref=f7e753] [cursor=pointer]':
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2215%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=C9F6C48589B90AECAD132ACA4503FFDF1EAB&serviceType=CLIP
+                      - generic [ref=f7e755]:
+                        - text: "너무 멋지다👍 #삼성라이온즈 #"
+                        - mark [ref=f7e756]: 준플레이오프
+                        - text: "#3차전승리"
+                      - generic [ref=f7e757]: 새 창 열림
+                  - link "프로필 이미지 eunijjuya 25.10.14 조회 98 새 창 열림" [ref=f7e758] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@eunijjuya
+                    - generic [ref=f7e759]:
+                      - img "프로필 이미지" [ref=f7e761]
+                      - generic [ref=f7e762]:
+                        - generic [ref=f7e763]: eunijjuya
+                        - generic [ref=f7e765]:
+                          - generic [ref=f7e766]: 25.10.14
+                          - generic [ref=f7e768]: 조회 98
+                    - generic [ref=f7e769]: 새 창 열림
+                - generic [ref=f7e770]:
+                  - generic [ref=f7e772]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e773] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?blogId=cjfwls1029&docNo=11947527&mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2216%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=C0B6D1C1A40E979C55CFD85D47928CB6C6D9&serviceType=MOMENT
+                      - img "클립 이미지" [ref=f7e775]
+                      - generic [ref=f7e777]: 새 창 열림
+                    - link "구구포차 본점🍻 2025 삼성라이온즈⚾️ 가을 야구 전 경기 중계확정!... 새 창 열림" [ref=f7e778] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?blogId=cjfwls1029&docNo=11947527&mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2216%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=C0B6D1C1A40E979C55CFD85D47928CB6C6D9&serviceType=MOMENT
+                      - generic [ref=f7e780]:
+                        - text: 구구포차 본점🍻 2025 삼성라이온즈⚾️ 가을 야구 전 경기
+                        - mark [ref=f7e781]: 중계
+                        - text: 확정!...
+                      - generic [ref=f7e782]: 새 창 열림
+                  - link "프로필 이미지 윤스파파 25.10.08 조회 1.6천 새 창 열림" [ref=f7e783] [cursor=pointer]:
+                    - /url: https://m.blog.naver.com/cjfwls1029
+                    - generic [ref=f7e784]:
+                      - img "프로필 이미지" [ref=f7e786]
+                      - generic [ref=f7e787]:
+                        - generic [ref=f7e788]: 윤스파파
+                        - generic [ref=f7e790]:
+                          - generic [ref=f7e791]: 25.10.08
+                          - generic [ref=f7e793]: 조회 1.6천
+                    - generic [ref=f7e794]: 새 창 열림
+                - generic [ref=f7e795]:
+                  - generic [ref=f7e797]:
+                    - link "클립 이미지 새 창 열림" [ref=f7e798] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2217%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=4FF59F6F9D491DDD65AD8880C6DFA2B1982A&serviceType=NTV
+                      - img "클립 이미지" [ref=f7e800]
+                      - generic [ref=f7e802]: 새 창 열림
+                    - link "전황 바꾼 LG ‘경엽볼’…오늘 100% 확률 걸고 3차전 새 창 열림" [ref=f7e803] [cursor=pointer]:
+                      - /url: https://m.naver.com/shorts/?mediaType=VOD&recId=%7B%22query%22%3A%22%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84%22%2C%22seedIndex%22%3A%2217%22%2C%22type%22%3A%22ALL%22%2C%22order%22%3A%22RELATED%22%2C%22filter%22%3A%22LOW_QUALITY_LEVEL_3%22%2C%22theme%22%3A%22sports%22%2C%22now%22%3A%220%22%7D&recType=CLIP_SEARCH&seedMediaId=4FF59F6F9D491DDD65AD8880C6DFA2B1982A&serviceType=NTV
+                      - generic [ref=f7e804]: 전황 바꾼 LG ‘경엽볼’…오늘 100% 확률 걸고 3차전
+                      - generic [ref=f7e806]: 새 창 열림
+                  - link "프로필 이미지 KBS 24.10.08 조회 1.3천 새 창 열림" [ref=f7e807] [cursor=pointer]:
+                    - /url: https://clip.naver.com/@kbsmedia_news
+                    - generic [ref=f7e808]:
+                      - img "프로필 이미지" [ref=f7e810]
+                      - generic [ref=f7e811]:
+                        - generic [ref=f7e812]: KBS
+                        - generic [ref=f7e814]:
+                          - generic [ref=f7e815]: 24.10.08
+                          - generic [ref=f7e817]: 조회 1.3천
+                    - generic [ref=f7e818]: 새 창 열림
+              - button "다음" [ref=f7e819] [cursor=pointer]
+            - link "클립 더보기" [ref=f7e824] [cursor=pointer]:
+              - /url: "?nso=&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_smr&sort=rel&ssc=tab.clip.all"
+              - generic [ref=f7e829]:
+                - generic [ref=f7e830]: 클립
+                - generic [ref=f7e831]: 더보기
+          - generic [ref=f7e835]:
+            - generic [ref=f7e839]:
+              - generic [ref=f7e841]:
+                - generic [ref=f7e842]:
+                  - link "새 창 열림" [ref=f7e844] [cursor=pointer]:
+                    - /url: https://blog.naver.com/10thousandwater
+                  - generic [ref=f7e848]:
+                    - link "덕수의 사생활 새 창 열림" [ref=f7e851] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater
+                      - generic [ref=f7e852]: 덕수의 사생활
+                      - generic [ref=f7e853]: 새 창 열림
+                    - generic [ref=f7e854]: 2일 전
+                - button "옵션 메뉴 열기" [ref=f7e857] [cursor=pointer]
+              - generic [ref=f7e862]:
+                - generic [ref=f7e863]:
+                  - link "10월 17일 오후 2시 2026 준플레이오프 1차전 일정·중계 채널·예상 선발 총정리 새 창 열림" [ref=f7e864] [cursor=pointer]:
+                    - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - generic [ref=f7e865]:
+                      - text: 10월 17일 오후 2시 2026
+                      - mark [ref=f7e866]: 준플레이오프 1차전
+                      - text: 일정·
+                      - mark [ref=f7e867]: 중계
+                      - text: 채널·예상 선발 총정리
+                    - generic [ref=f7e868]: 새 창 열림
+                  - link "준플레이오프 1차전 일정·중계 채널·예상 선발 총정리 2026 KBO 포스트시즌의 뜨거운 열기를 이어갈 준플레이오프 1차전이... 가이드 준플레이오프는 5전 3선승제로 치러지며, 1·2차전과 필요 시 열리는 5차전은 광주에서, 3·4차전은 서울 잠실구장에서 개최됩니다. 디지털 생중계의 경우 2026년 KBO 리그 유무선 중계권을 보유한 티빙(TVING)을 통해 PC와 모바일... 새 창 열림" [ref=f7e869] [cursor=pointer]:
+                    - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - generic [ref=f7e870]:
+                      - mark [ref=f7e871]: 준플레이오프 1차전
+                      - text: 일정·
+                      - mark [ref=f7e872]: 중계
+                      - text: 채널·예상 선발 총정리 2026 KBO 포스트시즌의 뜨거운 열기를 이어갈
+                      - mark [ref=f7e873]: 준플레이오프 1차전
+                      - text: 이... 가이드
+                      - mark [ref=f7e874]: 준플레이오프
+                      - text: 는 5전 3선승제로 치러지며,
+                      - mark [ref=f7e875]: "1"
+                      - text: ·2차전과 필요 시 열리는 5차전은 광주에서, 3·4차전은 서울 잠실구장에서 개최됩니다. 디지털
+                      - mark [ref=f7e876]: 생중계
+                      - text: 의 경우 2026년 KBO 리그 유무선
+                      - mark [ref=f7e877]: 중계
+                      - text: 권을 보유한 티빙(TVING)을 통해 PC와 모바일...
+                    - generic [ref=f7e878]: 새 창 열림
+                - generic [ref=f7e879]:
+                  - generic [ref=f7e880]:
+                    - link "새 창 열림" [ref=f7e881] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e886] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e891] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e896] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e901] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e906] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e911] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e916] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e921] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                    - link "새 창 열림" [ref=f7e926] [cursor=pointer]:
+                      - /url: https://blog.naver.com/10thousandwater/224442903827
+                  - button "다음"
+            - generic [ref=f7e934]:
+              - generic [ref=f7e936]:
+                - generic [ref=f7e937]:
+                  - link "새 창 열림" [ref=f7e939] [cursor=pointer]:
+                    - /url: https://blog.naver.com/sports_sip
+                  - generic [ref=f7e943]:
+                    - link "윈터로그 | WINTER LOG 새 창 열림" [ref=f7e946] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip
+                      - generic [ref=f7e947]: 윈터로그 | WINTER LOG
+                      - generic [ref=f7e948]: 새 창 열림
+                    - generic [ref=f7e949]: 2일 전
+                - button "옵션 메뉴 열기" [ref=f7e952] [cursor=pointer]
+              - generic [ref=f7e957]:
+                - generic [ref=f7e958]:
+                  - link "2026 KIA LG 준플레이오프 일정·중계·예매 총정리! 1차전 10월 17일 광주 개최 새 창 열림" [ref=f7e959] [cursor=pointer]:
+                    - /url: https://blog.naver.com/sports_sip/224442698251
+                    - generic [ref=f7e960]:
+                      - text: 2026 KIA LG
+                      - mark [ref=f7e961]: 준플레이오프
+                      - text: 일정·
+                      - mark [ref=f7e962]: 중계
+                      - text: ·예매 총정리!
+                      - mark [ref=f7e963]: 1차전
+                      - text: 10월 17일 광주 개최
+                    - generic [ref=f7e964]: 새 창 열림
+                  - 'link "오늘은 KIA와 LG의 준플레이오프 1~5차전 일정, 중계 시청 방법, 티켓 예매 시간, 관전 포인트까지 정리해 보겠습니다. 1. 2026 KIA LG 준플레이오프 일정 이번 준플레이오프는 5전 3선승제로 진행됩니다. 먼저 3승을 거두는 팀이 플레이오프에 진출하는 방식입니다. ⚾ 1차전 날짜 : 10월 17일 토요일 시간 : 오후 2시 경기장 : 광주-기아 챔피언스필드 ⚾ 2차전... 새 창 열림" [ref=f7e965] [cursor=pointer]':
+                    - /url: https://blog.naver.com/sports_sip/224442698251
+                    - generic [ref=f7e966]:
+                      - text: 오늘은 KIA와 LG의
+                      - mark [ref=f7e967]: 준플레이오프 1
+                      - text: ~5차전 일정,
+                      - mark [ref=f7e968]: 중계
+                      - text: 시청 방법, 티켓 예매 시간, 관전 포인트까지 정리해 보겠습니다.
+                      - mark [ref=f7e969]: "1"
+                      - text: . 2026 KIA LG
+                      - mark [ref=f7e970]: 준플레이오프
+                      - text: 일정 이번
+                      - mark [ref=f7e971]: 준플레이오프
+                      - text: 는 5전 3선승제로 진행됩니다. 먼저 3승을 거두는 팀이
+                      - mark [ref=f7e972]: 플레이오프
+                      - text: 에 진출하는 방식입니다. ⚾
+                      - mark [ref=f7e973]: 1차전
+                      - text: "날짜 : 10월 17일 토요일 시간 : 오후 2시 경기장 : 광주-기아 챔피언스필드 ⚾ 2차전..."
+                    - generic [ref=f7e974]: 새 창 열림
+                - generic [ref=f7e975]:
+                  - generic [ref=f7e976]:
+                    - link "새 창 열림" [ref=f7e977] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip/224442698251
+                    - link "새 창 열림" [ref=f7e982] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip/224442698251
+                    - link "새 창 열림" [ref=f7e987] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip/224442698251
+                    - link "새 창 열림" [ref=f7e992] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip/224442698251
+                    - link "새 창 열림" [ref=f7e997] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip/224442698251
+                    - link "새 창 열림" [ref=f7e1002] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sports_sip/224442698251
+                  - button "다음"
+            - generic [ref=f7e1011]:
+              - generic [ref=f7e1012]:
+                - generic [ref=f7e1013]:
+                  - link "나무위키 namu.wiki›2025 신한 SOL Bank KBO 준플레이오프 새 창 열림" [ref=f7e1014] [cursor=pointer]:
+                    - /url: https://namu.wiki/w/%EB%82%98%EB%AC%B4%EC%9C%84%ED%82%A4:%EB%8C%80%EB%AC%B8
+                    - generic [ref=f7e1020]:
+                      - generic [ref=f7e1021]: 나무위키
+                      - generic [ref=f7e1023]: namu.wiki›2025 신한 SOL Bank KBO 준플레이오프
+                    - generic [ref=f7e1027]: 새 창 열림
+                  - button "옵션 메뉴 열기" [ref=f7e1029] [cursor=pointer]
+                - generic [ref=f7e1034]:
+                  - link "2025 신한 SOL Bank KBO 준플레이오프 새 창 열림" [ref=f7e1036] [cursor=pointer]:
+                    - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84
+                    - generic [ref=f7e1037]:
+                      - text: 2025 신한 SOL Bank KBO
+                      - mark [ref=f7e1038]: 준플레이오프
+                    - generic [ref=f7e1039]: 새 창 열림
+                  - 'link "아울러 2021년 플레이오프 이후 4년 만에 라떼동맹 소속 팀들 간의 포스트시즌 대결이 성사됐다. 준플레이오프로 한정하면 2003년 준플레이오프 이후 22년 만의 매치업이다. 2.... 2.1. 예매 일정 2025 신한 SOL Bank KBO 준플레이오프 티켓 예매 경기 사이트 일시 예매 오픈 순서(현황) 1차전 NOL 티켓 홈페이지( # ), NOL 티켓 어플리케이션, ARS(1544-1555) 10월 8일 14:00... 새 창 열림" [ref=f7e1041] [cursor=pointer]':
+                    - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84
+                    - generic [ref=f7e1042]:
+                      - text: 아울러 2021년
+                      - mark [ref=f7e1043]: 플레이오프
+                      - text: 이후 4년 만에 라떼동맹 소속 팀들 간의 포스트시즌 대결이 성사됐다.
+                      - mark [ref=f7e1044]: 준플레이오프
+                      - text: 로 한정하면 2003년
+                      - mark [ref=f7e1045]: 준플레이오프
+                      - text: 이후 22년 만의 매치업이다. 2.... 2.
+                      - mark [ref=f7e1046]: "1"
+                      - text: . 예매 일정 2025 신한 SOL Bank KBO
+                      - mark [ref=f7e1047]: 준플레이오프
+                      - text: 티켓 예매 경기 사이트 일시 예매 오픈 순서(현황)
+                      - mark [ref=f7e1048]: 1차전
+                      - text: "NOL 티켓 홈페이지( # ), NOL 티켓 어플리케이션, ARS(1544-1555) 10월 8일 14:00..."
+                    - generic [ref=f7e1049]: 새 창 열림
+              - generic [ref=f7e1050]:
+                - link "개요 새 창 열림" [ref=f7e1051] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-1
+                  - generic [ref=f7e1052]: 개요
+                  - generic [ref=f7e1053]: 새 창 열림
+                - link "일정 새 창 열림" [ref=f7e1054] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-2
+                  - generic [ref=f7e1055]: 일정
+                  - generic [ref=f7e1056]: 새 창 열림
+                - link "시리즈 전 상황 새 창 열림" [ref=f7e1057] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-3
+                  - generic [ref=f7e1058]: 시리즈 전 상황
+                  - generic [ref=f7e1059]: 새 창 열림
+                - link "엔트리 새 창 열림" [ref=f7e1060] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-4
+                  - generic [ref=f7e1061]: 엔트리
+                  - generic [ref=f7e1062]: 새 창 열림
+                - link "결과 새 창 열림" [ref=f7e1063] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-5
+                  - generic [ref=f7e1064]: 결과
+                  - generic [ref=f7e1065]: 새 창 열림
+                - link "총평 새 창 열림" [ref=f7e1066] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-6
+                  - generic [ref=f7e1067]: 총평
+                  - generic [ref=f7e1068]: 새 창 열림
+                - link "준플레이오프 MVP 새 창 열림" [ref=f7e1069] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-7
+                  - generic [ref=f7e1070]: 준플레이오프 MVP
+                  - generic [ref=f7e1071]: 새 창 열림
+                - link "중계 관련 새 창 열림" [ref=f7e1072] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-8
+                  - generic [ref=f7e1073]: 중계 관련
+                  - generic [ref=f7e1074]: 새 창 열림
+                - link "기타 새 창 열림" [ref=f7e1075] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-9
+                  - generic [ref=f7e1076]: 기타
+                  - generic [ref=f7e1077]: 새 창 열림
+                - link "예매 일정 새 창 열림" [ref=f7e1078] [cursor=pointer]:
+                  - /url: https://namu.wiki/w/2025%20%EC%8B%A0%ED%95%9C%20SOL%20Bank%20KBO%20%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84#s-2.1
+                  - generic [ref=f7e1079]: 예매 일정
+                  - generic [ref=f7e1080]: 새 창 열림
+            - generic [ref=f7e1084]:
+              - generic [ref=f7e1086]:
+                - generic [ref=f7e1087]:
+                  - link "새 창 열림" [ref=f7e1089] [cursor=pointer]:
+                    - /url: https://blog.naver.com/yongchulk
+                  - generic [ref=f7e1093]:
+                    - link "위트상식의 생활꿀팁 새 창 열림" [ref=f7e1096] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yongchulk
+                      - generic [ref=f7e1097]: 위트상식의 생활꿀팁
+                      - generic [ref=f7e1098]: 새 창 열림
+                    - generic [ref=f7e1099]: 5일 전
+                - button "옵션 메뉴 열기" [ref=f7e1102] [cursor=pointer]
+              - generic [ref=f7e1108]:
+                - generic [ref=f7e1109]:
+                  - link "2026 KBO 와일드카드 결정전 일정, 예매, 중계 보는 법 총정리 새 창 열림" [ref=f7e1110] [cursor=pointer]:
+                    - /url: https://blog.naver.com/yongchulk/224439046720
+                    - generic [ref=f7e1111]:
+                      - text: 2026 KBO 와일드카드 결정전 일정, 예매,
+                      - mark [ref=f7e1112]: 중계
+                      - text: 보는 법 총정리
+                    - generic [ref=f7e1113]: 새 창 열림
+                  - link "홈구장 준플레이오프 1차전 10월 17일 토요일 오후 2시 정규시즌 3위 팀 홈구장 와일드카드 2차전은 반드시 열리는 경기가 아닙니다. 1차전 결과에 따라 시리즈가 끝나면 2차전은... 경기 시작 전에 생중계 화면을 선택합니다. 스마트TV에서 티빙 앱을 지원한다면 TV 화면으로도 시청할 수 있어요. TV 중계 채널은 어디일까요? KBO는 2024~2026년 지상파 3사와 TV... 새 창 열림" [ref=f7e1114] [cursor=pointer]:
+                    - /url: https://blog.naver.com/yongchulk/224439046720
+                    - generic [ref=f7e1115]:
+                      - text: 홈구장
+                      - mark [ref=f7e1116]: 준플레이오프 1차전
+                      - text: 10월 17일 토요일 오후 2시 정규시즌 3위 팀 홈구장 와일드카드 2차전은 반드시 열리는 경기가 아닙니다.
+                      - mark [ref=f7e1117]: 1차전
+                      - text: 결과에 따라 시리즈가 끝나면 2차전은... 경기 시작 전에
+                      - mark [ref=f7e1118]: 생중계
+                      - text: 화면을 선택합니다. 스마트TV에서 티빙 앱을 지원한다면 TV 화면으로도 시청할 수 있어요. TV
+                      - mark [ref=f7e1119]: 중계
+                      - text: 채널은 어디일까요? KBO는 2024~2026년 지상파 3사와 TV...
+                    - generic [ref=f7e1120]: 새 창 열림
+                - link "새 창 열림" [ref=f7e1121] [cursor=pointer]:
+                  - /url: https://blog.naver.com/yongchulk/224439046720
+            - generic [ref=f7e1129]:
+              - generic [ref=f7e1131]:
+                - generic [ref=f7e1132]:
+                  - link "새 창 열림" [ref=f7e1134] [cursor=pointer]:
+                    - /url: https://in.naver.com/mossin0514
+                  - generic [ref=f7e1138]:
+                    - link "나미작업실 새 창 열림" [ref=f7e1141] [cursor=pointer]:
+                      - /url: https://in.naver.com/mossin0514
+                      - generic [ref=f7e1142]: 나미작업실
+                      - generic [ref=f7e1143]: 새 창 열림
+                    - generic [ref=f7e1144]: 4일 전
+                - button "옵션 메뉴 열기" [ref=f7e1147] [cursor=pointer]
+              - generic [ref=f7e1152]:
+                - generic [ref=f7e1153]:
+                  - link "KBO 가을야구 중계 어디서? LG 두산 와일드카드 결정전, 포스트시즌 일정 새 창 열림" [ref=f7e1154] [cursor=pointer]:
+                    - /url: https://blog.naver.com/mossin0514/224440236697
+                    - generic [ref=f7e1155]:
+                      - text: KBO 가을야구
+                      - mark [ref=f7e1156]: 중계
+                      - text: 어디서? LG 두산 와일드카드 결정전, 포스트시즌 일정
+                    - generic [ref=f7e1157]: 새 창 열림
+                  - link "결정전 1차전을 치르는데요. 같은 구장을 쓰는 두 팀이지만 이번 시리즈는 LG가 정규시즌 4위 자격으로 홈팀이... ✅ kbo 가을야구 중계 티빙에서는 생중계뿐 아니라 경기 후 다시보기와 하이라이트도 제공하는 페이지가 운영되고 있어... 플레이오프는 삼성 홈에서 1·2차전, 준플레이오프 승리팀 홈에서 3·4차전이 진행되고, 5차전이 필요하면 삼성 홈으로... 새 창 열림" [ref=f7e1158] [cursor=pointer]:
+                    - /url: https://blog.naver.com/mossin0514/224440236697
+                    - generic [ref=f7e1159]:
+                      - text: 결정전
+                      - mark [ref=f7e1160]: 1차전
+                      - text: 을 치르는데요. 같은 구장을 쓰는 두 팀이지만 이번 시리즈는 LG가 정규시즌 4위 자격으로 홈팀이... ✅ kbo 가을야구
+                      - mark [ref=f7e1161]: 중계
+                      - text: 티빙에서는
+                      - mark [ref=f7e1162]: 생중계
+                      - text: 뿐 아니라 경기 후 다시보기와 하이라이트도 제공하는 페이지가 운영되고 있어...
+                      - mark [ref=f7e1163]: 플레이오프
+                      - text: 는 삼성 홈에서
+                      - mark [ref=f7e1164]: "1"
+                      - text: ·2차전,
+                      - mark [ref=f7e1165]: 준플레이오프
+                      - text: 승리팀 홈에서 3·4차전이 진행되고, 5차전이 필요하면 삼성 홈으로...
+                    - generic [ref=f7e1166]: 새 창 열림
+                - generic [ref=f7e1167]:
+                  - generic [ref=f7e1168]:
+                    - link "새 창 열림" [ref=f7e1169] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                    - link "새 창 열림" [ref=f7e1174] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                    - link "새 창 열림" [ref=f7e1179] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                    - link "새 창 열림" [ref=f7e1184] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                    - link "새 창 열림" [ref=f7e1189] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                    - link "새 창 열림" [ref=f7e1194] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                    - link "새 창 열림" [ref=f7e1199] [cursor=pointer]:
+                      - /url: https://blog.naver.com/mossin0514/224440236697
+                  - button "다음"
+          - generic [ref=f7e1204]:
+            - generic [ref=f7e1209]:
+              - generic [ref=f7e1210]:
+                - generic [ref=f7e1211]:
+                  - link "위키백과 한국어 ko.wikipedia.org›2025년_KBO_포스트시즌 새 창 열림" [ref=f7e1212] [cursor=pointer]:
+                    - /url: https://ko.wikipedia.org/wiki/%EC%9C%84%ED%82%A4%EB%B0%B1%EA%B3%BC:%EB%8C%80%EB%AC%B8
+                    - generic [ref=f7e1218]:
+                      - generic [ref=f7e1219]: 위키백과 한국어
+                      - generic [ref=f7e1221]: ko.wikipedia.org›2025년_KBO_포스트시즌
+                    - generic [ref=f7e1225]: 새 창 열림
+                  - button "옵션 메뉴 열기" [ref=f7e1227] [cursor=pointer]
+                - generic [ref=f7e1232]:
+                  - link "2025년 KBO 포스트시즌 새 창 열림" [ref=f7e1234] [cursor=pointer]:
+                    - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C
+                    - generic [ref=f7e1235]: 2025년 KBO 포스트시즌
+                    - generic [ref=f7e1236]: 새 창 열림
+                  - 'link "이번 포스트시즌부터 한국시리즈 방식이 2-2-3에서 2-3-2로 다시 회귀하면서 한국시리즈 5차전 장소는 플레이오프... 2사 1, 3루에서 나온 데이비슨의 1타점 2루타까지 나오며 삼성 선발 후라도로부터 4득점에 성공했다. 반면 삼성은... 준플레이오프 출장자 명단 경기 기록 1차전 2025년 10월 9일 - 인천SSG랜더스필드 시구 : 배우 최현욱 1차전 MVP : 삼성 최원태... 새 창 열림" [ref=f7e1238] [cursor=pointer]':
+                    - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C
+                    - generic [ref=f7e1239]:
+                      - text: 이번 포스트시즌부터 한국시리즈 방식이 2-2-3에서 2-3-2로 다시 회귀하면서 한국시리즈 5차전 장소는
+                      - mark [ref=f7e1240]: 플레이오프
+                      - text: ... 2사
+                      - mark [ref=f7e1241]: "1"
+                      - text: ", 3루에서 나온 데이비슨의 1타점 2루타까지 나오며 삼성 선발 후라도로부터 4득점에 성공했다. 반면 삼성은..."
+                      - mark [ref=f7e1242]: 준플레이오프
+                      - text: 출장자 명단 경기 기록
+                      - mark [ref=f7e1243]: 1차전
+                      - text: "2025년 10월 9일 - 인천SSG랜더스필드 시구 : 배우 최현욱"
+                      - mark [ref=f7e1244]: 1차전
+                      - text: "MVP : 삼성 최원태..."
+                    - generic [ref=f7e1245]: 새 창 열림
+              - generic [ref=f7e1246]:
+                - link "진출팀 새 창 열림" [ref=f7e1247] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EC%A7%84%EC%B6%9C%ED%8C%80
+                  - generic [ref=f7e1248]: 진출팀
+                  - generic [ref=f7e1249]: 새 창 열림
+                - link "대진표 새 창 열림" [ref=f7e1250] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EB%8C%80%EC%A7%84%ED%91%9C
+                  - generic [ref=f7e1251]: 대진표
+                  - generic [ref=f7e1252]: 새 창 열림
+                - link "와일드카드 결정전 새 창 열림" [ref=f7e1253] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EC%99%80%EC%9D%BC%EB%93%9C%EC%B9%B4%EB%93%9C_%EA%B2%B0%EC%A0%95%EC%A0%84
+                  - generic [ref=f7e1254]: 와일드카드 결정전
+                  - generic [ref=f7e1255]: 새 창 열림
+                - link "준플레이오프 새 창 열림" [ref=f7e1256] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84
+                  - generic [ref=f7e1257]: 준플레이오프
+                  - generic [ref=f7e1258]: 새 창 열림
+                - link "플레이오프 새 창 열림" [ref=f7e1259] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84
+                  - generic [ref=f7e1260]: 플레이오프
+                  - generic [ref=f7e1261]: 새 창 열림
+                - link "한국시리즈 새 창 열림" [ref=f7e1262] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%ED%95%9C%EA%B5%AD%EC%8B%9C%EB%A6%AC%EC%A6%88
+                  - generic [ref=f7e1263]: 한국시리즈
+                  - generic [ref=f7e1264]: 새 창 열림
+                - link "중계 일정 새 창 열림" [ref=f7e1265] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EC%A4%91%EA%B3%84_%EC%9D%BC%EC%A0%95
+                  - generic [ref=f7e1266]: 중계 일정
+                  - generic [ref=f7e1267]: 새 창 열림
+                - link "같이 보기 새 창 열림" [ref=f7e1268] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EA%B0%99%EC%9D%B4_%EB%B3%B4%EA%B8%B0
+                  - generic [ref=f7e1269]: 같이 보기
+                  - generic [ref=f7e1270]: 새 창 열림
+                - link "각주 새 창 열림" [ref=f7e1271] [cursor=pointer]:
+                  - /url: https://ko.wikipedia.org/wiki/2025%EB%85%84_KBO_%ED%8F%AC%EC%8A%A4%ED%8A%B8%EC%8B%9C%EC%A6%8C#%EA%B0%81%EC%A3%BC
+                  - generic [ref=f7e1272]: 각주
+                  - generic [ref=f7e1273]: 새 창 열림
+            - generic [ref=f7e1279]:
+              - generic [ref=f7e1280]:
+                - link "baduktime.com 3주 전 baduktime.com›bbs 새 창 열림" [ref=f7e1281] [cursor=pointer]:
+                  - /url: https://baduktime.com/
+                  - generic [ref=f7e1287]:
+                    - generic [ref=f7e1288]: baduktime.com
+                    - generic [ref=f7e1292]:
+                      - generic [ref=f7e1293]: 3주 전
+                      - generic [ref=f7e1295]: baduktime.com›bbs
+                  - generic [ref=f7e1296]: 새 창 열림
+                - button "옵션 메뉴 열기" [ref=f7e1298] [cursor=pointer]
+              - generic [ref=f7e1303]:
+                - link "삼척vs부안 (7시) NH여자바둑리그 <mark>준플레이오프 1차전</mark> - 바둑타임 뉴스&amp;<mark>중계</mark> 게시판의 이미지 새 창 열림" [ref=f7e1304] [cursor=pointer]:
+                  - /url: https://baduktime.com/g2/bbs/board.php?bo_table=baduktalk&wr_id=16725
+                  - img "삼척vs부안 (7시) NH여자바둑리그 <mark>준플레이오프 1차전</mark> - 바둑타임 뉴스&amp;<mark>중계</mark> 게시판의 이미지" [ref=f7e1306]
+                  - generic [ref=f7e1308]: 새 창 열림
+                - link "삼척vs부안 (7시) NH여자바둑리그 준플레이오프 1차전 - 바둑타임 뉴스&중계 게시판 새 창 열림" [ref=f7e1310] [cursor=pointer]:
+                  - /url: https://baduktime.com/g2/bbs/board.php?bo_table=baduktalk&wr_id=16725
+                  - generic [ref=f7e1311]:
+                    - text: 삼척vs부안 (7시) NH여자바둑리그
+                    - mark [ref=f7e1312]: 준플레이오프 1차전
+                    - text: "- 바둑타임 뉴스&"
+                    - mark [ref=f7e1313]: 중계
+                    - text: 게시판
+                  - generic [ref=f7e1314]: 새 창 열림
+                - link "이정은과 리허가 이긴 3위삼척이 승리하며 플레이오프에 진출합니다. 부안의 오유진이 김은지를 눌렀음에도 아깝게 부안은 탈락합니다. 3위삼척 vs 2위철원의 플레이오프는 9/23일 시작됩니다. 2026 NH농협은행 한국여자바둑리그 포스트시즌 준플레이오프 1차전, 정규리그 3위삼척 vs 4위부안의 대결입니다. 준플레이오프는 3위팀이 1대0으로 이긴 상태에서... 새 창 열림" [ref=f7e1316] [cursor=pointer]:
+                  - /url: https://baduktime.com/g2/bbs/board.php?bo_table=baduktalk&wr_id=16725
+                  - generic [ref=f7e1317]:
+                    - text: 이정은과 리허가 이긴 3위삼척이 승리하며
+                    - mark [ref=f7e1318]: 플레이오프
+                    - text: 에 진출합니다. 부안의 오유진이 김은지를 눌렀음에도 아깝게 부안은 탈락합니다. 3위삼척 vs 2위철원의
+                    - mark [ref=f7e1319]: 플레이오프
+                    - text: 는 9/23일 시작됩니다. 2026 NH농협은행 한국여자바둑리그 포스트시즌
+                    - mark [ref=f7e1320]: 준플레이오프 1차전
+                    - text: ", 정규리그 3위삼척 vs 4위부안의 대결입니다."
+                    - mark [ref=f7e1321]: 준플레이오프
+                    - text: 는 3위팀이 1대0으로 이긴 상태에서...
+                  - generic [ref=f7e1322]: 새 창 열림
+            - generic [ref=f7e1326]:
+              - generic [ref=f7e1328]:
+                - generic [ref=f7e1329]:
+                  - link "새 창 열림" [ref=f7e1331] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/kiawin
+                  - generic [ref=f7e1335]:
+                    - link "V13을 위하여 응원하는 타이거즈 새 창 열림" [ref=f7e1338] [cursor=pointer]:
+                      - /url: https://cafe.naver.com/kiawin
+                      - generic [ref=f7e1339]: V13을 위하여 응원하는 타이거즈
+                      - generic [ref=f7e1340]: 새 창 열림
+                    - generic [ref=f7e1344]: 3일 전
+                - button "옵션 메뉴 열기" [ref=f7e1347] [cursor=pointer]
+              - generic [ref=f7e1353]:
+                - generic [ref=f7e1354]:
+                  - link "2026 KBO 와일드카드전 1차전 양팀 선발 라인업 (두산 vs LG) 새 창 열림" [ref=f7e1355] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/kiawin/1512004?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxMjAwNCwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.fUDOAoWdV-eyFS80W2cdatSpfEpuIgq3raJW8ff5f-Q
+                    - generic [ref=f7e1356]:
+                      - text: 2026 KBO 와일드카드전
+                      - mark [ref=f7e1357]: 1차전
+                      - text: 양팀 선발 라인업 (두산 vs LG)
+                    - generic [ref=f7e1358]: 새 창 열림
+                  - link "ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ 가을야구 기념 (?) 양팀 라인업 한번에 작성할게요 ! 준플레이오프 시작되면 당연히 기아 라인업만 ! 승리의 라인업으로 찾아오겠습니다 ㅎ.ㅎ 와일드카드전 1차전 중계 방송사는 MBC 입니다 . 두산 쪽에서 제공한 라인업지 같은데 기자님 sns에 보여서 같이 올려둡니다! 새 창 열림" [ref=f7e1359] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/kiawin/1512004?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxMjAwNCwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.fUDOAoWdV-eyFS80W2cdatSpfEpuIgq3raJW8ff5f-Q
+                    - generic [ref=f7e1360]:
+                      - text: ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ 가을야구 기념 (?) 양팀 라인업 한번에 작성할게요 !
+                      - mark [ref=f7e1361]: 준플레이오프
+                      - text: 시작되면 당연히 기아 라인업만 ! 승리의 라인업으로 찾아오겠습니다 ㅎ.ㅎ 와일드카드전
+                      - mark [ref=f7e1362]: 1차전 중계
+                      - text: 방송사는 MBC 입니다 . 두산 쪽에서 제공한 라인업지 같은데 기자님 sns에 보여서 같이 올려둡니다!
+                    - generic [ref=f7e1363]: 새 창 열림
+                - link "새 창 열림" [ref=f7e1364] [cursor=pointer]:
+                  - /url: https://cafe.naver.com/kiawin/1512004?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxMjAwNCwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.fUDOAoWdV-eyFS80W2cdatSpfEpuIgq3raJW8ff5f-Q
+              - link "차라리 엘지가 이기는게 좋을거 같긴한데요 ㅎㅎㅎ 고우석없는 엘지는 앙꼬없는 찐빵입니다. 새 창 열림" [ref=f7e1376] [cursor=pointer]:
+                - /url: https://cafe.naver.com/kiawin/1512004?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxMjAwNCwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.fUDOAoWdV-eyFS80W2cdatSpfEpuIgq3raJW8ff5f-Q
+                - generic [ref=f7e1377]: 차라리 엘지가 이기는게 좋을거 같긴한데요 ㅎㅎㅎ 고우석없는 엘지는 앙꼬없는 찐빵입니다.
+                - generic [ref=f7e1378]: 새 창 열림
+            - generic [ref=f7e1382]:
+              - generic [ref=f7e1384]:
+                - generic [ref=f7e1385]:
+                  - link "새 창 열림" [ref=f7e1387] [cursor=pointer]:
+                    - /url: https://blog.naver.com/vspark365
+                  - generic [ref=f7e1391]:
+                    - link "브이365 블로그 새 창 열림" [ref=f7e1394] [cursor=pointer]:
+                      - /url: https://blog.naver.com/vspark365
+                      - generic [ref=f7e1395]: 브이365 블로그
+                      - generic [ref=f7e1396]: 새 창 열림
+                    - generic [ref=f7e1397]: 2주 전
+                - button "옵션 메뉴 열기" [ref=f7e1400] [cursor=pointer]
+              - generic [ref=f7e1406]:
+                - generic [ref=f7e1407]:
+                  - link "2026 KBO 한국시리즈 일정과 시청 방법, 7전 4선승제 경기 방식까지 정리 새 창 열림" [ref=f7e1408] [cursor=pointer]:
+                    - /url: https://blog.naver.com/vspark365/224436120328
+                    - generic [ref=f7e1409]: 2026 KBO 한국시리즈 일정과 시청 방법, 7전 4선승제 경기 방식까지 정리
+                    - generic [ref=f7e1410]: 새 창 열림
+                  - link "공식 중계일정에서 확인하는 것이 정확합니다. 2026 KBO 포스트시즌은 10월 14일 시작 KBO가 발표한 공식 일정에 따르면 2026 신한 SOL KBO 포스트시즌은 10월 14일 수요일 와일드카드 결정전 1차전으로 출발합니다. 와일드카드 결정전은 최대 2경기이며 정규시즌 4위 팀 홈구장에서 열립니다. 준플레이오프와 플레이오프는 각각 5전 3선승제입니다. 마지막... 새 창 열림" [ref=f7e1411] [cursor=pointer]:
+                    - /url: https://blog.naver.com/vspark365/224436120328
+                    - generic [ref=f7e1412]:
+                      - text: 공식
+                      - mark [ref=f7e1413]: 중계
+                      - text: 일정에서 확인하는 것이 정확합니다. 2026 KBO 포스트시즌은 10월 14일 시작 KBO가 발표한 공식 일정에 따르면 2026 신한 SOL KBO 포스트시즌은 10월 14일 수요일 와일드카드 결정전
+                      - mark [ref=f7e1414]: 1차전
+                      - text: 으로 출발합니다. 와일드카드 결정전은 최대 2경기이며 정규시즌 4위 팀 홈구장에서 열립니다.
+                      - mark [ref=f7e1415]: 준플레이오프
+                      - text: 와
+                      - mark [ref=f7e1416]: 플레이오프
+                      - text: 는 각각 5전 3선승제입니다. 마지막...
+                    - generic [ref=f7e1417]: 새 창 열림
+                - link "새 창 열림" [ref=f7e1418] [cursor=pointer]:
+                  - /url: https://blog.naver.com/vspark365/224436120328
+            - generic [ref=f7e1426]:
+              - generic [ref=f7e1428]:
+                - generic [ref=f7e1429]:
+                  - link "새 창 열림" [ref=f7e1431] [cursor=pointer]:
+                    - /url: https://blog.naver.com/yhzkim
+                  - generic [ref=f7e1435]:
+                    - link "최고를 꿈꾸다 -구름이형- 새 창 열림" [ref=f7e1438] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim
+                      - generic [ref=f7e1439]: 최고를 꿈꾸다 -구름이형-
+                      - generic [ref=f7e1440]: 새 창 열림
+                    - generic [ref=f7e1441]: 1주 전
+                - button "옵션 메뉴 열기" [ref=f7e1444] [cursor=pointer]
+              - generic [ref=f7e1449]:
+                - generic [ref=f7e1450]:
+                  - link "2026 KBO 가을야구 일정·대진표｜포스트시즌 진출팀과 한국시리즈 총정리 새 창 열림" [ref=f7e1451] [cursor=pointer]:
+                    - /url: https://blog.naver.com/yhzkim/224436219161
+                    - generic [ref=f7e1452]: 2026 KBO 가을야구 일정·대진표｜포스트시즌 진출팀과 한국시리즈 총정리
+                    - generic [ref=f7e1453]: 새 창 열림
+                  - link "한국시리즈 1차전 11월 2일(월) 한국시리즈 방식 7전 4선승제 KBO는 10월 7일 포스트시즌 일정을 발표했습니다. 와일드카드 결정전부터 준플레이오프, 플레이오프를 거쳐 한국시리즈 우승팀을 결정합니다. 다만 우천 순연이나 시리즈 조기... 가을야구 중계와 티켓 예매 방법 2026 KBO 포스트시즌은 TV와 온라인 중계를 통해 시청할 수 있습니다. 정확한 경기별... 새 창 열림" [ref=f7e1454] [cursor=pointer]:
+                    - /url: https://blog.naver.com/yhzkim/224436219161
+                    - generic [ref=f7e1455]:
+                      - text: 한국시리즈
+                      - mark [ref=f7e1456]: 1차전
+                      - text: 11월 2일(월) 한국시리즈 방식 7전 4선승제 KBO는 10월 7일 포스트시즌 일정을 발표했습니다. 와일드카드 결정전부터
+                      - mark [ref=f7e1457]: 준플레이오프
+                      - text: ","
+                      - mark [ref=f7e1458]: 플레이오프
+                      - text: 를 거쳐 한국시리즈 우승팀을 결정합니다. 다만 우천 순연이나 시리즈 조기... 가을야구
+                      - mark [ref=f7e1459]: 중계
+                      - text: 와 티켓 예매 방법 2026 KBO 포스트시즌은 TV와 온라인
+                      - mark [ref=f7e1460]: 중계
+                      - text: 를 통해 시청할 수 있습니다. 정확한 경기별...
+                    - generic [ref=f7e1461]: 새 창 열림
+                - generic [ref=f7e1462]:
+                  - generic [ref=f7e1463]:
+                    - link "새 창 열림" [ref=f7e1464] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim/224436219161
+                    - link "새 창 열림" [ref=f7e1469] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim/224436219161
+                    - link "새 창 열림" [ref=f7e1474] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim/224436219161
+                    - link "새 창 열림" [ref=f7e1479] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim/224436219161
+                    - link "새 창 열림" [ref=f7e1484] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim/224436219161
+                    - link "새 창 열림" [ref=f7e1489] [cursor=pointer]:
+                      - /url: https://blog.naver.com/yhzkim/224436219161
+                  - button "다음"
+            - generic [ref=f7e1497]:
+              - generic [ref=f7e1499]:
+                - generic [ref=f7e1500]:
+                  - link "새 창 열림" [ref=f7e1502] [cursor=pointer]:
+                    - /url: https://blog.naver.com/heobabyhanbaby
+                  - generic [ref=f7e1506]:
+                    - link "어부허브 새 창 열림" [ref=f7e1509] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby
+                      - generic [ref=f7e1510]: 어부허브
+                      - generic [ref=f7e1511]: 새 창 열림
+                    - generic [ref=f7e1512]: 1주 전
+                - button "옵션 메뉴 열기" [ref=f7e1515] [cursor=pointer]
+              - generic [ref=f7e1520]:
+                - generic [ref=f7e1521]:
+                  - link "프로야구 포스트시즌 일정, 10월 14일 와일드카드로 시작합니다 새 창 열림" [ref=f7e1522] [cursor=pointer]:
+                    - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - generic [ref=f7e1523]: 프로야구 포스트시즌 일정, 10월 14일 와일드카드로 시작합니다
+                    - generic [ref=f7e1524]: 새 창 열림
+                  - link "준플레이오프 1차전은 10월 17일, 플레이오프 1차전은 10월 25일, 한국시리즈 1차전은 11월 2일이에요. KT는 한국시리즈, 삼성은 플레이오프에 바로 올라가 있고 두산은 5위로 와일드카드에 나갑니다. 가을야구 큰 틀부터 표로 보여 드려요... 공지 중계 채널 발표 확인 못 함 방송사 편성표 10월 7일 KBO 발표를 다룬 기사에는 시작 시각, 예매, 중계 내용이... 새 창 열림" [ref=f7e1525] [cursor=pointer]:
+                    - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - generic [ref=f7e1526]:
+                      - mark [ref=f7e1527]: 준플레이오프 1차전
+                      - text: 은 10월 17일,
+                      - mark [ref=f7e1528]: 플레이오프 1차전
+                      - text: 은 10월 25일, 한국시리즈
+                      - mark [ref=f7e1529]: 1차전
+                      - text: 은 11월 2일이에요. KT는 한국시리즈, 삼성은
+                      - mark [ref=f7e1530]: 플레이오프
+                      - text: 에 바로 올라가 있고 두산은 5위로 와일드카드에 나갑니다. 가을야구 큰 틀부터 표로 보여 드려요... 공지
+                      - mark [ref=f7e1531]: 중계
+                      - text: 채널 발표 확인 못 함 방송사 편성표 10월 7일 KBO 발표를 다룬 기사에는 시작 시각, 예매,
+                      - mark [ref=f7e1532]: 중계
+                      - text: 내용이...
+                    - generic [ref=f7e1533]: 새 창 열림
+                - generic [ref=f7e1534]:
+                  - generic [ref=f7e1535]:
+                    - link "새 창 열림" [ref=f7e1536] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - link "새 창 열림" [ref=f7e1541] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - link "새 창 열림" [ref=f7e1546] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - link "새 창 열림" [ref=f7e1551] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - link "새 창 열림" [ref=f7e1556] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - link "새 창 열림" [ref=f7e1561] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                    - link "새 창 열림" [ref=f7e1566] [cursor=pointer]:
+                      - /url: https://blog.naver.com/heobabyhanbaby/224437497098
+                  - button "다음"
+            - generic [ref=f7e1574]:
+              - generic [ref=f7e1576]:
+                - generic [ref=f7e1577]:
+                  - link "새 창 열림" [ref=f7e1579] [cursor=pointer]:
+                    - /url: https://in.naver.com/blu2sky7
+                  - generic [ref=f7e1583]:
+                    - link "무상훈 새 창 열림" [ref=f7e1586] [cursor=pointer]:
+                      - /url: https://in.naver.com/blu2sky7
+                      - generic [ref=f7e1587]: 무상훈
+                      - generic [ref=f7e1588]: 새 창 열림
+                    - generic [ref=f7e1589]: 5일 전
+                - button "옵션 메뉴 열기" [ref=f7e1592] [cursor=pointer]
+              - generic [ref=f7e1597]:
+                - generic [ref=f7e1598]:
+                  - link "KBO 포스트시즌 일정 총정리 와일드카드부터 한국시리즈 및 예매 팁 새 창 열림" [ref=f7e1599] [cursor=pointer]:
+                    - /url: https://blog.naver.com/blu2sky7/224439310411
+                    - generic [ref=f7e1600]: KBO 포스트시즌 일정 총정리 와일드카드부터 한국시리즈 및 예매 팁
+                    - generic [ref=f7e1601]: 새 창 열림
+                  - link "이번 가을야구는 10월 14일 수요일 와일드카드 결정전 1차전을 시작으로 대망의 한국시리즈 7차전이 예정된 11월... 홈구장 준플레이오프 10월 17일(토)~10월 23일(금) 5전 3선승제 3위 팀 홈에서 1·2·5차전 진행 플레이오프 10월 25일(일)~10월... 극장 생중계 상영관 예매 일정 활용하기 가을 저녁 구장은 바람이 차갑고 체감온도가 급격히 떨어지므로 담요와 핫팩 등... 새 창 열림" [ref=f7e1602] [cursor=pointer]:
+                    - /url: https://blog.naver.com/blu2sky7/224439310411
+                    - generic [ref=f7e1603]:
+                      - text: 이번 가을야구는 10월 14일 수요일 와일드카드 결정전
+                      - mark [ref=f7e1604]: 1차전
+                      - text: 을 시작으로 대망의 한국시리즈 7차전이 예정된 11월... 홈구장
+                      - mark [ref=f7e1605]: 준플레이오프
+                      - text: 10월 17일(토)~10월 23일(금) 5전 3선승제 3위 팀 홈에서
+                      - mark [ref=f7e1606]: "1"
+                      - text: ·2·5차전 진행
+                      - mark [ref=f7e1607]: 플레이오프
+                      - text: 10월 25일(일)~10월... 극장
+                      - mark [ref=f7e1608]: 생중계
+                      - text: 상영관 예매 일정 활용하기 가을 저녁 구장은 바람이 차갑고 체감온도가 급격히 떨어지므로 담요와 핫팩 등...
+                    - generic [ref=f7e1609]: 새 창 열림
+                - generic [ref=f7e1610]:
+                  - generic [ref=f7e1611]:
+                    - link "새 창 열림" [ref=f7e1612] [cursor=pointer]:
+                      - /url: https://blog.naver.com/blu2sky7/224439310411
+                    - link "새 창 열림" [ref=f7e1617] [cursor=pointer]:
+                      - /url: https://blog.naver.com/blu2sky7/224439310411
+                    - link "새 창 열림" [ref=f7e1622] [cursor=pointer]:
+                      - /url: https://blog.naver.com/blu2sky7/224439310411
+                    - link "새 창 열림" [ref=f7e1627] [cursor=pointer]:
+                      - /url: https://blog.naver.com/blu2sky7/224439310411
+                    - link "새 창 열림" [ref=f7e1632] [cursor=pointer]:
+                      - /url: https://blog.naver.com/blu2sky7/224439310411
+                  - button "다음"
+            - generic [ref=f7e1640]:
+              - generic [ref=f7e1642]:
+                - generic [ref=f7e1643]:
+                  - link "새 창 열림" [ref=f7e1645] [cursor=pointer]:
+                    - /url: https://blog.naver.com/hannystock
+                  - generic [ref=f7e1649]:
+                    - link "하니의 이슈모음 새 창 열림" [ref=f7e1652] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock
+                      - generic [ref=f7e1653]: 하니의 이슈모음
+                      - generic [ref=f7e1654]: 새 창 열림
+                    - generic [ref=f7e1655]: 1주 전
+                - button "옵션 메뉴 열기" [ref=f7e1658] [cursor=pointer]
+              - generic [ref=f7e1663]:
+                - generic [ref=f7e1664]:
+                  - link "2026 KBO 포스트시즌 일정 와일드카드 준플레이오프 플레이오프 한국시리즈 중계 새 창 열림" [ref=f7e1665] [cursor=pointer]:
+                    - /url: https://blog.naver.com/hannystock/224437472887
+                    - generic [ref=f7e1666]:
+                      - text: 2026 KBO 포스트시즌 일정 와일드카드
+                      - mark [ref=f7e1667]: 준플레이오프
+                      - mark [ref=f7e1668]: 플레이오프
+                      - text: 한국시리즈
+                      - mark [ref=f7e1669]: 중계
+                    - generic [ref=f7e1670]: 새 창 열림
+                  - link "홈구장 준플레이오프 1차전 10월 17일 토요일 14:00 2차전 10월 18일 일요일 14:00 3차전 10월 20일 화요일 18:30 4차전 10월 21일 수요일 18:30, 필요 시 5차전 10월 23일 금요일 18:30, 필요 시 3위 팀 홈 1·2·5차전 와일드카드 승리 팀 홈 3·4차전 플레이오프 1차전 10월 25일 일요일 14:00 2차전 10월 26일 월요일 18:30 3차전 10월 28일 수요일 18:30 4차전 10월 29일 목요일 18:30... 새 창 열림" [ref=f7e1671] [cursor=pointer]:
+                    - /url: https://blog.naver.com/hannystock/224437472887
+                    - generic [ref=f7e1672]:
+                      - text: 홈구장
+                      - mark [ref=f7e1673]: 준플레이오프 1차전
+                      - text: 10월 17일 토요일 14:00 2차전 10월 18일 일요일 14:00 3차전 10월 20일 화요일 18:30 4차전 10월 21일 수요일 18:30, 필요 시 5차전 10월 23일 금요일 18:30, 필요 시 3위 팀 홈
+                      - mark [ref=f7e1674]: "1"
+                      - text: ·2·5차전 와일드카드 승리 팀 홈 3·4차전
+                      - mark [ref=f7e1675]: 플레이오프 1차전
+                      - text: 10월 25일 일요일 14:00 2차전 10월 26일 월요일 18:30 3차전 10월 28일 수요일 18:30 4차전 10월 29일 목요일 18:30...
+                    - generic [ref=f7e1676]: 새 창 열림
+                - generic [ref=f7e1677]:
+                  - generic [ref=f7e1678]:
+                    - link "새 창 열림" [ref=f7e1679] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                    - link "새 창 열림" [ref=f7e1684] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                    - link "새 창 열림" [ref=f7e1689] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                    - link "새 창 열림" [ref=f7e1694] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                    - link "새 창 열림" [ref=f7e1699] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                    - link "새 창 열림" [ref=f7e1704] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                    - link "새 창 열림" [ref=f7e1709] [cursor=pointer]:
+                      - /url: https://blog.naver.com/hannystock/224437472887
+                  - button "다음"
+            - generic [ref=f7e1717]:
+              - generic [ref=f7e1719]:
+                - generic [ref=f7e1720]:
+                  - link "새 창 열림" [ref=f7e1722] [cursor=pointer]:
+                    - /url: https://blog.naver.com/sayoo86
+                  - generic [ref=f7e1726]:
+                    - link "모든것에 함께하길 새 창 열림" [ref=f7e1729] [cursor=pointer]:
+                      - /url: https://blog.naver.com/sayoo86
+                      - generic [ref=f7e1730]: 모든것에 함께하길
+                      - generic [ref=f7e1731]: 새 창 열림
+                    - generic [ref=f7e1732]: 3주 전
+                - button "옵션 메뉴 열기" [ref=f7e1735] [cursor=pointer]
+              - generic [ref=f7e1741]:
+                - generic [ref=f7e1742]:
+                  - link "2026 KBO 포스트시즌 일정 총정리｜진출팀·대진표·와일드카드·한국시리즈·티켓 예매·중계방송 새 창 열림" [ref=f7e1743] [cursor=pointer]:
+                    - /url: https://blog.naver.com/sayoo86/224429427816
+                    - generic [ref=f7e1744]:
+                      - text: 2026 KBO 포스트시즌 일정 총정리｜진출팀·대진표·와일드카드·한국시리즈·티켓 예매·
+                      - mark [ref=f7e1745]: 중계
+                      - text: 방송
+                    - generic [ref=f7e1746]: 새 창 열림
+                  - link "1, 2차전 진행 이후 상대 팀 홈구장으로 이동 플레이오프 경기 방식 플레이오프는 정규시즌 2위 팀과 준플레이오프... 경기 홈구장 1차전 정규시즌 1위 팀 2차전 정규시즌 1위 팀 3차전 플레이오프 승리 팀 4차전 플레이오프 승리 팀 5차전... 포스트시즌 중계 채널 CGV 포스트시즌 극장 생중계 CGV는 2026년 포스트시즌 전 경기를 극장 SCREENX 방식으로... 새 창 열림" [ref=f7e1747] [cursor=pointer]:
+                    - /url: https://blog.naver.com/sayoo86/224429427816
+                    - generic [ref=f7e1748]:
+                      - mark [ref=f7e1749]: "1"
+                      - text: ", 2차전 진행 이후 상대 팀 홈구장으로 이동"
+                      - mark [ref=f7e1750]: 플레이오프
+                      - text: 경기 방식
+                      - mark [ref=f7e1751]: 플레이오프
+                      - text: 는 정규시즌 2위 팀과
+                      - mark [ref=f7e1752]: 준플레이오프
+                      - text: ... 경기 홈구장
+                      - mark [ref=f7e1753]: 1차전
+                      - text: 정규시즌 1위 팀 2차전 정규시즌 1위 팀 3차전
+                      - mark [ref=f7e1754]: 플레이오프
+                      - text: 승리 팀 4차전
+                      - mark [ref=f7e1755]: 플레이오프
+                      - text: 승리 팀 5차전... 포스트시즌
+                      - mark [ref=f7e1756]: 중계
+                      - text: 채널 CGV 포스트시즌 극장
+                      - mark [ref=f7e1757]: 생중계
+                      - text: CGV는 2026년 포스트시즌 전 경기를 극장 SCREENX 방식으로...
+                    - generic [ref=f7e1758]: 새 창 열림
+                - link "새 창 열림" [ref=f7e1759] [cursor=pointer]:
+                  - /url: https://blog.naver.com/sayoo86/224429427816
+            - generic [ref=f7e1767]:
+              - generic [ref=f7e1769]:
+                - generic [ref=f7e1770]:
+                  - link "새 창 열림" [ref=f7e1772] [cursor=pointer]:
+                    - /url: https://blog.naver.com/bodycare2002
+                  - generic [ref=f7e1776]:
+                    - link "바디케어 온열돔님의 블로그 새 창 열림" [ref=f7e1779] [cursor=pointer]:
+                      - /url: https://blog.naver.com/bodycare2002
+                      - generic [ref=f7e1780]: 바디케어 온열돔님의 블로그
+                      - generic [ref=f7e1781]: 새 창 열림
+                    - generic [ref=f7e1782]: 5일 전
+                - button "옵션 메뉴 열기" [ref=f7e1785] [cursor=pointer]
+              - generic [ref=f7e1791]:
+                - generic [ref=f7e1792]:
+                  - link "2026 프로야구 포스트시즌 일정 총정리, 준플레이오프부터 한국시리즈까지 중계·티켓 예매 방법은.... 새 창 열림" [ref=f7e1793] [cursor=pointer]:
+                    - /url: https://blog.naver.com/bodycare2002/224438436196
+                    - generic [ref=f7e1794]:
+                      - text: 2026 프로야구 포스트시즌 일정 총정리,
+                      - mark [ref=f7e1795]: 준플레이오프
+                      - text: 부터 한국시리즈까지
+                      - mark [ref=f7e1796]: 중계
+                      - text: ·티켓 예매 방법은....
+                    - generic [ref=f7e1797]: 새 창 열림
+                  - link "특히 포스트시즌 경기 일정과 진출팀, 준플레이오프와 플레이오프의 차이, 한국시리즈 일정, 티켓 예매 방법 등을... 1차전을 시작으로 최대 7경기가 열립니다. 한국시리즈는 7전 4선승제이며, 먼저 4승을 기록한 팀이 최종 우승을 차지합니다. 정규시즌 1위 KT 위즈는 1·2·6·7차전을 홈구장인 수원케이티위즈파크에서 치릅니다. 3·4·5차전은 플레이오프 승리팀... 새 창 열림" [ref=f7e1798] [cursor=pointer]:
+                    - /url: https://blog.naver.com/bodycare2002/224438436196
+                    - generic [ref=f7e1799]:
+                      - text: 특히 포스트시즌 경기 일정과 진출팀,
+                      - mark [ref=f7e1800]: 준플레이오프
+                      - text: 와
+                      - mark [ref=f7e1801]: 플레이오프
+                      - text: 의 차이, 한국시리즈 일정, 티켓 예매 방법 등을...
+                      - mark [ref=f7e1802]: 1차전
+                      - text: 을 시작으로 최대 7경기가 열립니다. 한국시리즈는 7전 4선승제이며, 먼저 4승을 기록한 팀이 최종 우승을 차지합니다. 정규시즌 1위 KT 위즈는
+                      - mark [ref=f7e1803]: "1"
+                      - text: ·2·6·7차전을 홈구장인 수원케이티위즈파크에서 치릅니다. 3·4·5차전은
+                      - mark [ref=f7e1804]: 플레이오프
+                      - text: 승리팀...
+                    - generic [ref=f7e1805]: 새 창 열림
+                - link "새 창 열림" [ref=f7e1806] [cursor=pointer]:
+                  - /url: https://blog.naver.com/bodycare2002/224438436196
+            - generic [ref=f7e1814]:
+              - generic [ref=f7e1816]:
+                - generic [ref=f7e1817]:
+                  - link "새 창 열림" [ref=f7e1819] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/lionsball
+                  - generic [ref=f7e1823]:
+                    - link "사자 사랑방 (삼성라이온즈 팬 커뮤니티) 새 창 열림" [ref=f7e1826] [cursor=pointer]:
+                      - /url: https://cafe.naver.com/lionsball
+                      - generic [ref=f7e1827]: 사자 사랑방 (삼성라이온즈 팬 커뮤니티)
+                      - generic [ref=f7e1828]: 새 창 열림
+                    - generic [ref=f7e1832]: 1일 전
+                - button "옵션 메뉴 열기" [ref=f7e1835] [cursor=pointer]
+              - generic [ref=f7e1840]:
+                - link "내일부터 엘지 vs 기아 준플레이오프 시작합니다 새 창 열림" [ref=f7e1841] [cursor=pointer]:
+                  - /url: https://cafe.naver.com/lionsball/5825111?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6Imxpb25zYmFsbCIsImFydGljbGVJZCI6NTgyNTExMSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.RaADCz9gxZWipLrjDQgZWT9Sqnb1hBpaLoq3yU-IqDo
+                  - generic [ref=f7e1842]:
+                    - text: 내일부터 엘지 vs 기아
+                    - mark [ref=f7e1843]: 준플레이오프
+                    - text: 시작합니다
+                  - generic [ref=f7e1844]: 새 창 열림
+                - link "내일부터 엘지 vs 기아 준플레이오프 시작합니다 1차전 톨허스트 vs 네일 2차전 임찬규 vs 올러 3차전 카라스코 vs 양현종 4차전 박시원 vs 시라카와 5차전까지는 안갈꺼같습니다 선발 정리해봤는데 재미있겠네요 새 창 열림" [ref=f7e1845] [cursor=pointer]:
+                  - /url: https://cafe.naver.com/lionsball/5825111?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6Imxpb25zYmFsbCIsImFydGljbGVJZCI6NTgyNTExMSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.RaADCz9gxZWipLrjDQgZWT9Sqnb1hBpaLoq3yU-IqDo
+                  - generic [ref=f7e1846]:
+                    - text: 내일부터 엘지 vs 기아
+                    - mark [ref=f7e1847]: 준플레이오프
+                    - text: 시작합니다
+                    - mark [ref=f7e1848]: 1차전
+                    - text: 톨허스트 vs 네일 2차전 임찬규 vs 올러 3차전 카라스코 vs 양현종 4차전 박시원 vs 시라카와 5차전까지는 안갈꺼같습니다 선발 정리해봤는데 재미있겠네요
+                  - generic [ref=f7e1849]: 새 창 열림
+              - link "고마우신 직장상사분께서 LG팬이신데 죄송하지만 제가 좋아하는 삼성이 우승해야되서 누가 올라오든 5꽉 바래야겠습니다. 새 창 열림" [ref=f7e1857] [cursor=pointer]:
+                - /url: https://cafe.naver.com/lionsball/5825111?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6Imxpb25zYmFsbCIsImFydGljbGVJZCI6NTgyNTExMSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.RaADCz9gxZWipLrjDQgZWT9Sqnb1hBpaLoq3yU-IqDo
+                - generic [ref=f7e1858]: 고마우신 직장상사분께서 LG팬이신데 죄송하지만 제가 좋아하는 삼성이 우승해야되서 누가 올라오든 5꽉 바래야겠습니다.
+                - generic [ref=f7e1859]: 새 창 열림
+            - generic [ref=f7e1863]:
+              - generic [ref=f7e1865]:
+                - generic [ref=f7e1866]:
+                  - link "새 창 열림" [ref=f7e1868] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/kiawin
+                  - generic [ref=f7e1872]:
+                    - link "V13을 위하여 응원하는 타이거즈 새 창 열림" [ref=f7e1875] [cursor=pointer]:
+                      - /url: https://cafe.naver.com/kiawin
+                      - generic [ref=f7e1876]: V13을 위하여 응원하는 타이거즈
+                      - generic [ref=f7e1877]: 새 창 열림
+                    - generic [ref=f7e1881]: 1일 전
+                - button "옵션 메뉴 열기" [ref=f7e1884] [cursor=pointer]
+              - generic [ref=f7e1889]:
+                - link "준플레이오프 중계 방송사 입니다 . 새 창 열림" [ref=f7e1890] [cursor=pointer]:
+                  - /url: https://cafe.naver.com/kiawin/1515427?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxNTQyNywiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.mCgJ4T0t1IlsJ3VJyz4Fsl3tE2oggagcqCMnmhExShY
+                  - generic [ref=f7e1891]:
+                    - mark [ref=f7e1892]: 준플레이오프
+                    - mark [ref=f7e1893]: 중계
+                    - text: 방송사 입니다 .
+                  - generic [ref=f7e1894]: 새 창 열림
+                - 'link "1차전 : KBS2 2차전 : SBS 3차전 : MBC 입니다. 4,5차전은 아직 확인이 안되는데, 변동이 없다면 4 KBS2, 5 SBS 순으로 진행될 듯 합니다. 가을야구 경기 시작 시간은 토요일 2시, 평일 6시 30분 고정 입니다. 새 창 열림" [ref=f7e1895] [cursor=pointer]':
+                  - /url: https://cafe.naver.com/kiawin/1515427?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxNTQyNywiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.mCgJ4T0t1IlsJ3VJyz4Fsl3tE2oggagcqCMnmhExShY
+                  - generic [ref=f7e1896]:
+                    - mark [ref=f7e1897]: 1차전
+                    - text: ": KBS2 2차전 : SBS 3차전 : MBC 입니다. 4,5차전은 아직 확인이 안되는데, 변동이 없다면 4 KBS2, 5 SBS 순으로 진행될 듯 합니다. 가을야구 경기 시작 시간은 토요일 2시, 평일 6시 30분 고정 입니다."
+                  - generic [ref=f7e1898]: 새 창 열림
+              - link "3까지만 하고 4,5는 경기 없을거니까 정규방송 봐야죠~ㅋㅋ 3패가 아니라 3승으로요~ 새 창 열림" [ref=f7e1906] [cursor=pointer]:
+                - /url: https://cafe.naver.com/kiawin/1515427?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImtpYXdpbiIsImFydGljbGVJZCI6MTUxNTQyNywiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9.mCgJ4T0t1IlsJ3VJyz4Fsl3tE2oggagcqCMnmhExShY
+                - generic [ref=f7e1907]: 3까지만 하고 4,5는 경기 없을거니까 정규방송 봐야죠~ㅋㅋ 3패가 아니라 3승으로요~
+                - generic [ref=f7e1908]: 새 창 열림
+            - generic [ref=f7e1912]:
+              - generic [ref=f7e1914]:
+                - generic [ref=f7e1915]:
+                  - link "새 창 열림" [ref=f7e1917] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/cantsb
+                  - generic [ref=f7e1921]:
+                    - link "국내1위 다이어트 커뮤니티 씨씨앙(식단,운동,후기,헬스,체험단) 새 창 열림" [ref=f7e1924] [cursor=pointer]:
+                      - /url: https://cafe.naver.com/cantsb
+                      - generic [ref=f7e1925]: 국내1위 다이어트 커뮤니티 씨씨앙(식단,운동,후기,헬스,체험단)
+                      - generic [ref=f7e1926]: 새 창 열림
+                    - generic [ref=f7e1930]: 4일 전
+                - button "옵션 메뉴 열기" [ref=f7e1933] [cursor=pointer]
+              - generic [ref=f7e1939]:
+                - generic [ref=f7e1940]:
+                  - link "kbo 가을야구 중계 포스트시즌 일정 와일드카드 lg 두산 새 창 열림" [ref=f7e1941] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/cantsb/3629261?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImNhbnRzYiIsImFydGljbGVJZCI6MzYyOTI2MSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9._h7kLklELcEYOM2-ze3POiBNSYv2GWBKKWH8mqMgwLM
+                    - generic [ref=f7e1942]:
+                      - text: kbo 가을야구
+                      - mark [ref=f7e1943]: 중계
+                      - text: 포스트시즌 일정 와일드카드 lg 두산
+                    - generic [ref=f7e1944]: 새 창 열림
+                  - link "중계 2026 KBO 가을야구 일정부터 정리해볼게요 포스트시즌은 와일드카드 결정전 → 준플레이오프 → 플레이오프... 1차전은 11월 2일 수원케이티위즈파크에서 열릴 예정입니다. 홈경기는 2-3-2 방식으로 배정됩니다. KT 홈에서 1·2차전을 하고... 그리고 편성표에 야구가 있다고 해도 생중계인지 재방송인지 꼭 확인해야 합니다. 경기 시작 시간과 방송 시작 시간을... 새 창 열림" [ref=f7e1945] [cursor=pointer]:
+                    - /url: https://cafe.naver.com/cantsb/3629261?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImNhbnRzYiIsImFydGljbGVJZCI6MzYyOTI2MSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9._h7kLklELcEYOM2-ze3POiBNSYv2GWBKKWH8mqMgwLM
+                    - generic [ref=f7e1946]:
+                      - mark [ref=f7e1947]: 중계
+                      - text: 2026 KBO 가을야구 일정부터 정리해볼게요 포스트시즌은 와일드카드 결정전 →
+                      - mark [ref=f7e1948]: 준플레이오프
+                      - text: →
+                      - mark [ref=f7e1949]: 플레이오프
+                      - text: ...
+                      - mark [ref=f7e1950]: 1차전
+                      - text: 은 11월 2일 수원케이티위즈파크에서 열릴 예정입니다. 홈경기는 2-3-2 방식으로 배정됩니다. KT 홈에서
+                      - mark [ref=f7e1951]: "1"
+                      - text: ·2차전을 하고... 그리고 편성표에 야구가 있다고 해도
+                      - mark [ref=f7e1952]: 생중계
+                      - text: 인지 재방송인지 꼭 확인해야 합니다. 경기 시작 시간과 방송 시작 시간을...
+                    - generic [ref=f7e1953]: 새 창 열림
+                - link "새 창 열림" [ref=f7e1954] [cursor=pointer]:
+                  - /url: https://cafe.naver.com/cantsb/3629261?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImNhbnRzYiIsImFydGljbGVJZCI6MzYyOTI2MSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9._h7kLklELcEYOM2-ze3POiBNSYv2GWBKKWH8mqMgwLM
+              - link "가을야구 중계 어디서 보는지 궁금했는데 정리 잘해주셔서 도움됐어요 ㅎㅎ 일정까지 같이 보니까 한눈에 들어오네용 새 창 열림" [ref=f7e1966] [cursor=pointer]:
+                - /url: https://cafe.naver.com/cantsb/3629261?art=ZXh0ZXJuYWwtc2VydmljZS1uYXZlci1zZWFyY2gtY2FmZS1wcg.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjYWZlVHlwZSI6IkNBRkVfVVJMIiwiY2FmZVVybCI6ImNhbnRzYiIsImFydGljbGVJZCI6MzYyOTI2MSwiaXNzdWVkQXQiOjE3OTIxNjU1MTY0NTJ9._h7kLklELcEYOM2-ze3POiBNSYv2GWBKKWH8mqMgwLM
+                - generic [ref=f7e1967]:
+                  - text: 가을야구
+                  - mark [ref=f7e1968]: 중계
+                  - text: 어디서 보는지 궁금했는데 정리 잘해주셔서 도움됐어요 ㅎㅎ 일정까지 같이 보니까 한눈에 들어오네용
+                - generic [ref=f7e1969]: 새 창 열림
+            - generic [ref=f7e1973]:
+              - generic [ref=f7e1974]:
+                - generic [ref=f7e1975]:
+                  - link "연합뉴스TV 새 창 열림" [ref=f7e1977] [cursor=pointer]:
+                    - /url: https://tv.naver.com/yonhapnewstv
+                    - img "연합뉴스TV" [ref=f7e1980]
+                    - generic [ref=f7e1981]: 새 창 열림
+                  - generic [ref=f7e1982]:
+                    - link "연합뉴스TV 새 창 열림" [ref=f7e1985] [cursor=pointer]:
+                      - /url: https://tv.naver.com/yonhapnewstv
+                      - generic [ref=f7e1986]: 연합뉴스TV
+                      - generic [ref=f7e1987]: 새 창 열림
+                    - generic [ref=f7e1991]:
+                      - generic [ref=f7e1992]: 2일 전
+                      - link "네이버TV 새 창 열림" [ref=f7e1995] [cursor=pointer]:
+                        - /url: https://tv.naver.com
+                        - generic [ref=f7e1996]: 네이버TV
+                        - generic [ref=f7e1997]: 새 창 열림
+                - button "옵션 메뉴 열기" [ref=f7e1999] [cursor=pointer]
+              - generic [ref=f7e2004]:
+                - generic [ref=f7e2005]:
+                  - link "LG vs 두산 와일드카드 1차전…마지막 잠실더비 시리즈 새 창 열림" [ref=f7e2006] [cursor=pointer]:
+                    - /url: https://tv.naver.com/v/106837792
+                    - generic [ref=f7e2007]: LG vs 두산 와일드카드 1차전…마지막 잠실더비 시리즈
+                    - generic [ref=f7e2008]: 새 창 열림
+                  - link "잠시 뒤 오후 6시 반부터 이곳에서 두산과 LG의 와일드카드 1차전이 열립니다. 벌써부터 경기장 분위기는 잠실더비를 보기 위한 팬들로 뜨겁습니다. 정규시즌 4위 LG와 5위 두산이 7번째 가을 맞대결을 준비 중입니다. 2021년 플레이오프 이후 5년... LG는 앞선 3번의 와일드카드 결정전에서 모두 승리를 거두고 준플레이오프에 진출했는데요. 올 시즌 두산과의 상대... 새 창 열림" [ref=f7e2009] [cursor=pointer]:
+                    - /url: https://tv.naver.com/v/106837792
+                    - generic [ref=f7e2010]:
+                      - text: 잠시 뒤 오후 6시 반부터 이곳에서 두산과 LG의 와일드카드
+                      - mark [ref=f7e2011]: 1차전
+                      - text: 이 열립니다. 벌써부터 경기장 분위기는 잠실더비를 보기 위한 팬들로 뜨겁습니다. 정규시즌 4위 LG와 5위 두산이 7번째 가을 맞대결을 준비 중입니다. 2021년
+                      - mark [ref=f7e2012]: 플레이오프
+                      - text: 이후 5년... LG는 앞선 3번의 와일드카드 결정전에서 모두 승리를 거두고
+                      - mark [ref=f7e2013]: 준플레이오프
+                      - text: 에 진출했는데요. 올 시즌 두산과의 상대...
+                    - generic [ref=f7e2014]: 새 창 열림
+                - link "LG vs 두산 와일드카드 1차전…마지막 잠실더비 시리즈 03:40" [ref=f7e2017] [cursor=pointer]:
+                  - /url: https://tv.naver.com/v/106837792
+                  - img "LG vs 두산 와일드카드 1차전…마지막 잠실더비 시리즈" [ref=f7e2018]
+                  - generic [ref=f7e2019]: 03:40
+            - generic [ref=f7e2027]:
+              - generic [ref=f7e2029]:
+                - generic [ref=f7e2030]:
+                  - link "새 창 열림" [ref=f7e2032] [cursor=pointer]:
+                    - /url: https://blog.naver.com/julie_kim_
+                  - generic [ref=f7e2036]:
+                    - link "리아월드 ✈ 새 창 열림" [ref=f7e2039] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_
+                      - generic [ref=f7e2040]: 리아월드 ✈
+                      - generic [ref=f7e2041]: 새 창 열림
+                    - generic [ref=f7e2042]: 2주 전
+                - button "옵션 메뉴 열기" [ref=f7e2045] [cursor=pointer]
+              - generic [ref=f7e2050]:
+                - generic [ref=f7e2051]:
+                  - link "2026 KBO 포스트시즌 한국시리즈 일정 순위 예매 방법 티켓 날짜 대진표 구장 총정리 새 창 열림" [ref=f7e2052] [cursor=pointer]:
+                    - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - generic [ref=f7e2053]: 2026 KBO 포스트시즌 한국시리즈 일정 순위 예매 방법 티켓 날짜 대진표 구장 총정리
+                    - generic [ref=f7e2054]: 새 창 열림
+                  - link "올해는 10월 14일 와일드카드 결정전 1차전 시작으로 준플레이오프, 플레이오프를 거쳐 11월 2일 한국시리즈... 3위 플레이오프 1차전 10월 25일 일 14:00 2위 2차전 10월 26일 월 18:30 2위 3차전 10월 28일 수 18:30 준 PO 승자 4차전 10월... 14:00 플레이오프 승자 6차전 11월 9일 월 18:30 1위 7차전 11월 10일 화 18:30 1위 2026 포스트시즌 일정 야구 1. 와일드카드... 새 창 열림" [ref=f7e2055] [cursor=pointer]:
+                    - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - generic [ref=f7e2056]:
+                      - text: 올해는 10월 14일 와일드카드 결정전
+                      - mark [ref=f7e2057]: 1차전
+                      - text: 시작으로
+                      - mark [ref=f7e2058]: 준플레이오프
+                      - text: ","
+                      - mark [ref=f7e2059]: 플레이오프
+                      - text: 를 거쳐 11월 2일 한국시리즈... 3위
+                      - mark [ref=f7e2060]: 플레이오프 1차전
+                      - text: 10월 25일 일 14:00 2위 2차전 10월 26일 월 18:30 2위 3차전 10월 28일 수 18:30 준 PO 승자 4차전 10월... 14:00
+                      - mark [ref=f7e2061]: 플레이오프
+                      - text: 승자 6차전 11월 9일 월 18:30 1위 7차전 11월 10일 화 18:30 1위 2026 포스트시즌 일정 야구
+                      - mark [ref=f7e2062]: "1"
+                      - text: . 와일드카드...
+                    - generic [ref=f7e2063]: 새 창 열림
+                - generic [ref=f7e2064]:
+                  - generic [ref=f7e2065]:
+                    - link "새 창 열림" [ref=f7e2066] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2071] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2076] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2081] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2086] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2091] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2096] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2101] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2106] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                    - link "새 창 열림" [ref=f7e2111] [cursor=pointer]:
+                      - /url: https://blog.naver.com/julie_kim_/224435004762
+                  - button "다음"
+          - complementary "웨일 브라우저 설치 안내" [ref=f7e2116]:
+            - generic [ref=f7e2117]:
+              - img "웨일 브라우저" [ref=f7e2119]
+              - generic [ref=f7e2120]: 브라우저를 업데이트하세요
+              - generic [ref=f7e2121]: 최신 기술을 품은 네이버 웨일에서 빠른 인터넷을 만나보세요
+            - link "웨일 다운로드" [ref=f7e2123] [cursor=pointer]:
+              - /url: https://whale.naver.com/ko/?wpid=searchpopup_theme1
+            - link "7일 내 다시보지 않기" [ref=f7e2125] [cursor=pointer]:
+              - /url: "#"
+            - button "배너 닫기" [ref=f7e2126] [cursor=pointer]
+          - generic [ref=f7e2129]:
+            - generic [ref=f7e2130]: 이전
+            - generic "페이지 탐색" [ref=f7e2132]:
+              - link "1 페이지" [ref=f7e2133] [cursor=pointer]:
+                - /url: "?nso=&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.nx.all"
+                - text: "1"
+                - generic [ref=f7e2134]: 페이지
+              - link "2 페이지" [ref=f7e2135] [cursor=pointer]:
+                - /url: "?nso=&page=2&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=1"
+                - text: "2"
+                - generic [ref=f7e2136]: 페이지
+              - link "3 페이지" [ref=f7e2137] [cursor=pointer]:
+                - /url: "?nso=&page=3&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=21"
+                - text: "3"
+                - generic [ref=f7e2138]: 페이지
+              - link "4 페이지" [ref=f7e2139] [cursor=pointer]:
+                - /url: "?nso=&page=4&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=41"
+                - text: "4"
+                - generic [ref=f7e2140]: 페이지
+              - link "5 페이지" [ref=f7e2141] [cursor=pointer]:
+                - /url: "?nso=&page=5&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=61"
+                - text: "5"
+                - generic [ref=f7e2142]: 페이지
+              - link "6 페이지" [ref=f7e2143] [cursor=pointer]:
+                - /url: "?nso=&page=6&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=81"
+                - text: "6"
+                - generic [ref=f7e2144]: 페이지
+              - link "7 페이지" [ref=f7e2145] [cursor=pointer]:
+                - /url: "?nso=&page=7&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=101"
+                - text: "7"
+                - generic [ref=f7e2146]: 페이지
+              - link "8 페이지" [ref=f7e2147] [cursor=pointer]:
+                - /url: "?nso=&page=8&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=121"
+                - text: "8"
+                - generic [ref=f7e2148]: 페이지
+              - link "9 페이지" [ref=f7e2149] [cursor=pointer]:
+                - /url: "?nso=&page=9&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=141"
+                - text: "9"
+                - generic [ref=f7e2150]: 페이지
+              - link "10 페이지" [ref=f7e2151] [cursor=pointer]:
+                - /url: "?nso=&page=10&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=161"
+                - text: "10"
+                - generic [ref=f7e2152]: 페이지
+            - link "다음" [ref=f7e2153] [cursor=pointer]:
+              - /url: "?nso=&page=2&qdt=0&query=%EC%A4%80%ED%94%8C%EB%A0%88%EC%9D%B4%EC%98%A4%ED%94%84+1%EC%B0%A8%EC%A0%84+%EC%A4%91%EA%B3%84&sm=tab_pge&ssc=tab.ur.all&start=1"
+        - generic [ref=f7e2158]:
+          - link "네이버 플리마켓 아웃도어 특가전 아크테릭스 · 파타고니아 · 몽벨 새 창 링크" [ref=f7e2159] [cursor=pointer]:
+            - /url: https://mkt.naver.com/p1/atrb?channel_id=pc_allright&campaign_id=2610-fleamarket-001&target=https%3A%2F%2Ffleamarket.naver.com%2F%3Fhero%3D01M3VCWSQ4JTVEMVV82ENVK8D1%3Fdtm_source%3Dpc_allright%26dtm_medium%3Dmktatrb%26dtm_campaign%3D2610-fleamarket-001%26tc%3Dpromotion_cafe_202610_camping_naver_pcallright_traffic
+            - generic [ref=f7e2161]:
+              - strong [ref=f7e2162]: 네이버 플리마켓 아웃도어 특가전
+              - paragraph [ref=f7e2163]: 아크테릭스 · 파타고니아 · 몽벨
+            - generic [ref=f7e2164]: 새 창 링크
+          - link "참여 누르고 쇼핑하면 최대 3만3천P 추가 적립! 새 창 링크" [ref=f7e2165] [cursor=pointer]:
+            - /url: https://mkt.naver.com/p1/atrb?channel_id=naver_pcsearchmktbanner&campaign_id=2610-shopping-008&target=https%3A%2F%2Fmkt.naver.com%2Fplusmission%3Fdtm_source%3Dnaver_pcsearchmktbanner%26dtm_medium%3Dmktatrb_etc%26dtm_campaign%3D2610-shopping-008
+            - generic [ref=f7e2167]:
+              - strong [ref=f7e2168]: 참여 누르고 쇼핑하면
+              - paragraph [ref=f7e2169]: 최대 3만3천P 추가 적립!
+            - generic [ref=f7e2170]: 새 창 링크
+          - link "적립적인 멤버십 전용카드 네이버 현대카드 Ed.3 새 창 링크" [ref=f7e2171] [cursor=pointer]:
+            - /url: https://mkt.naver.com/naverhyundaicard3?eventCode=NAVHJ&dtm_source=naver_pcsearchmktbanner&dtm_medium=display&dtm_campaign=hyundaicard3mkt
+            - generic [ref=f7e2173]:
+              - strong [ref=f7e2174]: 적립적인 멤버십 전용카드
+              - paragraph [ref=f7e2175]: 네이버 현대카드 Ed.3
+            - generic [ref=f7e2176]: 새 창 링크
+          - link "끝까지 끝내주는 AI, 네이버 AI탭 검색이 대화가 되다 새 창 링크" [ref=f7e2177] [cursor=pointer]:
+            - /url: https://mkt.naver.com/p1/atrb?channel_id=naver_pcsearchmktbanner&campaign_id=2607-naverAI-001&target=https%3A%2F%2Fmkt.naver.com%2Faitab%3Fdtm_source%3Dnaver_pcsearchmktbanner%26dtm_medium%3Dmktatrb_etc%26dtm_campaign%3D2607-naverAI-001
+            - generic [ref=f7e2179]:
+              - strong [ref=f7e2180]: 끝까지 끝내주는 AI, 네이버 AI탭
+              - paragraph [ref=f7e2181]: 검색이 대화가 되다
+            - generic [ref=f7e2182]: 새 창 링크
+    - generic [ref=f7e2183]:
+      - link "맨위로" [ref=f7e2185] [cursor=pointer]:
+        - /url: "#"
+      - generic [ref=f7e2188]:
+        - link "전체서비스 새 창 열림" [ref=f7e2190] [cursor=pointer]:
+          - /url: https://www.naver.com/more.html
+          - text: 전체서비스
+          - generic [ref=f7e2191]: 새 창 열림
+        - link "이용약관 새 창 열림" [ref=f7e2193] [cursor=pointer]:
+          - /url: https://policy.naver.com/policy/service.html
+          - text: 이용약관
+          - generic [ref=f7e2194]: 새 창 열림
+        - link "개인정보처리방침 새 창 열림" [ref=f7e2196] [cursor=pointer]:
+          - /url: https://policy.naver.com/policy/privacy.html
+          - strong [ref=f7e2197]: 개인정보처리방침
+          - generic [ref=f7e2198]: 새 창 열림
+        - link "검색 고객센터 새 창 열림" [ref=f7e2200] [cursor=pointer]:
+          - /url: https://help.naver.com/alias/search/integration/main.naver
+          - text: 검색 고객센터
+          - generic [ref=f7e2201]: 새 창 열림
+        - link "© NAVER Corp. 새 창 열림" [ref=f7e2203] [cursor=pointer]:
+          - /url: https://www.navercorp.com/
+          - text: © NAVER Corp.
+          - generic [ref=f7e2204]: 새 창 열림
