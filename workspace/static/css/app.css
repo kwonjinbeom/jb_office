@@ -696,6 +696,8 @@ a.mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; w
 .cal { display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap; padding: 10px var(--gutter); background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }
 .cal-nav { display: flex; align-items: center; gap: 6px; flex: none; }
 .cal-title { min-width: 148px; text-align: center; line-height: 1.25; }
+button.cal-title { font: inherit; color: inherit; background: none; border: 0; border-radius: 8px; padding: 3px 8px; cursor: pointer; }
+button.cal-title:hover { background: var(--hover); }
 .cal-title strong { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.3px; white-space: nowrap; }
 .cal-title strong em { font-style: normal; font-weight: 600; color: var(--text-2); font-size: 14px; }
 .cal-title span { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
@@ -1160,21 +1162,23 @@ details.trash-record > summary { position:relative; padding-right:56px; }
 .trash-pagination { display:flex; justify-content:center; align-items:center; gap:18px; padding:16px; font-size:13px; }
 @media (max-width:760px) { .trash-selection { bottom:16px; max-width:calc(100vw - 24px); gap:8px; } .trash-dialog { padding:22px; } }
 
-/* 블로그·카페 > 규칙: 사이트마다 한 줄 (사이트 · 컨셉 · 하루 · 수익·지표 · 체크). 오와 열을 맞춘다. */
+/* 블로그·카페 > 운영: 사이트마다 한 줄 (사이트 · 컨셉 · 발행 · 임시저장 · 체크). 오와 열을 맞춘다. */
 .br-sites { overflow: hidden; }
 .br-table { table-layout: fixed; width: 100%; }
 .br-table td { white-space: normal; text-overflow: clip; height: auto; vertical-align: top; padding-top: 12px; padding-bottom: 12px; font-size: 13px; line-height: 20px; }
 .br-table tbody tr + tr td { border-top: 1px solid var(--border); }
 .br-table tr.is-off td { color: var(--text-3); }
-.br-table tr.is-off .br-site strong, .br-table tr.is-off .br-daily strong { color: var(--text-3); }
+.br-table tr.is-off .br-site strong, .br-table tr.is-off .br-num strong { color: var(--text-3); }
 .br-site { display: flex; align-items: center; gap: 8px; min-width: 0; height: 20px; }
 .br-site strong { min-width: 0; font-size: 14px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .br-plat { flex: none; font-size: 11px; font-weight: 600; line-height: 16px; padding: 1px 7px; border-radius: 5px; background: var(--muted-weak); color: var(--text-2); }
 .br-addr { display: block; margin-top: 2px; font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 a.br-addr:hover { color: var(--accent); }
 .br-concept { color: var(--text); overflow-wrap: anywhere; }
-.br-daily { display: flex; align-items: baseline; gap: 3px; height: 20px; font-size: 12px; color: var(--text-3); }
-.br-daily strong { font-size: 18px; line-height: 20px; color: var(--text); font-variant-numeric: tabular-nums; }
+.br-num { font-size: 12.5px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.br-num strong { font-size: 18px; line-height: 20px; font-weight: 700; color: var(--text); }
+.br-num.done strong { color: var(--accent); }
+.br-num.zero strong { color: var(--text-3); font-weight: 500; }
 .br-sub { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
 .br-checks { margin: 0; padding: 0; list-style: none; }
 .br-checks li { display: flex; align-items: flex-start; gap: 6px; min-height: 24px; padding: 2px 0; }
@@ -1191,7 +1195,6 @@ a.br-addr:hover { color: var(--accent); }
 .br-edit { color: var(--text-3); display: inline-flex; padding: 3px; border-radius: 5px; }
 .br-edit:hover { color: var(--accent); background: var(--hover); }
 .br-edit .ic { width: 14px; height: 14px; }
-@media (max-width: 1000px) { .br-table col:nth-child(4), .br-table th:nth-child(4), .br-table td:nth-child(4) { display: none; } }
 @media (max-width: 760px) { .br-tools a { opacity: 1; } }
 
 /* 블로그·카페 > 운영: 숫자 네 칸 + 블로그×요일 표 + 발행 계획 + RSS. 모두 같은 격자 */

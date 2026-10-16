@@ -211,6 +211,15 @@
     el.form.submit();
   });
 
+  // 달력 띠 가운데 날짜를 누르면 오른쪽 날짜 칸의 캘린더를 연다.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-open-picker]");
+    if (!btn) return;
+    var input = btn.closest(".cal") && btn.closest(".cal").querySelector(".cal-tools input[type=date], .cal-tools input[type=month]");
+    if (!input) return;
+    try { input.showPicker(); } catch (err) { input.focus(); }
+  });
+
   // 표 머리글의 '모두 선택' 체크박스: 같은 폼(form 속성)·같은 name 의 체크박스를 한꺼번에 켜고 끈다.
   document.addEventListener("change", function (e) {
     var all = e.target;

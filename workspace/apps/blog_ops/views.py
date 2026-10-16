@@ -1,4 +1,4 @@
-"""블로그·카페 › 운영: 이번 주 발행 현황(블로그 × 요일), 숫자 네 개, 발행 계획(할 일)."""
+"""블로그·카페 › 모니터링: 이번 주 발행 현황(블로그 × 요일), 숫자 네 개, 발행 계획(할 일)."""
 import re
 from datetime import date, timedelta
 
@@ -50,7 +50,7 @@ def _key(url, title):
     return url or re.sub(r"\s+", "", title or "")
 
 
-def _published(blogs, start, end):
+def published_keys(blogs, start, end):
     """(블로그 pk, 날짜) → 발행 글 key 집합. 계획의 '발행' 기록과 RSS 기록을 합치고 같은 글은 한 번만 센다."""
     out = {}
     for p in Plan.objects.filter(blog__in=blogs, status=Plan.Status.PUBLISHED, published_on__range=(start, end)):
@@ -70,7 +70,7 @@ def index(request):
     start = _week_start(request)
     days = [start + timedelta(days=i) for i in range(7)]
     blogs = list(Blog.objects.filter(status=Blog.Status.ACTIVE))
-    done = _published(blogs, start, days[-1])
+    done = published_keys(blogs, start, days[-1])
     rows = []
     for b in blogs:
         cells = [{"day": d, "count": len(done.get((b.pk, d), ())), "target": b.daily,
@@ -84,7 +84,7 @@ def index(request):
             Plan.Status.DRAFT, Plan.Status.EDIT, Plan.Status.SCHEDULED]))
     states = {s.blog_id: s for s in FeedState.objects.filter(blog__in=blogs)}
     return render(request, "blog_ops/index.html", {
-        "page_title": "운영",
+        "page_title": "모니터링",
         "days": [(d, DAY_NAMES[i], d == today) for i, d in enumerate(days)],
         "rows": rows,
         "week_label": f"{start:%m.%d} – {days[-1]:%m.%d}",

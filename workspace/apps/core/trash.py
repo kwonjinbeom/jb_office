@@ -20,7 +20,7 @@ MODEL_SECTIONS = {
     "blog_types.category": "타입·카테고리",
     "blog_types.posttype": "타입·카테고리 · 타입", "blog_types.subtype": "타입·카테고리 · 하위",
     "blog_types.sitecategory": "타입·카테고리 · 사이트 카테고리",
-    "blog_rules.blog": "규칙 · 블로그", "blog_rules.rule": "규칙", "blog_ops.plan": "운영 · 발행 계획",
+    "blog_rules.blog": "운영 · 사이트", "blog_rules.rule": "운영 · 체크", "blog_ops.plan": "모니터링 · 발행 계획",
 }
 SOURCE_SECTIONS = {"daily": "일일 아이디어", "docs": "문서"}
 OWNED = {("tasks.task", "idea"), ("evidence.evidence", "idea")}

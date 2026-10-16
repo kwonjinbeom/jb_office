@@ -2,34 +2,64 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
-{% block heading %}규칙 <span class="cnt">오늘 {{ daily_total }}편</span>{% for name, total in accounts %} <span class="cnt">{{ name }} {{ total }}/3편</span>{% endfor %}{% endblock %}
+{% block heading %}운영 <span class="cnt">발행 {{ published_total }}/{{ target_total }}</span> <span class="cnt">임시저장 {{ drafts_total }}</span>{% for name, total in accounts %} <span class="cnt">{{ name }} 하루 {{ total }}/3편</span>{% endfor %}{% endblock %}
 
 {% block actions %}
 <a class="btn" href="{% url 'blog_rules:blog_create' %}">{% include "includes/ic.html" with name="plus" %}사이트</a>
 {% endblock %}
 
+{% block toolbar %}
+{# 달력 띠: 좌우(← →)로 하루·한 달씩, 가운데 날짜를 누르면 캘린더. 일별은 한 주, 월별은 한 해를 띠로 본다. #}
+<div class="cal">
+  <div class="cal-nav">
+    <a class="btn icon" href="{{ nav.prev }}" data-hotkey="ArrowLeft" title="{% if mode == 'day' %}전날{% else %}지난달{% endif %} (←)" aria-label="이전">{% include "includes/ic.html" with name="chevron-left" %}</a>
+    <button class="cal-title" type="button" data-open-picker title="{% if mode == 'day' %}날짜{% else %}달{% endif %} 고르기">
+      {% if mode == 'day' %}<strong>{{ sel|date:"n월 j일" }} <em>{{ sel_weekday }}요일</em></strong><span>{{ sel|date:"Y년" }}{% if is_today %} · 오늘{% endif %}</span>
+      {% else %}<strong>{{ sel|date:"Y년 n월" }}</strong><span>{{ sel|date:"t" }}일{% if is_today %} · 이번 달{% endif %}</span>{% endif %}
+    </button>
+    <a class="btn icon" href="{{ nav.next }}" data-hotkey="ArrowRight" title="{% if mode == 'day' %}다음 날{% else %}다음 달{% endif %} (→)" aria-label="다음">{% include "includes/ic.html" with name="chevron-right" %}</a>
+  </div>
+
+  <nav class="cal-week" aria-label="{{ nav.strip_label }}">
+    <a class="btn ghost sm icon" href="{{ nav.strip_prev }}" title="{% if mode == 'day' %}지난주{% else %}지난해{% endif %}" aria-label="이전">{% include "includes/ic.html" with name="chevron-left" %}</a>
+    {% for d in strip %}
+    <a class="cal-day{% if d.on %} on{% endif %}{% if not d.count %} nodata{% endif %}{% if d.today %} today{% endif %}{% if d.weekend %} weekend{% endif %}" href="{{ d.href }}" title="{{ d.title }}"{% if d.on %} aria-current="date"{% endif %}>
+      <span class="wd">{{ d.top }}</span>
+      <span class="dd">{{ d.main }}</span>
+      <span class="ct">{% if d.count %}{{ d.count }}{% else %}·{% endif %}</span>
+    </a>
+    {% endfor %}
+    <a class="btn ghost sm icon" href="{{ nav.strip_next }}" title="{% if mode == 'day' %}다음 주{% else %}다음 해{% endif %}" aria-label="다음">{% include "includes/ic.html" with name="chevron-right" %}</a>
+  </nav>
+
+  <form method="get" class="cal-tools">
+    {% if mode == 'day' %}<input class="input sm" type="date" name="date" value="{{ sel|date:'Y-m-d' }}" data-autosubmit title="날짜 고르기" aria-label="날짜 고르기">
+    {% else %}<input class="input sm" type="month" name="month" value="{{ month_value }}" data-autosubmit title="달 고르기" aria-label="달 고르기">{% endif %}
+    <a class="btn sm{% if mode == 'day' %} on{% endif %}" href="?date={% if mode == 'day' %}{{ sel|date:'Y-m-d' }}{% else %}{{ month_value }}-01{% endif %}">일별</a>
+    <a class="btn sm{% if mode == 'month' %} on{% endif %}" href="?month={{ month_value }}">월별</a>
+  </form>
+</div>
+{% endblock %}
+
 {% block content %}
-{# 사이트마다 한 줄: 컨셉 · 하루 · 수익·지표 · 체크 #}
+{# 사이트마다 한 줄: 컨셉(하루·수익·지표 포함, 고정) · 발행 · 임시저장 · 체크 #}
 <section class="card br-sites">
   <table class="grid br-table">
-    <colgroup><col style="width:190px"><col style="width:26%"><col style="width:120px"><col style="width:190px"><col><col style="width:40px"></colgroup>
-    <thead><tr><th>사이트</th><th>컨셉</th><th>하루</th><th>수익 · 지표</th><th>체크</th><th></th></tr></thead>
+    <colgroup><col style="width:190px"><col style="width:24%"><col style="width:76px"><col style="width:76px"><col><col style="width:40px"></colgroup>
+    <thead><tr><th>사이트</th><th>컨셉</th><th class="r">발행</th><th class="r">임시저장</th><th>체크</th><th></th></tr></thead>
     <tbody>
       {% for b in blogs %}
-      <tr id="site-{{ b.pk }}" class="{% if b.status != 'active' %}is-off{% endif %}">
+      <tr id="site-{{ b.pk }}" class="{% if not b.on %}is-off{% endif %}">
         <td>
           <div class="br-site"><span class="br-plat">{{ b.get_platform_display }}</span><strong title="{{ b.name }}">{{ b.name }}</strong></div>
           {% if b.address %}<a class="br-addr" href="{{ b.address }}" target="_blank" rel="noopener" title="{{ b.address }}">{{ b.address|cut:"https://"|cut:"http://" }}</a>{% else %}<span class="br-addr">주소 없음</span>{% endif %}
         </td>
-        <td class="br-concept">{{ b.content|default:"—" }}</td>
         <td>
-          {% if b.status == 'active' %}<div class="br-daily"><strong>{{ b.daily }}</strong>편</div>{% else %}<div class="br-daily"><strong>—</strong>{{ b.get_status_display }}</div>{% endif %}
-          {% if b.daily_note %}<div class="br-sub">{{ b.daily_note }}</div>{% endif %}
+          <div class="br-concept">{{ b.content|default:"—" }}</div>
+          <div class="br-sub">{{ b.meta }}</div>
         </td>
-        <td>
-          <div>{{ b.revenue|default:"—" }}</div>
-          <div class="br-sub">{{ b.kpi|default:"—" }}</div>
-        </td>
+        <td class="r"><span class="br-num{% if b.target and b.published >= b.target %} done{% endif %}"><strong>{{ b.published }}</strong>{% if b.target %}/{{ b.target }}{% endif %}</span></td>
+        <td class="r"><span class="br-num{% if not b.drafts %} zero{% endif %}"><strong>{{ b.drafts }}</strong></span></td>
         <td>
           <ul class="br-checks">
             {% for c in b.checks.all %}
@@ -37,7 +67,7 @@
             {% endfor %}
           </ul>
           <form class="br-add" method="post" action="{% url 'blog_rules:rule_add' %}">
-            {% csrf_token %}<input type="hidden" name="blog" value="{{ b.pk }}">
+            {% csrf_token %}<input type="hidden" name="blog" value="{{ b.pk }}"><input type="hidden" name="keep" value="{{ keep }}">
             <input class="input sm" name="body" placeholder="+ 체크 (Enter)" aria-label="{{ b.name }} 체크 추가" autocomplete="off">
           </form>
         </td>
