@@ -1,4 +1,4 @@
-{# 오른쪽 아래 (7.5): 글 분류를 고르면 그 분류의 글. 포스트 관리 글은 여기서 사이트 카테고리에 넣는다. 트리를 누르면 이 칸만 새로 받는다. #}
+{# 오른쪽 아래 (7.5): 글 분류를 고르면 그 분류의 글. 발행예정글은 여기서 사이트 카테고리에 넣는다. 트리를 누르면 이 칸만 새로 받는다. #}
 <div class="bt-pane-head">
   <span class="badge {% if kind == 'section' or kind == 'all' %}green{% elif kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ ckind_label }}</span>
   <div class="bt-path">{% for label, url in cpath %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}{% if site_sel %}&amp;site={{ site_sel }}{% endif %}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
@@ -14,7 +14,7 @@
       {% for p in posts %}
       <tr>
         <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
-        <td><span class="badge{% if p.step == '발행' %} green{% elif p.step == '포스트' %} blue{% else %} gray{% endif %}">{{ p.step }}</span></td>
+        <td><span class="badge{% if p.step == '발행' %} green{% elif p.step == '발행예정' %} blue{% else %} gray{% endif %}">{{ p.step }}</span></td>
         <td class="small">{% for pl in p.placements.all %}<div class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} <span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a></div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
         <td>
           {% if p.stage == 'post' %}
@@ -25,7 +25,7 @@
               {% for pk, label in site_options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
             </select>
           </form>
-          {% else %}<span class="muted small">포스트 관리로 보내면 넣을 수 있어요</span>{% endif %}
+          {% else %}<span class="muted small">발행예정글로 보내면 넣을 수 있어요</span>{% endif %}
         </td>
       </tr>
       {% empty %}

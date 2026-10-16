@@ -21,9 +21,9 @@
   {% endfor %}
 </div>
 
-{# 메인: 포스트 관리 단계 · 아직 발행 완료가 아닌 글. 글마다 사이트를 골라 변환 요청 #}
+{# 메인: 발행예정글 단계 · 아직 발행 완료가 아닌 글. 글마다 사이트를 골라 변환 요청 #}
 <section class="card">
-  <div class="card-head"><h3 class="card-title">변환할 글 <span class="cnt">{{ posts|length }}</span></h3><span class="hint">포스트 관리 · 발행 전</span></div>
+  <div class="card-head"><h3 class="card-title">변환할 글 <span class="cnt">{{ posts|length }}</span></h3><span class="hint">발행예정글 · 발행 전</span></div>
   <table class="grid bt-grid st-posts">
     <thead><tr><th>제목</th><th style="width:34%">넣은 곳 · 변환</th><th style="width:300px">사이트 골라 변환</th></tr></thead>
     <tbody>
@@ -48,7 +48,7 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="3" class="grid-empty">포스트 관리 단계의 발행 전 글이 없습니다. 글 관리에서 포스트로 보내면 여기에 모입니다.</td></tr>
+      <tr><td colspan="3" class="grid-empty">발행예정글 단계의 발행 전 글이 없습니다. 글 관리에서 발행예정으로 보내면 여기에 모입니다.</td></tr>
       {% endfor %}
     </tbody>
   </table>

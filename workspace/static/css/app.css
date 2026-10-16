@@ -1408,7 +1408,27 @@ a.br-addr:hover { color: var(--accent); }
 .ph-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .ph-main > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
 .ph-main > .wr-tabs { padding-left: var(--gutter); }
+/* 글 보기: 단계 탭 줄 오른쪽에 옮기기·휴지통 (글 관리 행의 버튼과 같은 모양) */
+.wr-tabs-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); background: var(--panel); padding-right: var(--gutter); }
+.wr-tabs-row > .wr-tabs { flex: 1; min-width: 0; border-bottom: 0; }
+.wr-tab-actions { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .wr-detail-main { overflow: auto; padding: 18px var(--gutter) 28px; }
+/* 글 보기 왼쪽 글 목록 (글 관리와 같은 조건). 접기는 글 분류 트리와 같은 .bt-tree / .tree-off 규칙을 쓴다 */
+.pl-list { display: flex; flex-direction: column; padding-bottom: 12px; }
+.pl-back { font-size: 11.5px; font-weight: 600; color: var(--text-3); white-space: nowrap; padding: 2px 6px; border-radius: 6px; }
+.pl-back:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.pl-filter { display: flex; gap: 6px; padding: 0 2px 8px; }
+.pl-filter .search-box { flex: 1; min-width: 0; }
+.pl-filter .search-box .input { width: 100%; }
+.pl-cond { padding: 0 6px 8px; line-height: 1.5; }
+.pl-cond a { margin-left: 4px; white-space: nowrap; }
+.pl-items { display: flex; flex-direction: column; gap: 1px; }
+.pl-item { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius); color: var(--text); }
+.pl-item:hover { background: var(--hover); text-decoration: none; }
+.pl-item.on { background: var(--accent-weak); }
+.pl-item.on .pl-title { color: var(--accent); font-weight: 600; }
+.pl-title { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pl-meta { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 사이트별 템플릿 */
 .st-table td { vertical-align: top; }
 .st-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

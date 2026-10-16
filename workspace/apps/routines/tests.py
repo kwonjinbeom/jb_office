@@ -381,7 +381,7 @@ class ClassChangeTests(TestCase):
 
 
 class DraftAutoImportTests(Login):
-    """루틴이 쓴 원고(T26~)는 글 관리를 열면 임시 템플릿에 바로 들어온다. 그 전 원고와 이미 있는(휴지통 포함) 글은 건너뛴다."""
+    """루틴이 쓴 원고(T26~)는 글 관리를 열면 임시글에 바로 들어온다. 그 전 원고와 이미 있는(휴지통 포함) 글은 건너뛴다."""
 
     def test_new_drafts_show_up_in_posts(self):
         with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
@@ -390,7 +390,7 @@ class DraftAutoImportTests(Login):
                 (Path(tmp) / key / "원고.md").write_text(DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
             TistoryPost.objects.create(title="지운 원고").delete()  # 휴지통
             res = self.client.get(reverse("posts:index"), follow=True)
-            self.assertContains(res, "새 원고 1편을 임시 템플릿으로 가져왔습니다.")
+            self.assertContains(res, "새 원고 1편을 임시글으로 가져왔습니다.")
             self.client.get(reverse("posts:index"))  # 두 번 열어도 한 번만
         self.assertEqual(list(TistoryPost.objects.values_list("title", "stage")), [("새 원고", "temp")])
 

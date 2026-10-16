@@ -4,16 +4,16 @@ from django.urls import reverse
 
 
 class Post(TrashableModel):
-    """네이버 글 한 편. 임시 템플릿 → 검토 템플릿 → 포스트 관리 세 화면을 오간다.
+    """네이버 글 한 편. 임시글 → 검토글 → 발행예정글 세 화면을 오간다.
 
     화면(stage)마다 그 화면에서 하는 일의 상태가 따로 있다.
     다른 화면으로 옮겨도 상태값은 지우지 않는다 (되돌아오면 하던 데서 이어간다).
     """
 
     class Stage(models.TextChoices):
-        TEMP = "temp", "임시 템플릿"
-        REVIEW = "review", "검토 템플릿"
-        POST = "post", "포스트 관리"
+        TEMP = "temp", "임시글"
+        REVIEW = "review", "검토글"
+        POST = "post", "발행예정글"
 
     class Review(models.TextChoices):
         TODO = "todo", "미검토"
@@ -80,7 +80,7 @@ class Post(TrashableModel):
         return {self.Stage.TEMP: self.Stage.REVIEW, self.Stage.REVIEW: self.Stage.POST}.get(self.stage)
 
     def prev_stage(self):
-        if self.is_published:  # 발행한 글은 포스트 관리에 남긴다
+        if self.is_published:  # 발행한 글은 발행예정글에 남긴다
             return None
         return {self.Stage.REVIEW: self.Stage.TEMP, self.Stage.POST: self.Stage.REVIEW}.get(self.stage)
 
