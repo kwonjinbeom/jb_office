@@ -18,7 +18,7 @@
   <div class="card-body st-paste-row">
     <button type="button" class="btn" data-copy="#st-title" data-copy-msg="제목을 복사했습니다. 제목 칸에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}① 제목</button>
     {% for b in paste.body %}
-    <button type="button" class="btn{% if forloop.first %} primary{% endif %}" {% if b.kind == 'rich' %}data-copy-rich="#st-paste" data-copy-plain="#st-plain"{% else %}data-copy="#st-html"{% endif %} data-copy-msg="{{ b.msg }}" title="{{ b.hint }}">{% include "includes/ic.html" with name="copy" %}② {{ b.label }}</button>
+    <button type="button" class="btn{% if forloop.first %} primary{% endif %}" {% if b.kind == 'rich' %}data-copy-rich="#st-paste" data-copy-plain="#st-plain"{% elif b.kind == 'raw' %}data-copy="#st-raw"{% else %}data-copy="#st-html"{% endif %} data-copy-msg="{{ b.msg }}" title="{{ b.hint }}">{% include "includes/ic.html" with name="copy" %}② {{ b.label }}</button>
     {% endfor %}
     {% if pl.converted_tags %}<button type="button" class="btn" data-copy="#st-tags" data-copy-msg="태그를 복사했습니다. {{ paste.tags }}에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}③ 태그</button>{% endif %}
   </div>
@@ -54,7 +54,8 @@
 <textarea id="st-request" hidden>{{ request_text }}</textarea>
 <textarea id="st-title" hidden>{{ pl.converted_title|default:post.title }}</textarea>
 <textarea id="st-paste" hidden>{{ paste_html }}</textarea>
-<textarea id="st-html" hidden>{{ converted_html }}</textarea>
+<textarea id="st-html" hidden>{{ clean_html }}</textarea>
+<textarea id="st-raw" hidden>{{ pl.converted_body }}</textarea>
 <textarea id="st-plain" hidden>{{ plain_text }}</textarea>
 <textarea id="st-tags" hidden>{{ pl.converted_tags }}</textarea>
 {% endblock %}

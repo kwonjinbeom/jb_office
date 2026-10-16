@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST
 from apps.blog_rules.models import Blog
 from apps.blog_types.models import Placement
 
-from . import prompt
+from . import paste, prompt
 from .models import PlatformFormat, SiteTemplate
 
 
@@ -92,14 +92,15 @@ def site(request, pk):
 
 
 def _render_for(placement, text):
-    """그 사이트 플랫폼에 맞는 미리보기·복사용 HTML"""
+    """그 사이트 플랫폼에 맞는 (미리보기 HTML, 서식 복사용 HTML, 글자만, 깨끗한 HTML).
+    네이버만 인라인 style 을 단 서식 HTML 을 쓴다. 나머지는 꾸밈 없는 HTML (포스팅자동화/13 문서)."""
     if placement.site_category.blog.platform == Blog.Platform.NAVER:
         from apps.naver_writing.render import paste_html, plain_text, render_body
         html = render_body(text)
-        return html, paste_html(html), plain_text(html)
-    from apps.writing.render import plain_text, render_body
-    html = render_body(text)
-    return html, html, plain_text(html)
+        return html, paste_html(html), plain_text(html), paste.clean_html(text)
+    from apps.writing.render import plain_text
+    clean = paste.clean_html(text)
+    return clean, clean, plain_text(clean), clean
 
 
 class ConvertForm(_Styled):
@@ -139,11 +140,14 @@ def convert(request, pk):
         if request.headers.get("X-Requested-With") == "fetch":
             return JsonResponse({"ok": False, "errors": form.errors}, status=400)
     post = placement.post
-    original_html, _, _ = _render_for(placement, post.body)
-    conv_html, paste, plain = _render_for(placement, placement.converted_body) if placement.converted_body else ("", "", "")
+    from apps.writing.render import render_body
+    original_html = render_body(post.body)
+    conv_html, rich, plain, clean = (_render_for(placement, placement.converted_body) if placement.converted_body
+                                     else ("", "", "", ""))
     return render(request, "site_templates/convert.html", {
         "page_title": "변환", "pl": placement, "blog": placement.site_category.blog, "post": post, "form": form,
-        "original_html": original_html, "converted_html": conv_html, "paste_html": paste, "plain_text": plain,
+        "original_html": original_html, "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
+        "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
         "request_text": prompt.build(placement),
     })
 

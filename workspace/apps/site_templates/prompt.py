@@ -1,4 +1,5 @@
 """변환 요청문: 사이트 템플릿 + 플랫폼 포맷 + 원문을 한 덩어리로. 사용자가 복사해 Claude 에게 주거나, Claude 가 requests.json 으로 읽는다."""
+from . import paste
 from .models import PlatformFormat, SiteTemplate
 
 
@@ -25,5 +26,5 @@ def build(placement):
     if placement.convert_note:
         parts.append(f"## 이 글만\n{placement.convert_note}")
     parts.append(f"## 원문\n### 제목\n{post.title}\n### 본문\n{post.body}")
-    parts.append("## 돌려줄 것\n변환 제목 한 줄, 변환 본문 (마크다운 또는 HTML).")
+    parts.append(paste.OUTPUT)
     return "\n\n".join(parts)
