@@ -6,6 +6,7 @@
 {% block heading %}{{ page_title }} <span class="cnt">{{ posts|length }}</span>{% endblock %}
 
 {% block actions %}
+{% if stage == 'temp' %}<a class="btn" href="{% url 'naver_writing:import' %}" title="저장소의 네이버원고 폴더(일일루틴이 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
 <a class="btn primary" href="{% url 'naver_writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}{% if stage == 'post' %}새 포스트{% else %}새 템플릿{% endif %}</a>
 {% endblock %}
 

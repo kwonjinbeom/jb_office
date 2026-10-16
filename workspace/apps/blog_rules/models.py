@@ -69,3 +69,20 @@ class Rule(TrashableModel):
 
     def __str__(self):
         return self.body
+
+
+class SiteDay(models.Model):
+    """운영 화면에서 고친 그날 숫자. 비어 있으면(None) 자동으로 센 값을 쓴다."""
+
+    blog = models.ForeignKey(Blog, verbose_name="사이트", on_delete=models.CASCADE, related_name="days")
+    day = models.DateField("날짜")
+    published = models.PositiveSmallIntegerField("발행", null=True, blank=True)
+    drafts = models.PositiveSmallIntegerField("임시저장", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "사이트 날짜별 숫자"
+        verbose_name_plural = verbose_name
+        constraints = [models.UniqueConstraint(fields=["blog", "day"], name="blog_rules_siteday_unique")]
+
+    def __str__(self):
+        return f"{self.blog} {self.day}"

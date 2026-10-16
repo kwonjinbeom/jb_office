@@ -82,7 +82,7 @@ class DailyIdeasTests(TestCase):
     def test_navigation_separates_daily_and_my_ideas(self):
         titles = [menu.title for menu in get_menus()]
 
-        self.assertEqual(titles[:2], ["일일 아이디어", "내 아이디어"])
+        self.assertEqual(titles[:3], ["일일루틴", "일일 아이디어", "내 아이디어"])  # 일일루틴이 맨 위
 
     def test_my_ideas_grid_has_no_status_or_stars(self):
         Idea.objects.create(code="C01", title="표시 점검")

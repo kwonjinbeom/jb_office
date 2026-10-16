@@ -26,3 +26,6 @@ Thumbs.db
 
 # Claude Code personal overrides
 .claude/settings.local.json
+
+# 일일루틴 로컬 실행 때 쓰는 프롬프트 파일
+workspace/.routine/

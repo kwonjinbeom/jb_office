@@ -1,13 +1,13 @@
-"""블로그·카페 › 운영: 사이트마다 한 줄 (컨셉 · 발행 · 임시저장 · 체크). 위쪽 달력 띠로 일별·월별을 고른다.
+"""블로그·카페 › 운영: 사이트마다 한 줄 (컨셉 · 발행 · 임시저장 · 체크 · 상태). 위쪽 달력 띠로 일별·월별을 고른다.
 
-발행 = 모니터링의 '발행' 계획 + RSS 로 읽은 글 (같은 글은 한 번). 임시저장 = 그 기간 계획 중 아직 발행 안 한 것.
+발행 = 모니터링의 '발행' 계획 + RSS 로 읽은 글 (같은 글은 한 번). 임시저장 = 그날 계획 중 아직 발행 안 한 것.
+일별 화면에서 두 숫자를 고치면 그날 값으로 남는다 (SiteDay). 칸을 비우면 다시 자동으로 센 값.
 """
-import calendar
-from collections import OrderedDict
-from datetime import date, timedelta
+from collections import Counter, OrderedDict
+from datetime import date
 
 from django.contrib import messages
-from django.db.models import Count, Max
+from django.db.models import Max
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -15,89 +15,76 @@ from django.views.decorators.http import require_POST
 
 from apps.blog_ops.models import Plan
 from apps.blog_ops.views import published_keys
+from apps.core import period
 
 from .forms import BlogForm, RuleForm
-from .models import Blog, Rule
+from .models import Blog, Rule, SiteDay
 
-WEEKDAYS = "월화수목금토일"
+FIELDS = ("published", "drafts")
 
 
 def _nav(request):
     request.nav_key = "blog_rules"
 
 
-def _month_end(first):
-    return first.replace(day=calendar.monthrange(first.year, first.month)[1])
+def _values(blogs, lo, hi):
+    """(필드, 블로그 pk, 날짜) → 그날 숫자. 고친 값이 있으면 그 값, 없으면 자동으로 센 값."""
+    auto = Counter()
+    for (pk, d), keys in published_keys(blogs, lo, hi).items():
+        auto["published", pk, d] = len(keys)
+    for pk, d in (Plan.objects.filter(blog__in=blogs, planned_on__range=(lo, hi))
+                  .exclude(status=Plan.Status.PUBLISHED).values_list("blog", "planned_on")):
+        auto["drafts", pk, d] += 1
+    fixed = {}
+    for row in SiteDay.objects.filter(blog__in=blogs, day__range=(lo, hi)):
+        for f in FIELDS:
+            if getattr(row, f) is not None:
+                fixed[f, row.blog_id, row.day] = getattr(row, f)
+    return auto, fixed
 
 
-def _add_months(first, n):
-    m = first.year * 12 + first.month - 1 + n
-    return date(m // 12, m % 12 + 1, 1)
-
-
-def _period(request, today):
-    """?month=YYYY-MM 이면 월별, 아니면 ?date=YYYY-MM-DD 일별 (없으면 오늘)."""
-    try:
-        y, m = (int(x) for x in request.GET.get("month", "").split("-"))
-        return "month", date(y, m, 1)
-    except ValueError:
-        pass
-    try:
-        return "day", date.fromisoformat(request.GET.get("date", ""))
-    except ValueError:
-        return "day", today
+def _target_days(lo, hi, today):
+    """목표를 세는 날 수: 지난 기간은 끝까지, 이번 기간은 오늘까지, 앞으로 올 기간은 전체."""
+    if lo > today:
+        return (hi - lo).days + 1
+    return (min(hi, today) - lo).days + 1
 
 
 def index(request):
     _nav(request)
     today = timezone.localdate()
-    mode, sel = _period(request, today)
+    mode, sel = period.parse(request, today)
+    start, end = period.bounds(mode, sel)
+    strip_lo, strip_hi = period.strip_bounds(mode, sel)
     blogs = list(Blog.objects.prefetch_related("checks"))
-    active = [b for b in blogs if b.status == Blog.Status.ACTIVE]
+    active = [b for b in blogs if b.status == Blog.Status.ACTIVE and b.daily]
+    auto, fixed = _values(blogs, strip_lo, strip_hi)
 
-    if mode == "day":
-        start = end = sel
-        monday = sel - timedelta(days=sel.weekday())
-        strip_from, strip_to = monday, monday + timedelta(days=6)
-        days = 1
-    else:
-        start, end = sel, _month_end(sel)
-        strip_from, strip_to = sel.replace(month=1), _month_end(sel.replace(month=12))
-        days = end.day
-    done = {k: len(v) for k, v in published_keys(blogs, strip_from, strip_to).items()}  # (블로그 pk, 날짜) → 발행 수
-    drafts = dict(Plan.objects.filter(blog__in=blogs, planned_on__range=(start, end))
-                  .exclude(status=Plan.Status.PUBLISHED).values_list("blog").annotate(n=Count("pk")))
+    def value(field, pk, d):
+        return fixed.get((field, pk, d), auto[field, pk, d])
 
-    def published(lo, hi, blog=None):
-        return sum(n for (pk, d), n in done.items() if lo <= d <= hi and (blog is None or pk == blog.pk))
+    def total(field, pk, lo, hi):
+        return sum(value(field, pk, d) for d in period.days_between(lo, hi))
 
+    def state(lo, hi):
+        if not active:
+            return ""
+        days = (hi - lo).days + 1
+        return "done" if all(total("published", b.pk, lo, hi) >= b.daily * days for b in active) else "todo"
+
+    days = _target_days(start, end, today)
     for b in blogs:
         b.on = b.status == Blog.Status.ACTIVE
-        b.published = published(start, end, b)
+        b.published = total("published", b.pk, start, end)
+        b.drafts = total("drafts", b.pk, start, end)
         b.target = b.daily * days if b.on else 0
-        b.drafts = drafts.get(b.pk, 0)
+        b.state = ("done" if b.published >= b.target else "todo") if b.target and start <= today else ""
+        if mode == "day":
+            b.auto = {f: auto[f, b.pk, sel] for f in FIELDS}
+            b.fixed = {f: (f, b.pk, sel) in fixed for f in FIELDS}
         b.meta = " · ".join(x for x in [
             (f"하루 {b.daily}편" + (f" ({b.daily_note})" if b.daily_note else "")) if b.on else b.get_status_display(),
             b.revenue, b.kpi] if x)
-    target_day = sum(b.daily for b in active)
-    if mode == "day":
-        strip = [{"href": f"?date={d}", "top": WEEKDAYS[i], "main": d.day, "count": published(d, d),
-                  "title": f"{d} · 발행 {published(d, d)}/{target_day}", "on": d == sel, "today": d == today,
-                  "weekend": i >= 5} for i, d in ((i, strip_from + timedelta(days=i)) for i in range(7))]
-        nav = {"prev": f"?date={sel - timedelta(days=1)}", "next": f"?date={sel + timedelta(days=1)}",
-               "strip_prev": f"?date={sel - timedelta(days=7)}", "strip_next": f"?date={sel + timedelta(days=7)}",
-               "strip_label": f"{strip_from.year}년 {strip_from.month}월 한 주"}
-    else:
-        strip = []
-        for m in range(1, 13):
-            lo = date(sel.year, m, 1)
-            n = published(lo, _month_end(lo))
-            strip.append({"href": f"?month={lo:%Y-%m}", "top": f"{lo:%y}년", "main": f"{m}월", "count": n,
-                          "title": f"{lo:%Y-%m} · 발행 {n}", "on": m == sel.month,
-                          "today": (lo.year, lo.month) == (today.year, today.month), "weekend": False})
-        nav = {"prev": f"?month={_add_months(sel, -1):%Y-%m}", "next": f"?month={_add_months(sel, 1):%Y-%m}",
-               "strip_prev": f"?month={_add_months(sel, -12):%Y-%m}", "strip_next": f"?month={_add_months(sel, 12):%Y-%m}",
-               "strip_label": f"{sel.year}년"}
 
     accounts = OrderedDict()  # 같은 계정의 하루 편수 합계 (티스토리: 카카오 계정 단위로 합산된다)
     for b in active:
@@ -105,21 +92,38 @@ def index(request):
             accounts.setdefault(b.account, []).append(b)
     return render(request, "blog_rules/index.html", {
         "page_title": "운영",
+        "bar": period.bar(mode, sel, today, state),
         "mode": mode,
-        "sel": sel,
-        "sel_weekday": WEEKDAYS[sel.weekday()],
-        "is_today": sel == today if mode == "day" else (sel.year, sel.month) == (today.year, today.month),
-        "strip": strip,
-        "nav": nav,
-        "month_value": f"{sel:%Y-%m}",
+        "day": sel,
         "blogs": blogs,
         "published_total": sum(b.published for b in blogs),
         "target_total": sum(b.target for b in blogs),
         "drafts_total": sum(b.drafts for b in blogs),
-        "daily_total": target_day,
         "accounts": [(name, sum(b.daily for b in items)) for name, items in accounts.items() if len(items) > 1],
         "keep": request.get_full_path().partition("?")[2],
     })
+
+
+@require_POST
+def count(request):
+    """일별 화면에서 발행·임시저장 숫자를 고친다. 비우면 자동으로 센 값으로 돌아간다."""
+    blog = get_object_or_404(Blog, pk=request.POST.get("blog") or 0)
+    field = request.POST.get("field")
+    try:
+        day = date.fromisoformat(request.POST.get("day", ""))
+    except ValueError:
+        day = None
+    if field not in FIELDS or day is None:
+        return _back(request)
+    raw = request.POST.get("value", "").strip()
+    value = min(int(raw), 999) if raw.isdigit() else None
+    row, _ = SiteDay.objects.get_or_create(blog=blog, day=day)
+    setattr(row, field, value)
+    if all(getattr(row, f) is None for f in FIELDS):
+        row.delete()
+    else:
+        row.save()
+    return _back(request, f"#site-{blog.pk}")
 
 
 def blog_form(request, pk=None):

@@ -696,6 +696,9 @@ a.mrow .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; w
 .cal { display: flex; align-items: center; gap: 10px 20px; flex-wrap: wrap; padding: 10px var(--gutter); background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }
 .cal-nav { display: flex; align-items: center; gap: 6px; flex: none; }
 .cal-title { min-width: 148px; text-align: center; line-height: 1.25; }
+.cal-pick { position: relative; }
+.cal-pick form { margin: 0; }
+.cal-pick-input { position: absolute; left: 50%; bottom: 0; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 button.cal-title { font: inherit; color: inherit; background: none; border: 0; border-radius: 8px; padding: 3px 8px; cursor: pointer; }
 button.cal-title:hover { background: var(--hover); }
 .cal-title strong { display: block; font-size: 17px; font-weight: 700; letter-spacing: -.3px; white-space: nowrap; }
@@ -1227,6 +1230,16 @@ a.br-addr:hover { color: var(--accent); }
 .br-add { margin-top: 4px; }
 .br-add .input { width: 100%; height: 28px; font-size: 12.5px; }
 .br-add .input:not(:focus) { border-color: transparent; background: transparent; padding-left: 10px; }
+.br-site .br-edit { margin-left: auto; opacity: 0; }
+.br-table tr:hover .br-site .br-edit, .br-site .br-edit:focus { opacity: 1; }
+.br-table .c { text-align: center; }
+.br-count { display: inline; margin: 0; }
+.num-in { width: 46px; height: 26px; padding: 0 4px; text-align: right; font: inherit; font-size: 18px; font-weight: 700; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 6px; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.num-in::-webkit-inner-spin-button, .num-in::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.num-in:hover { border-color: var(--border); }
+.num-in:focus { outline: none; border-color: var(--accent); background: var(--panel); }
+.num-in.is-fixed { color: var(--accent); }
+.br-of { font-size: 12.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .br-edit { color: var(--text-3); display: inline-flex; padding: 3px; border-radius: 5px; }
 .br-edit:hover { color: var(--accent); background: var(--hover); }
 .br-edit .ic { width: 14px; height: 14px; }
@@ -1267,3 +1280,17 @@ a.br-addr:hover { color: var(--accent); }
   .op-add { grid-template-columns: 1fr 1fr; }
   .op-add input[name=title] { grid-column: span 2; }
 }
+
+/* 달력 띠 칸의 완료/미완료 (운영·일일루틴) */
+.cal-day .st { font-size: 10.5px; font-weight: 700; height: 16px; padding: 0 6px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: #c3c9d0; white-space: nowrap; }
+.cal-day .st.done { background: var(--ok-weak); color: var(--ok); }
+.cal-day .st.todo { background: var(--danger-weak); color: var(--danger); }
+.cal-day.on .st { background: rgba(255, 255, 255, .92); }
+.cal-day.on .st:not(.done):not(.todo) { background: transparent; color: rgba(255, 255, 255, .7); }
+
+/* 일일루틴: 운영 화면과 같은 표 (br-*) + 실행 버튼 */
+.rt-name { font-size: 14px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-name:hover { color: var(--accent); text-decoration: none; }
+.rt-acts { display: flex; align-items: center; gap: 4px; }
+.rt-acts form { margin: 0; }
+.rt-table td { vertical-align: middle; }

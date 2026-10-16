@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a></div>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'routines:index' %}">취소</a>
+<button class="btn primary" type="submit" form="rt-form">{% include "includes/ic.html" with name="save" %}저장</button>
+{% endblock %}
+
+{% block content %}
+<form id="rt-form" method="post" class="form-page">
+  {% csrf_token %}
+  <section class="card">
+    <div class="card-body form-grid">
+      {% for field in form %}
+      {% if field.name == 'prompt_local' or field.name == 'prompt_cloud' or field.name == 'task' or field.name == 'output' %}
+      {% include "includes/field.html" with field=field cls="span-2" %}
+      {% else %}
+      {% include "includes/field.html" with field=field %}
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  <div class="form-foot">
+    <a class="btn" href="{% url 'routines:index' %}">취소</a>
+    <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+  </div>
+</form>
+{% endblock %}

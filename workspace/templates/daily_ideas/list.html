@@ -14,10 +14,17 @@
   <div class="cal-nav">
     {% if calendar.prev_date %}<a class="btn icon" href="?date={{ calendar.prev_date }}{{ keep }}" data-hotkey="ArrowLeft" title="이전 조사일 {{ calendar.prev_date }} (←)" aria-label="이전 조사일">{% include "includes/ic.html" with name="chevron-left" %}</a>
     {% else %}<span class="btn icon" aria-disabled="true" title="더 이전 조사가 없습니다">{% include "includes/ic.html" with name="chevron-left" %}</span>{% endif %}
+    <div class="cal-pick">
     <button class="cal-title" type="button" data-open-picker title="날짜 고르기">
       {% if show_all %}<strong>전체 기간</strong><span>조사한 날 모두</span>
       {% else %}<strong>{{ selected_day|date:"n월 j일" }} <em>{{ selected_weekday }}요일</em></strong><span>{{ selected_day|date:"Y년" }}{% if selected_date == calendar.today %} · 오늘{% endif %}{% if selected_date == calendar.latest %} · 최신 조사{% endif %}</span>{% endif %}
     </button>
+    <form method="get">
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+      {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+      <input class="cal-pick-input" type="date" name="date" value="{% if not show_all %}{{ selected_date }}{% endif %}" max="{{ calendar.today }}" data-autosubmit tabindex="-1" aria-hidden="true">
+    </form>
+    </div>
     {% if calendar.next_date %}<a class="btn icon" href="?date={{ calendar.next_date }}{{ keep }}" data-hotkey="ArrowRight" title="다음 조사일 {{ calendar.next_date }} (→)" aria-label="다음 조사일">{% include "includes/ic.html" with name="chevron-right" %}</a>
     {% else %}<span class="btn icon" aria-disabled="true" title="더 최근 조사가 없습니다">{% include "includes/ic.html" with name="chevron-right" %}</span>{% endif %}
   </div>
@@ -35,13 +42,10 @@
     <a class="btn ghost sm icon" href="?date={{ calendar.next_week }}{{ keep }}" title="다음 주" aria-label="다음 주">{% include "includes/ic.html" with name="chevron-right" %}</a>
   </nav>
 
-  <form method="get" class="cal-tools">
-    {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
-    {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
-    <input class="input sm" type="date" name="date" value="{% if not show_all %}{{ selected_date }}{% endif %}" max="{{ calendar.today }}" data-autosubmit title="날짜 고르기" aria-label="날짜 고르기">
+  <div class="cal-tools">
     {% if calendar.latest %}<a class="btn sm{% if selected_date == calendar.latest %} on{% endif %}" href="?date={{ calendar.latest }}{{ keep }}">최신</a>{% endif %}
     <a class="btn sm{% if show_all %} on{% endif %}" href="?date=all{{ keep }}">전체 기간</a>
-  </form>
+  </div>
 </div>
 {% endblock %}
 
