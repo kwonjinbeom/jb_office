@@ -1,0 +1,5 @@
+{# 트리 한 행의 + · 연필. 트리 오른쪽 위 버튼으로 추가·수정을 켰을 때만 보인다. 컨텍스트: add_kind, parent, wk, edit_sel #}
+<span class="bt-acts">
+  {% if add_kind %}<button type="button" class="bt-act" data-bt-add data-kind="{{ add_kind }}" data-parent="{{ parent }}" data-w="{{ wk }}" title="아래에 추가" aria-label="아래에 추가">{% include "includes/ic.html" with name="plus" %}</button>{% endif %}
+  {% if edit_sel %}<a class="bt-act" data-bt-edit href="?{% if wk %}w={{ wk }}&amp;{% endif %}sel={{ edit_sel }}&amp;edit=1" title="고치기" aria-label="고치기">{% include "includes/ic.html" with name="edit" %}</a>{% endif %}
+</span>

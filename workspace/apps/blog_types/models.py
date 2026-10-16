@@ -117,3 +117,45 @@ class SiteCategory(TrashableModel):
     @property
     def sel(self):
         return f"k{self.pk}"
+
+
+class Placement(TrashableModel):
+    """매핑: 포스트 관리까지 간 글 하나를 사이트 카테고리 하나에 넣은 것. 상태는 그 사이트에서의 진행.
+
+    네이버 사이트에는 네이버 글쓰기 글, 그 밖의 사이트(티스토리·블로거·워드프레스)에는 티스토리 글쓰기 글을 넣는다.
+    """
+
+    class Status(models.TextChoices):
+        UNSAVED = "unsaved", "미저장"
+        DRAFT = "draft", "임시저장"
+        PUBLISHED = "published", "발행"
+
+    site_category = models.ForeignKey(SiteCategory, verbose_name="사이트 카테고리", on_delete=models.CASCADE,
+                                      related_name="placements")
+    tistory_post = models.ForeignKey("writing.Post", verbose_name="티스토리 글", null=True, blank=True,
+                                     on_delete=models.CASCADE, related_name="placements")
+    naver_post = models.ForeignKey("naver_writing.Post", verbose_name="네이버 글", null=True, blank=True,
+                                   on_delete=models.CASCADE, related_name="placements")
+    status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.UNSAVED)
+    created_at = models.DateTimeField("넣은 날", auto_now_add=True)
+    updated_at = models.DateTimeField("수정일", auto_now=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"{self.site_category} ← {self.post}"
+
+    @property
+    def post(self):
+        return self.tistory_post or self.naver_post
+
+    @property
+    def writer(self):
+        return "naver" if self.naver_post_id else "tistory"
+
+    @property
+    def title(self):
+        """휴지통 목록에 보이는 이름"""
+        post = self.post
+        return f"{post.title if post else '글'} → {self.site_category.blog.name} › {self.site_category}"

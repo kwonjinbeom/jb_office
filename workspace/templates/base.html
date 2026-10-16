@@ -23,13 +23,13 @@
       </a>
       {% for n in NAV %}
       {% if n.children %}
-      {# 하위 메뉴가 있는 항목: 누르면 그 화면으로 가면서 아래가 펼쳐진다. 옆 화살표는 이동 없이 펼치기만 한다. #}
+      {# 하위 메뉴가 있는 항목: 누르면 펼치기만 한다. 원래 화면은 첫 중메뉴 '○○ 리스트'. #}
       <div class="nav-group{% if n.open %} open{% endif %}" data-nav-group="{{ n.menu.key }}">
         <div class="nav-row">
-          <a class="nav-item{% if n.active %} active{% endif %}" href="{{ n.menu.url }}">
+          <button type="button" class="nav-item nav-toggle" data-nav-toggle aria-expanded="{% if n.open %}true{% else %}false{% endif %}">
             <svg class="ic"><use href="#i-{{ n.menu.icon }}"/></svg><span>{{ n.menu.title }}</span>
-          </a>
-          <button type="button" class="nav-caret" data-nav-toggle aria-label="{{ n.menu.title }} 하위 메뉴" aria-expanded="{% if n.open %}true{% else %}false{% endif %}"><svg class="ic"><use href="#i-chevron-down"/></svg></button>
+            <span class="nav-caret" aria-hidden="true"><svg class="ic"><use href="#i-chevron-down"/></svg></span>
+          </button>
         </div>
         <div class="nav-sub">
           {% for c in n.children %}

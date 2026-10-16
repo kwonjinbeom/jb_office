@@ -81,6 +81,7 @@
   <section class="card wr-edit-meta">
     <div class="card-body form-grid">
       {% include "includes/field.html" with field=form.summary cls="span-2" %}
+      {% include "includes/field.html" with field=form.classification cls="span-2" %}
       {% if form.review_status %}{% include "includes/field.html" with field=form.review_status %}{% endif %}
       {% if form.write_status %}
       {% include "includes/field.html" with field=form.write_status %}

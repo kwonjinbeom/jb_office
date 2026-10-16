@@ -1,0 +1,6 @@
+{# 트리 오른쪽 위 작은 버튼: 누르면 그 기능이 켜지고 행마다 +, 연필, 휴지통이 생긴다. 다시 누르면 꺼진다. #}
+<span class="bt-tools" role="group" aria-label="편집">
+  <button type="button" class="bt-tool" data-bt-mode="add" aria-pressed="false" title="추가" aria-label="추가">{% include "includes/ic.html" with name="plus" %}</button>
+  <button type="button" class="bt-tool" data-bt-mode="edit" aria-pressed="false" title="수정" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</button>
+  <button type="button" class="bt-tool" data-bt-mode="delete" aria-pressed="false" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</button>
+</span>

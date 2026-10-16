@@ -16,10 +16,10 @@ MODEL_SECTIONS = {
     "content.folder": "폴더", "content.content": "콘텐츠", "content.publication": "게시 기록",
     "discussions.discussion": "진행현황", "discussions.discussionhistory": "논의 이력",
     "daily_ideas.searchstandard": "검색 표준", "writing.post": "티스토리 글쓰기",
-    "naver_writing.post": "네이버 글쓰기", "blog_types.section": "타입·카테고리 · 대분류",
-    "blog_types.category": "타입·카테고리",
-    "blog_types.posttype": "타입·카테고리 · 타입", "blog_types.subtype": "타입·카테고리 · 하위",
-    "blog_types.sitecategory": "타입·카테고리 · 사이트 카테고리",
+    "naver_writing.post": "네이버 글쓰기", "blog_types.section": "글 관리 · 대분류",
+    "blog_types.category": "글 관리 · 카테고리",
+    "blog_types.posttype": "글 관리 · 타입", "blog_types.subtype": "글 관리 · 하위",
+    "blog_types.sitecategory": "글 관리 · 사이트 카테고리", "blog_types.placement": "글 관리 · 매핑",
     "blog_rules.blog": "운영 · 사이트", "blog_rules.rule": "운영 · 체크", "blog_ops.plan": "모니터링 · 발행 계획",
 }
 SOURCE_SECTIONS = {"daily": "일일 아이디어", "docs": "문서"}

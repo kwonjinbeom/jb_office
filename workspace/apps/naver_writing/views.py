@@ -5,6 +5,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from apps.blog_types import classify
+
 from .forms import PostForm
 from .models import Post
 from .render import FONTS, QUOTE_STYLES, HR_STYLES, clean_html, paste_html, plain_text, render_body, text_to_html
@@ -65,6 +67,7 @@ def post_list(request, stage):
             "stage": stage,
             "tabs": _tabs(stage),
             "posts": qs,
+            "groups": classify.grouped(classify.with_classification(qs)),
             "q": q,
             "next_label": {Stage.TEMP: "검토로", Stage.REVIEW: "포스트로"}.get(stage),
             "prev_label": {Stage.REVIEW: "임시로", Stage.POST: "검토로"}.get(stage),

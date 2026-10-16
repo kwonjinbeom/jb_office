@@ -7,7 +7,8 @@
 - color: 홈 카드의 아이콘 색. 사무적인 톤의 색만 쓴다.
 
 하위 메뉴(트리)
-- children 에 Menu 를 넣으면 좌측 메뉴에서 그 항목 아래에 펼쳐진다. 상위 메뉴를 누르거나 옆 화살표를 누르면 보인다.
+- children 에 Menu 를 넣으면 좌측 메뉴에서 그 항목 아래에 펼쳐진다. 하위가 있는 상위 메뉴는 펼치기만 하고 이동하지 않는다
+  (2026-10-16 사용자). 상위 메뉴의 원래 화면은 맨 위 중메뉴 '<상위 메뉴명> 리스트' 로 들어간다 (build_nav 가 만든다).
 - 하위 메뉴의 key 는 앱 이름과 달라도 된다. 그 화면의 뷰에서 `request.nav_key = "<key>"` 를 넣으면 그 항목이 강조된다
   (예: apps/discussions/views.py 의 _nav). 넣지 않으면 앱 이름과 같은 key 가 강조된다.
 - query: 같은 화면을 조건만 달리해 여는 하위 메뉴에 쓴다 (예: "?area=blog").
@@ -52,7 +53,7 @@ MENUS: list[Menu] = [
         children=(
             Menu("blog_rules", "운영", "사이트별 컨셉·발행·임시저장 현황과 체크", "blog_rules:index", "check-list"),
             Menu("blog_ops", "모니터링", "이번 주 발행 현황, 발행 계획, RSS", "blog_ops:index", "calendar"),
-            Menu("blog_types", "타입·카테고리", "글 분류(대분류 › 카테고리 › 타입)와 사이트별 실제 카테고리", "blog_types:index", "tag"),
+            Menu("blog_types", "글 관리", "사이트 카테고리에 글 넣기, 글 분류별 글 보기", "blog_types:index", "tag"),
             Menu("writing", "티스토리 글쓰기", "임시 템플릿 → 검토 템플릿 → 포스트 관리", "writing:list", "edit"),
             Menu("naver_writing", "네이버 글쓰기", "임시 템플릿 → 검토 템플릿 → 포스트 관리", "naver_writing:list", "edit"),
             Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),
@@ -90,7 +91,10 @@ def build_nav(active_key: str) -> list[dict]:
     """좌측 메뉴용 트리. 현재 화면이 속한 가지는 펼친 채로 내보낸다."""
     nav = []
     for menu in MENUS:
-        children = [{"menu": child, "active": child.key == active_key} for child in menu.children]
-        active = menu.key == active_key
-        nav.append({"menu": menu, "active": active, "open": active or any(c["active"] for c in children), "children": children})
+        if not menu.children:
+            nav.append({"menu": menu, "active": menu.key == active_key, "open": False, "children": []})
+            continue
+        listing = Menu(menu.key, f"{menu.title} 리스트", menu.description, menu.url_name, menu.icon, menu.color, menu.query)
+        children = [{"menu": child, "active": child.key == active_key} for child in (listing, *menu.children)]
+        nav.append({"menu": menu, "active": False, "open": any(c["active"] for c in children), "children": children})
     return nav
