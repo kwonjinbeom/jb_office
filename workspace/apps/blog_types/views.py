@@ -254,6 +254,11 @@ def _top(skind, sobj):
 
 def index(request, form=None, form_sel=""):
     _nav(request)
+    try:  # AI 가 남긴 분류 변경 파일(일일루틴/분류변경)을 먼저 반영한다
+        from . import changes
+        changes.sync()
+    except Exception:
+        pass
     g = request.GET
     site_sel, sel, w_raw = g.get("site", ""), g.get("sel", ""), g.get("w", "")
     if not site_sel and _is_site(sel):  # 예전 주소 ?sel=k7

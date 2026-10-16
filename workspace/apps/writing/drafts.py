@@ -5,6 +5,7 @@ Claude 가 원고.md 를 써서 main 에 올리면 서버에도 같은 파일이
 
 원고.md 형식 (원고/README.md):
   위쪽 제작 정보 → <!-- 본문 시작 --> → # 제목 → 본문 → <!-- 본문 끝 --> → 태그: … → 소개: …
+  제작 정보의 `사이트: …` · `분류: 대 > 중 > 소` 줄(일일루틴 글쓰기)은 가져올 때 사이트·글 분류로 쓴다.
 """
 import re
 from dataclasses import dataclass
@@ -28,6 +29,8 @@ class Draft:
     tags: str
     summary: str
     modified: float
+    site: str = ""
+    classification: str = ""
 
     @property
     def code(self) -> str:
@@ -46,6 +49,9 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     body = body[m.end():]
     body = re.sub(r"^> 제목 대안:.*\n+", "", body, flags=re.M).strip()  # 제목 후보 줄은 제작 정보
     tail = text.split(END, 1)[1] if END in text else ""
+    head = text.split(START, 1)[0]
+    site = re.search(r"^[-*\s]*`?사이트:\s*([^`\n]+)`?\s*$", head, re.M)
+    classification = re.search(r"^[-*\s]*`?분류:\s*([^`\n]+)`?\s*$", head, re.M)
     tags = re.search(r"^태그:\s*(.+)$", tail, re.M)
     summary = re.search(r"^소개:\s*(.+)$", tail, re.M)
     return Draft(
@@ -55,6 +61,8 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
         tags=tags.group(1).strip()[:300] if tags else "",
         summary=summary.group(1).strip()[:300] if summary else "",
         modified=modified,
+        site=site.group(1).strip()[:60] if site else "",
+        classification=classification.group(1).strip()[:200] if classification else "",
     )
 
 
