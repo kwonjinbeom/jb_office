@@ -2,45 +2,134 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a></div>{% endblock %}
 
-{% block heading %}프롬프트 관리 <span class="cnt">프롬프트 {{ rows|length }}개</span>{% endblock %}
+{% block heading %}프롬프트 관리{% if routine %} <span class="cnt">{{ routine.name }}</span>{% endif %}{% endblock %}
 
 {% block actions %}
+{% if routine %}<a class="btn" href="{% url 'routines:edit' routine.pk %}">{% include "includes/ic.html" with name="edit" %}루틴 설정</a>{% endif %}
 <a class="btn" href="{% url 'routines:create' %}">{% include "includes/ic.html" with name="plus" %}루틴</a>
 {% endblock %}
 
+{% block toolbar %}
+{% if routines %}
+<div class="filter-bar">
+  <nav class="seg" aria-label="루틴">{% for r in routines %}<a href="?r={{ r.key }}"{% if r.pk == routine.pk %} class="on" aria-current="page"{% endif %}>{{ r.name }}</a>{% endfor %}</nav>
+</div>
+{% endif %}
+{% endblock %}
+
 {% block content %}
-{# 루틴마다 두 줄 (로컬·클라우드): 프롬프트 원문 · 보는 md·자료 · 바뀌는 칸. md 는 저장소 파일이라 고칠 때는 Claude 에게 맡긴다. #}
-<section class="card br-sites">
-  <table class="grid br-table pm-table">
-    <colgroup><col style="width:170px"><col style="width:76px"><col><col style="width:300px"><col style="width:120px"></colgroup>
-    <thead><tr><th>루틴</th><th>구분</th><th>프롬프트 (원문)</th><th>보는 md · 자료</th><th>바뀌는 칸</th></tr></thead>
-    <tbody>
-      {% for row in rows %}
-      <tr{% if row.first %} id="pm-{{ row.routine.key }}" class="pm-start"{% endif %}>
-        {% if row.first %}
-        <td rowspan="2">
-          <div class="br-site"><strong>{{ row.routine.name }}</strong><a class="br-edit" href="{% url 'routines:edit' row.routine.pk %}" title="루틴·프롬프트 수정" aria-label="{{ row.routine.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a></div>
-          <div class="br-sub">{{ row.routine.key }} · 하루 {{ row.routine.daily }}{{ row.routine.unit }}</div>
-          <div class="br-sub">{{ row.routine.task }}</div>
-        </td>
-        {% endif %}
-        <td>{{ row.label }}</td>
-        <td><textarea class="pm-text" readonly aria-label="{{ row.routine.name }} {{ row.label }} 프롬프트">{{ row.text }}</textarea>{% if row.mode == 'local' %}<div class="br-sub">+ 끝에 진행 보고 부분이 자동으로 붙습니다</div>{% endif %}</td>
-        <td>
-          <ul class="pm-refs">
-            {% for ref in row.refs %}
-            <li class="{% if not ref.ok %}is-missing{% endif %}">{% if ref.url %}<a href="{{ ref.url }}" title="{{ ref.label }}">{{ ref.label }}</a>{% else %}<span title="{{ ref.label }}">{{ ref.label }}</span>{% endif %}{% if not ref.ok %}<span class="badge red">없음</span>{% elif ref.note %}<span class="pm-note">{{ ref.note }}</span>{% endif %}</li>
-            {% empty %}
-            <li class="muted">—</li>
-            {% endfor %}
-          </ul>
-        </td>
-        <td><div class="pm-marks">{% for m in row.marks %}<code>{{ m }}</code>{% empty %}<span class="muted">—</span>{% endfor %}</div></td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5" class="grid-empty">루틴이 없습니다.</td></tr>
+{% if not routine %}
+<section class="card"><div class="empty">루틴이 없습니다. 오른쪽 위 '+ 루틴'으로 만드세요.</div></section>
+{% else %}
+<div class="pm-cols">
+  {# 왼쪽: 이 루틴이 보는 것 (프롬프트 md · 읽는 md · 클라우드 제약 · 오늘의 자료). 줄을 누르면 아래에 내용 #}
+  <div class="pm-left">
+    <section class="card">
+      <table class="grid br-table pm-refs-table">
+        <colgroup><col style="width:84px"><col><col style="width:64px"></colgroup>
+        <thead><tr><th>구분</th><th>보는 md · 자료</th><th class="c"></th></tr></thead>
+        <tbody>
+          {% for ref in refs %}
+          <tr class="pm-ref{% if forloop.first %} on{% endif %}" data-pm-ref="{{ forloop.counter }}" tabindex="0">
+            <td><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '클라우드' %}violet{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span></td>
+            <td class="pm-ref-name" title="{{ ref.label }}">{{ ref.label }}</td>
+            <td class="c">{% if not ref.ok %}<span class="badge red">없음</span>{% elif ref.rel %}<a class="br-edit" href="{% url 'routines:doc' ref.rel %}" title="새 화면으로" aria-label="{{ ref.label }} 열기">{% include "includes/ic.html" with name="external" %}</a>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <section class="card pm-viewer">
+      {% for ref in refs %}
+      <div class="pm-view" data-pm-view="{{ forloop.counter }}"{% if not forloop.first %} hidden{% endif %}>
+        <div class="pm-view-head"><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '클라우드' %}violet{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span><strong>{{ ref.label }}</strong>{% if ref.kind == '자료' %}<span class="muted small rt-right">오늘 날짜로 서버에서 가져온 내용</span>{% endif %}</div>
+        {% if ref.text %}<pre class="pm-data">{{ ref.text }}</pre>
+        {% elif ref.html %}<div class="prose pm-prose">{{ ref.html|safe }}</div>
+        {% else %}<div class="rt-empty">저장소에 이 파일이 없습니다. 루틴 설정에서 경로를 고치거나, 만들어 달라고 Claude 에게 맡기세요.</div>{% endif %}
+      </div>
       {% endfor %}
-    </tbody>
-  </table>
-</section>
+    </section>
+  </div>
+
+  {# 오른쪽: 나의 평가 → 갱신 → 프롬프트 이력 #}
+  <div class="pm-right">
+    <section class="card" id="pm-eval">
+      <div class="rt-panel-head"><h2 class="card-title">나의 평가 <span class="cnt">{{ evals|length }}개{% if avg %} · 평균 {{ avg|floatformat:1 }}점{% endif %}</span></h2></div>
+      <form class="pm-eval-form" method="post" action="{% url 'routines:evaluate' routine.pk %}">
+        {% csrf_token %}
+        <input class="input sm" type="date" name="day" value="{{ today|date:'Y-m-d' }}" aria-label="날짜" required>
+        <div class="seg pm-score" role="radiogroup" aria-label="평점">{% for i in "12345" %}<label><input type="radio" name="score" value="{{ i }}"{% if i == "3" %} checked{% endif %}><span>{{ i }}</span></label>{% endfor %}</div>
+        <input class="input sm" name="comment" placeholder="코멘트 (좋았던 점·고칠 점)" aria-label="코멘트" autocomplete="off">
+        <button class="btn sm primary" type="submit">저장</button>
+      </form>
+      <div class="pm-evals">
+        <table class="grid br-table">
+          <colgroup><col style="width:104px"><col style="width:52px"><col><col style="width:56px"><col style="width:40px"></colgroup>
+          <tbody>
+            {% for e in evals %}
+            <tr>
+              <td class="num">{{ e.day|date:"Y-m-d" }}</td>
+              <td><strong>{{ e.score }}</strong>점</td>
+              <td class="pm-comment">{{ e.comment|default:"—" }}</td>
+              <td>{% if e.is_new %}<span class="badge blue">새</span>{% else %}<span class="badge gray">반영</span>{% endif %}</td>
+              <td class="r"><form method="post" action="{% url 'routines:evaluation_delete' e.pk %}">{% csrf_token %}<button class="br-edit pm-x" type="submit" title="삭제(휴지통)" aria-label="평가 삭제">{% include "includes/ic.html" with name="trash" %}</button></form></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="grid-empty">아직 평가가 없습니다. 그날 결과물을 보고 평점과 코멘트를 남기세요.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="pm-update">
+      <div class="rt-panel-head">
+        <h2 class="card-title">갱신 <span class="cnt">새 평가 {{ new_count }}개</span></h2>
+        <div class="rt-right rt-acts">
+          {% include "routines/_launch.html" with key=routine.key name=routine.name kind="update" text=update_local day=today label="갱신" primary=True %}
+          <button class="btn sm ghost" type="button" data-copy="#pm-update-cloud" data-copy-msg="클라우드용 갱신 안내문을 복사했습니다.">{% include "includes/ic.html" with name="copy" %}클라우드</button>
+        </div>
+      </div>
+      <div class="pm-update-note">평가 전체(새 것 먼저)와 갱신 때 볼 관점으로 AI 가 <code>{{ routine.prompt_doc }}</code> 를 고쳐 main 에 올립니다. 반영되면 아래 이력에 새 버전이 쌓입니다.</div>
+      <div class="pm-focus"><span class="muted small">갱신 때 볼 관점</span><p>{{ routine.review_focus|default:"(없음 — 루틴 설정에서 적기)" }}</p></div>
+      <textarea id="pm-update-cloud" hidden>{{ update_cloud }}</textarea>
+    </section>
+
+    <section class="card" id="pm-history">
+      <div class="rt-panel-head"><h2 class="card-title">프롬프트 이력 <span class="cnt">{{ versions|length }}</span></h2></div>
+      <div class="pm-versions">
+        {% for v in versions %}
+        <details class="rt-run">
+          <summary class="pm-version"><span class="rt-run-name">v{{ v.number }}{% if forloop.first %} · 지금{% endif %}</span><span class="rt-run-time">{{ v.captured_at|date:"m-d H:i" }}</span><form method="post" action="{% url 'routines:version_star' v.pk %}">{% csrf_token %}<button class="pm-star{% if v.starred %} on{% endif %}" type="submit" title="{% if v.starred %}좋았던 버전 해제{% else %}좋았던 버전으로 표시{% endif %}" aria-label="좋았던 버전">★</button></form>{% if not forloop.first %}<a class="btn sm ghost" href="{% url 'routines:version_restore' v.pk %}">되돌리기</a>{% else %}<span></span>{% endif %}</summary>
+          <pre class="rt-log">{{ v.content }}</pre>
+        </details>
+        {% empty %}
+        <div class="rt-empty">프롬프트 md 가 저장소에 생기면 버전이 쌓입니다.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // 왼쪽 표의 줄을 누르면 아래 칸에 그 md·자료 내용을 보여 준다.
+  function pick(row) {
+    var id = row.getAttribute("data-pm-ref");
+    document.querySelectorAll("[data-pm-ref]").forEach(function (r) { r.classList.toggle("on", r === row); });
+    document.querySelectorAll("[data-pm-view]").forEach(function (v) { v.hidden = v.getAttribute("data-pm-view") !== id; });
+  }
+  document.addEventListener("click", function (e) {
+    var row = !e.target.closest("a") && e.target.closest("[data-pm-ref]");
+    if (row) pick(row);
+  });
+  document.addEventListener("keydown", function (e) {
+    var row = e.target.closest && e.target.closest("[data-pm-ref]");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pick(row); }
+  });
+})();
+</script>
 {% endblock %}

@@ -23,10 +23,7 @@
           {% else %}<span class="br-num"><strong>{{ r.result }}</strong></span>{% endif %}<span class="br-of">/{{ r.target }}</span>
         </td>
         <td>
-          <div class="rt-acts">
-            {% if local_run %}<form method="post" action="{% url 'routines:run' r.pk %}">{% csrf_token %}<input type="hidden" name="day" value="{% if mode == 'day' %}{{ day|date:'Y-m-d' }}{% endif %}"><input type="hidden" name="keep" value="{{ keep }}"><button class="btn sm" type="submit" title="새 터미널에서 claude 로 시작 (이 PC)">{% include "includes/ic.html" with name="server" %}터미널 실행</button></form>{% endif %}
-            <button class="btn sm ghost" type="button" data-copy="#p-{{ r.key }}-local" data-copy-msg="{{ r.name }} 로컬 프롬프트를 복사했습니다." title="PC 의 claude 에 붙여넣기">{% include "includes/ic.html" with name="copy" %}복사</button>
-          </div>
+          {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.local_prompt day=run_day label="실행" %}
           <textarea id="p-{{ r.key }}-local" hidden>{{ r.local_prompt }}</textarea>
         </td>
         <td>
@@ -54,7 +51,7 @@
   <section class="card rt-panel" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
     <div class="rt-panel-head">
       <h2 class="card-title">로컬 현황 <span class="cnt">{{ runs|length }}</span></h2>
-      <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% elif not local_run %}PC 에서 띄운 서버 화면에 보입니다{% endif %}</span>
+      <span class="muted small rt-right">{% if on_server %}<a href="{{ local_url }}" target="_blank" rel="noopener">PC 화면에서 보기</a>{% elif has_open_run %}15초마다 새로고침{% endif %}</span>
     </div>
     <div class="rt-runs">
       {% for run in runs %}
@@ -64,7 +61,7 @@
 {{ run.log }}</pre>
       </details>
       {% empty %}
-      <div class="rt-empty">로컬로 돌린 기록이 없습니다.<br>터미널 실행 또는 로컬 프롬프트로 시작하면 claude 가 단계마다 여기에 남깁니다.</div>
+      <div class="rt-empty">로컬로 돌린 기록이 없습니다.<br>{% if on_server %}로컬 현황은 PC 에서 띄운 서버 화면에 쌓입니다. '실행'을 누르면 그 화면이 열립니다.{% else %}'실행'을 누르면 claude 가 단계마다 여기에 남깁니다.{% endif %}</div>
       {% endfor %}
     </div>
   </section>
