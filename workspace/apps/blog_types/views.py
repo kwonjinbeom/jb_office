@@ -1,11 +1,12 @@
-"""글 관리 화면: 트리 두 개 + 오른쪽 목록.
+"""글 매핑 관리 화면: 왼쪽 위 사이트 카테고리(2.5) · 아래 글 분류(7.5) + 오른쪽 목록.
 
-- 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 그 카테고리에 넣은 글(매핑)이 보이고,
+- 사이트 카테고리 (왼쪽 위): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 그 카테고리에 넣은 글(매핑)이 보이고,
   포스트 관리까지 간 글을 골라 넣는다. 매핑마다 미저장 · 임시저장 · 발행.
-- 글 분류 (가운데): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 › 카테고리 › 타입 › 하위. 누르면 그 분류의 글(임시 → 검토 → 포스트 전부)이
-  보인다. 숫자는 그 아래 글 중 아직 발행 완료가 아닌 글 수. 글쓰기마다 플랫폼이 맞는 카테고리만 (공통 + 그 플랫폼).
+- 글 분류 (왼쪽 아래): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 누르면 그 분류의 글(임시 → 검토 →
+  포스트 전부)이 보이고, 포스트 관리 글은 그 자리에서 사이트 카테고리에 넣는다. 숫자는 그 아래 글 중 아직 발행 완료가 아닌 글 수.
+  글쓰기마다 플랫폼이 맞는 카테고리만 (공통 + 그 플랫폼). 트리는 글 관리 화면과 같다 (classify.class_tree).
 
-주소: ?sel=b2 (사이트) · k7 (사이트 카테고리) · ?w=tistory&sel=g1 (대분류) · c3 (카테고리) · t5 (타입) · s9 (하위).
+주소: ?sel=b2 (사이트) · k7 (사이트 카테고리) · ?w=tistory&sel=g1 (대분류) · c3 (카테고리) · t5 (타입) · s9 (하위) · u (미분류).
 &edit=1 이면 고른 것의 이름·설명을 고치는 칸이 위에 열린다.
 트리의 추가·수정·삭제는 각 트리 오른쪽 위 버튼으로 켠다 (켜야 행마다 +, 연필, 휴지통이 보인다).
 """
@@ -30,10 +31,10 @@ MODELS = {"section": Section, "category": Category, "type": PostType, "sub": Sub
           "site": Blog, "sitecat": SiteCategory}
 PREFIX = {"g": "section", "c": "category", "t": "type", "s": "sub", "b": "site", "k": "sitecat"}
 KIND_LABEL = {"section": "대분류", "category": "카테고리", "type": "타입", "sub": "하위",
-              "site": "사이트", "sitecat": "사이트 카테고리"}
+              "site": "사이트", "sitecat": "사이트 카테고리", "unclassified": "분류"}
 CHILD = {"section": "category", "category": "type", "type": "sub", "site": "sitecat"}
 EDITABLE = {"section", "category", "type", "sub", "sitecat"}  # 사이트는 운영 화면에서 고친다
-CLASS_KINDS = {"section", "category", "type", "sub"}
+CLASS_KINDS = {"section", "category", "type", "sub", "unclassified"}
 
 
 def _nav(request):
@@ -51,6 +52,8 @@ def _url(sel="", w="", edit=False):
 
 
 def _find(sel):
+    if sel == "u":
+        return "unclassified", classify.UNCLASSIFIED_NODE
     kind = PREFIX.get((sel or "")[:1])
     pk = (sel or "")[1:]
     if not kind or not pk.isdigit():
@@ -81,6 +84,8 @@ def _chain(kind, obj):
 
 def _path(kind, obj, w):
     """고른 것까지의 경로: [(이름, 주소)]. 글 분류는 앞에 글쓰기 이름이 붙는다."""
+    if kind == "unclassified":
+        return [(classify.WRITERS[w], _url(w=w)), (obj.name, _url("u", w))]
     if kind in ("site", "sitecat"):
         return [(o.name, _url(o.sel)) for o in _chain(kind, obj)]
     return [(classify.WRITERS[w], _url(w=w))] + [
@@ -91,6 +96,8 @@ def _open_branches(kind, obj, w):
     """트리에서 펼쳐 둘 가지 (data-bt-branch 값)"""
     if kind in ("site", "sitecat"):
         return {o.sel for o in _chain(kind, obj)}
+    if kind == "unclassified":
+        return {w}
     return {w} | {f"{w}-{o.sel}" for o in _chain(kind, obj)}
 
 
@@ -125,30 +132,6 @@ def _children(kind, obj):
 
 
 # ── 트리 ──────────────────────────────────────────────────────────
-
-def _class_tree():
-    """글쓰기마다 대분류 › 카테고리 › 타입 › 하위 와 그 아래 글 수 (발행 완료가 아닌 글: 임시·검토·포스트 모두)"""
-    sections = list(Section.objects.prefetch_related("categories__types__subs"))
-    writers = []
-    for key, label in classify.WRITERS.items():
-        allowed = {c.pk for c in classify.categories_for(key)}
-        counts = Counter()
-        Post = classify.post_model(key)
-        for cat, sec, t, s in Post.objects.exclude(publish_status=Post.Publish.DONE).values_list(
-                "bt_category_id", "bt_category__section_id", "bt_type_id", "bt_sub_id"):
-            counts["all"] += 1
-            for prefix, pk in (("g", sec), ("c", cat), ("t", t), ("s", s)):
-                if pk:
-                    counts[f"{prefix}{pk}"] += 1
-        writers.append({"key": key, "label": label, "count": counts["all"], "sections": [
-            {"obj": g, "count": counts[g.sel], "cats": [
-                {"obj": c, "count": counts[c.sel], "types": [
-                    {"obj": t, "count": counts[t.sel], "subs": [{"obj": s, "count": counts[s.sel]} for s in t.subs.all()]}
-                    for t in c.types.all()]}
-                for c in g.categories.all() if c.pk in allowed]}
-            for g in sections]})
-    return writers
-
 
 def _site_tree():
     counts = Counter(Placement.objects.values_list("site_category_id", flat=True))
@@ -185,6 +168,16 @@ def _posts(w, kind, obj):
     return posts
 
 
+def _site_options(w):
+    """글 분류 쪽에서 글을 넣을 사이트 카테고리: 네이버 글은 네이버 사이트에, 티스토리 글은 그 밖의 사이트에"""
+    blogs = Blog.objects.filter(platform=Blog.Platform.NAVER) if w == "naver" else Blog.objects.exclude(platform=Blog.Platform.NAVER)
+    out = []
+    for c in SiteCategory.objects.filter(blog__in=blogs, parent=None).select_related("blog").prefetch_related("children").order_by("blog__order", "order", "pk"):
+        out.append((c.pk, f"{c.blog.name} › {c.name}"))
+        out += [(k.pk, f"{c.blog.name} › {c.name} › {k.name}") for k in c.children.all()]
+    return out
+
+
 def _site_writer(blog):
     return "naver" if blog.platform == Blog.Platform.NAVER else "tistory"
 
@@ -210,8 +203,8 @@ def index(request, form=None):
     if editing and form is None:
         form = FORMS[kind](instance=obj)
     ctx = {
-        "page_title": "글 관리",
-        "writers": _class_tree(),
+        "page_title": "글 매핑 관리",
+        "writers": classify.class_tree(),
         "sites": _site_tree(),
         "sel": sel, "w": w, "kind": kind, "obj": obj,
         "kind_label": {"writer": "글쓰기"}.get(kind, KIND_LABEL.get(kind, "")),
@@ -229,6 +222,7 @@ def index(request, form=None):
     if kind == "writer" or kind in CLASS_KINDS:
         ctx["panel"] = "posts"
         ctx["posts"] = _posts(w, kind, obj)
+        ctx["site_options"] = _site_options(w)
     elif kind in ("site", "sitecat"):
         ctx["panel"] = "places"
         cats = [obj] if kind == "sitecat" else list(obj.site_categories.all())
@@ -348,16 +342,17 @@ def place_add(request):
     w = _site_writer(cat.blog)
     post = classify.post_model(w).objects.filter(pk=request.POST.get("post") or 0, stage="post").first()
     status = request.POST.get("status") or Placement.Status.UNSAVED
+    back = _url(cat.sel)
     if post is None or status not in Placement.Status.values:
         messages.warning(request, "넣을 글을 고르세요.")
-        return redirect(_url(cat.sel))
+        return _back(request, back)
     field = "naver_post" if w == "naver" else "tistory_post"
     if Placement.objects.filter(site_category=cat, **{field: post}).exists():
         messages.warning(request, "이미 넣은 글입니다.")
-        return redirect(_url(cat.sel))
+        return _back(request, back)
     Placement.objects.create(site_category=cat, status=status, **{field: post})
     messages.success(request, f"'{post.title}'을(를) {cat.blog.name} › {cat}에 넣었습니다.")
-    return redirect(_url(cat.sel))
+    return _back(request, back)
 
 
 def _back(request, fallback):

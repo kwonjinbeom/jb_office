@@ -136,5 +136,62 @@ def node_filter(kind, obj):
         return Q(bt_type=obj)
     if kind == "sub":
         return Q(bt_sub=obj)
+    if kind == "unclassified":
+        return unclassified_q()
     return Q()
 
+
+
+class _Unclassified:
+    """글 분류 트리의 '미분류' 칸. 대분류와 같은 줄에 있고, 분류가 없는 글(또는 분류가 휴지통에 간 글)이 모두 여기 든다."""
+    name = UNCLASSIFIED
+    sel = "u"
+    pk = None
+    deleted_at = None
+
+    def __str__(self):
+        return self.name
+
+
+UNCLASSIFIED_NODE = _Unclassified()
+
+
+def unclassified_q():
+    return (Q(bt_category__isnull=True) | Q(bt_category__deleted_at__isnull=False)
+            | Q(bt_category__section__deleted_at__isnull=False))
+
+
+def class_tree():
+    """글쓰기마다 대분류 › 카테고리 › 타입 › 하위 + 미분류, 그리고 그 아래 글 수 (발행 완료가 아닌 글: 임시·검토·포스트 모두).
+    글 관리(글쓰기)와 글 매핑 관리 두 화면이 같은 트리를 쓴다."""
+    from collections import Counter
+
+    from .models import Section
+
+    sections = list(Section.objects.prefetch_related("categories__types__subs"))
+    writers = []
+    for key, label in WRITERS.items():
+        allowed = {c.pk for c in categories_for(key)}
+        Post = post_model(key)
+        counts = Counter()
+        for post in with_classification(Post.objects.exclude(publish_status=Post.Publish.DONE)):
+            counts["all"] += 1
+            node = node_of(post)
+            if node is None:
+                counts["u"] += 1
+                continue
+            cat = post.bt_category
+            counts[cat.section.sel] += 1
+            counts[cat.sel] += 1
+            if isinstance(node, (PostType, SubType)):
+                counts[post.bt_type.sel] += 1
+            if isinstance(node, SubType):
+                counts[post.bt_sub.sel] += 1
+        writers.append({"key": key, "label": label, "count": counts["all"], "unclassified": counts["u"], "sections": [
+            {"obj": g, "count": counts[g.sel], "cats": [
+                {"obj": c, "count": counts[c.sel], "types": [
+                    {"obj": t, "count": counts[t.sel], "subs": [{"obj": s, "count": counts[s.sel]} for s in t.subs.all()]}
+                    for t in c.types.all()]}
+                for c in g.categories.all() if c.pk in allowed]}
+            for g in sections]})
+    return writers

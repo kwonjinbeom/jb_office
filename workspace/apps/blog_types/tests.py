@@ -356,3 +356,60 @@ class ClassifyExistingPostsTests(TestCase):
         self.assertEqual((flu.bt_category.name, flu.bt_type.name), ("정책·내 돈", "대상·신청일 (내 줄 찾기)"))
         self.assertEqual(kept.bt_category.code, "A")  # 이미 정한 분류는 그대로
         self.assertEqual(ssd.bt_sub.name, "두 개만 비교")
+
+
+class PostHubTests(TestCase):
+    """글 관리(티스토리·네이버 합친 화면)와 글 매핑 관리의 미분류·글 쪽 넣기"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post as TistoryPost
+        self.T, self.N = TistoryPost, NaverPost
+        self.season = PostType.objects.get(name="시즌 달력")
+
+    def test_posts_screen_merges_writers_and_filters_by_tree(self):
+        self.T.objects.create(title="티 임시", stage="temp", bt_category=self.season.category)
+        self.N.objects.create(title="네 임시", stage="temp")
+        self.T.objects.create(title="티 검토", stage="review")
+        url = reverse("posts:index")
+        res = self.client.get(url)
+        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["네 임시", "티 임시"])
+        self.assertEqual([t["count"] for t in res.context["tabs"]], [2, 1, 0])
+        res = self.client.get(url, {"w": "naver"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["네 임시"])
+        res = self.client.get(url, {"w": "tistory", "sel": "u", "stage": "review"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["티 검토"])  # 미분류
+        res = self.client.get(url, {"w": "tistory", "sel": self.season.category.sel})
+        self.assertEqual([p.title for p in res.context["posts"]], ["티 임시"])
+        self.assertContains(res, "미분류")  # 트리에 대분류와 같은 줄로
+
+    def test_bulk_move_and_send_mixed(self):
+        t = self.T.objects.create(title="티", stage="temp")
+        n = self.N.objects.create(title="네", stage="temp")
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{t.pk}", f"naver:{n.pk}"], "to": "review"})
+        t.refresh_from_db(), n.refresh_from_db()
+        self.assertEqual((t.stage, n.stage), ("review", "review"))
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{t.pk}"], "send": "1"})
+        self.assertTrue(self.N.objects.filter(title="티", stage="temp").exists())
+
+    def test_unclassified_node_and_place_from_class_side(self):
+        p = self.T.objects.create(title="분류 없는 포스트", stage="post")
+        tree = self.client.get(INDEX).context["writers"][0]
+        self.assertEqual(tree["unclassified"], 1)
+        res = self.client.get(INDEX, {"w": "tistory", "sel": "u"})
+        self.assertEqual([x.title for x in res.context["posts"]], ["분류 없는 포스트"])
+        java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        self.assertIn(java.pk, [pk for pk, _ in res.context["site_options"]])
+        self.assertNotIn(SiteCategory.objects.get(name="낙서장").pk, [pk for pk, _ in res.context["site_options"]])
+        back = f"{INDEX}?w=tistory&sel=u"
+        res = self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": p.pk, "next": back})
+        self.assertRedirects(res, back, fetch_redirect_response=False)
+        self.assertEqual(Placement.objects.get().tistory_post, p)
+
+    def test_writer_pages_highlight_post_hub_menu(self):
+        p = self.T.objects.create(title="글", stage="temp")
+        res = self.client.get(p.get_absolute_url())
+        self.assertEqual(res.context["ACTIVE_MENU"], "posts")
+        self.assertContains(res, f'{reverse("posts:index")}?stage=temp&amp;w=tistory')

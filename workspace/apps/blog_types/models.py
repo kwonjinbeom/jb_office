@@ -136,7 +136,20 @@ class Placement(TrashableModel):
                                      on_delete=models.CASCADE, related_name="placements")
     naver_post = models.ForeignKey("naver_writing.Post", verbose_name="네이버 글", null=True, blank=True,
                                    on_delete=models.CASCADE, related_name="placements")
+    class Convert(models.TextChoices):
+        """사이트별 템플릿으로 그 사이트에 맞게 바꾼 원고의 진행 (사이트별 템플릿 화면)"""
+        NONE = "none", "미변환"
+        REQUESTED = "requested", "변환 요청"
+        DONE = "done", "변환 완료"
+        CHECKED = "checked", "확인 완료"
+
     status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.UNSAVED)
+    convert_status = models.CharField("변환", max_length=10, choices=Convert.choices, default=Convert.NONE)
+    convert_note = models.CharField("변환 요청 메모", max_length=300, blank=True,
+                                    help_text="이 글만 다르게 할 것 (예: 첫 문단을 더 짧게)")
+    converted_title = models.CharField("변환 제목", max_length=200, blank=True)
+    converted_body = models.TextField("변환 본문", blank=True, help_text="그 사이트 에디터에 붙여넣을 원고 (마크다운 또는 HTML)")
+    converted_at = models.DateTimeField("변환한 때", null=True, blank=True)
     created_at = models.DateTimeField("넣은 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 
