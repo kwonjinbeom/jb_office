@@ -1,0 +1,96 @@
+/* 관리화면 (Django 관리자) — 앱(app.css)과 같은 글꼴·색. 색 띠 없이 흰 머리·옅은 회색 구분. */
+:root, html[data-theme] {
+  --primary: #2f6bd8;
+  --secondary: #2f6bd8;
+  --accent: #2f6bd8;
+  --primary-fg: #fff;
+  --body-fg: #1d2228;
+  --body-bg: #ffffff;
+  --body-quiet-color: #8a939e;
+  --body-medium-color: #4f5965;
+  --body-loud-color: #1d2228;
+  --header-color: #1d2228;
+  --header-branding-color: #1d2228;
+  --header-bg: #ffffff;
+  --header-link-color: #4f5965;
+  --breadcrumbs-fg: #8a939e;
+  --breadcrumbs-link-fg: #4f5965;
+  --breadcrumbs-bg: #f9fafb;
+  --link-fg: #2f6bd8;
+  --link-hover-color: #2459bd;
+  --link-selected-fg: #2459bd;
+  --hairline-color: #eef0f2;
+  --border-color: #e4e7eb;
+  --darkened-bg: #f9fafb;
+  --selected-bg: #ebf2fd;
+  --selected-row: #ebf2fd;
+  --button-fg: #fff;
+  --button-bg: #2f6bd8;
+  --button-hover-bg: #2459bd;
+  --default-button-bg: #2f6bd8;
+  --default-button-hover-bg: #2459bd;
+  --close-button-bg: #8a939e;
+  --close-button-hover-bg: #4f5965;
+  --delete-button-bg: #cf2a2a;
+  --delete-button-hover-bg: #b02323;
+  --object-tools-fg: #fff;
+  --object-tools-bg: #4f5965;
+  --object-tools-hover-bg: #1d2228;
+  --font-family-primary: "Pretendard Variable", Pretendard, "Malgun Gothic", "맑은 고딕", system-ui, sans-serif;
+  color-scheme: light;
+}
+body { background: #f3f4f6; font-size: 14px; }
+.theme-toggle { display: none; }
+
+/* 머리: 흰 바탕 + 아래 선 */
+#header { background: #fff; color: #1d2228; border-bottom: 1px solid #e4e7eb; padding: 10px 22px; min-height: 52px; box-sizing: border-box; }
+#site-name { display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 700; margin: 0; }
+#site-name a.jb-brand { display: inline-flex; align-items: center; gap: 8px; color: #1d2228; }
+.jb-mark { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: #2f6bd8; color: #fff; font-size: 12px; font-weight: 800; }
+#site-name a.jb-admin { color: #4f5965; font-weight: 600; padding-left: 14px; border-left: 1px solid #e4e7eb; }
+#user-tools { font-size: 12.5px; text-transform: none; letter-spacing: 0; color: #4f5965; }
+#user-tools a { border-bottom: 0; color: #4f5965; }
+#user-tools a:hover { color: #2f6bd8; }
+#logout-form button { color: #4f5965; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+
+/* 경로 */
+div.breadcrumbs { background: #f9fafb; color: #8a939e; border-bottom: 1px solid #e4e7eb; padding: 10px 22px; font-size: 12.5px; }
+div.breadcrumbs a { color: #4f5965; }
+
+/* 카드(모듈): 제목 줄은 색 띠 대신 옅은 회색 */
+.module { background: #fff; border: 1px solid #e4e7eb; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 2px rgba(16, 24, 40, .06); }
+.module h2, .module caption, .inline-group h2 { background: #f9fafb; color: #1d2228; font-size: 13px; font-weight: 700; text-transform: none; letter-spacing: 0; padding: 10px 14px; border-bottom: 1px solid #e4e7eb; }
+.module caption a.section, .module h2 a { color: #1d2228; }
+.module table { width: 100%; }
+#content { padding: 22px; }
+#content h1 { font-size: 20px; font-weight: 800; color: #1d2228; margin-bottom: 16px; }
+.dashboard .module table th, .dashboard .module table td { padding: 9px 14px; }
+.dashboard #content { max-width: 1100px; }
+
+/* 왼쪽 앱 목록 */
+#nav-sidebar { background: #fff; border-right: 1px solid #e4e7eb; }
+#nav-sidebar .module { border: 0; border-radius: 0; box-shadow: none; }
+#nav-sidebar .current-app .section:link, #nav-sidebar .current-app .section:visited { color: #2f6bd8; font-weight: 700; }
+#nav-sidebar .current-model { background: #ebf2fd; }
+#toggle-nav-sidebar { background: #fff; border-color: #e4e7eb; color: #8a939e; }
+
+/* 표 */
+thead th, tfoot td { background: #f9fafb; color: #4f5965; font-size: 12.5px; border-color: #e4e7eb; }
+#changelist table thead th { background: #f9fafb; }
+#result_list tbody tr:hover { background: #f3f5f8; }
+#changelist-filter { border-left: 1px solid #e4e7eb; }
+#changelist-filter h2 { background: #f9fafb; color: #1d2228; text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+/* 버튼·입력 */
+.button, input[type=submit], input[type=button], .submit-row input, a.button { border-radius: 6px; font-weight: 600; letter-spacing: 0; }
+input[type=text], input[type=password], input[type=email], input[type=url], input[type=number], input[type=search], textarea, select, .vTextField {
+  border: 1px solid #e4e7eb; border-radius: 6px; padding: 6px 8px; font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { border-color: #2f6bd8; outline: none; box-shadow: 0 0 0 3px #ebf2fd; }
+.submit-row { background: #f9fafb; border: 1px solid #e4e7eb; border-radius: 10px; }
+.object-tools a:link, .object-tools a:visited { border-radius: 6px; text-transform: none; letter-spacing: 0; font-weight: 600; }
+ul.messagelist li { border-radius: 8px; }
+
+/* 로그인 화면 */
+.login #container { border: 1px solid #e4e7eb; border-radius: 12px; box-shadow: 0 4px 16px rgba(16, 24, 40, .08); }
+.login #header { justify-content: center; }

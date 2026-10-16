@@ -97,3 +97,20 @@ class AppSetting(models.Model):
 
 
 WEBHOOK_SECRET_KEY = "deploy_webhook_secret"
+
+
+class MenuSetting(models.Model):
+    """메뉴 관리 화면에서 고친 메뉴 이름·순서·보이기. 메뉴 자체(주소·하위 구조)는 apps/core/menus.py 에 있다."""
+
+    key = models.CharField("메뉴 키", max_length=60, unique=True)
+    title = models.CharField("이름", max_length=40, blank=True, help_text="비우면 기본 이름")
+    order = models.PositiveSmallIntegerField("순서", default=0)
+    hidden = models.BooleanField("숨김", default=False)
+
+    class Meta:
+        ordering = ["order", "key"]
+        verbose_name = "메뉴 설정"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.title or self.key
