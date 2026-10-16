@@ -3,7 +3,10 @@
 프롬프트는 저장소 md (Routine.prompt_doc). 실행할 때는 짧은 안내문(launcher)만 만든다:
 날짜·하루 양 + "이 md 를 읽고 따른다" + 오늘의 자료(서버 DB: 사이트·체크, 이미 있는 글, 검색 표준).
 로컬·클라우드 구분은 없다 (2026-10-17 사용자). 진행 보고는 서버의 보고 주소(report_api)로 보내 '실행 이력'에 쌓인다
-(토큰이 없으면 PC 의 manage.py routine_report). 글쓰기는 '추가로 쓰기'(분류 고르기 · 코멘트)로 아침 분량과 별도로 더 쓴다.
+(토큰이 없으면 PC 의 manage.py routine_report).
+추가 실행 (중메뉴): 매일 아침 예약으로 도는 루틴(EXTRA_KEYS)을 아침 분량과 별도로 더 돌린다.
+글쓰기는 분류 고르기(기본) · 코멘트, 일일 아이디어는 개수 + 방향. 글쓰기 아침 분량(그날 쓸 분류)도 이 화면에서 고친다.
+리스트의 '실행'은 예약이 제대로 안 돌았을 때 손으로 돌리는 버튼이다.
 
 예약 실행: claude.ai 의 클라우드 루틴이 매일 아침 brief 주소(/routines/brief/<키>/?token=…)에서 그날 안내문을 받아 그대로 한다.
 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
@@ -330,7 +333,8 @@ REPORT = """
 
 REPORT_PC = 'workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}'
 REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --data-urlencode "step=<한 줄>"'
-EXTRA_TITLE = "이번에 쓸 것 (추가로 쓰기)"
+EXTRA_TITLE = "이번에 할 것 (추가 실행)"
+EXTRA_KEYS = ("writing", "daily_ideas")  # 추가 실행 화면에 나오는 루틴 (매일 아침 예약으로 도는 것)
 
 
 def report_url(request, routine, day, via=RoutineRun.Via.RUN):
@@ -353,10 +357,10 @@ def _report(routine, day, report):
 
 def launcher(routine, day, report=None, extra=""):
     """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ 진행 보고).
-    extra 는 글쓰기 '추가로 쓰기'의 내용: '오늘 쓸 분류' 대신 '이번에 쓸 것'으로 들어간다."""
+    extra 는 추가 실행의 내용: '오늘 쓸 분류'(없으면 맨 끝) 자리에 '이번에 할 것'으로 들어간다."""
     if extra:
-        head = [f"# 일일루틴 · {routine.name} (추가로 쓰기) — {day}", "",
-                f"할 일: 아침 예약 실행과 별도로 더 쓴다 — 아래 '{EXTRA_TITLE}'만큼만."]
+        head = [f"# 일일루틴 · {routine.name} (추가 실행) — {day}", "",
+                f"할 일: 아침 예약 실행과 별도로 더 한다 — 아래 '{EXTRA_TITLE}'만큼만."]
     else:
         head = [f"# 일일루틴 · {routine.name} — {day}", "", f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}."]
     lines = head + ["아래 md 를 읽고 그대로 따른다.", ""]
@@ -461,34 +465,33 @@ def _day(request):
         return timezone.localdate()
 
 
-def all_prompt(routines, day, report_for=lambda r: True):
-    """전체 실행 안내문: 루틴 순서대로 각 안내문(진행 보고 포함)을 이어 붙인다."""
-    head = [f"# 일일루틴 전체 실행 — {day}", "",
-            "아래 루틴을 위에서부터 차례로 끝까지 진행한다. 오래 걸려도 된다.",
-            "- 한 루틴을 끝내고(완료 보고) 다음 루틴으로 넘어간다.",
-            "- 한 루틴이 막히면 막힘으로 보고하고 다음 루틴으로 간다. 내가 할 일이 생기면 대기로 보고하고 기다린다.",
-            "- 순서: " + " → ".join(f"{i}. {r.name}" for i, r in enumerate(routines, start=1)), ""]
-    parts = ["\n".join(head)]
-    for i, r in enumerate(routines, start=1):
-        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, day, report=report_for(r)))
-    return "\n".join(parts)
-
-
 # ---- 분류 고르기 (글쓰기)
 
 def _picker(routine, day):
+    """추가 실행의 분류 칸 (빈 편수로 시작)과 그날 아침 분량 (저장한 분류 또는 기본 무작위)."""
     picks, custom = day_picks(routine, day)
-    tree = []
-    for s in _sections():
-        cats = []
-        for c in s.categories.all():
-            cats.append({"obj": c, "n": picks.get(c.sel, 0),
-                         "types": [{"obj": t, "n": picks.get(t.sel, 0)} for t in c.types.all()]})
-        total = sum(c["n"] + sum(t["n"] for t in c["types"]) for c in cats)
-        tree.append({"obj": s, "cats": cats, "n": total})
+    tree = [{"obj": s, "cats": [{"obj": c, "types": list(c.types.all())} for c in s.categories.all()]} for s in _sections()]
+    morning = [{"path": path, "n": n} for sel, n in picks.items() for node, path in [_node_path(sel)] if node is not None]
     from apps.blog_types.models import ClassChange
-    return {"routine": routine, "tree": tree, "total": sum(picks.values()), "custom": custom, "day": day,
+    return {"tree": tree, "picks": picks, "morning": morning, "total": sum(picks.values()), "custom": custom,
             "changes": list(ClassChange.objects.all()[:3])}
+
+
+def extra_page(request):
+    """추가 실행: 매일 아침 예약으로 도는 루틴을 더 돌린다. 누르면 extra 에서 안내문을 받아 PC 터미널을 연다."""
+    _nav(request, "routine_extra")
+    targets = [r for r in Routine.objects.all() if r.key in EXTRA_KEYS]
+    routine = next((r for r in targets if r.key == request.GET.get("r")), None) or next(
+        (r for r in targets if r.key == EXTRA_KEYS[0]), None)
+    try:
+        day = date.fromisoformat(request.GET.get("date", ""))
+    except ValueError:
+        day = timezone.localdate()
+    return render(request, "routines/extra.html", {
+        "page_title": "추가 실행", "targets": targets, "routine": routine, "day": day, "today": timezone.localdate(),
+        "picker": _picker(routine, day) if routine and "picks" in routine.data_keys else None,
+        "on_server": settings.IS_SERVER,
+    })
 
 
 def _picked(data):
@@ -515,7 +518,7 @@ def picks(request, pk):
         else:
             value = _picked(request.POST)
         RoutinePick.objects.update_or_create(routine=routine, day=day, defaults={"picks": value})
-    return _back(request, "#rt-picker")
+    return redirect(f"{reverse('routines:extra_page')}?{urlencode({'r': routine.key, 'date': day.isoformat()})}#ex-morning")
 
 
 # ---- 일일루틴 리스트
@@ -572,9 +575,7 @@ def index(request):
         "done_total": sum(1 for r in routines if r.state == "done"),
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
-        "all_prompt": all_prompt(routines, run_day, lambda r: report_url(request, r, run_day)) if routines else "",
-        "all_keys": ",".join(r.key for r in routines),
-        "picker": next((_picker(r, run_day) for r in routines if "picks" in r.data_keys), None),
+        "extra_keys": EXTRA_KEYS,
         "on_server": settings.IS_SERVER,
         "keep": request.get_full_path().partition("?")[2],
     })
@@ -722,10 +723,20 @@ def report_api(request, key):
 
 @require_POST
 def extra(request, pk):
-    """글쓰기 '추가로 쓰기' 안내문 (JSON). 분류 고르기(n_<sel> 편수) 또는 코멘트. 화면이 받아 '실행'처럼 PC 터미널을 연다."""
+    """추가 실행 안내문 (JSON). 글쓰기: 분류 고르기(n_<sel> 편수) 또는 코멘트. 그 밖(일일 아이디어): 개수 + 방향.
+    화면이 받아 '실행'처럼 PC 터미널을 연다."""
     routine = get_object_or_404(Routine, pk=pk)
     day = _day(request)
-    if request.POST.get("mode") == "comment":
+    mode = request.POST.get("mode")
+    if mode == "count":
+        raw = request.POST.get("count", "").strip()
+        if not raw.isdigit() or not 1 <= int(raw) <= 30:
+            return JsonResponse({"error": "개수는 1~30 으로 넣으세요."}, status=400)
+        comment = request.POST.get("comment", "").strip()[:2000]
+        body = f"{int(raw)}{routine.unit} 더 한다."
+        if comment:
+            body += f"\n방향 (사용자 코멘트): {comment}"
+    elif mode == "comment":
         comment = request.POST.get("comment", "").strip()[:2000]
         if not comment:
             return JsonResponse({"error": "무엇을 몇 편 쓸지 코멘트를 적으세요."}, status=400)

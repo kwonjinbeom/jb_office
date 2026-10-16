@@ -49,8 +49,8 @@ class TempRepoTests(Login):
     def test_seed_and_screen(self):
         self.assertEqual(list(Routine.objects.values_list("key", flat=True)), ["daily_ideas", "writing", "prompt_update"])
         res = self.client.get(INDEX)
-        for text in ["일일루틴", "글쓰기", "프롬프트 최신화", ">실행<", "미완료", "로컬 현황", 'id="rt-view"',
-                     ">전체 실행<", 'id="rt-picker"', "쓸 분류"]:
+        for text in ["일일루틴", "글쓰기", "프롬프트 최신화", ">실행<", "미완료",
+                     "실행 이력", ">추가 실행<"]:
             self.assertContains(res, text)
         self.assertNotContains(res, "클라우드")  # 로컬·클라우드 구분 없음
         self.assertTrue(Routine.all_objects.filter(key="naver", deleted_at__isnull=False).exists())  # 네이버 글쓰기 루틴은 휴지통
@@ -285,18 +285,37 @@ class RepoTests(Login):
         it = Category.objects.get(section__name="IT/AI", name="AI 도구·활용")
         res = self.client.post(url, {"day": "2026-10-16", "mode": "cats", f"n_{it.sel}": "2"})
         text = res.json()["prompt"]
-        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가로 쓰기) — 2026-10-16"))
-        self.assertIn("### 이번에 쓸 것 (추가로 쓰기)\n(총 2편 · 추가로 고른 분류)\n- IT/AI > AI 도구·활용 — 2편", text)
+        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가 실행) — 2026-10-16"))
+        self.assertIn("### 이번에 할 것 (추가 실행)\n(총 2편 · 추가로 고른 분류)\n- IT/AI > AI 도구·활용 — 2편", text)
         self.assertNotIn("### 오늘 쓸 분류", text)
         self.assertIn("### 이미 있는 글", text)  # 겹침 피하기 자료는 그대로
-        self.assertFalse(RoutinePick.objects.exists())  # 추가로 쓰기는 그날 분류를 저장하지 않는다
+        self.assertFalse(RoutinePick.objects.exists())  # 추가 실행은 그날 아침 분량을 저장하지 않는다
         res = self.client.post(url, {"day": "2026-10-16", "mode": "comment", "comment": "IT/AI 로 3편, 아이폰 18 가격 비교"})
         self.assertIn("사용자 코멘트: IT/AI 로 3편, 아이폰 18 가격 비교", res.json()["prompt"])
         self.assertEqual(self.client.post(url, {"mode": "comment", "comment": " "}).status_code, 400)
         self.assertEqual(self.client.post(url, {"mode": "cats"}).status_code, 400)
-        page = self.client.get(INDEX)
-        for html in ['data-pk-mode="cats" class="on"', 'data-pk-mode="comment"', "추가로 쓰기", 'id="pk-comment"']:
+        page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
+        for html in ['data-ex-mode="cats" class="on"', 'data-ex-mode="comment"', ">추가 실행<", 'id="ex-comment"',
+                     "10월 16일 아침 예약 분량", 'id="pk-morning"']:
             self.assertContains(page, html)
+        self.assertNotContains(page, 'class="num-in pk-n" type="number" min="0" max="20" name="n_c' + str(it.pk) + '" value')  # 빈 칸으로 시작
+
+    def test_extra_daily_ideas_by_count(self):
+        ideas = Routine.objects.get(key="daily_ideas")
+        url = reverse("routines:extra", args=[ideas.pk])
+        text = self.client.post(url, {"day": "2026-10-16", "mode": "count", "count": "4", "comment": "겨울 시즌 상품"}).json()["prompt"]
+        self.assertTrue(text.startswith("# 일일루틴 · 일일 아이디어 (추가 실행) — 2026-10-16"))
+        self.assertIn("### 이번에 할 것 (추가 실행)\n4개 더 한다.\n방향 (사용자 코멘트): 겨울 시즌 상품", text)
+        self.assertIn("### 검색 표준", text)
+        for bad in ["0", "31", "x"]:
+            self.assertEqual(self.client.post(url, {"mode": "count", "count": bad}).status_code, 400)
+        page = self.client.get(reverse("routines:extra_page"), {"r": "daily_ideas"})
+        self.assertContains(page, 'name="count"')
+        self.assertContains(page, 'data-mode="count"')
+        index = self.client.get(INDEX)
+        self.assertContains(index, ">실행<")  # 예약이 안 돌았을 때 손으로
+        self.assertContains(index, f'{reverse("routines:extra_page")}?r=daily_ideas')
+        self.assertNotContains(index, "전체 실행")
 
     def test_capture_version_when_md_changes(self):
         tistory = Routine.objects.get(key="writing")
@@ -324,7 +343,7 @@ class RepoTests(Login):
 
 
 class WritingPickTests(Login):
-    """글쓰기: 그날 쓸 분류 (기본 광고 6 · 판매 3 · IT/AI 2), 고르기·다시 뽑기·기본값, 전체 실행."""
+    """글쓰기: 그날 쓸 분류 (기본 광고 6 · 판매 3 · IT/AI 2), 고르기·다시 뽑기·기본값 (추가 실행 화면)."""
 
     def setUp(self):
         super().setUp()
@@ -359,24 +378,14 @@ class WritingPickTests(Login):
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
         self.assertEqual(row.target, 4)
-        self.assertTrue(res.context["picker"]["custom"])
-        self.client.post(self.url, {"day": "2026-10-16", "action": "reroll"})
+        page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
+        self.assertTrue(page.context["picker"]["custom"])
+        self.assertContains(page, "IT/AI &gt; AI 도구·활용 <strong>3편</strong>")
+        res = self.client.post(self.url, {"day": "2026-10-16", "action": "reroll"})
+        self.assertEqual(res.url, reverse("routines:extra_page") + "?r=writing&date=2026-10-16#ex-morning")
         self.assertEqual(sum(RoutinePick.objects.get().picks.values()), 11)
         self.client.post(self.url, {"day": "2026-10-16", "action": "default"})
         self.assertFalse(RoutinePick.objects.exists())
-
-    @patch("apps.routines.local_run.find_claude", return_value="claude")
-    @patch("apps.routines.local_run.subprocess.Popen")
-    def test_launch_all_runs_every_routine_in_one_terminal(self, popen, _claude):
-        res = self.client.get(INDEX, {"date": "2026-10-16"})
-        text = res.context["all_prompt"]
-        self.assertIn("1. 일일 아이디어 → 2. 글쓰기 → 3. 프롬프트 최신화", text)
-        self.assertEqual(text.count("## 진행 보고"), 3)
-        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
-            start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text)
-            self.assertTrue((Path(tmp) / ".routine" / "all-2026-10-16.md").is_file())
-        self.assertEqual(popen.call_count, 1)
-        self.assertEqual(sorted(RoutineRun.objects.values_list("routine__key", flat=True)), ["daily_ideas", "prompt_update", "writing"])
 
 
 class ClassChangeTests(TestCase):
