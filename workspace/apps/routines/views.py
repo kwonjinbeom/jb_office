@@ -1,35 +1,44 @@
-"""일일루틴: 메뉴마다 한 줄 (할 일 · 결과 · 로컬 · 클라우드 · 상태). 위쪽 달력 띠는 운영 화면과 같다.
+"""일일루틴: 메뉴마다 한 줄 (할 일 · 결과 · 로컬 실행 · 클라우드 복사 · 상태)과 프롬프트 관리.
 
-결과는 각 화면에 그날 생긴 수를 자동으로 센다 (일일 아이디어 = 그날 조사 후보, 글쓰기 = 그날 만든 템플릿).
-일별 화면에서 숫자를 고치면 그날 값으로 남는다 (RoutineDay). 비우면 다시 자동.
-로컬 실행은 이 PC 에서 돌리는 개발 서버에서만: 프롬프트를 workspace/.routine/ 에 쓰고 새 터미널에서 claude 를 연다.
-로컬 프롬프트 끝에는 진행 보고 부분이 자동으로 붙어, claude 가 `manage.py routine_report` 로 현황(RoutineRun)을 남긴다.
-프롬프트 관리: 루틴마다 로컬·클라우드 프롬프트와 그 프롬프트가 보는 md·자료를 보여 주고 고친다.
+프롬프트는 저장소 md (Routine.prompt_doc). 실행할 때는 짧은 안내문(launcher)만 만든다:
+날짜·하루 양 + "이 md 를 읽고 따른다" + 오늘의 자료(서버 DB: 사이트·체크, 이미 있는 글, 검색 표준).
+클라우드 안내문은 일일루틴/클라우드_제약.md 를 더 읽게 하고, 로컬 안내문 끝에는 진행 보고 부분이 붙는다.
+
+로컬 실행: 화면의 '실행'은 PC 에서 띄운 서버(ROUTINE_LOCAL_URL)의 launch 로 안내문을 보낸다.
+PC 서버가 안내문을 workspace/.routine/ 에 쓰고 새 터미널에서 claude 를 연다. 실서버 화면에서 눌러도 PC 에서 돈다.
+claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
+
+갱신: 평가(Evaluation)와 루틴의 점검 관점을 담은 갱신 안내문으로 AI 가 프롬프트 md 를 고쳐 main 에 올린다.
+바뀐 md 는 프롬프트 관리 화면을 열 때 PromptVersion 으로 남는다.
 """
+import hashlib
 import os
 import re
 import subprocess
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.db.models import Max, Q
-from django.http import Http404
+from django.db.models import Avg, Max, Q
+from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.blog_ops.models import FeedEntry
 from apps.blog_rules.models import Blog
 from apps.core import period
 
-from .models import Routine, RoutineDay, RoutineRun
+from .models import DATA_CHOICES, Evaluation, PromptVersion, Routine, RoutineDay, RoutineRun
 
 NAVER_DRAFTS = ("콘텐츠", "블로그_카페", "포스팅자동화", "네이버원고")
+CLOUD_DOC = "일일루틴/클라우드_제약.md"
 
 
 def naver_drafts_dir():
@@ -41,34 +50,49 @@ def _screen_choices():
     out = []
     for menu in MENUS:
         for m in (menu, *menu.children):
-            if m.url_name and not m.query and m.key != "routines" and (m.url_name, m.title) not in out:
+            if m.url_name and not m.query and m.key not in ("routines", "routine_prompts") and (m.url_name, m.title) not in out:
                 out.append((m.url_name, m.title))
-    # 티스토리·네이버 글쓰기는 메뉴에서 '글 관리'로 합쳤지만 각 목록 화면은 그대로 있다 (기존 루틴이 가리킨다)
-    out += [("writing:list", "티스토리 글쓰기"), ("naver_writing:list", "네이버 글쓰기")]
     return out
 
 
 class RoutineForm(forms.ModelForm):
     url_name = forms.ChoiceField(label="화면", choices=())
+    data = forms.MultipleChoiceField(label="오늘의 자료", choices=DATA_CHOICES, required=False,
+                                     widget=forms.CheckboxSelectMultiple)
 
     class Meta:
         model = Routine
-        fields = ["key", "name", "url_name", "task", "output", "daily", "unit", "prompt_local", "prompt_cloud"]
-        widgets = {"prompt_local": forms.Textarea(attrs={"rows": 18}), "prompt_cloud": forms.Textarea(attrs={"rows": 18})}
+        fields = ["key", "name", "url_name", "task", "output", "daily", "unit", "prompt_doc", "data", "review_focus"]
+        widgets = {"review_focus": forms.Textarea(attrs={"rows": 4})}
         help_texts = {"key": "영문 소문자·숫자·_ (진행 보고 명령에 쓰는 이름, 만든 뒤에는 못 바꿈)"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.label_suffix = ""
-        self.fields["url_name"].choices = _screen_choices()
+        choices = _screen_choices()
+        current = self.instance.url_name if self.instance.pk else ""
+        if current and current not in dict(choices):  # 메뉴가 바뀌어도 지금 화면은 고를 수 있게
+            choices.insert(0, (current, current))
+        self.fields["url_name"].choices = choices
+        self.initial["data"] = self.instance.data_keys if self.instance.pk else []
         if self.instance.pk:
             self.fields["key"].disabled = True
-        for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "input")
+        for name, field in self.fields.items():
+            if name != "data":
+                field.widget.attrs.setdefault("class", "input")
+
+    def clean_data(self):
+        return ",".join(self.cleaned_data["data"])
+
+    def clean_prompt_doc(self):
+        rel = self.cleaned_data["prompt_doc"].strip().replace("\\", "/").lstrip("/")
+        if rel and (not rel.endswith(".md") or ".." in rel.split("/")):
+            raise forms.ValidationError("저장소 안의 .md 경로로 적으세요.")
+        return rel
 
 
-def _nav(request):
-    request.nav_key = "routines"
+def _nav(request, key="routines"):
+    request.nav_key = key
 
 
 # ---- 자동으로 세는 결과 (날짜 → 수)
@@ -98,7 +122,7 @@ def _auto(key, lo, hi):
     return Counter()
 
 
-# ---- 프롬프트에 넣는 바뀌는 칸
+# ---- 오늘의 자료 (서버 DB 에서 가져와 안내문에 붙인다)
 
 PLATFORMS = {"tistory": [Blog.Platform.TISTORY], "naver": [Blog.Platform.NAVER]}
 
@@ -122,7 +146,7 @@ def _existing(key, day):
                 titles += [f"{batch['date']} · {item['title']}" for item in batch["items"]]
             if len(titles) >= 80:
                 break
-    else:
+    elif key in PLATFORMS:
         from apps.writing import drafts
         if key == "tistory":
             from apps.writing.models import Post
@@ -151,13 +175,26 @@ def _standard(day):
     return request_text(standard, day.isoformat())
 
 
-# 로컬 프롬프트 끝에 자동으로 붙는 부분. claude 가 단계마다 화면(로컬 현황)에 한 줄을 남긴다.
-REPORT = """
+DATA_TITLES = {"sites": "사이트·체크 (운영 화면)", "existing": "이미 있는 글 (겹치지 않게)", "standard": "검색 표준 (최신판)"}
 
+
+def data_text(routine, key, day):
+    if key == "sites":
+        return _sites(routine.key)
+    if key == "existing":
+        return _existing(routine.key, day)
+    if key == "standard":
+        return _standard(day)
+    return ""
+
+
+# ---- 안내문
+
+REPORT = """
 ## 진행 보고 (로컬 실행에 자동으로 붙는 부분)
 단계가 바뀔 때마다 저장소 폴더에서 아래 명령으로 일일루틴 화면(로컬 현황)에 한 줄을 남긴다.
 
-    workspace/.venv/Scripts/python workspace/manage.py routine_report {키} <상태> "<한 줄>" --date {날짜}
+    workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}
 
 - 시작: 맨 처음, 오늘 할 일 한 줄
 - 진행: 단계가 바뀔 때 (예: "사이트 최근 글 확인", "원고 2/4편 저장")
@@ -168,70 +205,191 @@ REPORT = """
 """
 
 
-def render_prompt(routine, mode, day):
-    text = routine.prompt_local if mode == "local" else routine.prompt_cloud
+def launcher(routine, mode, day):
+    """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ 로컬이면 진행 보고)."""
+    where = "로컬 PC" if mode == "local" else "클라우드"
+    lines = [f"# 일일루틴 · {routine.name} — {day} ({where})", "",
+             f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}.",
+             "아래 md 를 읽고 그대로 따른다.", ""]
+    lines.append(f"- `{routine.prompt_doc}` (이 루틴의 프롬프트)" if routine.prompt_doc else "- (프롬프트 md 가 아직 없습니다)")
+    if mode == "cloud":
+        lines.append(f"- `{CLOUD_DOC}` (클라우드 세션 제약)")
+    keys = routine.data_keys
+    if keys:
+        lines += ["", "## 오늘의 자료 (서버에서 가져옴)"]
+        for k in keys:
+            lines += ["", f"### {DATA_TITLES.get(k, k)}", data_text(routine, k, day)]
+    text = "\n".join(lines).rstrip() + "\n"
     if mode == "local":
-        text = text.rstrip() + REPORT
-    fills = {"{날짜}": lambda: day.isoformat(), "{하루양}": lambda: f"{routine.daily}{routine.unit}",
-             "{키}": lambda: routine.key,
-             "{사이트}": lambda: _sites(routine.key), "{기존글}": lambda: _existing(routine.key, day),
-             "{검색표준}": lambda: _standard(day)}
-    for mark, fill in fills.items():
-        if mark in text:
-            text = text.replace(mark, fill())
-    return text.strip() + "\n"
+        text += REPORT.format(key=routine.key, day=day)
+    return text
 
 
-# ---- 프롬프트가 보는 것: 본문에 적힌 md 파일 + 바뀌는 칸이 가져오는 자료
+def update_prompt(routine, mode, day, restore=None):
+    """갱신 안내문: 평가와 점검 관점으로 프롬프트 md 를 고친다. restore 면 그 버전 내용으로 되돌린다."""
+    evals = list(Evaluation.objects.filter(routine=routine).order_by("-day")[:60])
+    since = _last_update(routine)
+    lines = [f"# 일일루틴 프롬프트 갱신 · {routine.name} — {day} ({'로컬 PC' if mode == 'local' else '클라우드'})", "",
+             f"대상 프롬프트: `{routine.prompt_doc}` (로컬·클라우드가 함께 보는 지시)",
+             f"클라우드에만 해당하는 제약은 `{CLOUD_DOC}` 에 고친다.", "", "## 할 일"]
+    if restore is not None:
+        lines += [f"1. 대상 프롬프트를 아래 'v{restore.number} 내용'으로 되돌린다 (사용자가 좋았던 버전으로 고름).",
+                  "2. 맨 아래 '평가에서 배운 점'에 되돌린 날짜와 이유를 한 줄 더한다.",
+                  f"3. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} v{restore.number} 로 되돌림`.",
+                  "", f"## v{restore.number} 내용", "", restore.content]
+    else:
+        lines += [
+            "1. 대상 프롬프트와 그 안에서 읽게 하는 md 를 읽는다.",
+            "2. 아래 '나의 평가'를 분석한다: 점수가 낮은 날과 높은 날의 차이, 코멘트에서 반복되는 요구, [새] 표시 평가를 먼저.",
+            f"3. 이 루틴의 일 자체도 점검한다. 갱신 때 볼 관점: {routine.review_focus or '(없음)'}. 필요하면 웹에서 최신 기준(플랫폼 정책 등)을 확인한다.",
+            "4. 대상 프롬프트를 고친다. 지시는 짧고 구체적으로, 서로 부딪히는 지시는 정리한다. 맨 아래 '평가에서 배운 점'에 이번 갱신 날짜와 바꾼 이유를 한 줄씩 더한다.",
+            "5. 프롬프트 md 만 고친다. 루틴 결과물이나 다른 안내 md 는 고치지 않고, 고칠 점이 있으면 마지막 보고에 적는다.",
+            f"6. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} 갱신 (평가 {len(evals)}개)`.",
+            "", "## 나의 평가"]
+        for e in evals:
+            new = " [새]" if since is None or e.updated_at > since else ""
+            lines.append(f"- {e.day} · {e.score}점{new} · {e.comment or '(코멘트 없음)'}")
+        if not evals:
+            lines.append("- (아직 없음: 점검 관점만으로 손본다)")
+        today = timezone.localdate()
+        counts = _auto(routine.key, today - timedelta(days=13), today)
+        fixed = {d.day: d.done for d in RoutineDay.objects.filter(routine=routine, day__gte=today - timedelta(days=13))}
+        lines += ["", f"## 최근 14일 결과 수 (하루 {routine.daily}{routine.unit} 목표)"]
+        lines += [f"- {d}: {fixed.get(d, counts[d])}" for d in period.days_between(today - timedelta(days=13), today)]
+    if mode == "cloud":
+        lines += ["", f"(클라우드: `{CLOUD_DOC}` 도 따른다)"]
+    text = "\n".join(lines).rstrip() + "\n"
+    if mode == "local":
+        text += REPORT.format(key=routine.key, day=day)
+    return text
+
+
+# ---- 프롬프트가 보는 것: 프롬프트 md, 그 안에서 읽게 하는 md, 클라우드 제약, 오늘의 자료
 
 MD_PATH = re.compile(r"(?<![\w가-힣./-])([\w가-힣][\w가-힣./-]*\.md)\b")
 
 
 def _md_path(rel):
-    for base in (settings.REPO_ROOT, settings.REPO_ROOT / "workspace"):
-        f = (Path(base) / rel).resolve()
-        if f.is_file() and Path(settings.REPO_ROOT).resolve() in f.parents:
-            return f.relative_to(Path(settings.REPO_ROOT).resolve()).as_posix()
+    root = Path(settings.REPO_ROOT).resolve()
+    for base in (root, root / "workspace"):
+        f = (base / rel).resolve()
+        if f.is_file() and root in f.parents:
+            return f.relative_to(root).as_posix()
     return None
 
 
-def references(routine, text):
-    """[{label, url, ok, note}] — md 는 저장소에 있는지(ok)와 볼 주소, 자료는 어디서 오는지."""
-    from apps.daily_ideas.standard import METHOD_DOC
-    out, seen = [], set()
+def _read(rel):
+    found = _md_path(rel) if rel else None
+    return (Path(settings.REPO_ROOT) / found).read_text(encoding="utf-8") if found else ""
 
-    def md(rel, note=""):
-        found = _md_path(rel)
-        key = found or rel
-        if key in seen:
-            return
-        seen.add(key)
-        out.append({"label": rel, "rel": found, "url": reverse("routines:doc", args=[found]) if found else "",
-                    "ok": bool(found), "note": note})
 
-    # 쓰는 곳(저장·결과 줄)은 빼고 읽는 md 만. 짧게 다시 적은 경로(원고/README.md)는 앞에서 찾은 전체 경로와 같은 파일.
-    reads = [rel for line in text.splitlines() if not re.search(r"저장|결과", line) for rel in MD_PATH.findall(line)]
-    for rel in reads:
-        if not _md_path(rel) and any(r != rel and r.endswith("/" + rel) and _md_path(r) for r in reads):
+def _reads(text):
+    """md 안에서 읽게 하는 md. 쓰는 곳(저장·결과 줄)은 빼고, 짧게 다시 적은 경로는 앞의 전체 경로와 같은 파일로 본다."""
+    found = [rel for line in text.splitlines() if not re.search(r"저장|결과", line) for rel in MD_PATH.findall(line)]
+    out = []
+    for rel in found:
+        if not _md_path(rel) and any(r != rel and r.endswith("/" + rel) and _md_path(r) for r in found):
             continue
-        md(rel)
-    if "{검색표준}" in text:
-        md(METHOD_DOC, "검색 표준 안")
-        out.append({"label": "검색 표준 (최신판)", "url": reverse("daily_ideas:standard"), "ok": True, "note": "자료"})
-    if "{사이트}" in text:
-        out.append({"label": "운영: 사이트 컨셉·체크", "url": reverse("blog_rules:index"), "ok": True, "note": "자료"})
-    if "{기존글}" in text:
-        label = "지난 후보 (일일아이디어 JSON)" if routine.key == "daily_ideas" else "이미 있는 글 (글쓰기·RSS·원고 폴더)"
-        out.append({"label": label, "url": "", "ok": True, "note": "자료"})
+        if rel not in out:
+            out.append(rel)
+    return out
+
+
+def references(routine):
+    """[{kind, label, rel, ok}] — 프롬프트 md · 읽는 md · 클라우드 제약 · 오늘의 자료."""
+    out = [{"kind": "프롬프트", "label": routine.prompt_doc or "(프롬프트 md 없음)",
+            "rel": _md_path(routine.prompt_doc) if routine.prompt_doc else None}]
+    seen = {routine.prompt_doc}
+    for rel in _reads(_read(routine.prompt_doc)):
+        if rel not in seen:
+            seen.add(rel)
+            out.append({"kind": "읽는 md", "label": rel, "rel": _md_path(rel)})
+    out.append({"kind": "클라우드", "label": CLOUD_DOC, "rel": _md_path(CLOUD_DOC)})
+    for ref in out:
+        ref["ok"] = bool(ref["rel"])
+    out += [{"kind": "자료", "label": DATA_TITLES.get(k, k), "rel": None, "ok": True, "data": k} for k in routine.data_keys]
     return out
 
 
 def _docs_of(routine):
-    return {ref["rel"] for text in (routine.prompt_local, routine.prompt_cloud)
-            for ref in references(routine, text) if ref.get("rel")}
+    return {ref["rel"] for ref in references(routine) if ref["rel"]}
 
 
-# ---- 화면
+def capture_version(routine):
+    """프롬프트 md 가 마지막 버전과 다르면 새 버전으로 남긴다."""
+    content = _read(routine.prompt_doc)
+    if not content:
+        return None
+    sha = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    last = routine.versions.first()
+    if last and last.sha == sha:
+        return last
+    return PromptVersion.objects.create(routine=routine, number=(last.number + 1) if last else 1, sha=sha, content=content)
+
+
+def _last_update(routine):
+    """마지막 갱신 시각 = 첫 버전 뒤에 새로 남은 버전의 시각. 그 뒤에 남긴 평가가 '새 평가'."""
+    last = routine.versions.first()
+    return last.captured_at if last and last.number > 1 else None
+
+
+# ---- 로컬 실행 (PC 서버의 launch 로 보낸다)
+
+def launch_action():
+    """'실행' 폼이 보낼 곳. PC 서버면 같은 서버, 실서버면 PC 서버(ROUTINE_LOCAL_URL)."""
+    path = reverse("routines:launch")
+    return settings.ROUTINE_LOCAL_URL.rstrip("/") + path if settings.IS_SERVER else path
+
+
+def _origin_ok(request):
+    origin = request.headers.get("Origin", "")
+    if not origin:
+        return False
+    parts = urlsplit(origin)
+    origin = f"{parts.scheme}://{parts.netloc}"
+    allowed = {f"{request.scheme}://{request.get_host()}", *settings.ROUTINE_LAUNCH_ORIGINS}
+    return origin in {a.rstrip("/") for a in allowed}
+
+
+@csrf_exempt
+@require_POST
+def launch(request):
+    """안내문을 받아 새 터미널에서 claude 를 연다. PC 서버에서만, 허용한 화면(실서버·PC)에서 보낸 것만."""
+    if settings.IS_SERVER:
+        return HttpResponseForbidden("로컬 실행은 PC 에서 띄운 서버에서만 됩니다.")
+    if not _origin_ok(request):
+        return HttpResponseForbidden("허용하지 않은 화면에서 보낸 실행 요청입니다.")
+    key = request.POST.get("key", "")
+    text = request.POST.get("prompt", "")
+    kind = "update" if request.POST.get("kind") == "update" else "run"
+    if not re.fullmatch(r"[a-z0-9_-]{1,30}", key) or not text.strip() or len(text) > 200_000:
+        return HttpResponseForbidden("실행 요청이 올바르지 않습니다.")
+    try:
+        day = date.fromisoformat(request.POST.get("day", ""))
+    except ValueError:
+        day = timezone.localdate()
+    routine = Routine.objects.filter(key=key).first() or Routine.objects.create(
+        key=key, name=request.POST.get("name", key)[:40] or key, url_name="routines:index", task="(실서버에서 보낸 루틴)")
+    folder = settings.BASE_DIR / ".routine"
+    folder.mkdir(exist_ok=True)
+    name = f"{key}-{'update-' if kind == 'update' else ''}{day}.md"
+    (folder / name).write_text(text, encoding="utf-8")
+    label = "갱신" if kind == "update" else "루틴"
+    run = RoutineRun.objects.filter(routine=routine, day=day).first()
+    if run is None or not run.is_open:
+        run = RoutineRun.objects.create(routine=routine, day=day)
+    run.report(RoutineRun.Status.RUNNING, f"{label} · 터미널을 열었습니다 (claude 시작 대기)", timezone.localtime())
+    ask = f"Read workspace/.routine/{name} and follow it exactly."
+    if os.name == "nt":
+        subprocess.Popen(["cmd", "/c", "start", f"일일루틴 {routine.name} {label}", "/D", str(settings.REPO_ROOT),
+                          "cmd", "/k", "claude", ask])
+        messages.success(request, f"새 터미널에서 {routine.name} {label}을 시작했습니다. 아래 로컬 현황에 단계가 쌓입니다.")
+    else:
+        messages.info(request, f'저장소 폴더에서 실행하세요: claude "{ask}"')
+    return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
+
+
+# ---- 일일루틴 리스트
 
 def index(request):
     _nav(request)
@@ -254,6 +412,7 @@ def index(request):
         return "done" if all(total(r, a, b) >= r.daily * days for r in targets) else "todo"
 
     days = (end - start).days + 1 if start > today else (min(end, today) - start).days + 1
+    run_day = sel if mode == "day" else today
     for r in routines:
         r.result = total(r, start, end)
         r.target = r.daily * days
@@ -261,21 +420,24 @@ def index(request):
         r.auto = auto[r.pk][sel]
         r.fixed = (r.pk, sel) in fixed
         r.url = reverse(r.url_name)
-        r.local_prompt = render_prompt(r, "local", sel if mode == "day" else today)
-        r.cloud_prompt = render_prompt(r, "cloud", sel if mode == "day" else today)
+        r.local_prompt = launcher(r, "local", run_day)
+        r.cloud_prompt = launcher(r, "cloud", run_day)
     runs = (RoutineRun.objects.select_related("routine")
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
-                                                                 RoutineRun.Status.BLOCKED]))[:20])
+                                                                 RoutineRun.Status.BLOCKED]))[:30])
     return render(request, "routines/index.html", {
         "page_title": "일일루틴",
         "bar": period.bar(mode, sel, today, state),
         "mode": mode,
         "day": sel,
+        "run_day": run_day,
         "routines": routines,
         "done_total": sum(1 for r in routines if r.state == "done"),
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
-        "local_run": not settings.IS_SERVER,
+        "on_server": settings.IS_SERVER,
+        "launch_action": launch_action(),
+        "local_url": settings.ROUTINE_LOCAL_URL.rstrip("/") + reverse("routines:index"),
         "keep": request.get_full_path().partition("?")[2],
     })
 
@@ -300,53 +462,105 @@ def count(request, pk):
     return _back(request, f"#rt-{routine.key}")
 
 
-@require_POST
-def run_local(request, pk):
-    """이 PC 의 개발 서버에서만: 로컬 프롬프트를 파일로 쓰고 새 터미널에서 claude 를 연다 (권한은 터미널에서 직접 승인)."""
-    routine = get_object_or_404(Routine, pk=pk)
-    if settings.IS_SERVER:
-        messages.warning(request, "로컬 실행은 PC 에서 띄운 서버에서만 됩니다. 여기서는 프롬프트를 복사해 쓰세요.")
-        return _back(request)
-    try:
-        day = date.fromisoformat(request.POST.get("day", ""))
-    except ValueError:
-        day = timezone.localdate()
-    folder = settings.BASE_DIR / ".routine"
-    folder.mkdir(exist_ok=True)
-    name = f"{routine.key}-{day}.md"
-    (folder / name).write_text(render_prompt(routine, "local", day), encoding="utf-8")
-    ask = f"Read workspace/.routine/{name} and follow it exactly."
-    run = RoutineRun.objects.filter(routine=routine, day=day).first()
-    if run is None or not run.is_open:
-        run = RoutineRun.objects.create(routine=routine, day=day)
-    run.report(RoutineRun.Status.RUNNING, "터미널을 열었습니다 (claude 시작 대기)", timezone.localtime())
-    if os.name == "nt":
-        subprocess.Popen(["cmd", "/c", "start", f"일일루틴 {routine.name}", "/D", str(settings.REPO_ROOT),
-                          "cmd", "/k", "claude", ask])
-        messages.success(request, f"새 터미널에서 {routine.name} 루틴을 시작했습니다.")
-    else:
-        messages.info(request, f'저장소 폴더에서 실행하세요: claude "{ask}"')
-    return _back(request, f"#rt-{routine.key}")
-
-
-def _prompt_nav(request):
-    request.nav_key = "routine_prompts"
-
+# ---- 프롬프트 관리 (루틴 탭: 왼쪽 프롬프트 md·자료, 오른쪽 나의 평가·갱신·이력)
 
 def prompts(request):
-    """프롬프트 관리: 루틴마다 로컬·클라우드 프롬프트(원문)와 그 프롬프트가 보는 md·자료."""
-    _prompt_nav(request)
-    rows = []
-    for r in Routine.objects.all():
-        for mode, label, text in (("local", "로컬", r.prompt_local), ("cloud", "클라우드", r.prompt_cloud)):
-            rows.append({"routine": r, "mode": mode, "label": label, "text": text, "first": mode == "local",
-                         "refs": references(r, text + (REPORT if mode == "local" else "")),
-                         "marks": [m for m in ("{날짜}", "{하루양}", "{사이트}", "{기존글}", "{검색표준}") if m in text]})
-    return render(request, "routines/prompts.html", {"page_title": "프롬프트 관리", "rows": rows})
+    _nav(request, "routine_prompts")
+    routines = list(Routine.objects.all())
+    if not routines:
+        return render(request, "routines/prompts.html", {"page_title": "프롬프트 관리", "routines": []})
+    routine = next((r for r in routines if r.key == request.GET.get("r")), routines[0])
+    capture_version(routine)
+    today = timezone.localdate()
+    refs = references(routine)
+    from apps.docs.views import _render
+    for ref in refs:
+        if ref.get("data"):
+            ref["text"] = data_text(routine, ref["data"], today)
+        elif ref["rel"]:
+            ref["html"], _ = _render(_read(ref["rel"]))
+    since = _last_update(routine)
+    evals = list(routine.evaluations.all()[:60])
+    for e in evals:
+        e.is_new = since is None or e.updated_at > since
+    return render(request, "routines/prompts.html", {
+        "page_title": "프롬프트 관리",
+        "routines": routines,
+        "routine": routine,
+        "refs": refs,
+        "evals": evals,
+        "new_count": sum(1 for e in evals if e.is_new),
+        "avg": routine.evaluations.aggregate(avg=Avg("score"))["avg"],
+        "versions": list(routine.versions.all()[:30]),
+        "today": today,
+        "on_server": settings.IS_SERVER,
+        "launch_action": launch_action(),
+        "update_local": update_prompt(routine, "local", today),
+        "update_cloud": update_prompt(routine, "cloud", today),
+    })
+
+
+def _prompts_url(routine, anchor=""):
+    return f"{reverse('routines:prompts')}?r={routine.key}{anchor}"
+
+
+@require_POST
+def evaluate(request, pk):
+    routine = get_object_or_404(Routine, pk=pk)
+    try:
+        day = date.fromisoformat(request.POST.get("day", ""))
+        score = int(request.POST.get("score", ""))
+    except ValueError:
+        messages.warning(request, "날짜와 평점을 고르세요.")
+        return redirect(_prompts_url(routine, "#pm-eval"))
+    if not 1 <= score <= 5:
+        messages.warning(request, "평점은 1~5점입니다.")
+        return redirect(_prompts_url(routine, "#pm-eval"))
+    comment = request.POST.get("comment", "").strip()[:2000]
+    Evaluation.objects.update_or_create(routine=routine, day=day, defaults={"score": score, "comment": comment})
+    return redirect(_prompts_url(routine, "#pm-eval"))
+
+
+@require_POST
+def evaluation_delete(request, pk):
+    e = get_object_or_404(Evaluation, pk=pk)
+    e.delete()  # 휴지통으로
+    messages.success(request, "평가를 휴지통으로 옮겼습니다.")
+    return redirect(_prompts_url(e.routine, "#pm-eval"))
+
+
+@require_POST
+def version_star(request, pk):
+    v = get_object_or_404(PromptVersion, pk=pk)
+    v.starred = not v.starred
+    v.save(update_fields=["starred"])
+    return redirect(_prompts_url(v.routine, "#pm-history"))
+
+
+def version_restore(request, pk):
+    """좋았던 버전으로 되돌리는 갱신 안내문 (로컬 실행 / 클라우드 복사)."""
+    _nav(request, "routine_prompts")
+    v = get_object_or_404(PromptVersion, pk=pk)
+    today = timezone.localdate()
+    return render(request, "routines/restore.html", {
+        "page_title": f"{v.routine.name} v{v.number} 로 되돌리기", "version": v, "routine": v.routine, "today": today,
+        "on_server": settings.IS_SERVER, "launch_action": launch_action(),
+        "local": update_prompt(v.routine, "local", today, restore=v), "cloud": update_prompt(v.routine, "cloud", today, restore=v)})
+
+
+def doc(request, rel):
+    """프롬프트가 보는 md 를 읽기 전용으로. 루틴이 보는 파일만 연다."""
+    _nav(request, "routine_prompts")
+    used = [r for r in Routine.objects.all() if rel in _docs_of(r)]
+    if not used:
+        raise Http404
+    from apps.docs.views import _render
+    body, _ = _render(_read(rel))
+    return render(request, "routines/doc.html", {"page_title": Path(rel).name, "rel": rel, "html": body, "used": used})
 
 
 def edit(request, pk=None):
-    _prompt_nav(request)
+    _nav(request, "routine_prompts")
     routine = get_object_or_404(Routine, pk=pk) if pk else None
     form = RoutineForm(request.POST or None, instance=routine)
     if request.method == "POST" and form.is_valid():
@@ -355,28 +569,16 @@ def edit(request, pk=None):
             saved.order = (Routine.all_objects.aggregate(m=Max("order"))["m"] or 0) + 1
         saved.save()
         messages.success(request, f"'{saved.name}' 루틴을 저장했습니다.")
-        return redirect("routines:prompts")
+        return redirect(_prompts_url(saved))
     return render(request, "routines/form.html", {
         "page_title": f"{routine.name} 루틴" if routine else "새 루틴", "form": form, "routine": routine})
 
 
 def delete(request, pk):
-    _prompt_nav(request)
+    _nav(request, "routine_prompts")
     routine = get_object_or_404(Routine, pk=pk)
     if request.method == "POST":
         routine.delete()  # 휴지통으로 (7일 동안 복원)
         messages.success(request, f"'{routine.name}' 루틴을 휴지통으로 옮겼습니다.")
         return redirect("routines:prompts")
     return render(request, "routines/confirm_delete.html", {"page_title": "삭제", "routine": routine})
-
-
-def doc(request, rel):
-    """프롬프트가 보는 md 를 읽기 전용으로. 루틴 프롬프트에 적힌 파일만 연다."""
-    _prompt_nav(request)
-    used = [r for r in Routine.objects.all() if rel in _docs_of(r)]
-    if not used:
-        raise Http404
-    from apps.docs.views import _render
-    path = Path(settings.REPO_ROOT) / rel
-    body, toc = _render(path.read_text(encoding="utf-8"))
-    return render(request, "routines/doc.html", {"page_title": path.name, "rel": rel, "html": body, "used": used})

@@ -14,7 +14,7 @@
   <section class="card">
     <div class="card-body form-grid">
       {% for field in form %}
-      {% if field.name == 'prompt_local' or field.name == 'prompt_cloud' or field.name == 'task' or field.name == 'output' %}
+      {% if field.name == 'review_focus' or field.name == 'prompt_doc' or field.name == 'task' or field.name == 'output' or field.name == 'data' %}
       {% include "includes/field.html" with field=field cls="span-2" %}
       {% else %}
       {% include "includes/field.html" with field=field %}

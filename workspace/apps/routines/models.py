@@ -1,13 +1,14 @@
-"""일일루틴: 화면(메뉴)마다 AI 에게 맡길 하루 양과 프롬프트. 로컬(PC 터미널)과 클라우드는 프롬프트가 다르다.
+"""일일루틴: 화면(메뉴)마다 AI 에게 맡길 하루 양과 프롬프트.
 
-로컬: 이 PC 저장소에서 claude 를 돌린다. 티스토리·네이버를 직접 볼 수 있고 main 에 push 한다.
-클라우드: 클라우드 세션에 프롬프트를 직접 보낸다. 사이트를 제대로 못 보니 이미 있는 글 목록을 프롬프트에 넣고, PR 로 올린다.
+프롬프트는 저장소 md (일일루틴/프롬프트/<키>.md). 로컬·클라우드가 같은 md 를 보고, 클라우드는 일일루틴/클라우드_제약.md 를 더 본다.
+실행할 때는 짧은 안내문(날짜·하루 양·오늘의 자료)만 만들어 넘긴다 (views.launcher).
+평가(Evaluation)를 쌓고 '갱신'하면 AI 가 그 md 를 고친다. 바뀐 md 는 PromptVersion 으로 남는다.
 """
 from django.db import models
 
 from apps.core.models import TrashableModel
 
-PLACEHOLDERS = "{날짜} {하루양} {사이트} {기존글} {검색표준}"
+DATA_CHOICES = [("sites", "사이트·체크"), ("existing", "이미 있는 글"), ("standard", "검색 표준")]
 
 
 class Routine(TrashableModel):
@@ -18,8 +19,12 @@ class Routine(TrashableModel):
     output = models.CharField("결과 위치", max_length=200, blank=True)
     daily = models.PositiveSmallIntegerField("하루 양", default=1)
     unit = models.CharField("단위", max_length=10, default="개")
-    prompt_local = models.TextField("로컬 프롬프트", help_text=f"PC 터미널용. 바뀌는 칸: {PLACEHOLDERS}")
-    prompt_cloud = models.TextField("클라우드 프롬프트", help_text=f"클라우드 세션용. 바뀌는 칸: {PLACEHOLDERS}")
+    prompt_doc = models.CharField("프롬프트 md", max_length=200, blank=True, help_text="저장소 기준 경로 (예: 일일루틴/프롬프트/tistory.md)")
+    data = models.CharField("오늘의 자료", max_length=60, blank=True, help_text="실행 안내문에 붙일 자료 (서버 DB 에서 가져옴)")
+    review_focus = models.TextField("갱신 때 볼 관점", blank=True, help_text="갱신할 때 평가와 함께 점검할 것 (예: 글쓰기면 사실 확인·중복·광고 정책)")
+    # 예전에 DB 에 두던 프롬프트. 지금은 prompt_doc(md)을 쓴다. 지우지 않고 남겨 둔다.
+    prompt_local = models.TextField("(예전) 로컬 프롬프트", blank=True, editable=False)
+    prompt_cloud = models.TextField("(예전) 클라우드 프롬프트", blank=True, editable=False)
     order = models.PositiveSmallIntegerField("순서", default=0)
 
     class Meta:
@@ -29,6 +34,10 @@ class Routine(TrashableModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def data_keys(self):
+        return [k for k in self.data.split(",") if k]
 
 
 class RoutineDay(models.Model):
@@ -89,3 +98,42 @@ class RoutineRun(models.Model):
         line = f"{at:%H:%M} {self.Status(status).label} · {message}"
         self.log = f"{self.log}\n{line}" if self.log else line
         self.save()
+
+
+class Evaluation(TrashableModel):
+    """그날 루틴 결과물에 대한 나의 평가. 갱신 때 AI 가 읽고 프롬프트에 반영한다."""
+
+    routine = models.ForeignKey(Routine, verbose_name="루틴", on_delete=models.CASCADE, related_name="evaluations")
+    day = models.DateField("날짜")
+    score = models.PositiveSmallIntegerField("평점", choices=[(i, f"{i}점") for i in range(1, 6)])
+    comment = models.TextField("코멘트", blank=True)
+    created_at = models.DateTimeField("남긴 때", auto_now_add=True)
+    updated_at = models.DateTimeField("고친 때", auto_now=True)
+
+    class Meta:
+        ordering = ["-day", "-pk"]
+        verbose_name = "루틴 평가"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return f"{self.routine} {self.day} {self.score}점"
+
+
+class PromptVersion(models.Model):
+    """프롬프트 md 가 바뀔 때마다 남기는 내용. 프롬프트 관리 화면을 열 때 파일과 비교해 새로 남긴다."""
+
+    routine = models.ForeignKey(Routine, verbose_name="루틴", on_delete=models.CASCADE, related_name="versions")
+    number = models.PositiveIntegerField("버전")
+    sha = models.CharField("내용 해시", max_length=64)
+    content = models.TextField("내용")
+    captured_at = models.DateTimeField("남긴 때", auto_now_add=True)
+    starred = models.BooleanField("좋았던 버전", default=False)
+
+    class Meta:
+        ordering = ["-number"]
+        verbose_name = "프롬프트 버전"
+        verbose_name_plural = verbose_name
+        constraints = [models.UniqueConstraint(fields=["routine", "number"], name="routines_promptversion_unique")]
+
+    def __str__(self):
+        return f"{self.routine} v{self.number}"

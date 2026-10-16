@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'routines:prompts' %}?r={{ routine.key }}">프롬프트 관리</a></div>{% endblock %}
+
+{% block heading %}{{ routine.name }} <span class="cnt">v{{ version.number }} 로 되돌리기</span>{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{% url 'routines:prompts' %}?r={{ routine.key }}#pm-history">취소</a>
+<button class="btn" type="button" data-copy="#rs-cloud" data-copy-msg="클라우드용 안내문을 복사했습니다.">{% include "includes/ic.html" with name="copy" %}클라우드</button>
+{% include "routines/_launch.html" with key=routine.key name=routine.name kind="update" text=local day=today label="로컬에서 되돌리기" primary=True %}
+{% endblock %}
+
+{% block content %}
+{# 되돌리기도 갱신과 같다: AI 가 프롬프트 md 를 이 버전 내용으로 고쳐 main 에 올리면 새 버전으로 쌓인다. #}
+<section class="card pm-viewer"><pre class="pm-data">{{ local }}</pre></section>
+<textarea id="rs-cloud" hidden>{{ cloud }}</textarea>
+{% endblock %}
