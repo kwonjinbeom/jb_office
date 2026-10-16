@@ -1,4 +1,4 @@
-"""블로그·카페 › 규칙: 위에는 블로그 카드(하루 편수·쓰는 글·지표), 아래는 묶음별 규칙. 한 화면에서 보고 바로 고친다."""
+"""블로그·카페 › 규칙: 사이트마다 한 줄 (컨셉 · 하루 · 수익·지표 · 체크). 한 화면에서 보고 바로 고친다."""
 from collections import OrderedDict
 
 from django.contrib import messages
@@ -17,21 +17,17 @@ def _nav(request):
 
 def index(request):
     _nav(request)
-    blogs = list(Blog.objects.all())
+    blogs = list(Blog.objects.prefetch_related("checks"))
     active = [b for b in blogs if b.status == Blog.Status.ACTIVE]
     accounts = OrderedDict()  # 같은 계정의 하루 편수 합계 (티스토리: 카카오 계정 단위로 합산된다)
     for b in active:
         if b.account:
             accounts.setdefault(b.account, []).append(b)
-    groups = OrderedDict((value, {"label": label, "rules": []}) for value, label in Rule.Group.choices)
-    for rule in Rule.objects.all():
-        groups[rule.group]["rules"].append(rule)
     return render(request, "blog_rules/index.html", {
         "page_title": "규칙",
         "blogs": blogs,
         "daily_total": sum(b.daily for b in active),
-        "accounts": [(name, sum(b.daily for b in items), items) for name, items in accounts.items() if len(items) > 1],
-        "groups": groups,
+        "accounts": [(name, sum(b.daily for b in items)) for name, items in accounts.items() if len(items) > 1],
     })
 
 
@@ -57,20 +53,22 @@ def rule_form(request, pk):
     form = RuleForm(request.POST or None, instance=rule)
     if request.method == "POST" and form.is_valid():
         form.save()
-        messages.success(request, "규칙을 저장했습니다.")
-        return redirect(f"{_index_url()}#g-{rule.group}")
-    return render(request, "blog_rules/form.html", {"page_title": "규칙 수정", "form": form, "obj": rule, "kind": "rule"})
+        messages.success(request, "체크를 저장했습니다.")
+        return redirect(f"{_index_url()}#site-{rule.blog_id}")
+    return render(request, "blog_rules/form.html", {"page_title": "체크 수정", "form": form, "obj": rule, "kind": "rule"})
 
 
 @require_POST
 def rule_add(request):
-    group, body = request.POST.get("group", ""), " ".join(request.POST.get("body", "").split())[:200]
-    if group not in Rule.Group.values or not body:
-        messages.warning(request, "규칙을 입력하세요.")
+    """사이트 체크 한 줄 추가 (입력 후 Enter)."""
+    blog = Blog.objects.filter(pk=request.POST.get("blog") or 0).first()
+    body = " ".join(request.POST.get("body", "").split())[:200]
+    if blog is None or not body:
+        messages.warning(request, "체크할 내용을 입력하세요.")
         return redirect("blog_rules:index")
-    order = (Rule.objects.filter(group=group).aggregate(m=Max("order"))["m"] or 0) + 1
-    Rule.objects.create(group=group, body=body, order=order)
-    return redirect(f"{_index_url()}#g-{group}")
+    order = (Rule.objects.filter(blog=blog).aggregate(m=Max("order"))["m"] or 0) + 1
+    Rule.objects.create(blog=blog, body=body, order=order)
+    return redirect(f"{_index_url()}#site-{blog.pk}")
 
 
 def delete(request, kind, pk):

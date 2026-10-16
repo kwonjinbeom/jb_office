@@ -1158,47 +1158,39 @@ details.trash-record > summary { position:relative; padding-right:56px; }
 .trash-pagination { display:flex; justify-content:center; align-items:center; gap:18px; padding:16px; font-size:13px; }
 @media (max-width:760px) { .trash-selection { bottom:16px; max-width:calc(100vw - 24px); gap:8px; } .trash-dialog { padding:22px; } }
 
-/* 블로그·카페 > 규칙: 같은 크기 블로그 카드(칸마다 한 줄) + 규칙 한 표. 오와 열을 맞춘다. */
-.br-page { display: grid; gap: 14px; }
-.br-blogs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-.br-blog { padding: 12px 14px; display: grid; grid-template-rows: auto auto auto; gap: 8px; min-width: 0; }
-.br-blog.is-off { background: var(--panel-2); }
-.br-blog.is-off .br-daily strong, .br-blog.is-off h2 { color: var(--text-3); }
-.br-row1 { display: flex; align-items: center; gap: 8px; min-width: 0; height: 24px; }
-.br-row1 h2 { flex: 1; min-width: 0; margin: 0; font-size: 15px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-row1 h2 a { color: inherit; }
-.br-row1 h2 a:hover { color: var(--accent); text-decoration: none; }
-.br-plat { flex: none; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: var(--muted-weak); color: var(--text-2); }
-.br-edit { flex: none; color: var(--text-3); display: inline-flex; padding: 3px; border-radius: 5px; }
-.br-edit:hover { color: var(--accent); background: var(--hover); }
-.br-edit .ic { width: 14px; height: 14px; }
-.br-daily { display: flex; align-items: baseline; gap: 4px; height: 28px; font-size: 12px; color: var(--text-3); min-width: 0; }
-.br-daily strong { font-size: 24px; line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; }
-.br-daily em { font-style: normal; white-space: nowrap; flex: none; }
-.br-daily span { margin-left: auto; padding-left: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-kv { margin: 0; display: grid; grid-template-columns: 30px minmax(0, 1fr); row-gap: 4px; font-size: 12.5px; }
-.br-kv dt { color: var(--text-3); font-size: 11.5px; }
-.br-kv dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-.br-rules { overflow: hidden; }
+/* 블로그·카페 > 규칙: 사이트마다 한 줄 (사이트 · 컨셉 · 하루 · 수익·지표 · 체크). 오와 열을 맞춘다. */
+.br-sites { overflow: hidden; }
 .br-table { table-layout: fixed; width: 100%; }
-.br-table td { height: 34px; }
-.br-table tr.grp-start td { border-top: 1px solid var(--border); }
-.br-table tbody tr:first-child td { border-top: 0; }
-.br-grp { font-weight: 700; color: var(--text); font-size: 12.5px; }
-.br-body { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-src { color: var(--text-3); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.br-tools { text-align: right; white-space: nowrap; }
+.br-table td { white-space: normal; text-overflow: clip; height: auto; vertical-align: top; padding-top: 12px; padding-bottom: 12px; font-size: 13px; line-height: 20px; }
+.br-table tbody tr + tr td { border-top: 1px solid var(--border); }
+.br-table tr.is-off td { color: var(--text-3); }
+.br-table tr.is-off .br-site strong, .br-table tr.is-off .br-daily strong { color: var(--text-3); }
+.br-site { display: flex; align-items: center; gap: 8px; min-width: 0; height: 20px; }
+.br-site strong { min-width: 0; font-size: 14px; font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.br-plat { flex: none; font-size: 11px; font-weight: 600; line-height: 16px; padding: 1px 7px; border-radius: 5px; background: var(--muted-weak); color: var(--text-2); }
+.br-addr { display: block; margin-top: 2px; font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+a.br-addr:hover { color: var(--accent); }
+.br-concept { color: var(--text); overflow-wrap: anywhere; }
+.br-daily { display: flex; align-items: baseline; gap: 3px; height: 20px; font-size: 12px; color: var(--text-3); }
+.br-daily strong { font-size: 18px; line-height: 20px; color: var(--text); font-variant-numeric: tabular-nums; }
+.br-sub { font-size: 12px; color: var(--text-3); overflow-wrap: anywhere; }
+.br-checks { margin: 0; padding: 0; list-style: none; }
+.br-checks li { display: flex; align-items: flex-start; gap: 6px; min-height: 24px; padding: 2px 0; }
+.br-checks li::before { content: ""; flex: none; width: 4px; height: 4px; margin-top: 8px; border-radius: 50%; background: var(--text-3); }
+.br-checks li > span:first-child { flex: 1; min-width: 0; color: var(--text); overflow-wrap: anywhere; }
+.br-tools { flex: none; white-space: nowrap; }
 .br-tools a { color: var(--text-3); display: inline-flex; padding: 3px; border-radius: 4px; opacity: 0; }
-.br-table tr:hover .br-tools a, .br-tools a:focus { opacity: 1; }
+.br-checks li:hover .br-tools a, .br-tools a:focus { opacity: 1; }
 .br-tools a:hover { color: var(--accent); background: var(--hover); }
 .br-tools .ic { width: 13px; height: 13px; }
-.br-add { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
-@media (max-width: 1200px) { .br-blogs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 760px) {
-  .br-blogs { grid-template-columns: minmax(0, 1fr); }
-  .br-table col:nth-child(3), .br-table th:nth-child(3), .br-src { display: none; }
-  .br-tools a { opacity: 1; }
-}
+.br-add { margin-top: 4px; }
+.br-add .input { width: 100%; height: 28px; font-size: 12.5px; }
+.br-add .input:not(:focus) { border-color: transparent; background: transparent; padding-left: 10px; }
+.br-edit { color: var(--text-3); display: inline-flex; padding: 3px; border-radius: 5px; }
+.br-edit:hover { color: var(--accent); background: var(--hover); }
+.br-edit .ic { width: 14px; height: 14px; }
+@media (max-width: 1000px) { .br-table col:nth-child(4), .br-table th:nth-child(4), .br-table td:nth-child(4) { display: none; } }
+@media (max-width: 760px) { .br-tools a { opacity: 1; } }
 
 /* 블로그·카페 > 운영: 숫자 네 칸 + 블로그×요일 표 + 발행 계획 + RSS. 모두 같은 격자 */
 .op-page { display: grid; gap: 14px; }
