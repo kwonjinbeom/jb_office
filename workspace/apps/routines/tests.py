@@ -355,3 +355,23 @@ class DraftAutoImportTests(Login):
             self.assertContains(res, "새 원고 1편을 임시 템플릿으로 가져왔습니다.")
             self.client.get(reverse("posts:index"))  # 두 번 열어도 한 번만
         self.assertEqual(list(TistoryPost.objects.values_list("title", "stage")), [("새 원고", "temp")])
+
+    def test_created_at_is_when_draft_was_written(self):
+        import importlib
+        import os
+
+        from django.apps import apps as registry
+
+        written = timezone.make_aware(timezone.datetime(2026, 10, 16, 20, 35))
+        with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
+            for key, title in [("T26_새원고", "새 원고"), ("T27_먼저가져온원고", "먼저 가져온 원고")]:
+                (Path(tmp) / key).mkdir()
+                f = Path(tmp) / key / "원고.md"
+                f.write_text(DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
+                os.utime(f, (written.timestamp(), written.timestamp()))  # git 밖이면 파일 시각
+            early = TistoryPost.objects.create(title="먼저 가져온 원고")  # 고치기 전에 가져온 것 = 가져온 시각
+            self.client.get(reverse("posts:index"))
+            importlib.import_module("apps.writing.migrations.0006_draft_written_at").forward(registry, None)
+        self.assertEqual(TistoryPost.objects.get(title="새 원고").created_at, written)
+        early.refresh_from_db()
+        self.assertEqual(early.created_at, written)
