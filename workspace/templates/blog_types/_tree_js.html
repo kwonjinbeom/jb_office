@@ -52,7 +52,8 @@
       form.method = "post";
       form.className = "bt-quickadd bt-inline-add";
       form.action = ADD_URL.replace("KIND", add.getAttribute("data-kind"));
-      [["csrfmiddlewaretoken", csrf], ["parent", add.getAttribute("data-parent")], ["w", add.getAttribute("data-w")]].forEach(function (pair) {
+      [["csrfmiddlewaretoken", csrf], ["parent", add.getAttribute("data-parent")], ["w", add.getAttribute("data-w")],
+       ["next", location.pathname + location.search]].forEach(function (pair) {
         var input = document.createElement("input");
         input.type = "hidden"; input.name = pair[0]; input.value = pair[1] || "";
         form.appendChild(input);
@@ -67,6 +68,42 @@
       name.focus();
     });
   });
+})();
+
+/* 글 매핑 관리: 트리를 누르면 화면 전체를 새로 받지 않고 오른쪽 그 칸(위 매핑 / 아래 글)만 받아 바꾼다.
+   주소는 두 고르기를 모두 담고(site · w · sel), 누른 쪽 값만 바꾼다. 뒤로 가기는 그 주소를 다시 연다. */
+(function () {
+  var OWN = {top: ["site"], bottom: ["w", "sel"]};
+  if (!document.querySelector("[data-pane-box]")) return;
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-pane]");
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var pane = a.getAttribute("data-pane"), box = document.querySelector('[data-pane-box="' + pane + '"]');
+    if (!box) return;
+    e.preventDefault();
+    var link = new URL(a.href), target = new URL(location.href);
+    target.searchParams.delete("edit");
+    OWN[pane].forEach(function (k) {
+      if (link.searchParams.has(k)) target.searchParams.set(k, link.searchParams.get(k)); else target.searchParams.delete(k);
+    });
+    if (link.searchParams.has("edit")) target.searchParams.set("edit", link.searchParams.get("edit"));
+    box.classList.add("is-loading");
+    fetch(target, {credentials: "same-origin", headers: {"X-Partial": pane}}).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.text();
+    }).then(function (html) {
+      box.innerHTML = html;
+      box.scrollTop = 0;
+      box.classList.remove("is-loading");
+      history.pushState(null, "", target);
+      if (a.classList.contains("bt-node")) {
+        var tree = a.closest("[data-bt-tree]");
+        tree.querySelectorAll(".bt-node.on").forEach(function (n) { n.classList.remove("on"); });
+        a.classList.add("on");
+      }
+    }).catch(function () { location.assign(target); });
+  });
+  window.addEventListener("popstate", function () { location.reload(); });
 })();
 
 /* 목록의 고르기 칸(사이트 카테고리에 넣기 등): 고르면 바로 보낸다. */

@@ -1,0 +1,58 @@
+{# 오른쪽 위 (2.5): 사이트 카테고리를 고르면 그 매핑, 안 골랐으면 모든 매핑. 트리를 누르면 이 칸만 새로 받는다. #}
+<div class="bt-pane-head">
+  {% if sobj %}
+  <span class="badge {% if skind == 'site' %}green{% else %}blue{% endif %}">{{ skind_label }}</span>
+  <div class="bt-path">{% for label, url in spath %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}{% if class_q %}&amp;{{ class_q }}{% endif %}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
+  {% if skind == 'site' and sobj.address %}<a class="muted small" href="{{ sobj.address }}" target="_blank" rel="noopener">{{ sobj.address|cut:"https://"|cut:"http://" }}</a>{% endif %}
+  {% else %}
+  <span class="badge gray">매핑</span><strong class="bt-pane-title">모든 사이트</strong>
+  {% endif %}
+  <span class="cnt">{{ placements|length }}</span>
+</div>
+
+{% if top_form %}{% include "blog_types/_edit_card.html" with form=top_form ekind=skind eobj=sobj %}{% endif %}
+
+<section class="card bt-list">
+  <table class="grid bt-grid">
+    <thead><tr>{% if show_site %}<th style="width:96px">사이트</th>{% endif %}{% if show_cat %}<th style="width:16%">카테고리</th>{% endif %}<th>제목</th><th style="width:200px">상태</th><th style="width:84px">변환</th><th style="width:44px"></th></tr></thead>
+    <tbody>
+      {% for pl in placements %}
+      <tr>
+        {% if show_site %}<td class="small bt-cut">{{ pl.site_category.blog.name }}</td>{% endif %}
+        {% if show_cat %}<td class="small muted bt-cut">{{ pl.site_category }}</td>{% endif %}
+        <td class="title-cell">{% with p=pl.post %}<a href="{{ p.get_absolute_url }}">{{ p.title }}</a>{% endwith %}</td>
+        <td>
+          <form method="post" action="{% url 'blog_types:place_status' pl.pk %}" class="status-seg">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ here }}">
+            {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == pl.status %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
+          </form>
+        </td>
+        <td><a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></td>
+        <td class="r">
+          <form method="post" action="{% url 'blog_types:place_remove' pl.pk %}" class="inline-form">{% csrf_token %}
+            <input type="hidden" name="next" value="{{ here }}">
+            <button class="btn ghost sm icon" title="이 카테고리에서 빼기" aria-label="이 카테고리에서 빼기">{% include "includes/ic.html" with name="x" %}</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="grid-empty">{% if skind == 'sitecat' %}아직 넣은 글이 없습니다. 아래에서 골라 넣거나, 아래 글 목록의 '넣을 곳'에서 고르세요.{% elif sobj %}이 사이트에 넣은 글이 없습니다.{% else %}아직 매핑이 없습니다. 아래 글 목록의 '넣을 곳'에서 고르세요.{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if skind == 'sitecat' %}
+  <form class="bt-place-add" method="post" action="{% url 'blog_types:place_add' %}">
+    {% csrf_token %}<input type="hidden" name="site_category" value="{{ sobj.pk }}"><input type="hidden" name="next" value="{{ here }}">
+    {% if candidates %}
+    <select class="input sm" name="post" aria-label="넣을 글" required>
+      <option value="">넣을 글 고르기 ({{ site_writer }} · 포스트 관리)</option>
+      {% for pk, label in candidates %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
+    </select>
+    <select class="input sm" name="status" aria-label="상태">{% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="plus" %}넣기</button>
+    {% else %}
+    <span class="muted small">넣을 글이 없습니다 ({{ site_writer }}의 포스트 관리 글).</span>
+    {% endif %}
+  </form>
+  {% endif %}
+</section>
