@@ -22,4 +22,4 @@ class BlogForm(_Styled):
 class RuleForm(_Styled):
     class Meta:
         model = Rule
-        fields = ["group", "body", "note"]
+        fields = ["blog", "body", "note"]

@@ -2,63 +2,49 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
-{% block heading %}규칙 <span class="cnt">오늘 목표 {{ daily_total }}편</span>{% for name, total, items in accounts %} <span class="cnt">{{ name }} {{ total }}/3편</span>{% endfor %}{% endblock %}
+{% block heading %}규칙 <span class="cnt">오늘 {{ daily_total }}편</span>{% for name, total in accounts %} <span class="cnt">{{ name }} {{ total }}/3편</span>{% endfor %}{% endblock %}
 
 {% block actions %}
-<a class="btn" href="{% url 'blog_rules:blog_create' %}">{% include "includes/ic.html" with name="plus" %}블로그</a>
+<a class="btn" href="{% url 'blog_rules:blog_create' %}">{% include "includes/ic.html" with name="plus" %}사이트</a>
 {% endblock %}
 
 {% block content %}
-<div class="br-page">
-
-  {# 블로그: 같은 크기 카드, 칸마다 한 줄 #}
-  <div class="br-blogs">
-    {% for b in blogs %}
-    <section class="card br-blog{% if b.status != 'active' %} is-off{% endif %}">
-      <div class="br-row1">
-        <span class="br-plat">{{ b.get_platform_display }}</span>
-        <h2 title="{{ b.name }}">{% if b.address %}<a href="{{ b.address }}" target="_blank" rel="noopener">{{ b.name }}</a>{% else %}{{ b.name }}{% endif %}</h2>
-        <a class="br-edit" href="{% url 'blog_rules:blog_edit' b.pk %}" title="수정" aria-label="{{ b.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a>
-      </div>
-      <div class="br-daily">
-        {% if b.status == 'active' %}<strong>{{ b.daily }}</strong><em>편/일</em>{% else %}<strong>—</strong><em>{{ b.get_status_display }}</em>{% endif %}
-        <span title="{{ b.daily_note }}">{{ b.daily_note }}</span>
-      </div>
-      <dl class="br-kv">
-        <dt>글</dt><dd title="{{ b.content }}">{{ b.content|default:"—" }}</dd>
-        <dt>수익</dt><dd title="{{ b.revenue }}">{{ b.revenue|default:"—" }}</dd>
-        <dt>지표</dt><dd title="{{ b.kpi }}">{{ b.kpi|default:"—" }}</dd>
-      </dl>
-    </section>
-    {% endfor %}
-  </div>
-
-  {# 규칙: 한 표, 묶음 · 규칙 · 근거 #}
-  <section class="card br-rules">
-    <table class="grid br-table">
-      <colgroup><col style="width:120px"><col><col style="width:240px"><col style="width:64px"></colgroup>
-      <thead><tr><th>묶음</th><th>규칙</th><th>근거</th><th></th></tr></thead>
-      <tbody>
-        {% for key, g in groups.items %}
-        {% for r in g.rules %}
-        <tr class="{% if forloop.first %}grp-start{% endif %}">
-          <td class="br-grp">{% if forloop.first %}{{ g.label }}{% endif %}</td>
-          <td class="br-body" title="{{ r.body }}">{{ r.body }}</td>
-          <td class="br-src" title="{{ r.note }}">{{ r.note }}</td>
-          <td class="br-tools">
-            <a href="{% url 'blog_rules:rule_edit' r.pk %}" title="수정" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</a>
-            <a href="{% url 'blog_rules:delete' 'rule' r.pk %}" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</a>
-          </td>
-        </tr>
-        {% endfor %}
-        {% endfor %}
-      </tbody>
-    </table>
-    <form class="br-add" method="post" action="{% url 'blog_rules:rule_add' %}">
-      {% csrf_token %}
-      <select class="input sm" name="group" aria-label="묶음">{% for key, g in groups.items %}<option value="{{ key }}">{{ g.label }}</option>{% endfor %}</select>
-      <input class="input sm" name="body" placeholder="+ 규칙 추가 (입력 후 Enter)" aria-label="규칙" autocomplete="off">
-    </form>
-  </section>
-</div>
+{# 사이트마다 한 줄: 컨셉 · 하루 · 수익·지표 · 체크 #}
+<section class="card br-sites">
+  <table class="grid br-table">
+    <colgroup><col style="width:190px"><col style="width:26%"><col style="width:120px"><col style="width:190px"><col><col style="width:40px"></colgroup>
+    <thead><tr><th>사이트</th><th>컨셉</th><th>하루</th><th>수익 · 지표</th><th>체크</th><th></th></tr></thead>
+    <tbody>
+      {% for b in blogs %}
+      <tr id="site-{{ b.pk }}" class="{% if b.status != 'active' %}is-off{% endif %}">
+        <td>
+          <div class="br-site"><span class="br-plat">{{ b.get_platform_display }}</span><strong title="{{ b.name }}">{{ b.name }}</strong></div>
+          {% if b.address %}<a class="br-addr" href="{{ b.address }}" target="_blank" rel="noopener" title="{{ b.address }}">{{ b.address|cut:"https://"|cut:"http://" }}</a>{% else %}<span class="br-addr">주소 없음</span>{% endif %}
+        </td>
+        <td class="br-concept">{{ b.content|default:"—" }}</td>
+        <td>
+          {% if b.status == 'active' %}<div class="br-daily"><strong>{{ b.daily }}</strong>편</div>{% else %}<div class="br-daily"><strong>—</strong>{{ b.get_status_display }}</div>{% endif %}
+          {% if b.daily_note %}<div class="br-sub">{{ b.daily_note }}</div>{% endif %}
+        </td>
+        <td>
+          <div>{{ b.revenue|default:"—" }}</div>
+          <div class="br-sub">{{ b.kpi|default:"—" }}</div>
+        </td>
+        <td>
+          <ul class="br-checks">
+            {% for c in b.checks.all %}
+            <li><span>{{ c.body }}</span><span class="br-tools"><a href="{% url 'blog_rules:rule_edit' c.pk %}" title="수정" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</a><a href="{% url 'blog_rules:delete' 'rule' c.pk %}" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</a></span></li>
+            {% endfor %}
+          </ul>
+          <form class="br-add" method="post" action="{% url 'blog_rules:rule_add' %}">
+            {% csrf_token %}<input type="hidden" name="blog" value="{{ b.pk }}">
+            <input class="input sm" name="body" placeholder="+ 체크 (Enter)" aria-label="{{ b.name }} 체크 추가" autocomplete="off">
+          </form>
+        </td>
+        <td class="r"><a class="br-edit" href="{% url 'blog_rules:blog_edit' b.pk %}" title="사이트 수정" aria-label="{{ b.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
 {% endblock %}

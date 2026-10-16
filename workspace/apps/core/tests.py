@@ -37,6 +37,7 @@ class TrashTests(TestCase):
         self.git = patch("apps.core.gitstate.deploy_status", return_value=None)
         self.git.start()
         self.addCleanup(self.git.stop)
+        TrashEntry.objects.all().delete()  # migration 이 옮겨 둔 항목(blog_rules 0007 일반 규칙) 없이 빈 휴지통에서 시작
 
     def post_json(self, name, data):
         return self.client.post(reverse(f"core:{name}"), json.dumps(data), content_type="application/json")
