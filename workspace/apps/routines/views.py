@@ -429,6 +429,20 @@ def _last_update(routine):
 
 # ---- 로컬 실행 (PC 서버의 launch 로 보낸다)
 
+def sends_origin(view):
+    """'실행' 폼이 있는 화면: 실서버 → PC 로 보낼 때 Origin 이 실리게 한다.
+
+    Django 기본 Referrer-Policy(same-origin)면 다른 주소로 보내는 POST 의 Origin 이 'null' 이 되어 PC 서버가 거절한다.
+    이 화면들만 origin-when-cross-origin (다른 주소에는 주소 앞부분만, 경로는 안 보냄).
+    """
+    def wrapped(request, *args, **kwargs):
+        response = view(request, *args, **kwargs)
+        response["Referrer-Policy"] = "origin-when-cross-origin"
+        return response
+    wrapped.__name__, wrapped.__doc__ = view.__name__, view.__doc__
+    return wrapped
+
+
 def launch_action():
     """'실행' 폼이 보낼 곳. PC 서버면 같은 서버, 실서버면 PC 서버(ROUTINE_LOCAL_URL)."""
     path = reverse("routines:launch")
@@ -452,7 +466,8 @@ def launch(request):
     if settings.IS_SERVER:
         return HttpResponseForbidden("로컬 실행은 PC 에서 띄운 서버에서만 됩니다.")
     if not _origin_ok(request):
-        return HttpResponseForbidden("허용하지 않은 화면에서 보낸 실행 요청입니다.")
+        got = request.headers.get("Origin") or "없음"
+        return HttpResponseForbidden(f"허용하지 않은 화면에서 보낸 실행 요청입니다. (보낸 곳: {got})")
     key = request.POST.get("key", "")
     text = request.POST.get("prompt", "")
     kind = request.POST.get("kind") if request.POST.get("kind") in ("update", "all") else "run"
@@ -574,6 +589,7 @@ def picks(request, pk):
 
 # ---- 일일루틴 리스트
 
+@sends_origin
 def index(request):
     _nav(request)
     try:  # AI 가 남긴 분류 변경 파일을 먼저 반영한다 (일일루틴/분류변경)
@@ -659,6 +675,7 @@ def count(request, pk):
 
 # ---- 프롬프트 관리 (루틴 탭: 왼쪽 프롬프트 md·자료, 오른쪽 나의 평가·갱신·이력)
 
+@sends_origin
 def prompts(request):
     _nav(request, "routine_prompts")
     routines = list(Routine.objects.all())
@@ -730,6 +747,7 @@ def version_star(request, pk):
     return redirect(_prompts_url(v.routine, "#pm-history"))
 
 
+@sends_origin
 def version_restore(request, pk):
     """좋았던 버전으로 되돌리는 안내문 (로컬 실행 / 클라우드 복사)."""
     _nav(request, "routine_prompts")

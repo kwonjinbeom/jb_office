@@ -110,6 +110,7 @@ class TempRepoTests(Login):
     def test_launch_refuses_other_sites_and_server(self, popen):
         data = {"key": "tistory", "kind": "run", "prompt": "x"}
         self.assertEqual(self.client.post(LAUNCH, data, HTTP_ORIGIN="https://evil.example").status_code, 403)
+        self.assertContains(self.client.post(LAUNCH, data, HTTP_ORIGIN="null"), "보낸 곳: null", status_code=403)
         self.assertEqual(self.client.post(LAUNCH, data).status_code, 403)  # Origin 없음
         with override_settings(IS_SERVER=True):
             self.assertEqual(self.client.post(LAUNCH, data, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com").status_code, 403)
@@ -118,6 +119,10 @@ class TempRepoTests(Login):
     def test_server_page_posts_to_pc(self):
         with override_settings(IS_SERVER=True):
             res = self.client.get(INDEX)
+        # same-origin 이면 PC 로 가는 POST 의 Origin 이 null 이 된다 → 실행 화면만 origin 을 보낸다
+        self.assertEqual(res["Referrer-Policy"], "origin-when-cross-origin")
+        self.assertEqual(self.client.get(PROMPTS)["Referrer-Policy"], "origin-when-cross-origin")
+        self.assertEqual(self.client.get(reverse("core:home"))["Referrer-Policy"], "same-origin")
         self.assertContains(res, 'action="http://127.0.0.1:8000/routines/launch/" target="_blank"')
         self.assertContains(res, "PC 화면에서 보기")
 
