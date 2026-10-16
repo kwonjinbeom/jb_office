@@ -39,4 +39,73 @@
     </tbody>
   </table>
 </section>
+
+{# 아래 두 칸: 왼쪽 프롬프트 원문(고른 루틴·구분), 오른쪽 로컬로 돌린 현황 (claude 가 routine_report 로 남긴 것) #}
+<div class="rt-bottom">
+  <section class="card rt-panel">
+    <div class="rt-panel-head">
+      <div class="seg" role="tablist" aria-label="루틴">{% for r in routines %}<button type="button" data-rt-pick="{{ r.key }}"{% if forloop.first %} class="on"{% endif %}>{{ r.name }}</button>{% endfor %}</div>
+      <div class="seg" role="tablist" aria-label="구분"><button type="button" data-rt-mode="local" class="on">로컬</button><button type="button" data-rt-mode="cloud">클라우드</button></div>
+      <button class="btn sm ghost rt-right" type="button" data-copy="#rt-view" data-copy-msg="보이는 프롬프트를 복사했습니다.">{% include "includes/ic.html" with name="copy" %}복사</button>
+    </div>
+    <textarea id="rt-view" class="rt-view" readonly aria-label="프롬프트 원문">{% with routines|first as r %}{{ r.local_prompt }}{% endwith %}</textarea>
+  </section>
+
+  <section class="card rt-panel" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
+    <div class="rt-panel-head">
+      <h2 class="card-title">로컬 현황 <span class="cnt">{{ runs|length }}</span></h2>
+      <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% elif not local_run %}PC 에서 띄운 서버 화면에 보입니다{% endif %}</span>
+    </div>
+    <div class="rt-runs">
+      {% for run in runs %}
+      <details class="rt-run">
+        <summary><span class="rt-run-name">{{ run.routine.name }}</span><span class="badge {{ run.badge }}">{{ run.get_status_display }}</span><span class="rt-run-step" title="{{ run.step }}">{{ run.step }}</span><span class="rt-run-time" title="{{ run.updated_at|date:'Y-m-d H:i' }}">{{ run.updated_at|time:"H:i" }}</span></summary>
+        <pre class="rt-log">{{ run.day|date:"Y-m-d" }}
+{{ run.log }}</pre>
+      </details>
+      {% empty %}
+      <div class="rt-empty">로컬로 돌린 기록이 없습니다.<br>터미널 실행 또는 로컬 프롬프트로 시작하면 claude 가 단계마다 여기에 남깁니다.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // 프롬프트 칸: 루틴·구분을 고르면 표의 숨은 원문(#p-키-local|cloud)을 보여 준다. 표의 줄을 눌러도 고른다.
+  var view = document.getElementById("rt-view"), key = "{{ routines.0.key }}", mode = "local";
+  function show() {
+    var src = document.getElementById("p-" + key + "-" + mode);
+    if (src) view.value = src.value;
+    document.querySelectorAll("[data-rt-pick]").forEach(function (b) { b.classList.toggle("on", b.dataset.rtPick === key); });
+    document.querySelectorAll("[data-rt-mode]").forEach(function (b) { b.classList.toggle("on", b.dataset.rtMode === mode); });
+  }
+  document.addEventListener("click", function (e) {
+    var pick = e.target.closest("[data-rt-pick]"), m = e.target.closest("[data-rt-mode]");
+    var row = !pick && !m && !e.target.closest("a, button, input, form") && e.target.closest("tr[id^='rt-']");
+    if (pick) key = pick.dataset.rtPick;
+    else if (m) mode = m.dataset.rtMode;
+    else if (row) key = row.id.slice(3);
+    else return;
+    show();
+  });
+  // 로컬 현황: 진행 중인 기록이 있으면 그 칸만 다시 읽는다 (펼친 기록은 펼친 채로).
+  var box = document.getElementById("rt-runs");
+  if (box && box.dataset.rtRefresh) {
+    setInterval(function () {
+      var open = Array.prototype.map.call(box.querySelectorAll("details[open] .rt-run-name"), function (n) { return n.textContent; });
+      fetch(location.href, { credentials: "same-origin" }).then(function (r) { return r.text(); }).then(function (html) {
+        var fresh = new DOMParser().parseFromString(html, "text/html").getElementById("rt-runs");
+        if (!fresh) return;
+        box.innerHTML = fresh.innerHTML;
+        box.querySelectorAll("details").forEach(function (d) {
+          if (open.indexOf(d.querySelector(".rt-run-name").textContent) >= 0) d.open = true;
+        });
+      }).catch(function () {});
+    }, Number(box.dataset.rtRefresh) * 1000);
+  }
+})();
+</script>
 {% endblock %}

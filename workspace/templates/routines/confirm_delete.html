@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'routines:prompts' %}">프롬프트 관리</a></div>{% endblock %}
+
+{% block content %}
+<div class="confirm">
+  <div class="confirm-head">{% include "includes/ic.html" with name="alert" %}휴지통으로 이동할까요?</div>
+  <div class="confirm-body"><p>루틴 <strong>{{ routine.name }}</strong>(로컬·클라우드 프롬프트 포함)을 휴지통으로 옮깁니다. 7일 동안 복원할 수 있습니다.</p></div>
+  <form method="post" class="confirm-foot">
+    {% csrf_token %}
+    <a class="btn" href="{% url 'routines:edit' routine.pk %}">취소</a>
+    <button class="btn danger solid" type="submit">{% include "includes/ic.html" with name="trash" %}삭제</button>
+  </form>
+</div>
+{% endblock %}

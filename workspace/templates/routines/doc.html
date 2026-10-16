@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'routines:prompts' %}">프롬프트 관리</a></div>{% endblock %}
+
+{% block heading %}{{ page_title }} <span class="cnt">{{ rel }}</span>{% endblock %}
+{% block subtitle %}<span class="page-sub">이 md 를 보는 루틴: {% for r in used %}<a href="{% url 'routines:prompts' %}#pm-{{ r.key }}">{{ r.name }}</a>{% if not forloop.last %} · {% endif %}{% endfor %} — 저장소 파일이라 고칠 때는 Claude 에게 맡깁니다</span>{% endblock %}
+
+{% block content %}
+<section class="card"><div class="card-body prose">{{ html|safe }}</div></section>
+{% endblock %}

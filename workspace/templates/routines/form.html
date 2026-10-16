@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a></div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'routines:index' %}">일일루틴</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'routines:prompts' %}">프롬프트 관리</a></div>{% endblock %}
 
 {% block actions %}
-<a class="btn" href="{% url 'routines:index' %}">취소</a>
+{% if routine %}<a class="btn ghost danger" href="{% url 'routines:delete' routine.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
+<a class="btn" href="{% url 'routines:prompts' %}">취소</a>
 <button class="btn primary" type="submit" form="rt-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}
 
@@ -22,7 +23,7 @@
     </div>
   </section>
   <div class="form-foot">
-    <a class="btn" href="{% url 'routines:index' %}">취소</a>
+    <a class="btn" href="{% url 'routines:prompts' %}">취소</a>
     <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
   </div>
 </form>
