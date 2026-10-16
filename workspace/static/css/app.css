@@ -1316,7 +1316,7 @@ a.br-addr:hover { color: var(--accent); }
 .rt-acts form { margin: 0; }
 .rt-table td { vertical-align: middle; }
 .rt-table tbody tr { cursor: pointer; }
-.rt-bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+.rt-bottom { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
 .rt-panel { display: flex; flex-direction: column; min-width: 0; height: max(560px, calc(100vh - 140px)); overflow: hidden; }
 .rt-launch { display: inline; margin: 0; }
 .rt-panel-head { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px; border-bottom: 1px solid var(--border); flex: none; min-width: 0; }
@@ -1336,7 +1336,7 @@ a.br-addr:hover { color: var(--accent); }
 @media (max-width: 1000px) { .rt-bottom { grid-template-columns: minmax(0, 1fr); } }
 
 /* 일일루틴 › 프롬프트 관리: 루틴 탭 · 왼쪽 보는 md·자료(줄을 누르면 아래에 내용) · 오른쪽 평가·갱신·이력 */
-.pm-cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.pm-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .pm-left, .pm-right { display: grid; gap: 14px; min-width: 0; }
 .pm-ref { cursor: pointer; }
 .pm-ref:hover td { background: var(--hover); }
@@ -1347,13 +1347,17 @@ a.br-addr:hover { color: var(--accent); }
 .pm-view-head strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .pm-prose { padding: 12px 18px 20px; }
 .pm-data { margin: 0; padding: 12px 14px; white-space: pre-wrap; font: inherit; font-size: 12.5px; line-height: 1.65; color: var(--text); }
-.pm-eval-form { display: grid; grid-template-columns: 132px auto minmax(0, 1fr) auto; gap: 6px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.pm-eval-form { display: grid; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.pm-eval-row { display: grid; grid-template-columns: 150px auto auto; justify-content: start; gap: 8px; align-items: center; }
+.pm-eval-row .btn { justify-self: start; }
+.pm-comment-in { width: 100%; min-height: 120px; resize: vertical; font: inherit; font-size: 13.5px; line-height: 1.6; padding: 10px 12px; }
 .pm-score label { display: inline-flex; cursor: pointer; }
 .pm-score input { position: absolute; opacity: 0; pointer-events: none; }
-.pm-score span { min-width: 26px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 12.5px; color: var(--text-2); }
+.pm-score span { min-width: 40px; height: 28px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 12.5px; color: var(--text-2); }
 .pm-score input:checked + span { background: var(--panel); color: var(--text); font-weight: 700; box-shadow: var(--shadow-sm); }
 .pm-score input:focus-visible + span { outline: 2px solid var(--accent); }
-.pm-evals { max-height: 330px; overflow: auto; }
+.pm-evals { max-height: 560px; overflow: auto; }
+.pm-evals td { font-size: 13.5px; }
 .pm-comment { overflow-wrap: anywhere; }
 .pm-evals td.num { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pm-x { border: 0; background: none; cursor: pointer; }

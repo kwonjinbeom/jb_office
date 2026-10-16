@@ -16,7 +16,7 @@ from apps.naver_writing.models import Post as NaverPost
 from apps.writing.models import Post as TistoryPost
 
 from .models import Evaluation, PromptVersion, Routine, RoutineDay, RoutineRun
-from .views import capture_version, launcher, references, update_prompt
+from .views import capture_version, launcher, references
 
 INDEX = reverse("routines:index")
 PROMPTS = reverse("routines:prompts")
@@ -47,9 +47,9 @@ class TempRepoTests(Login):
         return next(r for r in self.client.get(INDEX, params).context["routines"] if r.key == key)
 
     def test_seed_and_screen(self):
-        self.assertEqual(list(Routine.objects.values_list("key", flat=True)), ["daily_ideas", "tistory", "naver"])
+        self.assertEqual(list(Routine.objects.values_list("key", flat=True)), ["daily_ideas", "tistory", "naver", "prompt_update"])
         res = self.client.get(INDEX)
-        for text in ["일일루틴", "티스토리 글쓰기", "네이버 글쓰기", ">실행<", "프롬프트 복사", "미완료", "로컬 현황", 'id="rt-view"']:
+        for text in ["일일루틴", "티스토리 글쓰기", "네이버 글쓰기", "프롬프트 최신화", ">실행<", "프롬프트 복사", "미완료", "로컬 현황", 'id="rt-view"']:
             self.assertContains(res, text)
         self.assertNotContains(res, 'data-copy="#p-tistory-local"')  # 로컬 칸은 실행만
 
@@ -162,29 +162,39 @@ class RepoTests(Login):
         res = self.client.get(PROMPTS, {"r": "naver"})
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.context["routine"].key, "naver")
-        for text in ["티스토리 글쓰기", "workspace/NAVER_WRITER.md", "나의 평가", "갱신", "프롬프트 이력", "v1"]:
+        for text in ["티스토리 글쓰기", "프롬프트 최신화", "workspace/NAVER_WRITER.md", "나의 평가", "프롬프트 이력", "v1",
+                     'class="input pm-comment-in"']:
             self.assertContains(res, text)
         self.assertNotContains(res, "프롬프트 (원문)")
+        self.assertNotContains(res, 'id="pm-update"')  # 갱신은 리스트의 '프롬프트 최신화'로
         self.assertEqual(PromptVersion.objects.filter(routine__key="naver").count(), 1)
         self.client.get(PROMPTS, {"r": "naver"})
         self.assertEqual(PromptVersion.objects.filter(routine__key="naver").count(), 1)  # 안 바뀌면 그대로
 
-    def test_evaluations_feed_update_prompt(self):
+    def test_evaluations_feed_prompt_update_routine(self):
         tistory = Routine.objects.get(key="tistory")
         self.client.post(reverse("routines:evaluate", args=[tistory.pk]), {"day": "2026-10-15", "score": "2", "comment": "제목이 너무 길다"})
         self.client.post(reverse("routines:evaluate", args=[tistory.pk]), {"day": "2026-10-15", "score": "3", "comment": "제목이 길다"})
         self.assertEqual(Evaluation.objects.get().score, 3)  # 같은 날은 고친다
-        text = update_prompt(tistory, "local", date(2026, 10, 16))
+        refresh = Routine.objects.get(key="prompt_update")
+        text = launcher(refresh, "local", date(2026, 10, 16))
+        self.assertIn("`일일루틴/프롬프트/prompt_update.md`", text)
+        self.assertIn("### 티스토리 글쓰기 — `일일루틴/프롬프트/tistory.md`", text)
         self.assertIn("2026-10-15 · 3점 [새] · 제목이 길다", text)
-        self.assertIn("사실 확인", text.replace("원 출처 확인", "사실 확인"))  # 갱신 때 볼 관점
-        self.assertIn("`일일루틴/프롬프트/tistory.md`", text)
-        self.assertIn("routine_report tistory", text)
+        self.assertIn("점검 관점: AI 글쓰기 유의점", text)
+        self.assertIn("routine_report prompt_update", text)
+        self.assertIn("일일루틴/클라우드_제약.md", launcher(refresh, "cloud", date(2026, 10, 16)))
         res = self.client.get(PROMPTS, {"r": "tistory"})
         self.assertEqual(res.context["new_count"], 1)
         # 프롬프트 md 가 바뀌어 새 버전이 생기면 그 전 평가는 '반영'
         v1 = PromptVersion.objects.get(routine=tistory)
         PromptVersion.objects.create(routine=tistory, number=2, sha="x", content="바뀐 프롬프트")
         self.assertEqual(self.client.get(PROMPTS, {"r": "tistory"}).context["new_count"], 0)
+        self.assertIn("3점 · 제목이 길다", launcher(Routine.objects.get(key="prompt_update"), "local", date(2026, 10, 16)))
+        # 그날 바뀐 프롬프트 수가 '프롬프트 최신화' 결과 (하루 1회 목표)
+        with patch("apps.routines.views.capture_version"):
+            row = next(r for r in self.client.get(INDEX).context["routines"] if r.key == "prompt_update")
+        self.assertEqual((row.result, row.target, row.state), (2, 1, "done"))  # 가짜 v2 + 실제 md 로 돌아온 v3
         e = Evaluation.objects.get()
         self.client.post(reverse("routines:evaluation_delete", args=[e.pk]))
         self.assertFalse(Evaluation.objects.exists())
@@ -213,7 +223,7 @@ class RepoTests(Login):
             "key": "wordpress", "name": "워드프레스 글쓰기", "url_name": "posts:index", "task": "원고", "output": "",
             "daily": 1, "unit": "편", "prompt_doc": "일일루틴/프롬프트/wordpress.md", "data": ["sites"], "review_focus": ""})
         new = Routine.objects.get(key="wordpress")
-        self.assertEqual((new.order, new.data), (4, "sites"))
+        self.assertEqual((new.order, new.data), (5, "sites"))
         res = self.client.get(PROMPTS, {"r": "wordpress"})
         self.assertContains(res, '<span class="badge red">없음</span>')  # md 가 아직 없음
         self.client.post(reverse("routines:delete", args=[new.pk]))

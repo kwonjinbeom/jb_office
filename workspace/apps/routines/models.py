@@ -8,7 +8,7 @@ from django.db import models
 
 from apps.core.models import TrashableModel
 
-DATA_CHOICES = [("sites", "사이트·체크"), ("existing", "이미 있는 글"), ("standard", "검색 표준")]
+DATA_CHOICES = [("sites", "사이트·체크"), ("existing", "이미 있는 글"), ("standard", "검색 표준"), ("evaluations", "루틴별 평가·점검 관점")]
 
 
 class Routine(TrashableModel):

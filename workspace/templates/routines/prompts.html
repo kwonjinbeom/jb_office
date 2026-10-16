@@ -51,20 +51,22 @@
     </section>
   </div>
 
-  {# 오른쪽: 나의 평가 → 갱신 → 프롬프트 이력 #}
+  {# 오른쪽: 나의 평가 → 프롬프트 이력. 고치는 건 리스트의 '프롬프트 최신화' 루틴이 한다. #}
   <div class="pm-right">
     <section class="card" id="pm-eval">
       <div class="rt-panel-head"><h2 class="card-title">나의 평가 <span class="cnt">{{ evals|length }}개{% if avg %} · 평균 {{ avg|floatformat:1 }}점{% endif %}</span></h2></div>
       <form class="pm-eval-form" method="post" action="{% url 'routines:evaluate' routine.pk %}">
         {% csrf_token %}
-        <input class="input sm" type="date" name="day" value="{{ today|date:'Y-m-d' }}" aria-label="날짜" required>
-        <div class="seg pm-score" role="radiogroup" aria-label="평점">{% for i in "12345" %}<label><input type="radio" name="score" value="{{ i }}"{% if i == "3" %} checked{% endif %}><span>{{ i }}</span></label>{% endfor %}</div>
-        <input class="input sm" name="comment" placeholder="코멘트 (좋았던 점·고칠 점)" aria-label="코멘트" autocomplete="off">
-        <button class="btn sm primary" type="submit">저장</button>
+        <div class="pm-eval-row">
+          <input class="input" type="date" name="day" value="{{ today|date:'Y-m-d' }}" aria-label="날짜" required>
+          <div class="seg pm-score" role="radiogroup" aria-label="평점">{% for i in "12345" %}<label><input type="radio" name="score" value="{{ i }}"{% if i == "3" %} checked{% endif %}><span>{{ i }}점</span></label>{% endfor %}</div>
+          <button class="btn primary" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+        </div>
+        <textarea class="input pm-comment-in" name="comment" rows="5" placeholder="코멘트: 그날 결과물에서 좋았던 점 · 고칠 점 (같은 날 다시 저장하면 고쳐집니다)" aria-label="코멘트"></textarea>
       </form>
       <div class="pm-evals">
         <table class="grid br-table">
-          <colgroup><col style="width:104px"><col style="width:52px"><col><col style="width:56px"><col style="width:40px"></colgroup>
+          <colgroup><col style="width:108px"><col style="width:56px"><col><col style="width:60px"><col style="width:40px"></colgroup>
           <tbody>
             {% for e in evals %}
             <tr>
@@ -80,19 +82,6 @@
           </tbody>
         </table>
       </div>
-    </section>
-
-    <section class="card" id="pm-update">
-      <div class="rt-panel-head">
-        <h2 class="card-title">갱신 <span class="cnt">새 평가 {{ new_count }}개</span></h2>
-        <div class="rt-right rt-acts">
-          {% include "routines/_launch.html" with key=routine.key name=routine.name kind="update" text=update_local day=today label="갱신" primary=True %}
-          <button class="btn sm ghost" type="button" data-copy="#pm-update-cloud" data-copy-msg="클라우드용 갱신 안내문을 복사했습니다.">{% include "includes/ic.html" with name="copy" %}클라우드</button>
-        </div>
-      </div>
-      <div class="pm-update-note">평가 전체(새 것 먼저)와 갱신 때 볼 관점으로 AI 가 <code>{{ routine.prompt_doc }}</code> 를 고쳐 main 에 올립니다. 반영되면 아래 이력에 새 버전이 쌓입니다.</div>
-      <div class="pm-focus"><span class="muted small">갱신 때 볼 관점</span><p>{{ routine.review_focus|default:"(없음 — 루틴 설정에서 적기)" }}</p></div>
-      <textarea id="pm-update-cloud" hidden>{{ update_cloud }}</textarea>
     </section>
 
     <section class="card" id="pm-history">
