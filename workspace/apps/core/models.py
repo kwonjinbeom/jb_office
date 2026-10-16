@@ -97,6 +97,7 @@ class AppSetting(models.Model):
 
 
 WEBHOOK_SECRET_KEY = "deploy_webhook_secret"
+ROUTINE_BRIEF_TOKEN_KEY = "routine_brief_token"  # 예약 실행이 그날 안내문을 받아 가는 주소의 토큰 (apps/routines/views.brief)
 
 
 class MenuSetting(models.Model):

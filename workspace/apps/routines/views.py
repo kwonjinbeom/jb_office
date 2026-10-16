@@ -1,8 +1,11 @@
-"""일일루틴: 메뉴마다 한 줄 (할 일 · 결과 · 로컬 실행 · 클라우드 복사 · 상태)과 프롬프트 관리.
+"""일일루틴: 메뉴마다 한 줄 (할 일 · 결과 · 실행 · 상태)과 프롬프트 관리.
 
 프롬프트는 저장소 md (Routine.prompt_doc). 실행할 때는 짧은 안내문(launcher)만 만든다:
 날짜·하루 양 + "이 md 를 읽고 따른다" + 오늘의 자료(서버 DB: 사이트·체크, 이미 있는 글, 검색 표준).
-클라우드 안내문은 일일루틴/클라우드_제약.md 를 더 읽게 하고, 로컬 안내문 끝에는 진행 보고 부분이 붙는다.
+로컬·클라우드 구분은 없다 (2026-10-17 사용자). 화면의 '실행'으로 연 터미널에만 진행 보고 부분이 붙는다.
+
+예약 실행: claude.ai 의 클라우드 루틴이 매일 아침 brief 주소(/routines/brief/<키>/?token=…)에서 그날 안내문을 받아 그대로 한다.
+토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
 
 로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
 PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
@@ -15,6 +18,7 @@ PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine
 AI 가 각 루틴의 프롬프트 md 를 고쳐 main 에 올린다. 바뀐 md 는 화면을 열 때 PromptVersion 으로 남는다.
 """
 import hashlib
+import hmac
 import random
 import re
 from collections import Counter
@@ -24,21 +28,22 @@ from pathlib import Path
 from django import forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
 from django.db.models import Avg, Max, Q
-from django.http import Http404
+from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from apps.blog_ops.models import FeedEntry
 from apps.blog_rules.models import Blog
 from apps.core import period
+from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
 from .models import DATA_CHOICES, Evaluation, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
 
 NAVER_DRAFTS = ("콘텐츠", "블로그_카페", "포스팅자동화", "네이버원고")
-CLOUD_DOC = "일일루틴/클라우드_제약.md"
 
 
 def naver_drafts_dir():
@@ -302,7 +307,7 @@ def data_text(routine, key, day):
 # ---- 안내문
 
 REPORT = """
-## 진행 보고 (로컬 실행에 자동으로 붙는 부분)
+## 진행 보고 (화면의 '실행'으로 연 터미널에만 붙는 부분)
 단계가 바뀔 때마다 저장소 폴더에서 아래 명령으로 일일루틴 화면(로컬 현황)에 한 줄을 남긴다.
 
     workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}
@@ -316,44 +321,39 @@ REPORT = """
 """
 
 
-def launcher(routine, mode, day):
-    """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ 로컬이면 진행 보고)."""
-    where = "로컬 PC" if mode == "local" else "클라우드"
-    lines = [f"# 일일루틴 · {routine.name} — {day} ({where})", "",
+def launcher(routine, day, report=False):
+    """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ report 면 진행 보고)."""
+    lines = [f"# 일일루틴 · {routine.name} — {day}", "",
              f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}.",
              "아래 md 를 읽고 그대로 따른다.", ""]
     lines.append(f"- `{routine.prompt_doc}` (이 루틴의 프롬프트)" if routine.prompt_doc else "- (프롬프트 md 가 아직 없습니다)")
-    if mode == "cloud":
-        lines.append(f"- `{CLOUD_DOC}` (클라우드 세션 제약)")
     keys = routine.data_keys
     if keys:
         lines += ["", "## 오늘의 자료 (서버에서 가져옴)"]
         for k in keys:
             lines += ["", f"### {DATA_TITLES.get(k, k)}", data_text(routine, k, day)]
     text = "\n".join(lines).rstrip() + "\n"
-    if mode == "local":
+    if report:
         text += REPORT.format(key=routine.key, day=day)
     return text
 
 
-def restore_prompt(version, mode, day):
+def restore_prompt(version, day, report=False):
     """좋았던 버전으로 되돌리는 안내문: AI 가 프롬프트 md 를 그 버전 내용으로 고쳐 main 에 올린다."""
     routine = version.routine
-    lines = [f"# 일일루틴 프롬프트 되돌리기 · {routine.name} v{version.number} — {day} ({'로컬 PC' if mode == 'local' else '클라우드'})", "",
+    lines = [f"# 일일루틴 프롬프트 되돌리기 · {routine.name} v{version.number} — {day}", "",
              f"대상 프롬프트: `{routine.prompt_doc}`", "", "## 할 일",
              f"1. 대상 프롬프트를 아래 'v{version.number} 내용'으로 되돌린다 (사용자가 좋았던 버전으로 고름).",
              "2. 맨 아래 '평가에서 배운 점'에 되돌린 날짜와 이유를 한 줄 더한다.",
              f"3. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} v{version.number} 로 되돌림`."]
-    if mode == "cloud":
-        lines.append(f"(클라우드: `{CLOUD_DOC}` 도 따른다)")
     lines += ["", f"## v{version.number} 내용", "", version.content]
     text = "\n".join(lines).rstrip() + "\n"
-    if mode == "local":
+    if report:
         text += REPORT.format(key=routine.key, day=day)
     return text
 
 
-# ---- 프롬프트가 보는 것: 프롬프트 md, 그 안에서 읽게 하는 md, 클라우드 제약, 오늘의 자료
+# ---- 프롬프트가 보는 것: 프롬프트 md, 그 안에서 읽게 하는 md, 오늘의 자료
 
 MD_PATH = re.compile(r"(?<![\w가-힣./-])([\w가-힣][\w가-힣./-]*\.md)\b")
 
@@ -385,7 +385,7 @@ def _reads(text):
 
 
 def references(routine):
-    """[{kind, label, rel, ok}] — 프롬프트 md · 읽는 md · 클라우드 제약 · 오늘의 자료."""
+    """[{kind, label, rel, ok}] — 프롬프트 md · 읽는 md · 오늘의 자료."""
     out = [{"kind": "프롬프트", "label": routine.prompt_doc or "(프롬프트 md 없음)",
             "rel": _md_path(routine.prompt_doc) if routine.prompt_doc else None}]
     seen = {routine.prompt_doc}
@@ -393,7 +393,6 @@ def references(routine):
         if rel not in seen:
             seen.add(rel)
             out.append({"kind": "읽는 md", "label": rel, "rel": _md_path(rel)})
-    out.append({"kind": "클라우드", "label": CLOUD_DOC, "rel": _md_path(CLOUD_DOC)})
     for ref in out:
         ref["ok"] = bool(ref["rel"])
     out += [{"kind": "자료", "label": DATA_TITLES.get(k, k), "rel": None, "ok": True, "data": k} for k in routine.data_keys]
@@ -430,15 +429,15 @@ def _day(request):
 
 
 def all_prompt(routines, day):
-    """전체 실행 안내문: 루틴 순서대로 각 로컬 안내문을 이어 붙인다."""
-    head = [f"# 일일루틴 전체 실행 — {day} (로컬 PC)", "",
+    """전체 실행 안내문: 루틴 순서대로 각 안내문(진행 보고 포함)을 이어 붙인다."""
+    head = [f"# 일일루틴 전체 실행 — {day}", "",
             "아래 루틴을 위에서부터 차례로 끝까지 진행한다. 오래 걸려도 된다.",
             "- 한 루틴을 끝내고(완료 보고) 다음 루틴으로 넘어간다.",
             "- 한 루틴이 막히면 막힘으로 보고하고 다음 루틴으로 간다. 내가 할 일이 생기면 대기로 보고하고 기다린다.",
             "- 순서: " + " → ".join(f"{i}. {r.name}" for i, r in enumerate(routines, start=1)), ""]
     parts = ["\n".join(head)]
     for i, r in enumerate(routines, start=1):
-        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, "local", day))
+        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, day, report=True))
     return "\n".join(parts)
 
 
@@ -520,8 +519,7 @@ def index(request):
         r.auto = auto[r.pk][sel]
         r.fixed = (r.pk, sel) in fixed
         r.url = reverse(r.url_name)
-        r.local_prompt = launcher(r, "local", run_day)
-        r.cloud_prompt = launcher(r, "cloud", run_day)
+        r.prompt = launcher(r, run_day, report=True)
     runs = (RoutineRun.objects.select_related("routine")
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
                                                                  RoutineRun.Status.BLOCKED]))[:30])
@@ -637,14 +635,29 @@ def version_star(request, pk):
 
 
 def version_restore(request, pk):
-    """좋았던 버전으로 되돌리는 안내문 (로컬 실행 / 클라우드 복사)."""
+    """좋았던 버전으로 되돌리는 안내문 ('실행'으로 PC 터미널에서)."""
     _nav(request, "routine_prompts")
     v = get_object_or_404(PromptVersion, pk=pk)
     today = timezone.localdate()
     return render(request, "routines/restore.html", {
         "page_title": f"{v.routine.name} v{v.number} 로 되돌리기", "version": v, "routine": v.routine, "today": today,
         "on_server": settings.IS_SERVER,
-        "local": restore_prompt(v, "local", today), "cloud": restore_prompt(v, "cloud", today)})
+        "prompt": restore_prompt(v, today, report=True)})
+
+
+@login_not_required
+@require_GET
+def brief(request, key):
+    """예약 실행용 그날 안내문 (text/plain). claude.ai 클라우드 루틴이 매일 아침 받아 간다. 토큰이 맞아야 준다."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    routine = get_object_or_404(Routine, key=key)
+    try:
+        day = date.fromisoformat(request.GET.get("day", ""))
+    except ValueError:
+        day = timezone.localdate()
+    return HttpResponse(launcher(routine, day), content_type="text/plain; charset=utf-8")
 
 
 def doc(request, rel):

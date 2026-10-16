@@ -22,7 +22,7 @@
 <section class="card"><div class="empty">루틴이 없습니다. 오른쪽 위 '+ 루틴'으로 만드세요.</div></section>
 {% else %}
 <div class="pm-cols">
-  {# 왼쪽: 이 루틴이 보는 것 (프롬프트 md · 읽는 md · 클라우드 제약 · 오늘의 자료). 줄을 누르면 아래에 내용 #}
+  {# 왼쪽: 이 루틴이 보는 것 (프롬프트 md · 읽는 md · 오늘의 자료). 줄을 누르면 아래에 내용 #}
   <div class="pm-left">
     <section class="card">
       <table class="grid br-table pm-refs-table">
@@ -31,7 +31,7 @@
         <tbody>
           {% for ref in refs %}
           <tr class="pm-ref{% if forloop.first %} on{% endif %}" data-pm-ref="{{ forloop.counter }}" tabindex="0">
-            <td><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '클라우드' %}violet{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span></td>
+            <td><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span></td>
             <td class="pm-ref-name" title="{{ ref.label }}">{{ ref.label }}</td>
             <td class="c">{% if not ref.ok %}<span class="badge red">없음</span>{% elif ref.rel %}<a class="br-edit" href="{% url 'routines:doc' ref.rel %}" title="새 화면으로" aria-label="{{ ref.label }} 열기">{% include "includes/ic.html" with name="external" %}</a>{% elif ref.data == 'standard' %}<a class="br-edit" href="{% url 'daily_ideas:standard' %}" title="검색 표준 고치기 (버전으로 남음)" aria-label="검색 표준 고치기">{% include "includes/ic.html" with name="edit" %}</a>{% endif %}</td>
           </tr>
@@ -42,7 +42,7 @@
     <section class="card pm-viewer">
       {% for ref in refs %}
       <div class="pm-view" data-pm-view="{{ forloop.counter }}"{% if not forloop.first %} hidden{% endif %}>
-        <div class="pm-view-head"><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '클라우드' %}violet{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span><strong>{{ ref.label }}</strong>{% if ref.kind == '자료' %}<span class="muted small rt-right">오늘 날짜로 서버에서 가져온 내용</span>{% endif %}</div>
+        <div class="pm-view-head"><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span><strong>{{ ref.label }}</strong>{% if ref.kind == '자료' %}<span class="muted small rt-right">오늘 날짜로 서버에서 가져온 내용</span>{% endif %}</div>
         {% if ref.text %}<pre class="pm-data">{{ ref.text }}</pre>
         {% elif ref.html %}<div class="prose pm-prose">{{ ref.html|safe }}</div>
         {% else %}<div class="rt-empty">저장소에 이 파일이 없습니다. 루틴 설정에서 경로를 고치거나, 만들어 달라고 Claude 에게 맡기세요.</div>{% endif %}

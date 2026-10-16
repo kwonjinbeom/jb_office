@@ -49,10 +49,10 @@ class TempRepoTests(Login):
     def test_seed_and_screen(self):
         self.assertEqual(list(Routine.objects.values_list("key", flat=True)), ["daily_ideas", "writing", "prompt_update"])
         res = self.client.get(INDEX)
-        for text in ["일일루틴", "글쓰기", "프롬프트 최신화", ">실행<", "프롬프트 복사", "미완료", "로컬 현황", 'id="rt-view"',
+        for text in ["일일루틴", "글쓰기", "프롬프트 최신화", ">실행<", "미완료", "로컬 현황", 'id="rt-view"',
                      ">전체 실행<", 'id="rt-picker"', "쓸 분류"]:
             self.assertContains(res, text)
-        self.assertNotContains(res, 'data-copy="#p-writing-local"')  # 로컬 칸은 실행만
+        self.assertNotContains(res, "클라우드")  # 로컬·클라우드 구분 없음
         self.assertTrue(Routine.all_objects.filter(key="naver", deleted_at__isnull=False).exists())  # 네이버 글쓰기 루틴은 휴지통
 
     def test_results_count_and_edit(self):
@@ -68,7 +68,7 @@ class TempRepoTests(Login):
         self.client.post(reverse("routines:count", args=[tistory.pk]), {"day": today, "value": ""})
         self.assertFalse(RoutineDay.objects.exists())
 
-    def test_launcher_same_md_cloud_adds_constraints(self):
+    def test_launcher_one_prompt_report_only_for_run_button(self):
         (self.root / "ideas" / "2026-10-14.json").write_text(json.dumps({
             "date": "2026-10-14", "title": "t", "items": [dict(
                 id="a1", title="지난 후보", category="tool", audience="a", problem="p", min_product="m", money_flow="f",
@@ -76,17 +76,16 @@ class TempRepoTests(Login):
         NaverPost.objects.create(title="이미 쓴 네이버 글")
         day = date(2026, 10, 16)
         naver = Routine.objects.get(key="writing")
-        local, cloud = launcher(naver, "local", day), launcher(naver, "cloud", day)
-        for text in (local, cloud):
+        run, scheduled = launcher(naver, day, report=True), launcher(naver, day)
+        for text in (run, scheduled):
             self.assertIn("`일일루틴/프롬프트/writing.md`", text)  # 같은 프롬프트 md
             self.assertIn("### 오늘 쓸 분류", text)
             self.assertIn("체크: 쇼핑커넥트 링크는", text)
             self.assertIn("이미 쓴 네이버 글", text)
-        self.assertIn("일일루틴/클라우드_제약.md", cloud)
-        self.assertNotIn("클라우드_제약", local)
-        self.assertIn("routine_report writing <상태>", local)
-        self.assertNotIn("routine_report", cloud)
-        ideas = launcher(Routine.objects.get(key="daily_ideas"), "cloud", day)
+            self.assertNotIn("클라우드", text)  # 로컬·클라우드 구분 없음
+        self.assertIn("routine_report writing <상태>", run)
+        self.assertNotIn("routine_report", scheduled)
+        ideas = launcher(Routine.objects.get(key="daily_ideas"), day)
         self.assertIn("2026-10-14 · 지난 후보", ideas)
         self.assertIn("검색 표준", ideas)
 
@@ -164,7 +163,7 @@ class TempRepoTests(Login):
 
 
 class RepoTests(Login):
-    """저장소의 실제 md (일일루틴/프롬프트, 클라우드_제약) 를 쓴다."""
+    """저장소의 실제 md (일일루틴/프롬프트) 를 쓴다."""
 
     def report(self, *args):
         out = StringIO()
@@ -183,13 +182,13 @@ class RepoTests(Login):
         self.report("writing", "시작", "다시", "--date", "2026-10-16")
         self.assertEqual(RoutineRun.objects.count(), 2)
 
-    def test_references_are_md_reads_cloud_and_data(self):
+    def test_references_are_md_reads_and_data(self):
         tistory = Routine.objects.get(key="writing")
         refs = references(tistory)
         self.assertEqual([r["kind"] for r in refs][:1], ["프롬프트"])
         labels = [r["label"] for r in refs]
         for label in ["일일루틴/프롬프트/writing.md", "AGENTS.md", "workspace/TISTORY_WRITER.md", "일일루틴/분류변경/README.md", "오늘 쓸 분류",
-                      "콘텐츠/블로그_카페/포스팅자동화/원고/README.md", "일일루틴/클라우드_제약.md", "사이트·체크 (운영 화면)"]:
+                      "콘텐츠/블로그_카페/포스팅자동화/원고/README.md", "사이트·체크 (운영 화면)"]:
             self.assertIn(label, labels)
         self.assertTrue(all(r["ok"] for r in refs))
         self.assertFalse(any("T번호" in label for label in labels))  # 쓰는 곳은 '보는 md'가 아니다
@@ -213,20 +212,20 @@ class RepoTests(Login):
         self.client.post(reverse("routines:evaluate", args=[tistory.pk]), {"day": "2026-10-15", "score": "3", "comment": "제목이 길다"})
         self.assertEqual(Evaluation.objects.get().score, 3)  # 같은 날은 고친다
         refresh = Routine.objects.get(key="prompt_update")
-        text = launcher(refresh, "local", date(2026, 10, 16))
+        text = launcher(refresh, date(2026, 10, 16), report=True)
         self.assertIn("`일일루틴/프롬프트/prompt_update.md`", text)
         self.assertIn("### 글쓰기 — `일일루틴/프롬프트/writing.md`", text)
         self.assertIn("2026-10-15 · 3점 [새] · 제목이 길다", text)
         self.assertIn("점검 관점: AI 글쓰기 유의점", text)
         self.assertIn("routine_report prompt_update", text)
-        self.assertIn("일일루틴/클라우드_제약.md", launcher(refresh, "cloud", date(2026, 10, 16)))
+        self.assertIn("### 글 분류 전체 (대 > 중 > 소)", text)  # 분류마다 깊은 조사 (0009)
         res = self.client.get(PROMPTS, {"r": "writing"})
         self.assertEqual(res.context["new_count"], 1)
         # 프롬프트 md 가 바뀌어 새 버전이 생기면 그 전 평가는 '반영'
         v1 = PromptVersion.objects.get(routine=tistory)
         PromptVersion.objects.create(routine=tistory, number=2, sha="x", content="바뀐 프롬프트")
         self.assertEqual(self.client.get(PROMPTS, {"r": "writing"}).context["new_count"], 0)
-        self.assertIn("3점 · 제목이 길다", launcher(Routine.objects.get(key="prompt_update"), "local", date(2026, 10, 16)))
+        self.assertIn("3점 · 제목이 길다", launcher(Routine.objects.get(key="prompt_update"), date(2026, 10, 16)))
         # 그날 바뀐 프롬프트 수가 '프롬프트 최신화' 결과 (하루 1회 목표)
         with patch("apps.routines.views.capture_version"):
             row = next(r for r in self.client.get(INDEX).context["routines"] if r.key == "prompt_update")
@@ -241,6 +240,21 @@ class RepoTests(Login):
         res = self.client.get(reverse("routines:version_restore", args=[v1.pk]))
         self.assertContains(res, "v1 내용")
 
+    def test_brief_for_scheduled_run_needs_token(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        url = reverse("routines:brief", args=["writing"])
+        self.client.logout()  # 클라우드 루틴은 로그인하지 않고 토큰으로 받는다
+        self.assertEqual(self.client.get(url, {"token": ""}).status_code, 403)  # 토큰을 만들기 전에는 안 준다
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.assertEqual(self.client.get(url, {"token": "bad"}).status_code, 403)
+        res = self.client.get(url, {"token": "tok", "day": "2026-10-16"})
+        self.assertEqual((res.status_code, res["Content-Type"]), (200, "text/plain; charset=utf-8"))
+        text = res.content.decode()
+        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 — 2026-10-16"))
+        self.assertIn("### 오늘 쓸 분류", text)
+        self.assertNotIn("routine_report", text)  # 예약 실행은 진행 보고 없음
+        self.assertEqual(self.client.get(reverse("routines:brief", args=["nope"]), {"token": "tok"}).status_code, 404)
+
     def test_capture_version_when_md_changes(self):
         tistory = Routine.objects.get(key="writing")
         v1 = capture_version(tistory)
@@ -250,7 +264,6 @@ class RepoTests(Login):
 
     def test_doc_only_for_referenced_md(self):
         self.assertContains(self.client.get(reverse("routines:doc", args=["workspace/TISTORY_WRITER.md"])), "티스토리")
-        self.assertContains(self.client.get(reverse("routines:doc", args=["일일루틴/클라우드_제약.md"])), "클라우드")
         self.assertEqual(self.client.get(reverse("routines:doc", args=["workspace/DEPLOY.md"])).status_code, 404)
         self.assertEqual(self.client.get(reverse("routines:doc", args=["../secret.md"])).status_code, 404)
 
@@ -297,7 +310,7 @@ class WritingPickTests(Login):
         self.client.post(self.url, {"day": "2026-10-16", f"n_{it.sel}": "3", f"n_{t.sel}": "1", "n_c999": "x", "n_g1": "2"})
         pick = RoutinePick.objects.get()
         self.assertEqual(pick.picks, {it.sel: 3, t.sel: 1})
-        text = launcher(self.writing, "local", date(2026, 10, 16))
+        text = launcher(self.writing, date(2026, 10, 16))
         self.assertIn("(총 4편 · 사용자가 고른 분류)", text)
         self.assertIn("- IT/AI > AI 도구·활용 — 3편", text)
         res = self.client.get(INDEX, {"date": "2026-10-16"})

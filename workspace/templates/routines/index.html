@@ -5,11 +5,11 @@
 {% block toolbar %}{% include "includes/period_bar.html" %}{% endblock %}
 
 {% block content %}
-{# 메뉴마다 한 줄: 할 일 · 결과(일별에서 고침) · 로컬(PC 터미널) · 클라우드(프롬프트 복사) · 상태 #}
+{# 메뉴마다 한 줄: 할 일 · 결과(일별에서 고침) · 실행(PC 터미널, 더 하고 싶을 때. 매일 아침은 클라우드 예약이 돈다) · 상태 #}
 <section class="card br-sites">
   <table class="grid br-table rt-table">
-    <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:190px"><col style="width:130px"><col style="width:80px"></colgroup>
-    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>로컬</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}</div></th><th>클라우드</th><th class="c">상태</th></tr></thead>
+    <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:190px"><col style="width:80px"></colgroup>
+    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
     <tbody>
       {% for r in routines %}
       <tr id="rt-{{ r.key }}">
@@ -23,12 +23,8 @@
           {% else %}<span class="br-num"><strong>{{ r.result }}</strong></span>{% endif %}<span class="br-of">/{{ r.target }}</span>
         </td>
         <td>
-          {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.local_prompt day=run_day label="실행" %}
-          <textarea id="p-{{ r.key }}-local" hidden>{{ r.local_prompt }}</textarea>
-        </td>
-        <td>
-          <button class="btn sm ghost" type="button" data-copy="#p-{{ r.key }}-cloud" data-copy-msg="{{ r.name }} 클라우드 프롬프트를 복사했습니다." title="클라우드 세션에 붙여넣기 (사이트 대신 이미 있는 글 목록 포함)">{% include "includes/ic.html" with name="copy" %}프롬프트 복사</button>
-          <textarea id="p-{{ r.key }}-cloud" hidden>{{ r.cloud_prompt }}</textarea>
+          {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt day=run_day label="실행" %}
+          <textarea id="p-{{ r.key }}" hidden>{{ r.prompt }}</textarea>
         </td>
         <td class="c">{% include "includes/state.html" with state=r.state %}</td>
       </tr>
@@ -43,10 +39,9 @@
   <section class="card rt-panel" id="rt-prompt">
     <div class="rt-panel-head">
       <div class="seg" role="tablist" aria-label="루틴">{% for r in routines %}<button type="button" data-rt-pick="{{ r.key }}"{% if forloop.first %} class="on"{% endif %}>{{ r.name }}</button>{% endfor %}</div>
-      <div class="seg" role="tablist" aria-label="구분"><button type="button" data-rt-mode="local" class="on">로컬</button><button type="button" data-rt-mode="cloud">클라우드</button></div>
       <button class="btn sm ghost rt-right" type="button" data-copy="#rt-view" data-copy-msg="보이는 프롬프트를 복사했습니다.">{% include "includes/ic.html" with name="copy" %}복사</button>
     </div>
-    <textarea id="rt-view" class="rt-view" readonly aria-label="프롬프트 원문">{% with routines|first as r %}{{ r.local_prompt }}{% endwith %}</textarea>
+    <textarea id="rt-view" class="rt-view" readonly aria-label="프롬프트 원문">{% with routines|first as r %}{{ r.prompt }}{% endwith %}</textarea>
   </section>
   {% if picker %}
   <section class="card rt-panel" id="rt-picker" data-picker-key="{{ picker.routine.key }}" hidden>
@@ -106,12 +101,12 @@
 {% block scripts %}
 <script>
 (function () {
-  // 프롬프트 칸: 루틴·구분을 고르면 표의 숨은 원문(#p-키-local|cloud)을 보여 준다. 표의 줄을 눌러도 고른다.
-  var view = document.getElementById("rt-view"), key = "{{ routines.0.key }}", mode = "local";
+  // 프롬프트 칸: 루틴을 고르면 표의 숨은 원문(#p-키)을 보여 준다. 표의 줄을 눌러도 고른다.
+  var view = document.getElementById("rt-view"), key = "{{ routines.0.key }}";
   var picker = document.getElementById("rt-picker"), prompt = document.getElementById("rt-prompt");
   if (picker && location.hash === "#rt-picker") key = picker.dataset.pickerKey;  // 분류 저장 뒤 돌아왔을 때
   function show() {
-    var src = document.getElementById("p-" + key + "-" + mode);
+    var src = document.getElementById("p-" + key);
     if (src) view.value = src.value;
     if (picker) {  // 글쓰기를 고르면 왼쪽 아래는 분류 고르기
       var picking = key === picker.dataset.pickerKey;
@@ -119,13 +114,11 @@
       prompt.hidden = picking;
     }
     document.querySelectorAll("[data-rt-pick]").forEach(function (b) { b.classList.toggle("on", b.dataset.rtPick === key); });
-    document.querySelectorAll("[data-rt-mode]").forEach(function (b) { b.classList.toggle("on", b.dataset.rtMode === mode); });
   }
   document.addEventListener("click", function (e) {
-    var pick = e.target.closest("[data-rt-pick]"), m = e.target.closest("[data-rt-mode]");
-    var row = !pick && !m && !e.target.closest("a, button, input, form") && e.target.closest("tr[id^='rt-']");
+    var pick = e.target.closest("[data-rt-pick]");
+    var row = !pick && !e.target.closest("a, button, input, form") && e.target.closest("tr[id^='rt-']");
     if (pick) key = pick.dataset.rtPick;
-    else if (m) mode = m.dataset.rtMode;
     else if (row) key = row.id.slice(3);
     else return;
     show();
