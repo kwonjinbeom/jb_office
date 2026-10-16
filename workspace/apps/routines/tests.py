@@ -100,10 +100,14 @@ class TempRepoTests(Login):
         conf = json.loads((self.root / "workspace" / ".routine" / "settings.json").read_text(encoding="utf-8"))
         self.assertIn("Bash(git push *)", conf["permissions"]["allow"])
         self.assertIn("AskUserQuestion", conf["permissions"]["deny"])  # 방법·선택은 묻지 않는다
+        self.assertIn("mcp__playwright", conf["permissions"]["allow"])  # 브라우저를 열어 직접 본다
+        mcp = json.loads((self.root / "workspace" / ".routine" / "mcp.json").read_text(encoding="utf-8"))
+        self.assertIn("@playwright/mcp@", " ".join(mcp["mcpServers"]["playwright"]["args"]))
         self.assertEqual(f.read_text(encoding="utf-8"), "# 일일루틴 · 글쓰기\n할 일")
         args = popen.call_args[0][0]
         self.assertEqual(args[args.index("claude") + 1], "workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.")
         self.assertIn("--settings", args)
+        self.assertTrue(args[args.index("--mcp-config") + 1].endswith("mcp.json"))
         self.assertIn("한국어", args[args.index("--append-system-prompt") + 1])
         run = RoutineRun.objects.get()
         self.assertEqual((run.status, run.day), ("running", date(2026, 10, 16)))
