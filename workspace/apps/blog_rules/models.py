@@ -43,7 +43,7 @@ class Blog(TrashableModel):
 
     @property
     def sel(self):
-        """타입·카테고리 화면의 사이트 카테고리 트리에서 고를 때 쓰는 값"""
+        """글 관리 화면의 사이트 카테고리 트리에서 고를 때 쓰는 값"""
         return f"b{self.pk}"
 
 

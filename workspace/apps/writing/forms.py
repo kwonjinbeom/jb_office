@@ -1,5 +1,7 @@
 from django import forms
 
+from apps.blog_types import classify
+
 from .models import Post
 from .render import clean_html, is_html
 
@@ -38,6 +40,15 @@ class PostForm(forms.ModelForm):
         for name in list(self.fields):
             if name not in keep:
                 del self.fields[name]
+        # 글 관리의 글 분류. 모든 화면(임시 → 검토 → 포스트)에서 고친다.
+        self.fields["classification"] = forms.ChoiceField(
+            label="분류", required=False, choices=classify.choices("tistory"),
+            initial=classify.value_of(self.instance) if self.instance.pk else "",
+            widget=forms.Select(attrs={"class": "input"}))
+
+    def save(self, commit=True):
+        classify.assign(self.instance, self.cleaned_data.get("classification"))
+        return super().save(commit=commit)
 
     def clean_title(self):
         return " ".join(self.cleaned_data["title"].split())

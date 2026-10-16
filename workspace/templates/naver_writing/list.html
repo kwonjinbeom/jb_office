@@ -45,7 +45,9 @@
       </tr>
     </thead>
     <tbody>
-      {% for post in posts %}
+      {% for g in groups %}
+      <tr class="wr-group"><td colspan="{% if stage == 'post' %}7{% elif stage == 'review' %}6{% else %}5{% endif %}">{{ g.label }} <span class="cnt">{{ g.posts|length }}</span></td></tr>
+      {% for post in g.posts %}
       <tr {% trash_attrs post %} data-href="{{ post.get_absolute_url }}">
         <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ post.pk }}" form="wr-bulk" aria-label="{{ post.title }} 선택"></td>
         <td class="title-cell mid"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></td>
@@ -66,6 +68,7 @@
           </form>
         </td>
       </tr>
+      {% endfor %}
       {% empty %}
       <tr><td colspan="{% if stage == 'post' %}7{% elif stage == 'review' %}6{% else %}5{% endif %}" class="grid-empty">
         {% if q %}검색 결과가 없습니다.

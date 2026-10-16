@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from apps.blog_rules.models import Blog
 
-from .models import Category, PostType, Section, SiteCategory, SubType
+from .models import Category, Placement, PostType, Section, SiteCategory, SubType
 
 INDEX = reverse("blog_types:index")
 
@@ -40,32 +40,33 @@ class BlogTypesTests(TestCase):
         self.assertContains(res, "세일 행사")  # 3단계까지 트리에 보인다
         self.assertNotContains(res, "K-세일페스타")  # 하위 설명은 트리에 없다
         self.assertContains(res, "왼쪽에서 하나를 고르세요")
-        self.assertContains(res, "타입·카테고리")  # 블로그·카페 아래 중메뉴
+        self.assertContains(res, "글 관리")  # 블로그·카페 아래 중메뉴
+        self.assertContains(res, "티스토리 글쓰기")  # 글 분류는 글쓰기마다 나뉜다
+        self.assertContains(res, "네이버 글쓰기")
 
     def test_select_shows_path_children_and_detail(self):
         season = PostType.objects.get(name="시즌 달력")
-        res = self.client.get(INDEX, {"sel": season.sel})
-        self.assertEqual(res.context["path"], [("판매 수익 (커넥트)", season.category.section.sel),
-                                               ("C. 타이밍", season.category.sel), ("시즌 달력", season.sel)])
-        self.assertEqual(res.context["open"], {season.category.section.sel, season.category.sel, season.sel})
-        self.assertEqual(res.context["child_kind"], "sub")
-        self.assertContains(res, "+ 하위 추가")
+        res = self.client.get(INDEX, {"w": "naver", "sel": season.sel})
+        self.assertEqual([label for label, _ in res.context["path"]], ["네이버 글쓰기", "판매 수익 (커넥트)", "C. 타이밍", "시즌 달력"])
+        self.assertEqual(res.context["open"], {"naver", f"naver-{season.category.section.sel}",
+                                               f"naver-{season.category.sel}", f"naver-{season.sel}"})
+        self.assertEqual(res.context["panel"], "posts")
+        self.assertIsNone(res.context["form"])  # 고치는 칸은 연필(edit=1)로만 연다
         sub = season.subs.first()
-        res = self.client.get(INDEX, {"sel": sub.sel})
-        self.assertContains(res, "K-세일페스타")  # 들어가면 설명이 보인다
-        self.assertIsNone(res.context["child_kind"])
+        res = self.client.get(INDEX, {"w": "naver", "sel": sub.sel, "edit": "1"})
+        self.assertContains(res, "K-세일페스타")  # 고치기를 열면 설명이 보인다
 
     def test_quick_add_each_level(self):
         res = self.client.post(reverse("blog_types:add", args=["section"]), {"name": "일상·브이로그"})
         daily = Section.objects.get(name="일상·브이로그")
-        self.assertRedirects(res, f"{INDEX}?sel={daily.sel}", fetch_redirect_response=False)
+        self.assertRedirects(res, f"{INDEX}?w=tistory&sel={daily.sel}", fetch_redirect_response=False)
         self.client.post(reverse("blog_types:add", args=["category"]), {"name": "카페", "parent": daily.sel})
         self.assertEqual(daily.categories.get().code, "A")  # 기호는 대분류마다 A 부터
         connect = Section.objects.get(name="판매 수익 (커넥트)")
         res = self.client.post(reverse("blog_types:add", args=["category"]), {"name": "구독", "parent": connect.sel})
         h = Category.objects.get(name="구독")
         self.assertEqual(h.code, "H")
-        self.assertRedirects(res, f"{INDEX}?sel={h.sel}", fetch_redirect_response=False)
+        self.assertRedirects(res, f"{INDEX}?w=tistory&sel={h.sel}", fetch_redirect_response=False)
         self.client.post(reverse("blog_types:add", args=["type"]), {"name": "해지 비교", "parent": h.sel})
         t = h.types.get()
         self.client.post(reverse("blog_types:add", args=["sub"]), {"name": "OTT", "parent": t.sel})
@@ -91,8 +92,8 @@ class BlogTypesTests(TestCase):
 
     def test_save_detail(self):
         sub = SubType.objects.get(name="세일 행사")
-        res = self.client.post(reverse("blog_types:save", args=["sub", sub.pk]), {"name": "큰 세일", "note": "블프 위주"})
-        self.assertRedirects(res, f"{INDEX}?sel={sub.sel}", fetch_redirect_response=False)
+        res = self.client.post(reverse("blog_types:save", args=["sub", sub.pk]), {"name": "큰 세일", "note": "블프 위주", "w": "naver"})
+        self.assertRedirects(res, f"{INDEX}?w=naver&sel={sub.sel}", fetch_redirect_response=False)
         sub.refresh_from_db()
         self.assertEqual((sub.name, sub.note), ("큰 세일", "블프 위주"))
         res = self.client.post(reverse("blog_types:save", args=["sub", sub.pk]), {"name": "", "note": ""})
@@ -192,3 +193,110 @@ class SiteCategoryTests(TestCase):
     def test_site_is_not_editable_here(self):
         self.assertEqual(self.client.post(reverse("blog_types:save", args=["site", self.memorily.pk])).status_code, 404)
         self.assertEqual(self.client.get(reverse("blog_types:delete", args=["site", self.memorily.pk])).status_code, 404)
+
+
+class PostManageTests(TestCase):
+    """글 관리: 글에 붙는 분류, 글쓰기 목록의 분류별 묶음, 사이트 카테고리에 글 넣기(매핑)"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post as TistoryPost
+        self.TistoryPost, self.NaverPost = TistoryPost, NaverPost
+        self.season = PostType.objects.get(name="시즌 달력")
+        self.sale = self.season.subs.get(name="세일 행사")
+
+    def test_form_sets_classification_and_list_groups(self):
+        from apps.writing.forms import PostForm
+        post = self.TistoryPost.objects.create(title="블프 달력", stage="post")
+        form = PostForm({"title": "블프 달력", "classification": self.sale.sel, "write_status": "todo",
+                         "publish_status": "todo"}, instance=post, stage="post")
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        post.refresh_from_db()
+        self.assertEqual((post.bt_category, post.bt_type, post.bt_sub), (self.season.category, self.season, self.sale))
+        self.assertEqual(PostForm(instance=post, stage="post").fields["classification"].initial, self.sale.sel)
+        self.TistoryPost.objects.create(title="분류 없는 글", stage="post")
+        res = self.client.get(reverse("writing:posts"))
+        labels = [g["label"] for g in res.context["groups"]]
+        self.assertEqual(labels, ["판매 수익 (커넥트) › C. 타이밍 › 시즌 달력 › 세일 행사", "미분류"])  # 미분류는 맨 아래
+
+    def test_naver_choices_follow_platform(self):
+        from apps.blog_types import classify
+        values = [v for _, rows in classify.choices("tistory")[1:] for v, _ in rows]
+        g = Category.objects.get(section__name="판매 수익 (커넥트)", code="G")  # G 여행·체험은 네이버 전용
+        self.assertNotIn(g.sel, values)
+        values = [v for _, rows in classify.choices("naver")[1:] for v, _ in rows]
+        self.assertIn(g.sel, values)
+
+    def test_class_node_lists_posts_of_that_writer(self):
+        from apps.blog_types import classify
+        p = self.TistoryPost.objects.create(title="세일 정리", stage="post")
+        classify.assign(p, self.sale.sel)
+        p.save()
+        self.TistoryPost.objects.create(title="아직 검토 중", stage="review", bt_category=self.season.category)
+        res = self.client.get(INDEX, {"w": "tistory", "sel": self.season.category.sel})
+        self.assertEqual([x.title for x in res.context["posts"]], ["세일 정리"])  # 포스트 관리 글만
+        res = self.client.get(INDEX, {"w": "naver", "sel": self.season.category.sel})
+        self.assertEqual(res.context["posts"], [])
+
+    def test_place_post_in_site_category(self):
+        memorily = Blog.objects.get(name="memorily")
+        java = SiteCategory.objects.get(blog=memorily, name="Java")
+        post = self.TistoryPost.objects.create(title="자바 정리", stage="post")
+        self.TistoryPost.objects.create(title="임시 글", stage="temp")
+        res = self.client.get(INDEX, {"sel": java.sel})
+        self.assertEqual([pk for pk, _ in res.context["candidates"]], [post.pk])  # 포스트 관리 글만 넣을 수 있다
+        self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": post.pk, "status": "draft"})
+        placement = Placement.objects.get()
+        self.assertEqual((placement.tistory_post, placement.status), (post, "draft"))
+        self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": post.pk})
+        self.assertEqual(Placement.objects.count(), 1)  # 같은 곳에 두 번 넣지 않는다
+        res = self.client.get(INDEX, {"sel": java.sel})
+        self.assertEqual(res.context["candidates"], [])
+        self.assertContains(res, "자바 정리")
+        self.client.post(reverse("blog_types:place_status", args=[placement.pk]), {"value": "published"})
+        placement.refresh_from_db()
+        self.assertEqual(placement.status, "published")
+        res = self.client.get(INDEX, {"w": "tistory"})
+        self.assertContains(res, "memorily › Java")  # 글 분류 쪽에서도 넣은 곳이 보인다
+        self.client.post(reverse("blog_types:place_remove", args=[placement.pk]))
+        self.assertFalse(Placement.objects.exists())
+        self.assertEqual(Placement.all_objects.count(), 1)  # 휴지통
+
+    def test_naver_site_takes_naver_posts(self):
+        lukey = SiteCategory.objects.get(blog__name="black_lukey", name="낙서장")
+        t = self.TistoryPost.objects.create(title="티스토리 글", stage="post")
+        n = self.NaverPost.objects.create(title="네이버 글", stage="post")
+        res = self.client.get(INDEX, {"sel": lukey.sel})
+        self.assertEqual([pk for pk, _ in res.context["candidates"]], [n.pk])
+        draft = self.NaverPost.objects.create(title="네이버 임시", stage="temp")
+        self.client.post(reverse("blog_types:place_add"), {"site_category": lukey.pk, "post": draft.pk})
+        self.assertFalse(Placement.objects.exists())  # 포스트 관리 글이 아니면 넣지 않는다
+        self.client.post(reverse("blog_types:place_add"), {"site_category": lukey.pk, "post": n.pk})
+        self.assertEqual(Placement.objects.get().naver_post, n)
+        self.assertNotIn(t.title, [label for _, label in self.client.get(INDEX, {"sel": lukey.sel}).context["candidates"]])
+
+    def test_trashing_post_takes_placement_along(self):
+        java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        post = self.TistoryPost.objects.create(title="자바 정리", stage="post")
+        Placement.objects.create(site_category=java, tistory_post=post)
+        post.delete()
+        self.assertFalse(Placement.objects.exists())
+
+
+class SideNavTests(TestCase):
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+
+    def test_parent_menus_only_expand_and_list_child_keeps_old_page(self):
+        res = self.client.get(reverse("blog:list"))
+        self.assertContains(res, "블로그·카페 리스트")
+        self.assertContains(res, 'class="nav-item nav-toggle" data-nav-toggle')
+        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")
+        self.assertTrue(group["open"])
+        self.assertTrue(group["children"][0]["active"])  # 리스트 중메뉴가 강조된다
+        memos = next(n for n in res.context["NAV"] if n["menu"].key == "memos")
+        self.assertEqual(memos["children"], [])  # 하위 없는 메뉴는 그대로
