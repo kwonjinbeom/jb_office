@@ -5,35 +5,50 @@
 {% block heading %}사이트별 템플릿{% if requested %} <span class="cnt">변환 요청 {{ requested }}</span>{% endif %}{% endblock %}
 
 {% block content %}
-{# 사이트마다 한 줄 (운영 화면과 같은 격자): 컨셉 · 말투·구성 · 붙여넣기 포맷 · 변환. 사이트를 누르면 고치기와 변환할 글 #}
-<section class="card br-sites">
-  <table class="grid br-table st-table">
-    <colgroup><col style="width:200px"><col style="width:20%"><col><col style="width:22%"><col style="width:190px"></colgroup>
-    <thead><tr><th>사이트</th><th>컨셉</th><th>말투·구성</th><th>붙여넣기 포맷</th><th>변환</th></tr></thead>
+{# 위: 사이트 카드 (같은 크기 격자). 누르면 그 사이트의 컨셉·템플릿 고치기 #}
+<div class="st-sites">
+  {% for b in sites %}
+  <a class="card st-site" href="{% url 'site_templates:site' b.pk %}" title="{{ b.name }} 컨셉·템플릿 고치기">
+    <div class="st-site-head"><span class="br-plat">{{ b.get_platform_display }}</span><strong>{{ b.name }}</strong></div>
+    <div class="st-site-concept">{{ b.content|default:"컨셉 미정" }}</div>
+    <div class="st-site-cv">
+      {% if b.cv.requested %}<span class="badge cv-requested">요청 {{ b.cv.requested }}</span>{% endif %}
+      {% if b.cv.done %}<span class="badge cv-done">완료 {{ b.cv.done }}</span>{% endif %}
+      {% if b.cv.checked %}<span class="badge cv-checked">확인 {{ b.cv.checked }}</span>{% endif %}
+      {% if not b.cv.requested and not b.cv.done and not b.cv.checked %}<span class="muted small">변환 없음</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{# 메인: 포스트 관리 단계 · 아직 발행 완료가 아닌 글. 글마다 사이트를 골라 변환 요청 #}
+<section class="card">
+  <div class="card-head"><h3 class="card-title">변환할 글 <span class="cnt">{{ posts|length }}</span></h3><span class="hint">포스트 관리 · 발행 전</span></div>
+  <table class="grid bt-grid st-posts">
+    <thead><tr><th>제목</th><th style="width:34%">넣은 곳 · 변환</th><th style="width:300px">사이트 골라 변환</th></tr></thead>
     <tbody>
-      {% for b in sites %}
+      {% for p in posts %}
       <tr>
-        <td>
-          <div class="br-site"><span class="br-plat">{{ b.get_platform_display }}</span><strong title="{{ b.name }}"><a href="{% url 'site_templates:site' b.pk %}">{{ b.name }}</a></strong></div>
-          {% if b.address %}<span class="br-addr">{{ b.address|cut:"https://"|cut:"http://" }}</span>{% else %}<span class="br-addr">주소 없음</span>{% endif %}
+        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
+        <td class="small">
+          {% for pl in p.placements.all %}<div class="bt-chip"><a href="{% url 'site_templates:convert' pl.pk %}">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }}</a> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a></div>{% empty %}<span class="muted">-</span>{% endfor %}
         </td>
-        <td><div class="br-concept st-clamp">{{ b.content|default:"—" }}</div></td>
         <td>
-          <div class="st-clamp">{{ b.tone_line|default:"말투 미정" }}</div>
-          <div class="br-sub st-clamp">{{ b.structure_line|default:"구성 미정" }}</div>
-        </td>
-        <td><div class="br-sub st-clamp">{{ b.fmt_line|default:"포맷 미정" }}</div></td>
-        <td>
-          {% if b.cv_total %}
-          <a class="st-cv" href="{% url 'site_templates:site' b.pk %}">
-            {% if b.cv.requested %}<span class="badge cv-requested">요청 {{ b.cv.requested }}</span>{% endif %}
-            {% if b.cv.done %}<span class="badge cv-done">완료 {{ b.cv.done }}</span>{% endif %}
-            {% if b.cv.checked %}<span class="badge cv-checked">확인 {{ b.cv.checked }}</span>{% endif %}
-            {% if b.cv.none %}<span class="badge cv-none">미변환 {{ b.cv.none }}</span>{% endif %}
-          </a>
-          {% else %}<span class="br-sub">넣은 글 없음</span>{% endif %}
+          <form class="st-pick" method="post" action="{% url 'site_templates:request' %}">{% csrf_token %}
+            <input type="hidden" name="post" value="{{ p.writer }}:{{ p.pk }}">
+            <select class="input sm" name="site_category" required aria-label="{{ p.title }} 변환할 사이트">
+              <option value="">사이트 고르기</option>
+              {% for g in site_choices %}
+              {% if g.rows %}<optgroup label="{{ g.blog.name }} ({{ g.blog.get_platform_display }})">{% for pk, label in g.rows %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}</optgroup>
+              {% else %}<option disabled>{{ g.blog.name }} — 카테고리 먼저 (글 매핑 관리)</option>{% endif %}
+              {% endfor %}
+            </select>
+            <button class="btn primary sm" type="submit">변환 요청</button>
+          </form>
         </td>
       </tr>
+      {% empty %}
+      <tr><td colspan="3" class="grid-empty">포스트 관리 단계의 발행 전 글이 없습니다. 글 관리에서 포스트로 보내면 여기에 모입니다.</td></tr>
       {% endfor %}
     </tbody>
   </table>

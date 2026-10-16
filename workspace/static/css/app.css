@@ -1423,3 +1423,14 @@ a.br-addr:hover { color: var(--accent); }
 .pk-sum { font-size: 12px; color: var(--accent); font-weight: 700; }
 .pk-changes { margin-top: 12px; padding: 10px 8px 0; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--text-3); line-height: 1.7; }
 .pk-changes strong { display: block; color: var(--text-2); }
+
+/* 사이트별 템플릿 메인: 사이트 카드(같은 크기) + 변환할 글 */
+.st-sites { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.st-site { display: grid; grid-template-rows: auto 40px auto; gap: 6px; padding: 12px 14px; color: var(--text); height: 118px; }
+.st-site:hover { text-decoration: none; border-color: var(--accent); }
+.st-site-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.st-site-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-site-concept { font-size: 12.5px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.st-site-cv { display: flex; gap: 4px; flex-wrap: wrap; overflow: hidden; height: 20px; }
+.st-pick { display: flex; gap: 6px; }
+.st-pick select { flex: 1; min-width: 0; }
