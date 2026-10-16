@@ -1,7 +1,8 @@
 """사이트별 템플릿 화면.
 
-- 목록(운영 화면처럼 사이트마다 한 줄): 컨셉 · 말투·구성 템플릿 · 붙여넣기 포맷 · 변환 현황
-- 사이트: 템플릿·포맷 고치기 + 그 사이트에 넣은 글과 변환 상태
+- 메인 (2026-10-16 사용자): 포스트 관리 단계이면서 아직 발행 완료가 아닌 글 목록. 글마다 사이트(카테고리)를 골라 변환을 요청하고,
+  이미 넣은 곳의 변환 상태를 본다. 위에는 사이트 카드(누르면 그 사이트의 컨셉·템플릿 고치기).
+- 사이트: 컨셉·말투·구성·지킬 것과 플랫폼 붙여넣기 포맷 고치기에만 집중한다.
 - 변환: 원문 ↔ 변환본. 변환 요청 → (Claude 가 변환본을 채움) → 변환 완료 → 확인 완료. 변환본은 그 사이트 에디터에 맞게 복사한다.
 - requests.json: 변환 요청인 글의 요청문 (Claude 가 읽는다)
 """
@@ -16,7 +17,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
-from apps.blog_types.models import Placement
+from apps.blog_types import classify
+from apps.blog_types.models import Placement, SiteCategory
 
 from . import paste, prompt
 from .models import PlatformFormat, SiteTemplate
@@ -28,6 +30,14 @@ class _Styled(forms.ModelForm):
         self.label_suffix = ""
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "input")
+
+
+class ConceptForm(_Styled):
+    """사이트의 컨셉 한 줄 (운영 화면과 같은 값)"""
+    class Meta:
+        model = Blog
+        fields = ["content"]
+        labels = {"content": "컨셉"}
 
 
 class TemplateForm(_Styled):
@@ -57,37 +67,81 @@ def _placements(blog=None):
     return qs.filter(site_category__blog=blog) if blog else qs
 
 
+def _site_choices(sites):
+    """사이트 골라 변환: 사이트마다 묶은 사이트 카테고리. 카테고리가 없는 사이트는 고를 수 없다 (글 매핑 관리에서 먼저 추가)."""
+    groups = []
+    cats = SiteCategory.objects.filter(parent=None).prefetch_related("children").order_by("order", "pk")
+    by_blog = {}
+    for c in cats:
+        by_blog.setdefault(c.blog_id, []).append(c)
+    for b in sites:
+        rows = []
+        for c in by_blog.get(b.pk, []):
+            rows.append((c.pk, f"{b.name} › {c.name}"))
+            rows += [(k.pk, f"{b.name} › {c.name} › {k.name}") for k in c.children.all()]
+        groups.append({"blog": b, "rows": rows})
+    return groups
+
+
 def index(request):
     _nav(request)
     counts = Counter(Placement.objects.values_list("site_category__blog_id", "convert_status"))
     sites = list(Blog.objects.all())
     for b in sites:
-        b.tpl = prompt.template_for(b)
-        b.fmt = prompt.format_for(b.platform)
-        b.tone_line = _first_line(b.tpl.tone)
-        b.structure_line = _first_line(b.tpl.structure)
-        b.fmt_line = _first_line(b.fmt.guide)
         b.cv = {key: counts[(b.pk, key)] for key in Placement.Convert.values}
-        b.cv_total = sum(b.cv.values())
-    return render(request, "site_templates/index.html", {"page_title": "사이트별 템플릿", "sites": sites,
-                                                          "requested": sum(b.cv["requested"] for b in sites)})
+    from django.db.models import Prefetch
+    pl_qs = _placements()
+
+    def narrow(qs):
+        qs = qs.filter(stage="post").exclude(publish_status=qs.model.Publish.DONE)
+        return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=pl_qs))
+    posts = classify.all_posts(narrow)
+    posts.sort(key=lambda p: p.updated_at, reverse=True)
+    for p in posts:
+        p.cls_label = classify.label_of(p)
+    return render(request, "site_templates/index.html", {
+        "page_title": "사이트별 템플릿", "sites": sites, "posts": posts, "site_choices": _site_choices(sites),
+        "requested": sum(b.cv["requested"] for b in sites),
+    })
+
+
+@require_POST
+def request_convert(request):
+    """메인에서: 글 하나를 사이트 카테고리에 넣고(없으면) 변환을 요청한다."""
+    cat = get_object_or_404(SiteCategory, pk=request.POST.get("site_category") or 0)
+    writer, _, pk = request.POST.get("post", "").rpartition(":")
+    if writer not in classify.WRITERS or not pk.isdigit():
+        messages.warning(request, "글을 고르세요.")
+        return redirect("site_templates:index")
+    post = get_object_or_404(classify.post_model(writer), pk=pk, stage="post")
+    field = "naver_post" if writer == "naver" else "tistory_post"
+    placement, created = Placement.objects.get_or_create(site_category=cat, **{field: post})
+    placement.convert_status = Placement.Convert.REQUESTED
+    placement.save(update_fields=["convert_status", "updated_at"])
+    messages.success(request, f"'{post.title}' → {cat.blog.name} › {cat} 변환을 요청했습니다. "
+                              "Claude 에게 '변환 요청 처리해줘'라고 하면 변환본을 채웁니다.")
+    return redirect("site_templates:index")
 
 
 def site(request, pk):
     _nav(request)
     blog = get_object_or_404(Blog, pk=pk)
     tpl, fmt = prompt.template_for(blog), prompt.format_for(blog.platform)
-    tpl_form = TemplateForm(request.POST if request.POST.get("part") == "template" else None, instance=tpl, prefix="t")
-    fmt_form = FormatForm(request.POST if request.POST.get("part") == "format" else None, instance=fmt, prefix="f")
+    part = request.POST.get("part")
+    concept_form = ConceptForm(request.POST if part == "template" else None, instance=blog, prefix="c")
+    tpl_form = TemplateForm(request.POST if part == "template" else None, instance=tpl, prefix="t")
+    fmt_form = FormatForm(request.POST if part == "format" else None, instance=fmt, prefix="f")
     if request.method == "POST":
-        form = tpl_form if request.POST.get("part") == "template" else fmt_form
-        if form.is_valid():
-            form.save()
+        forms_ = [concept_form, tpl_form] if part == "template" else [fmt_form]
+        if all(f.is_valid() for f in forms_):
+            for f in forms_:
+                f.save()
             messages.success(request, "저장했습니다.")
             return redirect("site_templates:site", pk=blog.pk)
+    cv = Counter(_placements(blog).values_list("convert_status", flat=True))
     return render(request, "site_templates/site.html", {
-        "page_title": f"{blog.name} 템플릿", "blog": blog, "tpl_form": tpl_form, "fmt_form": fmt_form,
-        "placements": _placements(blog).order_by("convert_status", "-updated_at"),
+        "page_title": f"{blog.name} 템플릿", "blog": blog, "concept_form": concept_form, "tpl_form": tpl_form,
+        "fmt_form": fmt_form, "cv": {k: cv[k] for k in Placement.Convert.values},
     })
 
 
