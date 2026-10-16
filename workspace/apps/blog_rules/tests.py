@@ -14,7 +14,11 @@ class BlogRulesTests(TestCase):
 
     def test_seed(self):
         self.assertEqual(list(Blog.objects.values_list("name", flat=True)),
-                         ["memorily", "눈잎", "black_lukey", "블로거", "워드프레스"])
+                         ["memorily", "눈잎", "black_lukey", "밤밤", "워드프레스"])
+        # 0004: 블로거 = 밤밤(정보성), 품질 순서와 겹침 금지 규칙
+        self.assertTrue(Blog.objects.get(name="밤밤").content.startswith("정보성"))
+        self.assertTrue(Rule.objects.filter(group="common", body__startswith="블로그끼리 내용이 겹치는").exists())
+        self.assertTrue(Rule.objects.filter(group="common", body__contains="눈잎(티스토리) > 밤밤(블로거)").exists())
         naver = Blog.objects.get(name="black_lukey")
         self.assertEqual((naver.platform, naver.daily, naver.address), ("naver", 1, "https://blog.naver.com/black_lukey"))
         self.assertEqual(Rule.objects.filter(group="check").count(), 5)
