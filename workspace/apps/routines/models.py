@@ -5,6 +5,7 @@
 평가(Evaluation)를 쌓고 '갱신'하면 AI 가 그 md 를 고친다. 바뀐 md 는 PromptVersion 으로 남는다.
 """
 from django.db import models
+from django.utils import timezone
 
 from apps.core.models import TrashableModel
 
@@ -58,7 +59,8 @@ class RoutineDay(models.Model):
 
 
 class RoutineRun(models.Model):
-    """로컬로 돌린 루틴 한 번. claude 가 단계마다 `manage.py routine_report` 로 상태와 한 줄을 남긴다."""
+    """루틴 실행 한 번 (매일 아침 예약 · 화면의 '실행'). claude 가 단계마다 서버의 보고 주소(views.report)나
+    PC 의 `manage.py routine_report` 로 상태와 한 줄을 남긴다. 일일루틴 화면 오른쪽 아래 '실행 이력'."""
 
     class Status(models.TextChoices):
         RUNNING = "running", "진행"
@@ -67,17 +69,26 @@ class RoutineRun(models.Model):
         DONE = "done", "완료"
         FAILED = "failed", "실패"
 
+    class Via(models.TextChoices):
+        RUN = "run", "실행"
+        SCHEDULE = "schedule", "예약"
+
+    # 보고 말 → 상태 (안내문의 '진행 보고'가 이 말을 쓴다)
+    WORDS = {"시작": Status.RUNNING, "진행": Status.RUNNING, "대기": Status.WAITING,
+             "막힘": Status.BLOCKED, "완료": Status.DONE, "실패": Status.FAILED}
+
     routine = models.ForeignKey(Routine, verbose_name="루틴", on_delete=models.CASCADE, related_name="runs")
     day = models.DateField("날짜")
     status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.RUNNING)
     step = models.CharField("지금 단계", max_length=200, blank=True)
     log = models.TextField("기록", blank=True)
+    via = models.CharField("어떻게", max_length=10, choices=Via.choices, default=Via.RUN)
     started_at = models.DateTimeField("시작", auto_now_add=True)
     updated_at = models.DateTimeField("마지막 보고", auto_now=True)
 
     class Meta:
         ordering = ["-updated_at", "-pk"]
-        verbose_name = "로컬 실행"
+        verbose_name = "루틴 실행"
         verbose_name_plural = verbose_name
 
     def __str__(self):
@@ -92,6 +103,15 @@ class RoutineRun(models.Model):
     @property
     def is_open(self):
         return self.status in (self.Status.RUNNING, self.Status.WAITING, self.Status.BLOCKED)
+
+    @classmethod
+    def record(cls, routine, day, word, message="", via=None):
+        """보고 한 줄을 남긴다. '시작'은 그날 끝나지 않은 기록이 있으면 이어 쓰고, 없으면 새로 만든다."""
+        run = cls.objects.filter(routine=routine, day=day).first()
+        if run is None or (word == "시작" and not run.is_open):
+            run = cls.objects.create(routine=routine, day=day, via=via or cls.Via.RUN)
+        run.report(cls.WORDS[word], message or word, timezone.localtime())
+        return run
 
     def report(self, status, message, at):
         self.status = status

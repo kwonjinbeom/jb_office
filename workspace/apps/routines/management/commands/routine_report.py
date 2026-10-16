@@ -12,10 +12,7 @@ from django.utils import timezone
 
 from apps.routines.models import Routine, RoutineRun
 
-WORDS = {
-    "시작": RoutineRun.Status.RUNNING, "진행": RoutineRun.Status.RUNNING, "대기": RoutineRun.Status.WAITING,
-    "막힘": RoutineRun.Status.BLOCKED, "완료": RoutineRun.Status.DONE, "실패": RoutineRun.Status.FAILED,
-}
+WORDS = RoutineRun.WORDS
 
 
 class Command(BaseCommand):
@@ -35,8 +32,5 @@ class Command(BaseCommand):
             day = date.fromisoformat(day) if day else timezone.localdate()
         except ValueError:
             raise CommandError("--date 는 YYYY-MM-DD") from None
-        run = RoutineRun.objects.filter(routine=routine, day=day).first()
-        if run is None or (status == "시작" and not run.is_open):
-            run = RoutineRun.objects.create(routine=routine, day=day)
-        run.report(WORDS[status], message or status, timezone.localtime())
+        run = RoutineRun.record(routine, day, status, message)
         self.stdout.write(f"ok {routine.key} {day} {run.status}")  # 터미널 인코딩과 상관없이 읽히게
