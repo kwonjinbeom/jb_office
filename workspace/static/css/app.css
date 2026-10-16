@@ -1386,6 +1386,10 @@ a.br-addr:hover { color: var(--accent); }
 .st-preview { max-height: 70vh; overflow: auto; border-top: 1px solid var(--line-soft); }
 .st-where { margin: 0 0 10px; }
 @media (max-width: 900px) { .st-cols { grid-template-columns: minmax(0, 1fr); } }
+/* 변환 화면: 붙여넣기 줄 (제목 → 본문 → 태그) */
+.st-paste .st-paste-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.st-paste .st-after { border-top: 1px solid var(--line-soft); padding-top: 10px; font-size: 13px; color: var(--text-2); }
+.st-paste { margin-bottom: 14px; }
 
 /* 메뉴 관리: 대메뉴 묶음마다 tbody, 중메뉴는 들여쓰기 */
 .mm-table tbody.mm-group + tbody.mm-group tr:first-child td { border-top: 1px solid var(--border-strong); }

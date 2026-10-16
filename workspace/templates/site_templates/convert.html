@@ -5,15 +5,27 @@
 {% block heading %}{{ post.title }} <span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% endblock %}
 
 {% block actions %}
-<button type="button" class="btn" data-copy="#st-request" data-copy-msg="요청문을 복사했습니다. Claude 에게 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}요청문 복사</button>
-{% if converted_html %}
-<button type="button" class="btn" data-copy="#st-title" data-copy-msg="제목을 복사했습니다.">{% include "includes/ic.html" with name="copy" %}제목</button>
-<button type="button" class="btn primary" data-copy-rich="#st-paste" data-copy-plain="#st-plain" data-copy-msg="변환본을 서식 그대로 복사했습니다. {{ blog.get_platform_display }} 에디터에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}변환본 (서식 그대로)</button>
-{% endif %}
+<button type="button" class="btn" data-copy="#st-request" data-copy-msg="요청문을 복사했습니다. Claude 에게 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}요청문</button>
 {% endblock %}
 
 {% block content %}
 <p class="muted small st-where">{{ blog.name }} › {{ pl.site_category }} · {{ blog.get_platform_display }}</p>
+
+{% if converted_html %}
+{# 붙여넣기: 변환본을 통째로 복사해 그 사이트 글쓰기 화면에 붙인다. 순서대로 제목 → 본문 → 태그. #}
+<section class="card st-paste">
+  <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }}에 붙여넣기</h3><span class="hint">{{ paste.where }}</span></div>
+  <div class="card-body st-paste-row">
+    <button type="button" class="btn" data-copy="#st-title" data-copy-msg="제목을 복사했습니다. 제목 칸에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}① 제목</button>
+    {% for b in paste.body %}
+    <button type="button" class="btn{% if forloop.first %} primary{% endif %}" {% if b.kind == 'rich' %}data-copy-rich="#st-paste" data-copy-plain="#st-plain"{% elif b.kind == 'raw' %}data-copy="#st-raw"{% else %}data-copy="#st-html"{% endif %} data-copy-msg="{{ b.msg }}" title="{{ b.hint }}">{% include "includes/ic.html" with name="copy" %}② {{ b.label }}</button>
+    {% endfor %}
+    {% if pl.converted_tags %}<button type="button" class="btn" data-copy="#st-tags" data-copy-msg="태그를 복사했습니다. {{ paste.tags }}에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}③ 태그</button>{% endif %}
+  </div>
+  {% if paste.after %}<div class="card-body st-after"><span class="muted small">붙인 뒤 확인:</span> {{ paste.after }}</div>{% endif %}
+</section>
+{% endif %}
+
 <div class="st-cols">
   <section class="card st-col">
     <div class="card-head"><h3 class="card-title">원문</h3><a class="hint" href="{{ post.get_absolute_url }}">글 보기</a></div>
@@ -42,5 +54,8 @@
 <textarea id="st-request" hidden>{{ request_text }}</textarea>
 <textarea id="st-title" hidden>{{ pl.converted_title|default:post.title }}</textarea>
 <textarea id="st-paste" hidden>{{ paste_html }}</textarea>
+<textarea id="st-html" hidden>{{ clean_html }}</textarea>
+<textarea id="st-raw" hidden>{{ pl.converted_body }}</textarea>
 <textarea id="st-plain" hidden>{{ plain_text }}</textarea>
+<textarea id="st-tags" hidden>{{ pl.converted_tags }}</textarea>
 {% endblock %}

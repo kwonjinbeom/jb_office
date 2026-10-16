@@ -55,3 +55,37 @@ class SiteTemplateTests(TestCase):
         self.pl.refresh_from_db()
         self.assertEqual(self.pl.convert_status, "checked")
         self.assertEqual(self.client.get(reverse("site_templates:requests")).json()["count"], 0)
+
+
+class PasteFormatTests(TestCase):
+    """플랫폼별 붙여넣기: 포맷 규칙(조사 결과)과 변환 화면의 복사 방식"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        self.post = Post.objects.create(title="원문", stage="post", body="본문")
+
+    def place(self, blog_name, cat_name=None):
+        blog = Blog.objects.get(name=blog_name)
+        cat = SiteCategory.objects.filter(blog=blog, name=cat_name).first() if cat_name else None
+        cat = cat or SiteCategory.objects.create(blog=blog, name="시험")
+        return Placement.objects.create(site_category=cat, tistory_post=self.post, converted_title="바꾼 제목",
+                                        converted_body="## 소제목\n\n**굵게** 본문", converted_tags="태그1, 태그2",
+                                        convert_status="done")
+
+    def test_guides_come_from_research(self):
+        self.assertTrue(PlatformFormat.objects.get(platform="naver").guide.startswith("붙이는 곳: 본문에 '서식 그대로'"))
+        self.assertIn("HTML 보기", PlatformFormat.objects.get(platform="blogger").guide)
+
+    def test_copy_buttons_follow_platform(self):
+        res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
+        self.assertContains(res, 'data-copy-rich="#st-paste"')  # 네이버: 서식 그대로
+        self.assertIn("style=", res.context["paste_html"])  # 네이버는 인라인 style 을 단 서식 HTML
+        res = self.client.get(reverse("site_templates:convert", args=[self.place("밤밤").pk]))
+        self.assertContains(res, "본문 HTML (HTML 보기)")
+        self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")  # 꾸밈 없는 HTML
+        res = self.client.get(reverse("site_templates:convert", args=[self.place("워드프레스").pk]))
+        self.assertContains(res, 'data-copy="#st-raw"')  # 워드프레스: 마크다운 그대로
+        self.assertContains(res, "태그1, 태그2")
+        self.assertIn("## 돌려줄 것", res.context["request_text"])
+        self.assertIn("블록 에디터", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
