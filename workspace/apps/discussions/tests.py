@@ -242,3 +242,24 @@ class DiscussionDocTests(TestCase):
 
         self.file.unlink()
         self.assertContains(self.client.get(item.get_absolute_url()), "저장소에 없습니다")
+
+
+class IdeaGroupDiscussionTests(TestCase):
+    """아이디어 › 논의 현황 하나가 일일 아이디어·내 아이디어 논의를 함께 보여 준다."""
+
+    def test_idea_area_groups_daily_and_my_ideas(self):
+        from django.contrib.auth import get_user_model
+        from django.urls import reverse
+
+        from .models import Discussion
+        self.client.force_login(get_user_model().objects.create_user("tester2", password="pw-test-1234"))
+        Discussion.objects.create(area="daily_ideas", name="일일 쪽 논의")
+        Discussion.objects.create(area="ideas", name="내 아이디어 쪽 논의")
+        Discussion.objects.create(area="blog", name="블로그 쪽 논의")
+        with patch("apps.discussions.docs.sync"):
+            res = self.client.get(reverse("discussions:list"), {"area": "idea"})
+        names = [e.name for e in res.context["entries"]]
+        self.assertEqual(sorted(names), ["내 아이디어 쪽 논의", "일일 쪽 논의"])
+        self.assertEqual(res.context["scope_label"], "아이디어")
+        active = [c["menu"].key for n in res.context["NAV"] for c in n["children"] if c["active"]]
+        self.assertEqual(active, ["idea_discussions"])

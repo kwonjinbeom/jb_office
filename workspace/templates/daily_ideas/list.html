@@ -4,7 +4,6 @@
 {% block subtitle %}{% if adopted_count %}<span class="page-sub">내 아이디어에 담은 것 {{ adopted_count }}개</span>{% endif %}{% endblock %}
 
 {% block actions %}
-<a class="btn" href="{% url 'daily_ideas:standard' %}">{% include "includes/ic.html" with name="edit" %}검색 표준</a>
 <a class="btn" href="{% url 'ideas:list' %}">{% include "includes/ic.html" with name="bulb" %}내 아이디어 보기</a>
 {% endblock %}
 

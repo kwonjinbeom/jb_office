@@ -82,7 +82,10 @@ class DailyIdeasTests(TestCase):
     def test_navigation_separates_daily_and_my_ideas(self):
         titles = [menu.title for menu in get_menus()]
 
-        self.assertEqual(titles[:3], ["일일루틴", "일일 아이디어", "내 아이디어"])  # 일일루틴이 맨 위
+        self.assertEqual(titles[:2], ["일일루틴", "아이디어"])  # 일일루틴이 맨 위, 일일·내 아이디어는 '아이디어' 아래
+        hub = get_menus()[1]
+        self.assertEqual([m.title for m in hub.children], ["일일 아이디어", "내 아이디어", "논의 현황"])
+        self.assertFalse(hub.listing)  # '아이디어 리스트' 는 만들지 않는다
 
     def test_my_ideas_grid_has_no_status_or_stars(self):
         Idea.objects.create(code="C01", title="표시 점검")
@@ -105,7 +108,7 @@ class SearchStandardTests(TestCase):
         self.assertContains(response, "먼저 저장하면")
         self.assertEqual(response.context["request_text"], "")
         active = [c["menu"].key for n in response.context["NAV"] for c in n["children"] if c["active"]]
-        self.assertEqual(active, ["daily_standard"])
+        self.assertEqual(active, ["routine_prompts"])
 
     def test_saving_makes_versions_only_when_something_changed(self):
         from .models import SearchStandard
@@ -139,7 +142,7 @@ class SearchStandardTests(TestCase):
     def test_daily_page_shows_which_standard_was_used(self):
         response = self.client.get(reverse("daily_ideas:list"))
         self.assertContains(response, "표준 없이 조사")
-        self.assertContains(response, reverse("daily_ideas:standard"))
+        self.assertNotContains(response, "검색 표준</a>")  # 버튼은 빼고 프롬프트 관리에서 연다
 
 
 class SearchMethodTests(TestCase):
