@@ -77,6 +77,36 @@ def _classify_draft(post, draft):
         classify.assign(post, node.sel)
 
 
+def _draft_post(d):
+    post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary)
+    _classify_draft(post, d)
+    post.save()
+    return post
+
+
+# 루틴이 쓴 원고는 글 관리에 바로 들어온다 (2026-10-16 사용자: "글 관리에 16일자가 안 보인다").
+# 그 전 원고(T01~T25)는 지금처럼 '원고 가져오기'에서 고른다.
+AUTO_IMPORT_FROM = 26
+
+
+def auto_import_drafts():
+    """T26 이후 원고.md 중 아직 없는 것을 임시 템플릿으로 가져온다. 글 관리를 열 때 부른다.
+
+    같은 제목의 글이 (휴지통 포함, 티스토리·네이버 어느 표든) 있으면 건너뛴다 — 지운 글이 다시 생기지 않게.
+    """
+    from apps.naver_writing.models import Post as NaverPost
+
+    existing = set(Post.all_objects.values_list("title", flat=True)) | set(NaverPost.all_objects.values_list("title", flat=True))
+    added = 0
+    for d in drafts_mod.list_drafts():
+        number = d.code[1:]
+        if number.isdigit() and int(number) >= AUTO_IMPORT_FROM and d.title not in existing:
+            _draft_post(d)
+            existing.add(d.title)
+            added += 1
+    return added
+
+
 def import_drafts(request):
     """저장소 원고 폴더의 원고.md 를 골라 임시 템플릿으로 가져온다. 같은 제목이 이미 있으면 건너뛴다."""
     drafts = drafts_mod.list_drafts()
@@ -86,9 +116,7 @@ def import_drafts(request):
         added = 0
         for d in drafts:
             if d.key in chosen and d.title not in existing:
-                post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary)
-                _classify_draft(post, d)
-                post.save()
+                _draft_post(d)
                 existing.add(d.title)
                 added += 1
         if added:

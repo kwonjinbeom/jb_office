@@ -92,9 +92,8 @@ DEPLOY = {
 DOCS_DIRS = [REPO_ROOT / "시장조사", REPO_ROOT]
 # 날짜별 조사 후보 원본. 모델로 옮기기 전까지 저장소 파일로 보존한다.
 DAILY_IDEAS_DIR = REPO_ROOT / "시장조사" / "일일아이디어"
-# 일일루틴 로컬 실행: 화면의 '실행'이 안내문을 보내는 PC 서버, 그리고 그 PC 서버가 받아 주는 화면(Origin)
+# 일일루틴 로컬 현황을 보는 PC 서버 화면 (실서버 일일루틴의 'PC 화면에서 보기')
 ROUTINE_LOCAL_URL = _env("ROUTINE_LOCAL_URL", "http://127.0.0.1:8000")
-ROUTINE_LAUNCH_ORIGINS = _env_list("ROUTINE_LAUNCH_ORIGINS", ["https://jbkwon.pythonanywhere.com", "http://127.0.0.1:8000", "http://localhost:8000"])
 # 논의 글(md). Claude·Codex 가 쓰고 push 하면 논의 현황·진행현황에 올라온다 (apps/discussions/docs.py)
 DISCUSSIONS_DIR = REPO_ROOT / "논의"
 # ---------------------------------------------------------------------------

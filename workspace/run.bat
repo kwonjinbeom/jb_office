@@ -14,6 +14,9 @@ if not exist ".venv\Scripts\python.exe" (
     ".venv\Scripts\python.exe" -m pip install --quiet -r requirements.txt || goto :fail
 )
 
+rem 1-1) 일일루틴 '실행' 링크 등록 (화면의 '실행'이 PC 서버 없이 claude 터미널을 연다). 실패해도 서버는 뜬다.
+call "%~dp0routine_link.bat" quiet
+
 rem 2) DB 마이그레이션 ('내 아이디어'는 일일 아이디어에서 직접 담은 것만 두므로 초기 데이터는 넣지 않는다)
 ".venv\Scripts\python.exe" manage.py migrate --noinput || goto :fail
 

@@ -5,7 +5,6 @@ from . import views
 app_name = "routines"
 urlpatterns = [
     path("", views.index, name="index"),
-    path("launch/", views.launch, name="launch"),
     path("prompts/", views.prompts, name="prompts"),
     path("new/", views.edit, name="create"),
     path("doc/<path:rel>", views.doc, name="doc"),

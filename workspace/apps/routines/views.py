@@ -4,9 +4,8 @@
 날짜·하루 양 + "이 md 를 읽고 따른다" + 오늘의 자료(서버 DB: 사이트·체크, 이미 있는 글, 검색 표준).
 클라우드 안내문은 일일루틴/클라우드_제약.md 를 더 읽게 하고, 로컬 안내문 끝에는 진행 보고 부분이 붙는다.
 
-로컬 실행: 화면의 '실행'은 PC 에서 띄운 서버(ROUTINE_LOCAL_URL)의 launch 로 안내문을 보낸다.
-PC 서버가 안내문을 workspace/.routine/ 에 쓰고 새 터미널에서 claude 를 연다. 실서버 화면에서 눌러도 PC 에서 돈다.
-claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
+로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
+PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
 글쓰기(키 writing): 티스토리·네이버 구분 없이 하루 11편. 그날 쓸 분류·편수는 RoutinePick (없으면 기본 무작위:
 광고 수익 하위 6 · 판매 수익 하위 3 · IT/AI 2). 리스트에서 글쓰기 줄을 누르면 왼쪽 아래가 분류 고르기 칸이 된다.
@@ -16,25 +15,20 @@ claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineR
 AI 가 각 루틴의 프롬프트 md 를 고쳐 main 에 올린다. 바뀐 md 는 화면을 열 때 PromptVersion 으로 남는다.
 """
 import hashlib
-import json
-import os
 import random
 import re
-import subprocess
 from collections import Counter
 from datetime import date
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Avg, Max, Q
-from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.blog_ops.models import FeedEntry
@@ -428,140 +422,6 @@ def _last_update(routine):
     return last.captured_at if last and last.number > 1 else None
 
 
-# ---- 로컬 실행 (PC 서버의 launch 로 보낸다)
-
-def sends_origin(view):
-    """'실행' 폼이 있는 화면: 실서버 → PC 로 보낼 때 Origin 이 실리게 한다.
-
-    Django 기본 Referrer-Policy(same-origin)면 다른 주소로 보내는 POST 의 Origin 이 'null' 이 되어 PC 서버가 거절한다.
-    이 화면들만 origin-when-cross-origin (다른 주소에는 주소 앞부분만, 경로는 안 보냄).
-    """
-    def wrapped(request, *args, **kwargs):
-        response = view(request, *args, **kwargs)
-        response["Referrer-Policy"] = "origin-when-cross-origin"
-        return response
-    wrapped.__name__, wrapped.__doc__ = view.__name__, view.__doc__
-    return wrapped
-
-
-def launch_action():
-    """'실행' 폼이 보낼 곳. PC 서버면 같은 서버, 실서버면 PC 서버(ROUTINE_LOCAL_URL)."""
-    path = reverse("routines:launch")
-    return settings.ROUTINE_LOCAL_URL.rstrip("/") + path if settings.IS_SERVER else path
-
-
-def _origin_ok(request):
-    origin = request.headers.get("Origin", "")
-    if not origin:
-        return False
-    parts = urlsplit(origin)
-    origin = f"{parts.scheme}://{parts.netloc}"
-    allowed = {f"{request.scheme}://{request.get_host()}", *settings.ROUTINE_LAUNCH_ORIGINS}
-    return origin in {a.rstrip("/") for a in allowed}
-
-
-# 로컬 실행 claude 에 미리 허용하는 것: 루틴이 늘 하는 일 (저장소 안 읽기·쓰기, 웹 검색, git 올리기, 진행 보고).
-# 묻는 건 권한이 없어 막힐 때만 (2026-10-16 사용자). 방법·선택을 묻는 질문 도구와 브라우저 자동화는 막는다.
-ROUTINE_ALLOW = [
-    "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch",
-    "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
-    "Bash(git status *)", "Bash(git log *)", "Bash(git diff *)", "Bash(ls *)", "Bash(mkdir *)",
-    "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_report *)",
-    "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
-]
-ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome", "mcp__playwright"]
-KOREAN = ("모든 말과 진행 보고는 한국어로 한다. 루틴은 스스로 판단해 끝까지 진행하고, 방법·선택·확인을 사용자에게 묻지 않는다. "
-          "사용자에게 묻는 건 권한이 없어 실행이 막힐 때뿐이고, 그때는 무엇을 왜 하려는지 한국어로 한 줄 먼저 말한다. "
-          "블로그·사이트 확인은 WebFetch·WebSearch 로 하고 브라우저 자동화는 쓰지 않는다. 읽히지 않는 페이지는 막힘으로 보고하고 넘어간다. "
-          "셸 명령은 Bash 도구로 저장소 폴더에서 실행한다.")
-
-
-def _open_terminal(name, title):
-    """새 터미널에서 claude 를 연다 (미리 허용한 것 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
-    folder = settings.BASE_DIR / ".routine"
-    folder.mkdir(exist_ok=True)
-    conf = folder / "settings.json"
-    conf.write_text(json.dumps({"permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
-    ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
-    if os.name != "nt":
-        return f'claude "{ask}" --settings workspace/.routine/settings.json'
-    subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", "claude", ask,
-                      "--settings", str(conf), "--append-system-prompt", KOREAN])
-    return ""
-
-
-def _cors(request, response):
-    origin = request.headers.get("Origin")
-    if origin and _origin_ok(request):
-        response["Access-Control-Allow-Origin"] = origin
-        response["Access-Control-Allow-Methods"] = "POST"
-        response["Access-Control-Allow-Headers"] = "Content-Type"
-        response["Access-Control-Allow-Private-Network"] = "true"
-        response["Vary"] = "Origin"
-    return response
-
-
-def _reply(request, ok, message, day=None):
-    """화면의 '실행'은 새 탭 없이 보내고(fmt=json) 결과 한 줄을 받는다. 그 밖에는 예전처럼 PC 화면으로."""
-    if request.POST.get("fmt") == "json":
-        return _cors(request, JsonResponse({"ok": ok, "message": message}, status=200 if ok else 403))
-    if not ok:
-        return HttpResponseForbidden(message)
-    messages.success(request, message)
-    return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
-
-
-def _open_run(routine, day, step):
-    run = RoutineRun.objects.filter(routine=routine, day=day).first()
-    if run is None or not run.is_open:
-        run = RoutineRun.objects.create(routine=routine, day=day)
-    run.report(RoutineRun.Status.RUNNING, step, timezone.localtime())
-
-
-def _routine_for(key, name=""):
-    return Routine.objects.filter(key=key).first() or Routine.objects.create(
-        key=key, name=(name or key)[:40], url_name="routines:index", task="(실서버에서 보낸 루틴)")
-
-
-@csrf_exempt
-def launch(request):
-    """안내문을 받아 새 터미널에서 claude 를 연다. PC 서버에서만, 허용한 화면(실서버·PC)에서 보낸 것만."""
-    if request.method == "OPTIONS":  # 브라우저가 먼저 묻는 경우 (다른 주소 → PC)
-        return _cors(request, HttpResponse(status=204))
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    if settings.IS_SERVER:
-        return _reply(request, False, "로컬 실행은 PC 에서 띄운 서버에서만 됩니다.")
-    if not _origin_ok(request):
-        got = request.headers.get("Origin") or "없음"
-        return _reply(request, False, f"허용하지 않은 화면에서 보낸 실행 요청입니다. (보낸 곳: {got})")
-    key = request.POST.get("key", "")
-    text = request.POST.get("prompt", "")
-    kind = request.POST.get("kind") if request.POST.get("kind") in ("update", "all") else "run"
-    if not re.fullmatch(r"[a-z0-9_-]{1,30}", key) or not text.strip() or len(text) > 600_000:
-        return _reply(request, False, "실행 요청이 올바르지 않습니다.")
-    day = _day(request)
-    folder = settings.BASE_DIR / ".routine"
-    folder.mkdir(exist_ok=True)
-    if kind == "all":
-        keys = [k for k in request.POST.get("keys", "").split(",") if re.fullmatch(r"[a-z0-9_-]{1,30}", k)]
-        for k in keys:
-            _open_run(_routine_for(k), day, "전체 실행 · 차례를 기다립니다")
-        name, title = f"all-{day}.md", "일일루틴 전체 실행"
-        done = f"PC 터미널에서 전체 실행을 시작했습니다 ({len(keys)}개 루틴, 차례로)."
-    else:
-        routine = _routine_for(key, request.POST.get("name", ""))
-        label = "갱신" if kind == "update" else "루틴"
-        _open_run(routine, day, f"{label} · 터미널을 열었습니다 (claude 시작 대기)")
-        name, title = f"{key}-{'update-' if kind == 'update' else ''}{day}.md", f"일일루틴 {routine.name} {label}"
-        done = f"PC 터미널에서 {routine.name} {label}을 시작했습니다."
-    (folder / name).write_text(text, encoding="utf-8")
-    manual = _open_terminal(name, title)
-    if manual:
-        return _reply(request, True, f"저장소 폴더에서 실행하세요: {manual}", day)
-    return _reply(request, True, done + " 진행은 PC 화면의 로컬 현황에 쌓입니다.", day)
-
-
 def _day(request):
     try:
         return date.fromisoformat(request.POST.get("day", ""))
@@ -622,7 +482,6 @@ def picks(request, pk):
 
 # ---- 일일루틴 리스트
 
-@sends_origin
 def index(request):
     _nav(request)
     try:  # AI 가 남긴 분류 변경 파일을 먼저 반영한다 (일일루틴/분류변경)
@@ -680,7 +539,6 @@ def index(request):
         "all_keys": ",".join(r.key for r in routines),
         "picker": next((_picker(r, run_day) for r in routines if "picks" in r.data_keys), None),
         "on_server": settings.IS_SERVER,
-        "launch_action": launch_action(),
         "local_url": settings.ROUTINE_LOCAL_URL.rstrip("/") + reverse("routines:index"),
         "keep": request.get_full_path().partition("?")[2],
     })
@@ -708,7 +566,6 @@ def count(request, pk):
 
 # ---- 프롬프트 관리 (루틴 탭: 왼쪽 프롬프트 md·자료, 오른쪽 나의 평가·갱신·이력)
 
-@sends_origin
 def prompts(request):
     _nav(request, "routine_prompts")
     routines = list(Routine.objects.all())
@@ -739,7 +596,6 @@ def prompts(request):
         "versions": list(routine.versions.all()[:30]),
         "today": today,
         "on_server": settings.IS_SERVER,
-        "launch_action": launch_action(),
     })
 
 
@@ -780,7 +636,6 @@ def version_star(request, pk):
     return redirect(_prompts_url(v.routine, "#pm-history"))
 
 
-@sends_origin
 def version_restore(request, pk):
     """좋았던 버전으로 되돌리는 안내문 (로컬 실행 / 클라우드 복사)."""
     _nav(request, "routine_prompts")
@@ -788,7 +643,7 @@ def version_restore(request, pk):
     today = timezone.localdate()
     return render(request, "routines/restore.html", {
         "page_title": f"{v.routine.name} v{v.number} 로 되돌리기", "version": v, "routine": v.routine, "today": today,
-        "on_server": settings.IS_SERVER, "launch_action": launch_action(),
+        "on_server": settings.IS_SERVER,
         "local": restore_prompt(v, "local", today), "cloud": restore_prompt(v, "cloud", today)})
 
 

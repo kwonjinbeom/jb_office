@@ -32,6 +32,10 @@ def _filtered(writer, kind, obj, q):
 
 def index(request):
     request.nav_key = "posts"
+    from apps.writing.views import auto_import_drafts
+    added = auto_import_drafts()  # 루틴이 새로 쓴 원고를 임시 템플릿으로
+    if added:
+        messages.success(request, f"새 원고 {added}편을 임시 템플릿으로 가져왔습니다.")
     stage = request.GET.get("stage") if request.GET.get("stage") in STAGE_KEYS else "temp"
     writers = list(classify.WRITERS)  # 두 편집기의 글을 함께
     sel = request.GET.get("sel", "")

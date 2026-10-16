@@ -16,11 +16,11 @@ from apps.naver_writing.models import Post as NaverPost
 from apps.writing.models import Post as TistoryPost
 
 from .models import Evaluation, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
+from .local_run import parse_link, start
 from .views import capture_version, launcher, references
 
 INDEX = reverse("routines:index")
 PROMPTS = reverse("routines:prompts")
-LAUNCH = reverse("routines:launch")
 DRAFT = "제작 정보\n<!-- 본문 시작 -->\n# 네이버 첫 원고\n본문입니다.\n<!-- 본문 끝 -->\n태그: 하나, 둘\n소개: 짧은 소개\n"
 
 
@@ -90,46 +90,43 @@ class TempRepoTests(Login):
         self.assertIn("2026-10-14 · 지난 후보", ideas)
         self.assertIn("검색 표준", ideas)
 
-    @patch("apps.routines.views.subprocess.Popen")
-    def test_launch_from_server_page_opens_terminal(self, popen):
-        data = {"key": "writing", "name": "글쓰기", "kind": "run", "day": "2026-10-16", "prompt": "# 안내문\n할 일"}
-        with patch("apps.routines.views.os.name", "nt"):
-            res = self.client.post(LAUNCH, data, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
-        self.assertEqual(res.status_code, 302)
+    @patch("apps.routines.local_run.WINDOWS", True)
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_link_opens_terminal_with_clipboard_prompt(self, popen):
+        link = "jbroutine:run?key=writing&day=2026-10-16&name=%EA%B8%80%EC%93%B0%EA%B8%B0"
+        with patch("apps.routines.local_run.read_clipboard", return_value="# 일일루틴 · 글쓰기\r\n할 일"):
+            call_command("routine_open", link, stdout=StringIO())
         f = self.root / "workspace" / ".routine" / "writing-2026-10-16.md"
         conf = json.loads((self.root / "workspace" / ".routine" / "settings.json").read_text(encoding="utf-8"))
         self.assertIn("Bash(git push *)", conf["permissions"]["allow"])
         self.assertIn("AskUserQuestion", conf["permissions"]["deny"])  # 방법·선택은 묻지 않는다
-        self.assertEqual(f.read_text(encoding="utf-8"), "# 안내문\n할 일")
+        self.assertEqual(f.read_text(encoding="utf-8"), "# 일일루틴 · 글쓰기\n할 일")
         args = popen.call_args[0][0]
         self.assertEqual(args[args.index("claude") + 1], "workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.")
         self.assertIn("--settings", args)
         self.assertIn("한국어", args[args.index("--append-system-prompt") + 1])
         run = RoutineRun.objects.get()
         self.assertEqual((run.status, run.day), ("running", date(2026, 10, 16)))
-        # 실서버에만 있는 루틴이면 PC DB 에 만들어 기록한다
-        with patch("apps.routines.views.os.name", "nt"):
-            self.client.post(LAUNCH, {**data, "key": "wordpress", "name": "워드프레스"}, HTTP_ORIGIN="http://127.0.0.1:8000")
+        # 실서버에만 있는 루틴이면 PC DB 에 만들어 기록한다 (브라우저가 끝에 / 를 붙여도 된다)
+        start("jbroutine:run/?key=wordpress&day=2026-10-16&name=%EC%9B%8C%EB%93%9C%ED%94%84%EB%A0%88%EC%8A%A4", "# 일일루틴 · 워드프레스")
         self.assertTrue(Routine.objects.filter(key="wordpress", name="워드프레스").exists())
 
-    @patch("apps.routines.views.subprocess.Popen")
-    def test_launch_refuses_other_sites_and_server(self, popen):
-        data = {"key": "tistory", "kind": "run", "prompt": "x"}
-        self.assertEqual(self.client.post(LAUNCH, data, HTTP_ORIGIN="https://evil.example").status_code, 403)
-        self.assertContains(self.client.post(LAUNCH, data, HTTP_ORIGIN="null"), "보낸 곳: null", status_code=403)
-        self.assertEqual(self.client.post(LAUNCH, data).status_code, 403)  # Origin 없음
-        with override_settings(IS_SERVER=True):
-            self.assertEqual(self.client.post(LAUNCH, data, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com").status_code, 403)
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_link_refuses_bad_link_or_clipboard(self, popen):
+        for link in ["http://evil.example/?key=writing", "jbroutine:rm?key=writing", "jbroutine:run?key=../x"]:
+            with self.assertRaises(ValueError):
+                parse_link(link)
+        with self.assertRaises(ValueError):  # 클립보드가 안내문이 아니면 열지 않는다
+            start("jbroutine:run?key=writing&day=2026-10-16", "아무 글")
+        with patch("apps.routines.local_run.read_clipboard", return_value="아무 글"), self.assertRaises(SystemExit):
+            call_command("routine_open", "jbroutine:run?key=writing", stdout=StringIO(), stderr=StringIO())
         popen.assert_not_called()
 
-    def test_server_page_posts_to_pc(self):
+    def test_run_button_copies_and_opens_link(self):
         with override_settings(IS_SERVER=True):
             res = self.client.get(INDEX)
-        # same-origin 이면 PC 로 가는 POST 의 Origin 이 null 이 된다 → 실행 화면만 origin 을 보낸다
-        self.assertEqual(res["Referrer-Policy"], "origin-when-cross-origin")
-        self.assertEqual(self.client.get(PROMPTS)["Referrer-Policy"], "origin-when-cross-origin")
-        self.assertEqual(self.client.get(reverse("core:home"))["Referrer-Policy"], "same-origin")
-        self.assertContains(res, 'action="http://127.0.0.1:8000/routines/launch/"')
+        self.assertContains(res, '<form class="rt-launch"><input type="hidden" name="key" value="writing">')
+        self.assertNotContains(res, "/routines/launch/")  # PC 서버로 보내지 않는다
         self.assertContains(res, "PC 화면에서 보기")
 
     def test_naver_import_drafts(self):
@@ -288,15 +285,14 @@ class WritingPickTests(Login):
         self.client.post(self.url, {"day": "2026-10-16", "action": "default"})
         self.assertFalse(RoutinePick.objects.exists())
 
-    @patch("apps.routines.views.subprocess.Popen")
+    @patch("apps.routines.local_run.subprocess.Popen")
     def test_launch_all_runs_every_routine_in_one_terminal(self, popen):
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         text = res.context["all_prompt"]
         self.assertIn("1. 일일 아이디어 → 2. 글쓰기 → 3. 프롬프트 최신화", text)
         self.assertEqual(text.count("## 진행 보고"), 3)
-        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.views.os.name", "nt"):
-            self.client.post(LAUNCH, {"key": "all", "kind": "all", "keys": res.context["all_keys"], "day": "2026-10-16",
-                                      "prompt": text}, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
+            start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text)
             self.assertTrue((Path(tmp) / ".routine" / "all-2026-10-16.md").is_file())
         self.assertEqual(popen.call_count, 1)
         self.assertEqual(sorted(RoutineRun.objects.values_list("routine__key", flat=True)), ["daily_ideas", "prompt_update", "writing"])
@@ -346,26 +342,16 @@ class ClassChangeTests(TestCase):
         self.assertEqual((post.bt_category.name, post.summary), ("AI 도구·활용", "짧게"))
 
 
-class LaunchInBackgroundTests(Login):
-    """실행은 새 탭 없이: fmt=json 이면 결과 한 줄(JSON)과 CORS, 브라우저가 먼저 묻는 OPTIONS 도 받는다."""
+class DraftAutoImportTests(Login):
+    """루틴이 쓴 원고(T26~)는 글 관리를 열면 임시 템플릿에 바로 들어온다. 그 전 원고와 이미 있는(휴지통 포함) 글은 건너뛴다."""
 
-    @patch("apps.routines.views.subprocess.Popen")
-    def test_json_reply_with_cors_for_server_page(self, popen):
-        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.views.os.name", "nt"):
-            res = self.client.post(LAUNCH, {"key": "writing", "kind": "run", "day": "2026-10-16", "prompt": "x", "fmt": "json"},
-                                   HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
-        self.assertEqual(res.status_code, 200)
-        self.assertTrue(res.json()["ok"])
-        self.assertIn("PC 터미널에서", res.json()["message"])
-        self.assertEqual(res["Access-Control-Allow-Origin"], "https://jbkwon.pythonanywhere.com")
-        bad = self.client.post(LAUNCH, {"key": "writing", "prompt": "x", "fmt": "json"}, HTTP_ORIGIN="https://evil.example")
-        self.assertEqual((bad.status_code, bad.json()["ok"]), (403, False))
-        self.assertNotIn("Access-Control-Allow-Origin", bad)
-        pre = self.client.options(LAUNCH, HTTP_ORIGIN="https://jbkwon.pythonanywhere.com")
-        self.assertEqual((pre.status_code, pre["Access-Control-Allow-Private-Network"]), (204, "true"))
-
-    def test_form_has_no_new_tab(self):
-        with override_settings(IS_SERVER=True):
-            res = self.client.get(INDEX)
-        self.assertNotContains(res, 'target="_blank"><input type="hidden" name="key"')
-        self.assertNotContains(res, 'class="rt-launch" method="post" action="http://127.0.0.1:8000/routines/launch/" target')
+    def test_new_drafts_show_up_in_posts(self):
+        with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
+            for key, title in [("T25_옛원고", "옛 원고"), ("T26_새원고", "새 원고"), ("T27_지운원고", "지운 원고")]:
+                (Path(tmp) / key).mkdir()
+                (Path(tmp) / key / "원고.md").write_text(DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
+            TistoryPost.objects.create(title="지운 원고").delete()  # 휴지통
+            res = self.client.get(reverse("posts:index"), follow=True)
+            self.assertContains(res, "새 원고 1편을 임시 템플릿으로 가져왔습니다.")
+            self.client.get(reverse("posts:index"))  # 두 번 열어도 한 번만
+        self.assertEqual(list(TistoryPost.objects.values_list("title", "stage")), [("새 원고", "temp")])
