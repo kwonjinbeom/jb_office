@@ -1,18 +1,18 @@
-"""글 매핑 관리 화면: 왼쪽 위 사이트 카테고리(2.5) · 아래 글 분류(7.5) + 오른쪽 목록.
+"""글 매핑 관리 화면: 트리 두 칸(사이트 카테고리 · 글 분류) + 오른쪽에 두 목록을 함께 (위 2.5 · 아래 7.5).
 
-- 사이트 카테고리 (왼쪽 위): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 그 카테고리에 넣은 글(매핑)이 보이고,
-  포스트 관리까지 간 글을 골라 넣는다. 매핑마다 미저장 · 임시저장 · 발행.
-- 글 분류 (왼쪽 아래): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 누르면 그 분류의 글(임시 → 검토 →
-  포스트 전부)이 보이고, 포스트 관리 글은 그 자리에서 사이트 카테고리에 넣는다. 숫자는 그 아래 글 중 아직 발행 완료가 아닌 글 수.
-  글쓰기마다 플랫폼이 맞는 카테고리만 (공통 + 그 플랫폼). 트리는 글 관리 화면과 같다 (classify.class_tree).
+- 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 오른쪽 **위** 목록이 그 카테고리에 넣은 글(매핑)로
+  바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 미저장 · 임시저장 · 발행, 그리고 변환 상태.
+- 글 분류 (가운데): 티스토리 글쓰기 / 네이버 글쓰기 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 누르면 오른쪽 **아래** 목록이 그 분류의 글
+  (임시 → 검토 → 포스트 전부)로 바뀌고, 포스트 관리 글은 그 자리에서 사이트 카테고리에 넣는다. 숫자는 발행 완료가 아닌 글 수.
 
-주소: ?sel=b2 (사이트) · k7 (사이트 카테고리) · ?w=tistory&sel=g1 (대분류) · c3 (카테고리) · t5 (타입) · s9 (하위) · u (미분류).
-&edit=1 이면 고른 것의 이름·설명을 고치는 칸이 위에 열린다.
+주소: ?site=b2|k7 (위) &w=tistory|naver&sel=g1|c3|t5|s9|u (아래) &edit=<고칠 것의 sel>. 두 고르기는 서로 유지된다.
+트리를 누르면 화면 전체를 새로 받지 않고 그 목록 칸만 바꾼다 (요청 머리 X-Partial: top|bottom → 그 칸 HTML 만 돌려준다).
+예전 주소 ?sel=k7 (사이트 카테고리) 도 위 목록으로 받는다.
 트리의 추가·수정·삭제는 각 트리 오른쪽 위 버튼으로 켠다 (켜야 행마다 +, 연필, 휴지통이 보인다).
 """
 import string
 from collections import Counter
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlsplit
 
 from django.contrib import messages
 from django.db.models import Max, Prefetch
@@ -35,6 +35,7 @@ KIND_LABEL = {"section": "대분류", "category": "카테고리", "type": "타�
 CHILD = {"section": "category", "category": "type", "type": "sub", "site": "sitecat"}
 EDITABLE = {"section", "category", "type", "sub", "sitecat"}  # 사이트는 운영 화면에서 고친다
 CLASS_KINDS = {"section", "category", "type", "sub", "unclassified"}
+SITE_KINDS = {"site", "sitecat"}
 
 
 def _nav(request):
@@ -45,10 +46,43 @@ def _writer(value):
     return value if value in classify.WRITERS else "tistory"
 
 
+def _is_site(sel):
+    return (sel or "")[:1] in ("b", "k")
+
+
 def _url(sel="", w="", edit=False):
-    params = {k: v for k, v in (("w", w), ("sel", sel), ("edit", "1" if edit else "")) if v}
+    """한쪽만 고른 주소. 사이트 쪽 값은 site, 글 분류 쪽 값은 w·sel 로 간다."""
+    params = {}
+    if _is_site(sel):
+        params["site"] = sel
+    else:
+        params.update({k: v for k, v in (("w", w), ("sel", sel)) if v})
+    if edit and sel:
+        params["edit"] = sel
     base = reverse("blog_types:index")
     return f"{base}?{urlencode(params)}" if params else base
+
+
+def _merge(base, sel="", w="", edit=""):
+    """지금 보던 주소(base)에서 한쪽 고르기만 바꾼다. 다른 쪽 고르기는 그대로 둔다. 고치기(edit)는 지운다."""
+    index = reverse("blog_types:index")
+    parts = urlsplit(base or index)
+    params = dict(parse_qsl(parts.query)) if parts.path == index else {}
+    params.pop("edit", None)
+    if sel:
+        if _is_site(sel):
+            params["site"] = sel
+        else:
+            params["sel"] = sel
+            params["w"] = w or params.get("w", "tistory")
+    if edit:
+        params["edit"] = edit
+    return f"{index}?{urlencode(params)}" if params else index
+
+
+def _next(request):
+    nxt = request.POST.get("next") or request.GET.get("next") or ""
+    return nxt if nxt.startswith("/") and not nxt.startswith("//") else ""
 
 
 def _find(sel):
@@ -86,7 +120,7 @@ def _path(kind, obj, w):
     """고른 것까지의 경로: [(이름, 주소)]. 글 분류는 앞에 글쓰기 이름이 붙는다."""
     if kind == "unclassified":
         return [(classify.WRITERS[w], _url(w=w)), (obj.name, _url("u", w))]
-    if kind in ("site", "sitecat"):
+    if kind in SITE_KINDS:
         return [(o.name, _url(o.sel)) for o in _chain(kind, obj)]
     return [(classify.WRITERS[w], _url(w=w))] + [
         (f"{o.code}. {o.name}" if isinstance(o, Category) else o.name, _url(o.sel, w)) for o in _chain(kind, obj)]
@@ -94,7 +128,7 @@ def _path(kind, obj, w):
 
 def _open_branches(kind, obj, w):
     """트리에서 펼쳐 둘 가지 (data-bt-branch 값)"""
-    if kind in ("site", "sitecat"):
+    if kind in SITE_KINDS:
         return {o.sel for o in _chain(kind, obj)}
     if kind == "unclassified":
         return {w}
@@ -191,49 +225,74 @@ def _candidates(cat):
     return [(p.pk, f"{p.title} — {classify.label_of(p)}") for p in sorted(posts.order_by("-updated_at"), key=classify.sort_key)]
 
 
-def index(request, form=None):
+def _top(skind, sobj):
+    """오른쪽 위: 고른 사이트·사이트 카테고리의 매핑. 안 골랐으면 모든 매핑."""
+    ctx = {"skind": skind, "sobj": sobj, "skind_label": KIND_LABEL.get(skind, "")}
+    if sobj is None:
+        ctx.update(placements=list(_placements_qs().order_by("site_category__blog__order", "site_category__order", "created_at")),
+                   show_site=True, show_cat=True)
+        return ctx
+    cats = [sobj] if skind == "sitecat" else list(sobj.site_categories.all())
+    if skind == "sitecat" and not sobj.parent_id:
+        cats += list(sobj.children.all())
+    ctx.update(placements=list(_placements_qs().filter(site_category__in=cats).order_by(
+        "site_category__parent__order", "site_category__order", "created_at")), show_cat=len(cats) > 1)
+    if skind == "sitecat":
+        ctx.update(candidates=_candidates(sobj), site_writer=classify.WRITERS[_site_writer(sobj.blog)])
+    return ctx
+
+
+def index(request, form=None, form_sel=""):
     _nav(request)
-    sel = request.GET.get("sel", "")
-    w = request.GET.get("w", "")
-    kind, obj = _find(sel)
-    if obj is None:
-        sel, kind = "", ("writer" if w in classify.WRITERS else None)
-    w = _writer(w)
-    editing = obj is not None and kind in EDITABLE and (request.GET.get("edit") == "1" or form is not None)
-    if editing and form is None:
-        form = FORMS[kind](instance=obj)
+    g = request.GET
+    site_sel, sel, w_raw = g.get("site", ""), g.get("sel", ""), g.get("w", "")
+    if not site_sel and _is_site(sel):  # 예전 주소 ?sel=k7
+        site_sel, sel = sel, ""
+    skind, sobj = _find(site_sel)
+    if skind not in SITE_KINDS or sobj is None:
+        site_sel, skind, sobj = "", None, None
+    ckind, cobj = _find(sel)
+    if ckind not in CLASS_KINDS or cobj is None:
+        sel, ckind, cobj = "", "writer", None
+    w = _writer(w_raw)
+
+    edit = form_sel or g.get("edit", "")
+    if edit == "1":  # 예전 주소: 고른 것을 고친다
+        edit = sel or site_sel
+    top_form = bottom_form = None
+    if edit and edit == site_sel and skind in EDITABLE:
+        top_form = form if form_sel else FORMS[skind](instance=sobj)
+    elif edit and edit == sel and ckind in EDITABLE:
+        bottom_form = form if form_sel else FORMS[ckind](instance=cobj)
+
+    here = _merge(request.get_full_path())
     ctx = {
         "page_title": "글 매핑 관리",
+        "site_sel": site_sel, "sel": sel, "w": w, "kind": ckind,
+        "site_q": f"site={site_sel}&" if site_sel else "",
+        "class_q": urlencode({k: v for k, v in (("w", w_raw), ("sel", sel)) if v}),
+        "here": here,
+        "status_choices": Placement.Status.choices,
+        # 아래(글 분류)
+        "cobj": cobj, "ckind_label": {"writer": "글쓰기"}.get(ckind, KIND_LABEL.get(ckind, "")),
+        "cpath": [(classify.WRITERS[w], _url(w=w))] if ckind == "writer" else _path(ckind, cobj, w),
+        "bottom_form": bottom_form,
+        "posts": _posts(w, ckind, cobj),
+        "site_options": _site_options(w),
+        # 위(사이트 카테고리)
+        "spath": _path(skind, sobj, w) if sobj else [],
+        "top_form": top_form,
+        **_top(skind, sobj),
+    }
+    partial = request.headers.get("X-Partial")
+    if partial in ("top", "bottom"):
+        return render(request, f"blog_types/_pane_{partial}.html", ctx)
+    ctx.update({
         "writers": classify.class_tree(),
         "sites": _site_tree(),
-        "sel": sel, "w": w, "kind": kind, "obj": obj,
-        "kind_label": {"writer": "글쓰기"}.get(kind, KIND_LABEL.get(kind, "")),
-        "form": form if editing else None,
-        "status_choices": Placement.Status.choices,
-        "open": set(),
-        "path": [],
-    }
-    if kind == "writer":
-        ctx["path"] = [(classify.WRITERS[w], _url(w=w))]
-        ctx["open"] = {w}
-    elif obj is not None:
-        ctx["path"] = _path(kind, obj, w)
-        ctx["open"] = _open_branches(kind, obj, w)
-    if kind == "writer" or kind in CLASS_KINDS:
-        ctx["panel"] = "posts"
-        ctx["posts"] = _posts(w, kind, obj)
-        ctx["site_options"] = _site_options(w)
-    elif kind in ("site", "sitecat"):
-        ctx["panel"] = "places"
-        cats = [obj] if kind == "sitecat" else list(obj.site_categories.all())
-        if kind == "sitecat" and not obj.parent_id:
-            cats += list(obj.children.all())
-        ctx["placements"] = list(_placements_qs().filter(site_category__in=cats).order_by(
-            "site_category__parent__order", "site_category__order", "created_at"))
-        ctx["show_cat"] = len(cats) > 1
-        if kind == "sitecat":
-            ctx["candidates"] = _candidates(obj)
-            ctx["site_writer"] = classify.WRITERS[_site_writer(obj.blog)]
+        "open": ({w} if ckind == "writer" else _open_branches(ckind, cobj, w))
+                | (_open_branches(skind, sobj, w) if sobj else set()),
+    })
     return render(request, "blog_types/index.html", ctx)
 
 
@@ -247,10 +306,15 @@ def save(request, kind, pk):
     if form.is_valid():
         form.save()
         messages.success(request, "저장했습니다.")
-        return redirect(_url(obj.sel, w if kind in CLASS_KINDS else ""))
+        return redirect(_merge(_next(request), obj.sel, w))
     request.GET = request.GET.copy()
-    request.GET.update({"sel": obj.sel, "w": w})
-    return index(request, form=form)
+    for key, value in parse_qsl(urlsplit(_next(request)).query):
+        request.GET[key] = value
+    if _is_site(obj.sel):  # 고치던 것이 그 칸에 골라져 있어야 오류와 함께 다시 보인다
+        request.GET["site"] = obj.sel
+    else:
+        request.GET.update({"sel": obj.sel, "w": w})
+    return index(request, form=form, form_sel=obj.sel)
 
 
 @require_POST
@@ -259,7 +323,8 @@ def add(request, kind):
     name = " ".join(request.POST.get("name", "").split())
     parent_sel = request.POST.get("parent", "")
     w = _writer(request.POST.get("w", ""))
-    back = _url(parent_sel, w if kind in CLASS_KINDS else "")
+    nxt = _next(request)
+    back = _merge(nxt, parent_sel, w)
     if not name or kind not in EDITABLE:
         messages.warning(request, "이름을 입력하세요.")
         return redirect(back)
@@ -285,7 +350,7 @@ def add(request, kind):
         else:
             obj = SubType.objects.create(post_type=parent, name=name[:80], order=order)
     messages.success(request, f"{KIND_LABEL[kind]} '{obj.name}'을(를) 추가했습니다.")
-    return redirect(_url(obj.sel, w if kind in CLASS_KINDS else ""))
+    return redirect(_merge(nxt, obj.sel, w))
 
 
 @require_POST
@@ -302,7 +367,7 @@ def move(request, kind, pk):
             if item.order != n:
                 item.order = n
                 item.save(update_fields=["order"])
-    return redirect(_url(obj.sel, _writer(request.POST.get("w", "")) if kind in CLASS_KINDS else "", edit=True))
+    return redirect(_merge(_next(request), obj.sel, _writer(request.POST.get("w", "")), edit=obj.sel))
 
 
 def delete(request, kind, pk):
@@ -311,12 +376,13 @@ def delete(request, kind, pk):
         raise Http404
     obj = get_object_or_404(MODELS[kind], pk=pk)
     _, parent = _parent(kind, obj)
-    keep_w = _writer(request.GET.get("w", "")) if kind in CLASS_KINDS else ""
+    w = _writer(request.GET.get("w", "") or request.POST.get("w", ""))
+    nxt = _next(request)
     if request.method == "POST":
         label = obj.name
         obj.delete()
         messages.success(request, f"{KIND_LABEL[kind]} '{label}'을(를) 삭제했습니다.")
-        return redirect(_url(parent.sel, keep_w) if parent else _url())
+        return redirect(_merge(nxt, parent.sel, w) if parent else _merge(nxt))
     inside = []
     if kind == "section":
         inside = [f"카테고리 {obj.categories.count()}개", f"타입 {PostType.objects.filter(category__section=obj).count()}개",
@@ -330,11 +396,15 @@ def delete(request, kind, pk):
         inside = ([f"하위 카테고리 {obj.children.count()}개"] if not obj.parent_id else []) + ([f"넣은 글 {n}개"] if n else [])
     return render(request, "blog_types/confirm_delete.html", {
         "page_title": "삭제", "obj": obj, "kind_label": KIND_LABEL[kind], "inside": inside,
-        "back": _url(obj.sel, keep_w),
+        "back": _merge(nxt, obj.sel, w), "next": nxt, "w": w,
     })
 
 
 # ── 매핑: 사이트 카테고리 ← 글 ─────────────────────────────────────
+
+def _back(request, fallback):
+    return redirect(_next(request) or fallback)
+
 
 @require_POST
 def place_add(request):
@@ -353,11 +423,6 @@ def place_add(request):
     Placement.objects.create(site_category=cat, status=status, **{field: post})
     messages.success(request, f"'{post.title}'을(를) {cat.blog.name} › {cat}에 넣었습니다.")
     return _back(request, back)
-
-
-def _back(request, fallback):
-    nxt = request.POST.get("next", "")
-    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else fallback)
 
 
 @require_POST

@@ -1,0 +1,36 @@
+{# 오른쪽 아래 (7.5): 글 분류를 고르면 그 분류의 글. 포스트 관리 글은 여기서 사이트 카테고리에 넣는다. 트리를 누르면 이 칸만 새로 받는다. #}
+<div class="bt-pane-head">
+  <span class="badge {% if kind == 'section' or kind == 'writer' %}green{% elif kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ ckind_label }}</span>
+  <div class="bt-path">{% for label, url in cpath %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}{% if site_sel %}&amp;site={{ site_sel }}{% endif %}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
+  <span class="cnt">{{ posts|length }}</span>
+</div>
+
+{% if bottom_form %}{% include "blog_types/_edit_card.html" with form=bottom_form ekind=kind eobj=cobj %}{% endif %}
+
+<section class="card bt-list">
+  <table class="grid bt-grid">
+    <thead><tr><th>제목</th><th style="width:64px">단계</th><th style="width:28%">넣은 곳 · 변환</th><th style="width:170px">사이트 카테고리에 넣기</th></tr></thead>
+    <tbody>
+      {% for p in posts %}
+      <tr>
+        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
+        <td><span class="badge{% if p.step == '발행' %} green{% elif p.step == '포스트' %} blue{% else %} gray{% endif %}">{{ p.step }}</span></td>
+        <td class="small">{% for pl in p.placements.all %}<div class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} <span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a></div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+        <td>
+          {% if p.stage == 'post' %}
+          <form method="post" action="{% url 'blog_types:place_add' %}">{% csrf_token %}
+            <input type="hidden" name="post" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ here }}">
+            <select class="input sm bt-place-pick" name="site_category" data-autosubmit aria-label="{{ p.title }} 넣을 사이트 카테고리">
+              <option value="">넣을 곳 고르기</option>
+              {% for pk, label in site_options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
+            </select>
+          </form>
+          {% else %}<span class="muted small">포스트 관리로 보내면 넣을 수 있어요</span>{% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="grid-empty">이 분류의 글이 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

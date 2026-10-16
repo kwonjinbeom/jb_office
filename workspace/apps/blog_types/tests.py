@@ -39,7 +39,7 @@ class BlogTypesTests(TestCase):
         self.assertContains(res, "시즌 달력")
         self.assertContains(res, "세일 행사")  # 3단계까지 트리에 보인다
         self.assertNotContains(res, "K-세일페스타")  # 하위 설명은 트리에 없다
-        self.assertContains(res, "왼쪽에서 하나를 고르세요")
+        self.assertContains(res, "모든 사이트")  # 위 칸: 아무것도 안 고르면 모든 매핑
         self.assertContains(res, "글 관리")  # 블로그·카페 아래 중메뉴
         self.assertContains(res, "티스토리 글쓰기")  # 글 분류는 글쓰기마다 나뉜다
         self.assertContains(res, "네이버 글쓰기")
@@ -47,11 +47,10 @@ class BlogTypesTests(TestCase):
     def test_select_shows_path_children_and_detail(self):
         season = PostType.objects.get(name="시즌 달력")
         res = self.client.get(INDEX, {"w": "naver", "sel": season.sel})
-        self.assertEqual([label for label, _ in res.context["path"]], ["네이버 글쓰기", "판매 수익 (커넥트)", "C. 타이밍", "시즌 달력"])
+        self.assertEqual([label for label, _ in res.context["cpath"]], ["네이버 글쓰기", "판매 수익 (커넥트)", "C. 타이밍", "시즌 달력"])
         self.assertEqual(res.context["open"], {"naver", f"naver-{season.category.section.sel}",
                                                f"naver-{season.category.sel}", f"naver-{season.sel}"})
-        self.assertEqual(res.context["panel"], "posts")
-        self.assertIsNone(res.context["form"])  # 고치는 칸은 연필(edit=1)로만 연다
+        self.assertIsNone(res.context["bottom_form"])  # 고치는 칸은 연필(edit)로만 연다
         sub = season.subs.first()
         res = self.client.get(INDEX, {"w": "naver", "sel": sub.sel, "edit": "1"})
         self.assertContains(res, "K-세일페스타")  # 고치기를 열면 설명이 보인다
@@ -98,7 +97,7 @@ class BlogTypesTests(TestCase):
         self.assertEqual((sub.name, sub.note), ("큰 세일", "블프 위주"))
         res = self.client.post(reverse("blog_types:save", args=["sub", sub.pk]), {"name": "", "note": ""})
         self.assertEqual(res.status_code, 200)  # 이름이 비면 저장하지 않고 오류를 보여 준다
-        self.assertTrue(res.context["form"].errors)
+        self.assertTrue(res.context["bottom_form"].errors)
 
     def test_delete_category_removes_children(self):
         c = self.cat("C")
@@ -413,3 +412,41 @@ class PostHubTests(TestCase):
         res = self.client.get(p.get_absolute_url())
         self.assertEqual(res.context["ACTIVE_MENU"], "posts")
         self.assertContains(res, f'{reverse("posts:index")}?stage=temp&amp;w=tistory')
+
+
+class MappingPanesTests(TestCase):
+    """글 매핑 관리 오른쪽: 위 매핑 · 아래 글을 함께, 트리를 누르면 그 칸만"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        from apps.writing.models import Post
+        self.java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        self.post = Post.objects.create(title="자바 정리", stage="post")
+        Placement.objects.create(site_category=self.java, tistory_post=self.post)
+
+    def test_both_selections_at_once(self):
+        res = self.client.get(INDEX, {"site": self.java.sel, "w": "tistory", "sel": "u"})
+        self.assertEqual([p.post.title for p in res.context["placements"]], ["자바 정리"])  # 위
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 아래 (미분류)
+        res = self.client.get(INDEX, {"sel": self.java.sel})  # 예전 주소도 위 칸으로
+        self.assertEqual(res.context["site_sel"], self.java.sel)
+
+    def test_partial_returns_only_that_pane(self):
+        res = self.client.get(INDEX, {"site": self.java.sel}, HTTP_X_PARTIAL="top")
+        self.assertTemplateUsed(res, "blog_types/_pane_top.html")
+        self.assertTemplateNotUsed(res, "blog_types/index.html")
+        self.assertContains(res, "자바 정리")
+        res = self.client.get(INDEX, {"w": "tistory", "sel": "u"}, HTTP_X_PARTIAL="bottom")
+        self.assertTemplateUsed(res, "blog_types/_pane_bottom.html")
+        self.assertNotContains(res, "사이트 카테고리</span>")  # 트리는 다시 그리지 않는다
+
+    def test_redirects_keep_the_other_selection(self):
+        here = f"{INDEX}?site={self.java.sel}&w=tistory&sel=u"
+        self.client.post(reverse("blog_types:add", args=["sitecat"]), {"name": "Spring", "parent": self.java.sel, "next": here})
+        spring = SiteCategory.objects.get(name="Spring")
+        res = self.client.post(reverse("blog_types:save", args=["sitecat", spring.pk]), {"name": "Spring Boot", "note": "", "next": here})
+        self.assertRedirects(res, f"{INDEX}?site={spring.sel}&w=tistory&sel=u", fetch_redirect_response=False)
+        res = self.client.get(INDEX, {"site": spring.sel, "w": "tistory", "sel": "u", "edit": spring.sel})
+        self.assertIsNotNone(res.context["top_form"])
+        self.assertIsNone(res.context["bottom_form"])

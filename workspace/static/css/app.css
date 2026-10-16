@@ -1069,10 +1069,17 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 /* 블로그·카페 > 타입·카테고리: 왼쪽 트리(대분류 › 카테고리 › 타입 › 하위, 이름과 개수만) + 오른쪽 상세 */
 /* 글 매핑 관리: 왼쪽 한 칸에 위 사이트 카테고리(2.5) · 아래 글 분류(7.5), 오른쪽 목록. 글 관리(글쓰기)는 왼쪽에 글 분류만. */
 .bt-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-.bt-side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); background: var(--panel); }
-.bt-side > .bt-tree { border-right: 0; min-height: 0; flex: 3 1 0; }
-.bt-side > .bt-tree:first-child { flex: 1 1 0; }
-.bt-side > .bt-tree + .bt-tree { border-top: 1px solid var(--border); }
+.bt-layout-3 { grid-template-columns: minmax(210px, 250px) minmax(230px, 290px) minmax(0, 1fr); }
+/* 글 매핑 관리 오른쪽: 위 매핑 2.5 · 아래 글 7.5 를 함께, 각자 스크롤 */
+.bt-panes { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.bt-pane { min-height: 0; overflow: auto; padding: 12px var(--gutter) 16px; display: grid; gap: 10px; align-content: start; transition: opacity .12s; }
+.bt-pane-top { flex: 1 1 0; border-bottom: 1px solid var(--border); }
+.bt-pane-bottom { flex: 3 1 0; }
+.bt-pane.is-loading { opacity: .55; }
+.bt-pane-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bt-pane-head .bt-path { font-size: 13.5px; min-width: 0; }
+.bt-pane-head .bt-path a.cur { font-size: 15px; font-weight: 700; }
+.bt-pane-title { font-size: 15px; }
 .bt-unclassified .nm { color: var(--text-3); }
 .bt-place-pick { width: 100%; }
 .badge.cv-none { color: var(--text-3); }
@@ -1171,8 +1178,8 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
   .bt-layout { grid-template-columns: minmax(0, 1fr); overflow: auto; }
   .bt-tree { border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
   .bt-layout { grid-template-rows: none; }
-  .bt-side { border-right: 0; }
-  .bt-side > .bt-tree, .bt-side > .bt-tree:first-child { flex: none; }
+  .bt-pane, .bt-pane-top, .bt-pane-bottom { flex: none; overflow: visible; }
+  .bt-layout-3 .bt-panes { order: -1; border-bottom: 1px solid var(--border); }
   .bt-panel { overflow: visible; }
   .bt-layout.has-sel .bt-panel { order: -1; border-bottom: 1px solid var(--border); }
   .bt-grid { table-layout: auto; }
