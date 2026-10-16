@@ -25,19 +25,24 @@ KINDS = ("run", "update", "all")
 KEY = re.compile(r"[a-z0-9_-]{1,30}")
 PROMPT_HEAD = "# 일일루틴"  # launcher · all_prompt · restore_prompt 가 모두 이렇게 시작한다
 
-# 로컬 실행 claude 에 미리 허용하는 것: 루틴이 늘 하는 일 (저장소 안 읽기·쓰기, 웹 검색, git 올리기, 진행 보고).
-# 묻는 건 권한이 없어 막힐 때만 (2026-10-16 사용자). 방법·선택을 묻는 질문 도구와 브라우저 자동화는 막는다.
+# 로컬 실행 claude 에 미리 허용하는 것: 루틴이 늘 하는 일 (저장소 안 읽기·쓰기, 웹 검색, 브라우저, git 올리기, 진행 보고).
+# 묻는 건 권한이 없어 막힐 때만 (2026-10-16 사용자). 방법·선택을 묻는 질문 도구와 크롬 확장(사이트마다 허락을 묻는다)은 막는다.
+# 브라우저: Playwright MCP 가 PC 의 크롬을 새 창(루틴 전용 프로필)으로 열어 claude 가 직접 검색·클릭·읽기를 한다.
+# 네이버·티스토리처럼 WebFetch 로는 안 읽히는 곳을 사람이 보듯 본다 (2026-10-16 사용자: "예전엔 브라우저를 열어 조작해서 확인했다").
+PLAYWRIGHT_MCP = "@playwright/mcp@0.0.83"
+MCP_SERVERS = {"playwright": {"command": "cmd", "args": ["/c", "npx", "-y", PLAYWRIGHT_MCP]}}
 ROUTINE_ALLOW = [
-    "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch",
+    "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch", "mcp__playwright",
     "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
     "Bash(git status *)", "Bash(git log *)", "Bash(git diff *)", "Bash(ls *)", "Bash(mkdir *)",
     "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_report *)",
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
 ]
-ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome", "mcp__playwright"]
+ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome"]
 KOREAN = ("모든 말과 진행 보고는 한국어로 한다. 루틴은 스스로 판단해 끝까지 진행하고, 방법·선택·확인을 사용자에게 묻지 않는다. "
           "사용자에게 묻는 건 권한이 없어 실행이 막힐 때뿐이고, 그때는 무엇을 왜 하려는지 한국어로 한 줄 먼저 말한다. "
-          "블로그·사이트 확인은 WebFetch·WebSearch 로 하고 브라우저 자동화는 쓰지 않는다. 읽히지 않는 페이지는 막힘으로 보고하고 넘어간다. "
+          "블로그·검색·트렌드 사이트는 브라우저(playwright 도구: browser_navigate·browser_snapshot·browser_click)로 직접 열어 보고, "
+          "브라우저가 안 뜨면 WebFetch·WebSearch 로 한다. 둘 다 안 되는 페이지는 막힘으로 보고하고 넘어간다. 로그인·글쓰기·게시는 하지 않는다. "
           "셸 명령은 Bash 도구로 저장소 폴더에서 실행한다.")
 
 
@@ -103,16 +108,17 @@ def _open_run(routine, day, step):
 
 
 def open_terminal(name, title):
-    """새 터미널에서 claude 를 연다 (미리 허용한 것 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
+    """새 터미널에서 claude 를 연다 (미리 허용한 것 + 브라우저 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
-    conf = folder / "settings.json"
+    conf, mcp = folder / "settings.json", folder / "mcp.json"
     conf.write_text(json.dumps({"permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
+    mcp.write_text(json.dumps({"mcpServers": MCP_SERVERS}, indent=2), encoding="utf-8")
     ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
     if not WINDOWS:
-        return f'claude "{ask}" --settings workspace/.routine/settings.json'
+        return f'claude "{ask}" --settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json'
     subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", "claude", ask,
-                      "--settings", str(conf), "--append-system-prompt", KOREAN])
+                      "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN])
     return ""
 
 
