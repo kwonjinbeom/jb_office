@@ -10,6 +10,7 @@ urlpatterns = [
     path("new/", views.edit, name="create"),
     path("doc/<path:rel>", views.doc, name="doc"),
     path("<int:pk>/count/", views.count, name="count"),
+    path("<int:pk>/picks/", views.picks, name="picks"),
     path("<int:pk>/evaluate/", views.evaluate, name="evaluate"),
     path("evaluations/<int:pk>/delete/", views.evaluation_delete, name="evaluation_delete"),
     path("versions/<int:pk>/star/", views.version_star, name="version_star"),

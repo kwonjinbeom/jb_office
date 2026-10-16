@@ -85,8 +85,9 @@ class BlogTypesTests(TestCase):
         self.client.post(reverse("blog_types:move", args=["category", first_cat.pk]), {"dir": "up"})
         self.assertEqual(first_cat.section.categories.first().code, "A")  # 맨 위는 더 못 올라간다
         daily = Section.objects.create(name="일상·브이로그", order=9)
-        self.client.post(reverse("blog_types:move", args=["section", daily.pk]), {"dir": "up"})
-        self.assertEqual([g.name for g in Section.objects.all()], ["판매 수익 (커넥트)", "일상·브이로그", "광고 수익 (조회수)"])
+        for _ in range(2):  # IT/AI 위로, 광고 수익 위로
+            self.client.post(reverse("blog_types:move", args=["section", daily.pk]), {"dir": "up"})
+        self.assertEqual([g.name for g in Section.objects.all()], ["판매 수익 (커넥트)", "일상·브이로그", "광고 수익 (조회수)", "IT/AI"])
 
     def test_save_detail(self):
         sub = SubType.objects.get(name="세일 행사")
@@ -111,7 +112,7 @@ class BlogTypesTests(TestCase):
         self.assertContains(res, "카테고리 7개, 타입 14개, 하위 6개")
         self.client.post(reverse("blog_types:delete", args=["section", connect.pk]))
         self.assertFalse(Category.objects.filter(name="문제 해결").exists())
-        self.assertEqual(Category.objects.count(), 8)  # 다른 대분류는 그대로
+        self.assertEqual(Category.objects.count(), 11)  # 다른 대분류(광고 수익 8 · IT/AI 3)는 그대로
 
     def test_views_section_from_09(self):
         views = Section.objects.get(name="광고 수익 (조회수)")
