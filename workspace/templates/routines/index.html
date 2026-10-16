@@ -96,7 +96,7 @@
 {{ run.log }}</pre>
       </details>
       {% empty %}
-      <div class="rt-empty">로컬로 돌린 기록이 없습니다.<br>{% if on_server %}로컬 현황은 PC 에서 띄운 서버 화면에 쌓입니다. '실행'을 누르면 그 화면이 열립니다.{% else %}'실행'을 누르면 claude 가 단계마다 여기에 남깁니다.{% endif %}</div>
+      <div class="rt-empty">로컬로 돌린 기록이 없습니다.<br>{% if on_server %}'실행'을 누르면 PC 에서 claude 가 돌고, 현황은 PC 서버 화면에 쌓입니다.{% else %}'실행'을 누르면 claude 가 단계마다 여기에 남깁니다.{% endif %}</div>
       {% endfor %}
     </div>
   </section>

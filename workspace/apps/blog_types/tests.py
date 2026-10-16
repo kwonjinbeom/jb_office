@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.blog_rules.models import Blog
@@ -357,6 +358,7 @@ class ClassifyExistingPostsTests(TestCase):
         self.assertEqual(ssd.bt_sub.name, "두 개만 비교")
 
 
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")  # 저장소 원고를 글 관리로 가져오지 않게
 class PostHubTests(TestCase):
     """글 관리(티스토리·네이버 합친 화면)와 글 매핑 관리의 미분류·글 쪽 넣기"""
 

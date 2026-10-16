@@ -220,28 +220,24 @@
     try { input.showPicker(); } catch (err) { input.focus(); }
   });
 
-  // 일일루틴 '실행': 새 탭 없이 PC 서버(launch)로 보내고 결과 한 줄을 알린다.
+  // 일일루틴 '실행': 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (PC 서버 없이).
+  // 링크는 PC 에서 workspace\run.bat(또는 routine_link.bat)을 한 번 실행하면 등록된다 (apps/routines/local_run.py).
   document.addEventListener("submit", function (e) {
     var form = e.target;
     if (!form.matches || !form.matches("form.rt-launch")) return;
     e.preventDefault();
-    var data = new FormData(form), btn = form.querySelector("button");
-    data.append("fmt", "json");
-    if (btn) btn.disabled = true;
-    fetch(form.action, { method: "POST", body: data, mode: "cors", credentials: "omit" })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        toast(j.message, j.ok ? "ok" : "warn");
-        if (j.ok && form.hasAttribute("data-reload")) setTimeout(function () { location.reload(); }, 900);
-      })
-      .catch(function () {
-        // PC 서버가 예전 코드(결과를 JSON 으로 안 줌)거나 꺼져 있을 때: 한 번만 예전 방식(PC 화면 열기)으로 보낸다.
-        toast("PC 서버가 바로 답하지 않아 PC 화면으로 보냅니다. 열리지 않으면 PC 서버(127.0.0.1:8000)가 켜져 있는지 보세요.", "warn");
-        form.setAttribute("target", "_blank");
-        HTMLFormElement.prototype.submit.call(form);
-        form.removeAttribute("target");
-      })
-      .then(function () { if (btn) btn.disabled = false; });
+    var field = function (n) { var el = form.elements.namedItem(n); return el ? el.value : ""; };
+    var q = new URLSearchParams({ key: field("key"), day: field("day"), name: field("name") });
+    if (field("keys")) q.set("keys", field("keys"));
+    var link = "jbroutine:" + field("kind") + "?" + q.toString();
+    copyText(field("prompt")).then(
+      function () {
+        window.location.href = link;
+        toast("PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
+        if (form.hasAttribute("data-reload")) setTimeout(function () { location.reload(); }, 4000);
+      },
+      function () { toast("안내문을 복사하지 못했습니다. 다시 눌러 보세요.", "warn"); }
+    );
   });
 
   // 표 머리글의 '모두 선택' 체크박스: 같은 폼(form 속성)·같은 name 의 체크박스를 한꺼번에 켜고 끈다.
