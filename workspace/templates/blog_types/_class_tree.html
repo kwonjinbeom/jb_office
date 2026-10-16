@@ -1,91 +1,81 @@
 {% load trash_tags %}
-{% comment %}글 분류 트리 — 글쓰기 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 숫자는 그 아래 발행 완료가 아닌 글 수.
-글 관리(글쓰기)와 글 매핑 관리가 같이 쓴다. 컨텍스트: writers, w, sel, kind, open, q(주소 앞에 붙일 조건, 예 "stage=post&"), tools,
-pane(글 매핑 관리: 누르면 그 칸만 바꾼다){% endcomment %}
+{% comment %}글 분류 트리 — 모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 티스토리·네이버 나눔 없음 (플랫폼은 사이트별 템플릿에서).
+숫자는 그 아래 발행 완료가 아닌 글 수. 글 관리와 글 매핑 관리가 같이 쓴다.
+컨텍스트: tree(classify.class_tree), sel, open, q(주소 앞에 붙일 조건, 예 "stage=post&"), tools, pane(글 매핑 관리: 누르면 그 칸만 바꾼다){% endcomment %}
 <nav class="bt-tree" aria-label="글 분류" data-bt-tree="class">
   <div class="bt-tree-head">
     <span>글 분류</span>
     {% if tools %}{% include "blog_types/_tools.html" %}{% endif %}
   </div>
-  {% for wr in writers %}
-  <div class="bt-section" data-bt-branch="{{ wr.key }}"{% if wr.key in open %} data-bt-force-open{% endif %}>
+  <div class="bt-row bt-all-row">
+    <span class="bt-tog-gap"></span>
+    <a class="bt-node lv0{% if not sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}">
+      <span class="nm">모든 글</span>
+      {% if tree.count %}<span class="ct">{{ tree.count }}</span>{% endif %}
+    </a>
+  </div>
+  {% for g in tree.sections %}
+  <div class="bt-section" data-bt-branch="{{ g.obj.sel }}"{% if g.obj.sel in open %} data-bt-force-open{% endif %}>
     <div class="bt-row">
-      <button type="button" class="bt-tog" data-bt-toggle aria-label="{{ wr.label }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>
-      <a class="bt-node lv0{% if kind == 'writer' and w == wr.key %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}w={{ wr.key }}">
-        <span class="nm">{{ wr.label }}</span>
-        {% if wr.count %}<span class="ct">{{ wr.count }}</span>{% endif %}
+      {% if g.cats %}<button type="button" class="bt-tog" data-bt-toggle aria-label="{{ g.obj.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>{% else %}<span class="bt-tog-gap"></span>{% endif %}
+      <a {% if tools %}{% trash_attrs g.obj %} {% endif %}class="bt-node lv0{% if sel == g.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}sel={{ g.obj.sel }}">
+        <span class="nm">{{ g.obj.name }}</span>
+        {% if g.count %}<span class="ct">{{ g.count }}</span>{% endif %}
       </a>
+      {% if tools %}{% include "blog_types/_acts.html" with add_kind="category" parent=g.obj.sel cls=True edit_sel=g.obj.sel %}{% endif %}
     </div>
     <div class="bt-kids-tree">
-      {% for g in wr.sections %}
-      {% with gb=wr.key|add:"-"|add:g.obj.sel %}
-      <div class="bt-group bt-sec" data-bt-branch="{{ gb }}"{% if gb in open %} data-bt-force-open{% endif %}>
+      {% for c in g.cats %}
+      <div class="bt-group" data-bt-branch="{{ c.obj.sel }}"{% if c.obj.sel in open %} data-bt-force-open{% endif %}>
         <div class="bt-row">
-          {% if g.cats %}<button type="button" class="bt-tog sm" data-bt-toggle aria-label="{{ g.obj.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>{% else %}<span class="bt-tog-gap"></span>{% endif %}
-          <a {% if tools %}{% trash_attrs g.obj %} {% endif %}class="bt-node lvs{% if w == wr.key and sel == g.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}w={{ wr.key }}&amp;sel={{ g.obj.sel }}">
-            <span class="nm">{{ g.obj.name }}</span>
-            {% if g.count %}<span class="ct">{{ g.count }}</span>{% endif %}
+          {% if c.types %}<button type="button" class="bt-tog sm" data-bt-toggle aria-label="{{ c.obj.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>{% else %}<span class="bt-tog-gap"></span>{% endif %}
+          <a {% if tools %}{% trash_attrs c.obj %} {% endif %}class="bt-node lv1{% if sel == c.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}sel={{ c.obj.sel }}">
+            <span class="bt-code">{{ c.obj.code }}</span>
+            <span class="nm">{{ c.obj.name }}</span>
+            {% if c.count %}<span class="ct">{{ c.count }}</span>{% endif %}
           </a>
-          {% if tools %}{% include "blog_types/_acts.html" with add_kind="category" parent=g.obj.sel wk=wr.key edit_sel=g.obj.sel %}{% endif %}
+          {% if tools %}{% include "blog_types/_acts.html" with add_kind="type" parent=c.obj.sel cls=True edit_sel=c.obj.sel %}{% endif %}
         </div>
         <div class="bt-kids-tree">
-          {% for c in g.cats %}
-          {% with cb=wr.key|add:"-"|add:c.obj.sel %}
-          <div class="bt-group" data-bt-branch="{{ cb }}"{% if cb in open %} data-bt-force-open{% endif %}>
-            <div class="bt-row">
-              {% if c.types %}<button type="button" class="bt-tog sm" data-bt-toggle aria-label="{{ c.obj.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>{% else %}<span class="bt-tog-gap"></span>{% endif %}
-              <a {% if tools %}{% trash_attrs c.obj %} {% endif %}class="bt-node lv1{% if w == wr.key and sel == c.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}w={{ wr.key }}&amp;sel={{ c.obj.sel }}">
-                <span class="bt-code">{{ c.obj.code }}</span>
-                <span class="nm">{{ c.obj.name }}</span>
-                {% if c.count %}<span class="ct">{{ c.count }}</span>{% endif %}
-              </a>
-              {% if tools %}{% include "blog_types/_acts.html" with add_kind="type" parent=c.obj.sel wk=wr.key edit_sel=c.obj.sel %}{% endif %}
-            </div>
-            <div class="bt-kids-tree">
-              {% for t in c.types %}
-              <div class="bt-row">
-                <a {% if tools %}{% trash_attrs t.obj %} {% endif %}class="bt-node lv2{% if w == wr.key and sel == t.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}w={{ wr.key }}&amp;sel={{ t.obj.sel }}">
-                  <span class="nm">{{ t.obj.name }}</span>
-                  {% if t.count %}<span class="ct">{{ t.count }}</span>{% endif %}
-                </a>
-                {% if tools %}{% include "blog_types/_acts.html" with add_kind="sub" parent=t.obj.sel wk=wr.key edit_sel=t.obj.sel %}{% endif %}
-              </div>
-              {% for s in t.subs %}
-              <div class="bt-row">
-                <a {% if tools %}{% trash_attrs s.obj %} {% endif %}class="bt-node lv3{% if w == wr.key and sel == s.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}w={{ wr.key }}&amp;sel={{ s.obj.sel }}">
-                  <span class="nm">{{ s.obj.name }}</span>
-                  {% if s.count %}<span class="ct">{{ s.count }}</span>{% endif %}
-                </a>
-                {% if tools %}{% include "blog_types/_acts.html" with add_kind="" parent="" wk=wr.key edit_sel=s.obj.sel %}{% endif %}
-              </div>
-              {% endfor %}
-              {% endfor %}
-            </div>
+          {% for t in c.types %}
+          <div class="bt-row">
+            <a {% if tools %}{% trash_attrs t.obj %} {% endif %}class="bt-node lv2{% if sel == t.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}sel={{ t.obj.sel }}">
+              <span class="nm">{{ t.obj.name }}</span>
+              {% if t.count %}<span class="ct">{{ t.count }}</span>{% endif %}
+            </a>
+            {% if tools %}{% include "blog_types/_acts.html" with add_kind="sub" parent=t.obj.sel cls=True edit_sel=t.obj.sel %}{% endif %}
           </div>
-          {% endwith %}
-          {% empty %}
-          <div class="bt-empty-line">카테고리 없음</div>
+          {% for s in t.subs %}
+          <div class="bt-row">
+            <a {% if tools %}{% trash_attrs s.obj %} {% endif %}class="bt-node lv3{% if sel == s.obj.sel %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}sel={{ s.obj.sel }}">
+              <span class="nm">{{ s.obj.name }}</span>
+              {% if s.count %}<span class="ct">{{ s.count }}</span>{% endif %}
+            </a>
+            {% if tools %}{% include "blog_types/_acts.html" with add_kind="" parent="" cls=True edit_sel=s.obj.sel %}{% endif %}
+          </div>
+          {% endfor %}
           {% endfor %}
         </div>
       </div>
-      {% endwith %}
+      {% empty %}
+      <div class="bt-empty-line">카테고리 없음</div>
       {% endfor %}
-      {# 미분류: 대분류와 같은 줄. 분류가 없는 글은 모두 여기 #}
-      <div class="bt-group bt-sec">
-        <div class="bt-row">
-          <span class="bt-tog-gap"></span>
-          <a class="bt-node lvs bt-unclassified{% if w == wr.key and sel == 'u' %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}w={{ wr.key }}&amp;sel=u">
-            <span class="nm">미분류</span>
-            {% if wr.unclassified %}<span class="ct">{{ wr.unclassified }}</span>{% endif %}
-          </a>
-        </div>
-      </div>
     </div>
   </div>
   {% endfor %}
+  {# 미분류: 대분류와 같은 줄. 분류가 없는 글은 모두 여기 #}
+  <div class="bt-section">
+    <div class="bt-row">
+      <span class="bt-tog-gap"></span>
+      <a class="bt-node lv0 bt-unclassified{% if sel == 'u' %} on{% endif %}"{% if pane %} data-pane="{{ pane }}"{% endif %} href="?{{ q }}sel=u">
+        <span class="nm">미분류</span>
+        {% if tree.unclassified %}<span class="ct">{{ tree.unclassified }}</span>{% endif %}
+      </a>
+    </div>
+  </div>
   {% if tools %}
   <form class="bt-quickadd bt-only-add" method="post" action="{% url 'blog_types:add' 'section' %}">
-    {% csrf_token %}<input type="hidden" name="w" value="{{ w }}">
+    {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
     <input class="input sm" name="name" placeholder="+ 대분류 (이름 입력 후 Enter)" aria-label="새 대분류 이름" autocomplete="off">
   </form>
   {% endif %}

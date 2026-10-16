@@ -1,6 +1,6 @@
 {# 오른쪽 아래 (7.5): 글 분류를 고르면 그 분류의 글. 포스트 관리 글은 여기서 사이트 카테고리에 넣는다. 트리를 누르면 이 칸만 새로 받는다. #}
 <div class="bt-pane-head">
-  <span class="badge {% if kind == 'section' or kind == 'writer' %}green{% elif kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ ckind_label }}</span>
+  <span class="badge {% if kind == 'section' or kind == 'all' %}green{% elif kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ ckind_label }}</span>
   <div class="bt-path">{% for label, url in cpath %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}{% if site_sel %}&amp;site={{ site_sel }}{% endif %}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
   <span class="cnt">{{ posts|length }}</span>
 </div>
@@ -19,7 +19,7 @@
         <td>
           {% if p.stage == 'post' %}
           <form method="post" action="{% url 'blog_types:place_add' %}">{% csrf_token %}
-            <input type="hidden" name="post" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ here }}">
+            <input type="hidden" name="post" value="{{ p.writer }}:{{ p.pk }}"><input type="hidden" name="next" value="{{ here }}">
             <select class="input sm bt-place-pick" name="site_category" data-autosubmit aria-label="{{ p.title }} 넣을 사이트 카테고리">
               <option value="">넣을 곳 고르기</option>
               {% for pk, label in site_options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}

@@ -23,16 +23,16 @@
     </nav>
     <div class="filter-bar">
       <form method="get" class="inline-form">
-        <input type="hidden" name="stage" value="{{ stage }}">{% if w %}<input type="hidden" name="w" value="{{ w }}">{% endif %}{% if sel %}<input type="hidden" name="sel" value="{{ sel }}">{% endif %}
+        <input type="hidden" name="stage" value="{{ stage }}">{% if sel %}<input type="hidden" name="sel" value="{{ sel }}">{% endif %}
         <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용 검색  ( / )"></div>
         <button class="btn sm" type="submit">검색</button>
-        {% if q or w %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
+        {% if q or sel %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
       </form>
       {% if posts %}
       <span class="wr-bulk">
         <span class="muted small">체크한 것을</span>
         {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시로{% else %}검토로{% endif %}</button>{% endif %}
-        <button class="btn sm" form="ph-bulk" name="send" value="1" title="복사본을 상대 글쓰기(티스토리 ↔ 네이버) 임시 템플릿에 만든다">상대 글쓰기로 보내기</button>
+        <button class="btn sm" form="ph-bulk" name="send" value="1" title="복사본을 다른 편집기(티스토리 ↔ 네이버) 임시 템플릿에 만든다">다른 편집기로 복사</button>
         {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토로{% else %}포스트로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
       </span>
       {% endif %}
@@ -45,7 +45,7 @@
           <tr>
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
             <th>제목</th>
-            <th style="width:76px">글쓰기</th>
+            <th style="width:76px" title="글을 쓰는 편집기. 분류와는 상관없다">편집기</th>
             {% if stage == 'temp' %}<th style="width:32%">내용</th>{% endif %}
             {% if stage == 'review' %}<th style="width:220px">검토</th>{% endif %}
             {% if stage == 'post' %}<th style="width:186px">작성</th><th style="width:128px">발행</th><th style="width:150px">넣은 곳 · 변환</th>{% endif %}
@@ -68,7 +68,7 @@
             {% if stage == 'post' %}
             <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="write_status" current=p.write_status choices=write_choices %}{% else %}{% include "writing/_status.html" with post=p field="write_status" current=p.write_status choices=write_choices %}{% endif %}</td>
             <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% else %}{% include "writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% endif %}</td>
-            <td class="mid small">{% for pl in p.placements.all %}<div class="bt-chip">{{ pl.site_category.blog.name }} <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></div>{% empty %}<a class="muted" href="{% url 'blog_types:index' %}?w={{ p.writer }}{% if p.bt_category_id %}&amp;sel=c{{ p.bt_category_id }}{% else %}&amp;sel=u{% endif %}">사이트에 넣기</a>{% endfor %}</td>
+            <td class="mid small">{% for pl in p.placements.all %}<div class="bt-chip">{{ pl.site_category.blog.name }} <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></div>{% empty %}<a class="muted" href="{% url 'blog_types:index' %}?{% if p.bt_category_id %}sel=c{{ p.bt_category_id }}{% else %}sel=u{% endif %}">사이트에 넣기</a>{% endfor %}</td>
             {% endif %}
             <td class="mid small muted num">{% if stage == 'temp' %}{{ p.created_at|date:"m-d H:i" }}{% else %}{{ p.updated_at|date:"m-d H:i" }}{% endif %}</td>
             <td class="mid r">

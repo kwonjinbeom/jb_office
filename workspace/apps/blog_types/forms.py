@@ -21,7 +21,7 @@ class SectionForm(_Styled):
 class CategoryForm(_Styled):
     class Meta:
         model = Category
-        fields = ["code", "name", "platform", "direction", "question", "note"]
+        fields = ["code", "name", "direction", "question", "note"]  # 플랫폼 나눔은 쓰지 않는다 (사이트별 템플릿에서)
         widgets = {"note": forms.Textarea(attrs={"rows": 5})}
 
 
