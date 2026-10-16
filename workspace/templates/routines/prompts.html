@@ -33,7 +33,7 @@
           <tr class="pm-ref{% if forloop.first %} on{% endif %}" data-pm-ref="{{ forloop.counter }}" tabindex="0">
             <td><span class="badge {% if ref.kind == '프롬프트' %}blue{% elif ref.kind == '클라우드' %}violet{% elif ref.kind == '자료' %}gray{% else %}outline{% endif %}">{{ ref.kind }}</span></td>
             <td class="pm-ref-name" title="{{ ref.label }}">{{ ref.label }}</td>
-            <td class="c">{% if not ref.ok %}<span class="badge red">없음</span>{% elif ref.rel %}<a class="br-edit" href="{% url 'routines:doc' ref.rel %}" title="새 화면으로" aria-label="{{ ref.label }} 열기">{% include "includes/ic.html" with name="external" %}</a>{% endif %}</td>
+            <td class="c">{% if not ref.ok %}<span class="badge red">없음</span>{% elif ref.rel %}<a class="br-edit" href="{% url 'routines:doc' ref.rel %}" title="새 화면으로" aria-label="{{ ref.label }} 열기">{% include "includes/ic.html" with name="external" %}</a>{% elif ref.data == 'standard' %}<a class="br-edit" href="{% url 'daily_ideas:standard' %}" title="검색 표준 고치기 (버전으로 남음)" aria-label="검색 표준 고치기">{% include "includes/ic.html" with name="edit" %}</a>{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

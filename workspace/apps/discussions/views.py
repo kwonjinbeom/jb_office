@@ -20,13 +20,24 @@ from .models import Discussion, DiscussionHistory
 
 SNAPSHOT_FIELDS = ["summary", "next_action", "status", "amount", "partner"]
 
+# 메뉴 하나의 '논의 현황'이 대구분 여럿을 묶는 경우 (아이디어 = 일일 아이디어 + 내 아이디어)
+AREA_GROUPS = {"idea": ("아이디어", ["daily_ideas", "ideas"])}
+GROUP_OF = {a: g for g, (_, areas) in AREA_GROUPS.items() for a in areas}
+
+
+def _areas(area):
+    """화면의 area(?area=) → 실제 대구분 목록."""
+    if area in AREA_GROUPS:
+        return AREA_GROUPS[area][1]
+    return [area] if area in dict(Discussion.AREA_CHOICES) else []
+
 
 def _nav(request, area):
     """블로그·카페·영상 콘텐츠의 논의는 그 메뉴 아래 '논의 현황'으로, 그 밖에는 '진행현황'으로 강조한다.
 
     하위 메뉴가 있는 area 면 그 메뉴(Menu)를 돌려준다. key 규칙: "<area>_discussions" (apps/core/menus.py).
     """
-    menu = find_menu(f"{area}_discussions") if area else None
+    menu = find_menu(f"{GROUP_OF.get(area, area)}_discussions") if area else None
     if menu:
         request.nav_key = menu.key
     return menu
@@ -34,6 +45,7 @@ def _nav(request, area):
 
 def _list_url(area=""):
     url = reverse("discussions:list")
+    area = GROUP_OF.get(area, area)
     return f"{url}?area={area}" if find_menu(f"{area}_discussions") else url
 
 
@@ -70,7 +82,8 @@ def discussion_list(request):
     docs.sync()  # 저장소의 논의 글(논의/**/*.md)을 먼저 맞춘다
     nodes = decorate_tree(Discussion.objects.all())
     q, area, status = [request.GET.get(key, "").strip() for key in ("q", "area", "status")]
-    selected = next((node for node in nodes if str(node.pk) == request.GET.get("topic") and (not area or node.area == area)), None)
+    scope_areas = _areas(area)
+    selected = next((node for node in nodes if str(node.pk) == request.GET.get("topic") and (not area or node.area in scope_areas)), None)
     today = timezone.localdate()
 
     # 기간: period(오늘·7일·30일) 또는 from~to. 그 기간에 바뀐 논의 = 최근 변경이 그 안이거나, 그 안에 요약 이력이 있는 것.
@@ -85,8 +98,8 @@ def discussion_list(request):
             date_from, date_to = date_to, date_from
 
     qs = Discussion.objects.all()
-    if area in dict(Discussion.AREA_CHOICES):
-        qs = qs.filter(area=area)
+    if scope_areas:
+        qs = qs.filter(area__in=scope_areas)
     if selected:
         qs = qs.filter(pk__in=subtree_ids(nodes, selected.pk))
     if status in Discussion.Status.values:
@@ -116,11 +129,11 @@ def discussion_list(request):
         day_groups[-1]["entries"].append(entry)
 
     scope = _nav(request, area)
-    scope_label = dict(Discussion.AREA_CHOICES)[area] if scope else ""
+    scope_label = (AREA_GROUPS[area][0] if area in AREA_GROUPS else dict(Discussion.AREA_CHOICES)[area]) if scope else ""
     return render(request, "discussions/list.html", {
         "page_title": f"{scope_label} 논의 현황" if scope else "진행현황", "scope": scope, "scope_label": scope_label,
         "entries": entries, "day_groups": day_groups,
-        "topics": [node for node in nodes if not area or node.area == area], "selected": selected,
+        "topics": [node for node in nodes if not area or node.area in scope_areas], "selected": selected,
         "q": q, "area": area, "status": status, "areas": Discussion.AREA_CHOICES, "statuses": Discussion.Status.choices,
         "period": period, "periods": PERIODS, "date_from": date_from.isoformat() if date_from else "", "date_to": date_to.isoformat() if date_to else "",
         "today": today, "is_filtered": bool(q or status or selected or date_from or date_to or (area and not scope)),

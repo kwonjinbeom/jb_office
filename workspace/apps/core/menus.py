@@ -12,6 +12,7 @@
 - 하위 메뉴의 key 는 앱 이름과 달라도 된다. 그 화면의 뷰에서 `request.nav_key = "<key>"` 를 넣으면 그 항목이 강조된다
   (예: apps/discussions/views.py 의 _nav). 넣지 않으면 앱 이름과 같은 key 가 강조된다.
 - query: 같은 화면을 조건만 달리해 여는 하위 메뉴에 쓴다 (예: "?area=blog").
+- listing=False: '<상위 메뉴명> 리스트' 를 만들지 않는다. 하위 메뉴들이 곧 그 묶음의 화면일 때 (예: 아이디어 = 일일 + 내 아이디어).
 """
 from dataclasses import dataclass
 
@@ -28,6 +29,7 @@ class Menu:
     color: str = "#2f6bd8"
     query: str = ""
     children: tuple["Menu", ...] = ()
+    listing: bool = True
 
     @property
     def url(self) -> str:
@@ -41,17 +43,14 @@ MENUS: list[Menu] = [
             Menu("routine_prompts", "프롬프트 관리", "루틴마다 로컬·클라우드 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),
     ),
+    # 일일 아이디어 + 내 아이디어 (2026-10-16 사용자). 검색 표준은 일일루틴 › 프롬프트 관리의 자료로 옮겨 메뉴에서 뺐다.
     Menu(
-        "daily_ideas", "일일 아이디어", "날짜별로 조사한 후보를 비교하고 필요한 것만 담는 곳", "daily_ideas:list", "sparkles", "#334155",
+        "idea_hub", "아이디어", "날짜별로 조사한 후보(일일)와 내가 고른 아이디어, 그 논의", "daily_ideas:list", "sparkles", "#334155",
+        listing=False,
         children=(
-            Menu("daily_standard", "검색 표준", "아이디어를 찾을 때 주는 조건을 쓰고 버전으로 남기는 곳", "daily_ideas:standard", "edit"),
-            Menu("daily_ideas_discussions", "논의 현황", "일일 아이디어에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=daily_ideas"),
-        ),
-    ),
-    Menu(
-        "ideas", "내 아이디어", "내가 고른 후보를 단계별로 실제 작업으로 바꾸는 곳", "ideas:list", "bulb", "#2f6bd8",
-        children=(
-            Menu("ideas_discussions", "논의 현황", "내 아이디어에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=ideas"),
+            Menu("daily_ideas", "일일 아이디어", "날짜별로 조사한 후보를 비교하고 필요한 것만 담는 곳", "daily_ideas:list", "sparkles"),
+            Menu("ideas", "내 아이디어", "내가 고른 후보를 단계별로 실제 작업으로 바꾸는 곳", "ideas:list", "bulb"),
+            Menu("idea_discussions", "논의 현황", "아이디어(일일·내 아이디어)에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=idea"),
         ),
     ),
     Menu(
@@ -100,7 +99,7 @@ def build_nav(active_key: str) -> list[dict]:
         if not menu.children:
             nav.append({"menu": menu, "active": menu.key == active_key, "open": False, "children": []})
             continue
-        listing = Menu(menu.key, f"{menu.title} 리스트", menu.description, menu.url_name, menu.icon, menu.color, menu.query)
-        children = [{"menu": child, "active": child.key == active_key} for child in (listing, *menu.children)]
+        first = (Menu(menu.key, f"{menu.title} 리스트", menu.description, menu.url_name, menu.icon, menu.color, menu.query),) if menu.listing else ()
+        children = [{"menu": child, "active": child.key == active_key} for child in (*first, *menu.children)]
         nav.append({"menu": menu, "active": False, "open": any(c["active"] for c in children), "children": children})
     return nav

@@ -242,7 +242,7 @@ def adopt(request, item_id: str):
 # ---------------------------------------------------------------------------
 def standard(request):
     """검색 표준 쓰기. 저장할 때마다 새 버전. ?v=N 은 그 버전을 불러와 보여 준다(저장하면 새 버전)."""
-    request.nav_key = "daily_standard"
+    request.nav_key = "routine_prompts"  # 메뉴에서 빼고 일일루틴 › 프롬프트 관리(자료 · 검색 표준)에서 연다
     latest = SearchStandard.latest()
     history = list(SearchStandard.objects.all()[:30])
 
