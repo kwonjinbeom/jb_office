@@ -16,6 +16,7 @@ urlpatterns = [
     path("blog/writing/", include("apps.writing.urls")),
     path("blog/naver-writing/", include("apps.naver_writing.urls")),
     path("blog/types/", include("apps.blog_types.urls")),
+    path("blog/rules/", include("apps.blog_rules.urls")),
     path("blog/", include(("apps.content.urls", "blog"), namespace="blog")),
     path("video/", include(("apps.content.urls", "video"), namespace="video")),
     path("discussions/", include("apps.discussions.urls")),
