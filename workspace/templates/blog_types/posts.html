@@ -38,11 +38,12 @@
     <form id="ph-bulk" method="post" action="{% url 'posts:bulk' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 
     <div class="grid-wrap">
-      <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}980{% else %}820{% endif %}px">
+      <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}1076{% else %}916{% endif %}px">
         <thead>
           <tr>
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
             <th>제목</th>
+            <th style="width:96px">타겟</th>
             {% if stage == 'temp' %}<th style="width:32%">내용</th>{% endif %}
             {% if stage == 'review' %}<th style="width:220px">검토</th>{% endif %}
             {% if stage == 'post' %}<th style="width:186px">작성</th><th style="width:128px">발행</th><th style="width:150px">넣은 곳 · 변환</th>{% endif %}
@@ -57,6 +58,7 @@
           <tr {% trash_attrs p %} data-href="{{ p.get_absolute_url }}">
             <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
             <td class="title-cell mid"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></td>
+            <td class="mid small wr-target" title="이 글을 쓴 대상 계정">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
             {% if stage == 'temp' %}<td class="mid small muted"><span class="wr-excerpt">{{ p.excerpt|default:"-" }}</span></td>{% endif %}
             {% if stage == 'review' %}
             <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="review_status" current=p.review_status choices=review_choices %}{% else %}{% include "writing/_status.html" with post=p field="review_status" current=p.review_status choices=review_choices %}{% endif %}</td>

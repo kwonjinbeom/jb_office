@@ -17,7 +17,7 @@ class PostForm(forms.ModelForm):
     class Meta:
         model = Post
         fields = [
-            "title", "summary", "tags", "body",
+            "title", "summary", "tags", "body", "target",
             "review_status", "write_status", "publish_status", "published_url", "published_on",
         ]
         widgets = {
@@ -36,7 +36,7 @@ class PostForm(forms.ModelForm):
     def __init__(self, *args, stage=Post.Stage.TEMP, **kwargs):
         super().__init__(*args, **kwargs)
         self.label_suffix = ""
-        keep = {"title", "summary", "tags", "body", *STAGE_FIELDS[stage]}
+        keep = {"title", "summary", "tags", "body", "target", *STAGE_FIELDS[stage]}
         for name in list(self.fields):
             if name not in keep:
                 del self.fields[name]
@@ -44,6 +44,14 @@ class PostForm(forms.ModelForm):
         self.fields["classification"] = forms.ChoiceField(
             label="분류", required=False, choices=classify.choices("naver"),
             initial=classify.value_of(self.instance) if self.instance.pk else "",
+            widget=forms.Select(attrs={"class": "input"}))
+        # 타겟: 운영 화면의 블로그 이름 중에서 고른다. 목록에 없는 예전 값도 그대로 남긴다.
+        from apps.blog_rules.models import Blog
+        names = list(Blog.objects.values_list("name", flat=True))
+        current = self.instance.target if self.instance.pk else ""
+        self.fields["target"] = forms.ChoiceField(
+            label="타겟", required=False,
+            choices=[("", "정하지 않음")] + [(n, n) for n in names] + ([(current, current)] if current and current not in names else []),
             widget=forms.Select(attrs={"class": "input"}))
 
     def save(self, commit=True):

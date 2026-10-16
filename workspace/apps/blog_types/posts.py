@@ -71,7 +71,7 @@ def index(request):
         "path": path,
         "posts": posts,
         "groups": classify.grouped(posts),
-        "cols": 7 if stage == "post" else 5,
+        "cols": 8 if stage == "post" else 6,  # 타겟 칸 포함
         "review_choices": classify.post_model("tistory").Review.choices,
         "write_choices": classify.post_model("tistory").Write.choices,
         "publish_choices": classify.post_model("tistory").Publish.choices,

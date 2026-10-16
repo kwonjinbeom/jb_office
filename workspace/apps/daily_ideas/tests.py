@@ -140,8 +140,16 @@ class SearchStandardTests(TestCase):
         self.assertIn("## 1. 목적과 방향", md.content.decode("utf-8"))
 
     def test_daily_page_shows_which_standard_was_used(self):
-        response = self.client.get(reverse("daily_ideas:list"))
-        self.assertContains(response, "표준 없이 조사")
+        # 저장소에 매일 새 날짜가 쌓여도 흔들리지 않게, 표준 없는 날(10-13)과 v2 로 찾은 날(10-16)만 둔 폴더로 본다.
+        real = Path(settings.DAILY_IDEAS_DIR)
+        folder = Path(tempfile.mkdtemp(prefix="daily-std-"))
+        self.addCleanup(shutil.rmtree, folder, True)
+        shutil.copy(real / "2026-10-13.json", folder / "2026-10-13.json")
+        with self.settings(DAILY_IDEAS_DIR=folder):
+            response = self.client.get(reverse("daily_ideas:list"))
+            self.assertContains(response, "표준 없이 조사")
+            shutil.copy(real / "2026-10-16.json", folder / "2026-10-16.json")
+            self.assertContains(self.client.get(reverse("daily_ideas:list")), "검색 표준 v2")
         self.assertNotContains(response, "검색 표준</a>")  # 버튼은 빼고 프롬프트 관리에서 연다
 
 

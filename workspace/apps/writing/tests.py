@@ -319,6 +319,32 @@ class DraftImportTests(TestCase):
         self.assertNotContains(res, "메모만 있는 파일")
         self.assertContains(res, "새 원고")
 
+    def test_target_comes_from_site_line(self):
+        """원고의 `사이트:` 줄이 타겟이 된다. 타겟 칸 전에 들어온 같은 제목 글은 비어 있던 타겟만 채운다."""
+        from pathlib import Path
+
+        from .forms import PostForm
+        from .views import auto_import_drafts
+
+        root = Path(self.tmp.name)
+        md = DRAFT_MD.replace("| 항목 | 내용 |", "사이트: memorily\n\n| 항목 | 내용 |", 1)
+        (root / "T97_타겟").mkdir()
+        (root / "T97_타겟" / "원고.md").write_text(md.replace("# 시험 원고 제목", "# 타겟 원고 제목"), encoding="utf-8")
+        (root / "T96_새글").mkdir()
+        (root / "T96_새글" / "원고.md").write_text(md.replace("# 시험 원고 제목", "# 새 타겟 원고"), encoding="utf-8")
+        old = Post.objects.create(title="타겟 원고 제목")  # 타겟 칸이 생기기 전에 가져온 글
+        auto_import_drafts()
+        old.refresh_from_db()
+        self.assertEqual(old.target, "memorily")
+        self.assertEqual(Post.objects.filter(title="타겟 원고 제목").count(), 1)
+        self.assertEqual(Post.objects.get(title="새 타겟 원고").target, "memorily")
+        self.assertEqual(Post.objects.get(title="시험 원고 제목").target, "")  # 사이트 줄이 없는 원고
+        res = self.client.get(reverse("posts:index"))
+        self.assertContains(res, "<th style=\"width:96px\">타겟</th>", html=False)
+        self.assertContains(res, "memorily")
+        form = PostForm(instance=old)
+        self.assertIn(("memorily", "memorily"), form.fields["target"].choices)  # 운영 목록에 없어도 지금 값은 남긴다
+
     def test_import_creates_temp_post_once(self):
         url = reverse("writing:import")
         res = self.client.post(url, {"keys": ["T99_시험"]})
