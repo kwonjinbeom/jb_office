@@ -93,3 +93,23 @@ class AdminSkinTests(TestCase):
         self.assertContains(res, "관리화면")
         self.assertContains(res, "css/admin.css")
         self.assertNotContains(res, "Django 관리")
+
+
+class PcAdminNoLoginTests(TestCase):
+    """PC(로그인 없이 쓰는 모드)에서는 관리화면도 따로 로그인하지 않는다. 서버(REQUIRE_LOGIN)에서는 그대로."""
+
+    def test_pc_opens_admin_without_login(self):
+        from django.test import override_settings
+        with override_settings(REQUIRE_LOGIN=False):
+            res = self.client.get("/admin/")
+            self.assertEqual(res.status_code, 200)
+            self.assertContains(res, "메뉴 권한")
+            self.assertEqual(self.client.get(URL).status_code, 200)
+            self.assertFalse(get_user_model().objects.get(username="pc").has_usable_password())
+
+    def test_server_still_needs_login(self):
+        from django.test import override_settings
+        with override_settings(REQUIRE_LOGIN=True):
+            res = self.client.get("/admin/")
+            self.assertEqual(res.status_code, 302)
+            self.assertFalse(get_user_model().objects.filter(username="pc").exists())

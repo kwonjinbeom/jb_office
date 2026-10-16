@@ -132,6 +132,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.PcAdminAutoLoginMiddleware",  # PC(로그인 없이 쓰는 모드)에서는 관리화면도 로그인 없이
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.trash_cleanup.TrashCleanupMiddleware",
