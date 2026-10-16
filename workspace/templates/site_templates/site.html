@@ -4,45 +4,34 @@
 
 {% block heading %}{{ blog.name }} <span class="cnt">{{ blog.get_platform_display }}</span>{% endblock %}
 
-{% block content %}
-<div class="st-cols">
-  <div class="st-col">
-    <section class="card">
-      <div class="card-head"><h3 class="card-title">사이트 템플릿</h3><span class="hint">{{ blog.content|default:"컨셉 미정" }}</span></div>
-      <form method="post">{% csrf_token %}<input type="hidden" name="part" value="template">
-        <div class="card-body form-grid">
-          {% for field in tpl_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
-        </div>
-        <div class="form-foot"><span style="margin-left:auto"></span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
-      </form>
-    </section>
-    <section class="card">
-      <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }} 붙여넣기 포맷</h3><span class="hint">같은 플랫폼 사이트가 함께 쓴다</span></div>
-      <form method="post">{% csrf_token %}<input type="hidden" name="part" value="format">
-        <div class="card-body form-grid">
-          {% for field in fmt_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
-        </div>
-        <div class="form-foot"><span style="margin-left:auto"></span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
-      </form>
-    </section>
-  </div>
+{% block actions %}
+<a class="btn" href="{% url 'site_templates:index' %}">{% include "includes/ic.html" with name="chevron-left" %}뒤로</a>
+{% endblock %}
 
-  <section class="card st-col">
-    <div class="card-head"><h3 class="card-title">변환할 글 <span class="cnt">{{ placements|length }}</span></h3><a class="hint" href="{% url 'blog_types:index' %}">글 매핑 관리에서 넣기</a></div>
-    <table class="grid bt-grid">
-      <thead><tr><th>제목</th><th style="width:28%">카테고리</th><th style="width:96px">변환</th></tr></thead>
-      <tbody>
-        {% for pl in placements %}
-        <tr>
-          <td class="title-cell"><a href="{% url 'site_templates:convert' pl.pk %}">{{ pl.post.title }}</a></td>
-          <td class="small muted bt-cut">{{ pl.site_category }}</td>
-          <td><a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="3" class="grid-empty">이 사이트에 넣은 글이 없습니다. 글 매핑 관리에서 사이트 카테고리에 넣으세요.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% block content %}
+{# 사이트 하나의 컨셉·템플릿 고치기에만 집중. 글 변환은 메인 화면에서 #}
+<div class="st-cols">
+  <section class="card">
+    <div class="card-head"><h3 class="card-title">컨셉 · 템플릿</h3><span class="hint">변환 요청문에 그대로 들어간다</span></div>
+    <form method="post">{% csrf_token %}<input type="hidden" name="part" value="template">
+      <div class="card-body form-grid">
+        {% for field in concept_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
+        {% for field in tpl_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
+      </div>
+      <div class="form-foot"><span style="margin-left:auto"></span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }} 붙여넣기 포맷</h3><span class="hint">같은 플랫폼 사이트가 함께 쓴다</span></div>
+    <form method="post">{% csrf_token %}<input type="hidden" name="part" value="format">
+      <div class="card-body form-grid">
+        {% for field in fmt_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
+      </div>
+      <div class="form-foot">
+        <span class="muted small">변환 요청 {{ cv.requested }} · 완료 {{ cv.done }} · 확인 {{ cv.checked }}</span>
+        <span style="margin-left:auto"></span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+      </div>
+    </form>
   </section>
 </div>
 {% endblock %}

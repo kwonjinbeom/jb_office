@@ -23,16 +23,33 @@ class SiteTemplateTests(TestCase):
         self.assertIn("개발자", SiteTemplate.objects.get(blog=self.memorily).tone)
         res = self.client.get(reverse("site_templates:index"))
         self.assertContains(res, "memorily")
-        self.assertContains(res, "미변환 1")
         self.assertContains(res, "사이트별 템플릿")  # 메뉴
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 포스트 관리 · 발행 전 글
+        self.assertContains(res, "눈잎 — 카테고리 먼저")  # 카테고리 없는 사이트는 못 고른다
 
     def test_site_page_saves_template_and_format(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])
-        self.client.post(url, {"part": "template", "t-tone": "새 말투", "t-structure": "", "t-rules": ""})
+        self.client.post(url, {"part": "template", "c-content": "새 컨셉", "t-tone": "새 말투", "t-structure": "", "t-rules": ""})
         self.assertEqual(SiteTemplate.objects.get(blog=self.memorily).tone, "새 말투")
+        self.memorily.refresh_from_db()
+        self.assertEqual(self.memorily.content, "새 컨셉")  # 컨셉도 여기서 (운영 화면과 같은 값)
         self.client.post(url, {"part": "format", "f-guide": "새 포맷"})
         self.assertEqual(PlatformFormat.objects.get(platform="tistory").guide, "새 포맷")
-        self.assertContains(self.client.get(url), "자바 정리")
+        res = self.client.get(url)
+        self.assertNotContains(res, "자바 정리")  # 상세는 컨셉·템플릿만, 글 변환은 메인에서
+        self.assertContains(res, f'href="{reverse("site_templates:index")}"')  # 뒤로
+
+    def test_request_convert_from_main(self):
+        from apps.writing.models import Post as T
+        new = T.objects.create(title="새 포스트", stage="post")
+        T.objects.create(title="발행한 글", stage="post", publish_status="done")
+        res = self.client.get(reverse("site_templates:index"))
+        self.assertNotIn("발행한 글", [p.title for p in res.context["posts"]])
+        self.client.post(reverse("site_templates:request"), {"post": f"tistory:{new.pk}", "site_category": self.java.pk})
+        pl = Placement.objects.get(tistory_post=new)
+        self.assertEqual((pl.site_category, pl.convert_status), (self.java, "requested"))
+        self.client.post(reverse("site_templates:request"), {"post": f"tistory:{new.pk}", "site_category": self.java.pk})
+        self.assertEqual(Placement.objects.filter(tistory_post=new).count(), 1)  # 이미 넣은 곳이면 요청만 다시
 
     def test_convert_flow(self):
         url = reverse("site_templates:convert", args=[self.pl.pk])

@@ -6,6 +6,7 @@ app_name = "site_templates"
 urlpatterns = [
     path("", views.index, name="index"),
     path("requests.json", views.requests_json, name="requests"),
+    path("request/", views.request_convert, name="request"),
     path("<int:pk>/", views.site, name="site"),
     path("convert/<int:pk>/", views.convert, name="convert"),
     path("convert/<int:pk>/status/", views.quick_status, name="status"),
