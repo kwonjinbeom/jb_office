@@ -370,6 +370,25 @@ class PostHubTests(TestCase):
         self.T, self.N = TistoryPost, NaverPost
         self.season = PostType.objects.get(name="시즌 달력")
 
+    def test_detail_keeps_class_tree(self):
+        """글을 골라 글 보기로 가도 글 분류 트리가 남고, 그 글의 분류가 골라져 있다. 트리를 누르면 글 관리로 돌아간다."""
+        t = self.T.objects.create(title="티 글", stage="review", bt_category=self.season.category, bt_type=self.season)
+        n = self.N.objects.create(title="네 글", stage="temp")
+        res = self.client.get(t.get_absolute_url())
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, 'data-bt-tree="class"')
+        self.assertContains(res, "data-bt-hide")  # 트리 접기 버튼
+        self.assertEqual(res.context["tree_sel"], self.season.sel)
+        self.assertContains(res, f'href="{reverse("posts:index")}?stage=review&amp;sel={self.season.sel}"')
+        res = self.client.get(n.get_absolute_url())
+        self.assertEqual(res.context["tree_sel"], "u")  # 미분류 글은 미분류가 골라진다
+        self.assertContains(res, f'href="{reverse("posts:index")}?stage=temp&amp;sel=u"')
+
+    def test_side_menu_has_collapse_button(self):
+        res = self.client.get(reverse("posts:index"))
+        self.assertContains(res, "data-nav-mini")
+        self.assertContains(res, 'localStorage.getItem("nav.mini")')
+
     def test_posts_screen_merges_writers_and_filters_by_tree(self):
         self.T.objects.create(title="티 임시", stage="temp", bt_category=self.season.category)
         self.N.objects.create(title="네 임시", stage="temp")

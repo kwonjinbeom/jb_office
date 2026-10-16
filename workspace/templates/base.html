@@ -8,17 +8,21 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_VER }}">
   {% block head %}{% endblock %}
+  <script>try{if(localStorage.getItem("nav.mini")==="1")document.documentElement.classList.add("nav-mini")}catch(e){}</script>
 </head>
 <body>
 {% include "includes/icons.html" %}
 <div class="app">
   <aside class="sidebar">
-    <a class="brand" href="{% url 'core:home' %}">
-      <span class="brand-mark">JB</span>
-      <span class="brand-text">Office</span>
-    </a>
+    <div class="brand-row">
+      <a class="brand" href="{% url 'core:home' %}" title="홈">
+        <span class="brand-mark">JB</span>
+        <span class="brand-text">Office</span>
+      </a>
+      <button type="button" class="nav-mini-btn" data-nav-mini aria-expanded="true" title="메뉴 접기" aria-label="왼쪽 메뉴 접기·펼치기"><svg class="ic"><use href="#i-panel-left"/></svg></button>
+    </div>
     <nav class="nav">
-      <a class="nav-item{% if request.resolver_match.url_name == 'home' and request.resolver_match.app_name == 'core' %} active{% endif %}" href="{% url 'core:home' %}">
+      <a class="nav-item{% if request.resolver_match.url_name == 'home' and request.resolver_match.app_name == 'core' %} active{% endif %}" href="{% url 'core:home' %}" title="홈">
         <svg class="ic"><use href="#i-home"/></svg><span>홈</span>
       </a>
       {% for n in NAV %}
@@ -26,7 +30,7 @@
       {# 하위 메뉴가 있는 항목: 누르면 펼치기만 한다. 원래 화면은 첫 중메뉴 '○○ 리스트'. #}
       <div class="nav-group{% if n.open %} open{% endif %}" data-nav-group="{{ n.menu.key }}">
         <div class="nav-row">
-          <button type="button" class="nav-item nav-toggle" data-nav-toggle aria-expanded="{% if n.open %}true{% else %}false{% endif %}">
+          <button type="button" class="nav-item nav-toggle" data-nav-toggle aria-expanded="{% if n.open %}true{% else %}false{% endif %}" title="{{ n.menu.title }}">
             <svg class="ic"><use href="#i-{{ n.menu.icon }}"/></svg><span>{{ n.menu.title }}</span>
             <span class="nav-caret" aria-hidden="true"><svg class="ic"><use href="#i-chevron-down"/></svg></span>
           </button>
@@ -38,7 +42,7 @@
         </div>
       </div>
       {% else %}
-      <a class="nav-item{% if n.active %} active{% endif %}" href="{{ n.menu.url }}">
+      <a class="nav-item{% if n.active %} active{% endif %}" href="{{ n.menu.url }}" title="{{ n.menu.title }}">
         <svg class="ic"><use href="#i-{{ n.menu.icon }}"/></svg><span>{{ n.menu.title }}</span>
       </a>
       {% endif %}
@@ -77,10 +81,10 @@
     {% endwith %}
 
     <div class="nav-foot">
-      <a class="nav-item{% if request.resolver_match.url_name == 'settings' %} active{% endif %}" href="{% url 'core:settings' %}">
+      <a class="nav-item{% if request.resolver_match.url_name == 'settings' %} active{% endif %}" href="{% url 'core:settings' %}" title="설정">
         <svg class="ic"><use href="#i-settings"/></svg><span>설정</span>
       </a>
-      <a class="nav-item" href="/admin/">
+      <a class="nav-item" href="/admin/" title="관리화면">
         <svg class="ic"><use href="#i-shield"/></svg><span>관리화면</span>
       </a>
       {% if user.is_authenticated %}

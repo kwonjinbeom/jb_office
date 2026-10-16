@@ -11,6 +11,7 @@ from . import drafts as drafts_mod
 from .forms import PostForm
 from .models import Post
 from .render import clean_html, plain_text, render_body, text_to_html
+from apps.blog_types.posts import tree_for_post
 
 Stage = Post.Stage
 
@@ -192,6 +193,7 @@ def detail(request, pk):
         request,
         "writing/detail.html",
         {
+            **tree_for_post(post),
             "page_title": post.title,
             "post": post,
             "stage": post.stage,

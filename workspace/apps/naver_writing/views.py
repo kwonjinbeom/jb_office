@@ -10,6 +10,7 @@ from apps.blog_types import classify
 from .forms import PostForm
 from .models import Post
 from .render import FONTS, QUOTE_STYLES, HR_STYLES, clean_html, paste_html, plain_text, render_body, text_to_html
+from apps.blog_types.posts import tree_for_post
 
 Stage = Post.Stage
 
@@ -119,6 +120,7 @@ def detail(request, pk):
         request,
         "naver_writing/detail.html",
         {
+            **tree_for_post(post),
             "page_title": post.title,
             "post": post,
             "stage": post.stage,

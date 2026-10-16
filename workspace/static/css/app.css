@@ -133,6 +133,25 @@ pre code { background: none; padding: 0; }
 .user-row .nm { flex: 1; min-width: 0; font-weight: 600; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .main { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* 왼쪽 메뉴 접기: 아이콘만 남긴 좁은 띠 (이 브라우저에 기억). 좁은 화면(위쪽 가로 메뉴)에서는 쓰지 않는다. */
+.brand-row { display: flex; align-items: flex-start; gap: 4px; }
+.brand-row .brand { flex: 1; min-width: 0; }
+.nav-mini-btn { flex: none; width: 26px; height: 26px; margin-top: 4px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer; }
+.nav-mini-btn:hover { background: var(--hover); color: var(--text); }
+.nav-mini-btn .ic { width: 15px; height: 15px; }
+@media (min-width: 761px) {
+  html.nav-mini { --sidebar-w: 58px; }
+  html.nav-mini .sidebar { padding: 12px 8px; }
+  html.nav-mini .brand-row { flex-direction: column; align-items: center; gap: 6px; padding-bottom: 8px; }
+  html.nav-mini .brand { padding: 4px 0; flex: none; }
+  html.nav-mini .nav-mini-btn { margin-top: 0; }
+  html.nav-mini .brand-text, html.nav-mini .nav-item > span, html.nav-mini .nav-sub, html.nav-mini .nav-group.open .nav-sub,
+  html.nav-mini .side-box, html.nav-mini .user-row .nm { display: none; }
+  html.nav-mini .nav-item, html.nav-mini .nav-row .nav-item { justify-content: center; padding: 9px 0; }
+  html.nav-mini .user-row { justify-content: center; padding: 6px 0 0; }
+}
+@media (max-width: 760px) { .nav-mini-btn { display: none; } }
 .page-header {
   display: flex; align-items: center; gap: 12px;
   padding: 10px var(--gutter);
@@ -1090,7 +1109,18 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .badge.cv-checked { background: var(--ok-weak); color: var(--ok); }
 a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .bt-tree { overflow: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 10px 8px 24px; }
-.bt-tree-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 8px 10px; font-size: 11.5px; font-weight: 700; color: var(--text-3); letter-spacing: .2px; }
+.bt-tree-head { display: flex; align-items: center; gap: 6px; padding: 0 2px 8px 4px; font-size: 11.5px; font-weight: 700; color: var(--text-3); letter-spacing: .2px; }
+.bt-tree-title { flex: 1; min-width: 0; }
+/* 트리 전체 접기 (글 관리·글 보기·글 매핑 관리): 접으면 버튼만 남은 좁은 띠 */
+.bt-hide { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer; }
+.bt-hide:hover { background: var(--hover); color: var(--text); }
+.bt-hide .ic { width: 15px; height: 15px; }
+.bt-layout.tree-off { grid-template-columns: 42px minmax(0, 1fr); }
+.bt-layout-3.tree-off { grid-template-columns: minmax(210px, 250px) 42px minmax(0, 1fr); }
+.bt-layout.tree-off .bt-tree { padding: 10px 8px; overflow: hidden; }
+.bt-layout.tree-off .bt-tree > :not(.bt-tree-head) { display: none; }
+.bt-layout.tree-off .bt-tree-head { padding: 0; }
+.bt-layout.tree-off .bt-tree-head > :not(.bt-hide) { display: none; }
 .bt-tools { display: inline-flex; gap: 2px; }
 .bt-tool, .bt-act { width: 24px; height: 24px; flex: none; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
 .bt-tool .ic, .bt-act .ic { width: 14px; height: 14px; }
@@ -1177,7 +1207,7 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .bt-welcome { max-width: 560px; padding-top: 6vh; color: var(--text-2); line-height: 1.75; }
 .bt-welcome h2 { color: var(--text); font-size: 20px; margin: 0 0 10px; }
 @media (max-width: 900px) {
-  .bt-layout { grid-template-columns: minmax(0, 1fr); overflow: auto; }
+  .bt-layout, .bt-layout.tree-off, .bt-layout-3.tree-off { grid-template-columns: minmax(0, 1fr); overflow: auto; }
   .bt-tree { border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
   .bt-layout { grid-template-rows: none; }
   .bt-pane, .bt-pane-top, .bt-pane-bottom { flex: none; overflow: visible; }
@@ -1378,6 +1408,7 @@ a.br-addr:hover { color: var(--accent); }
 .ph-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .ph-main > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
 .ph-main > .wr-tabs { padding-left: var(--gutter); }
+.wr-detail-main { overflow: auto; padding: 18px var(--gutter) 28px; }
 /* 사이트별 템플릿 */
 .st-table td { vertical-align: top; }
 .st-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

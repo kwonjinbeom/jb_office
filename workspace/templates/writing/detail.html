@@ -40,7 +40,12 @@
 </div>
 {% endblock %}
 
+{% block body_class %}fill{% endblock %}
+
 {% block content %}
+<div class="bt-layout">
+  {% include "blog_types/_class_tree.html" with sel=tree_sel open=tree_open q=tree_q base=tree_base tools=False %}
+  <section class="ph-main wr-detail-main">
 <div class="wr-read">
   {% if stage != 'temp' or post.summary or slots %}
   <div class="wr-read-info">
@@ -86,6 +91,8 @@
   </nav>
   {% endif %}
 </div>
+  </section>
+</div>
 
 {# 복사 원본: 화면에는 안 보인다 #}
 <textarea id="wr-copy-title" hidden>{{ post.title }}</textarea>
@@ -93,4 +100,8 @@
 <textarea id="wr-copy-text" hidden>{{ body_text }}</textarea>
 <textarea id="wr-copy-tags" hidden>{{ post.tag_list|join:", " }}</textarea>
 <textarea id="wr-copy-summary" hidden>{{ post.summary }}</textarea>
+{% endblock %}
+
+{% block scripts %}
+{% include "blog_types/_tree_js.html" %}
 {% endblock %}

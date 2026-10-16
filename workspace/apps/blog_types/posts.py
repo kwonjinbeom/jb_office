@@ -80,6 +80,21 @@ def index(request):
     })
 
 
+def tree_for_post(post):
+    """글 보기 왼쪽에 둘 글 분류 트리 (2026-10-17 사용자: 글을 고르면 글 분류가 사라진다).
+    그 글의 분류를 고른 상태로 펴 두고, 트리를 누르면 글 관리의 같은 단계·같은 분류 목록으로 돌아간다."""
+    node = classify.node_of(post)
+    sel = node.sel if node is not None else "u"
+    kind, obj = _find(sel)
+    return {
+        "tree": classify.class_tree(),
+        "tree_sel": sel,
+        "tree_open": _open_branches(kind, obj) if kind else set(),
+        "tree_q": f"stage={post.stage}&",
+        "tree_base": reverse("posts:index"),
+    }
+
+
 def _picked(request):
     """체크한 글: 'tistory:3' · 'naver:5'"""
     out = []
