@@ -1,24 +1,33 @@
 """사이트별 템플릿 화면.
 
-- 메인 (2026-10-16 사용자): 발행예정글 단계이면서 아직 발행 완료가 아닌 글 목록. 글마다 사이트(카테고리)를 골라 변환을 요청하고,
-  이미 넣은 곳의 변환 상태를 본다. 위에는 사이트 카드(누르면 그 사이트의 컨셉·템플릿 고치기).
+- 메인 (2026-10-17 사용자): 왼쪽은 글 매핑 관리처럼 사이트 › 카테고리 › 하위 카테고리 트리. 카테고리마다 컨셉이 있어서
+  고르면 오른쪽 위에서 그 컨셉을 보고 고친다 (사이트를 고르면 사이트 컨셉 · 템플릿 고치기로). 오른쪽 아래는 변환할 글:
+  발행예정글(발행 전) 중 미변환인 글. 글 매핑 관리에서 고른 곳(사이트·카테고리)에 넣은 글만 '변환' 버튼이 뜨고,
+  '변환 가능 글 전체 변환'은 그 범위의 미변환을 한꺼번에. 변환은 PC 터미널의 claude 가 한다 (run → jbroutine:convert 링크 →
+  apps/routines/local_run.py). claude 는 변환본을 api_save 주소로 보낸다 (설정의 보고 토큰).
+  그 아래는 변환 요청 · 완료 · 확인한 것 (누르면 변환 화면).
 - 사이트: 컨셉·말투·구성·지킬 것과 플랫폼 붙여넣기 포맷 고치기에만 집중한다.
 - 변환: 원문 ↔ 변환본. 변환 요청 → (Claude 가 변환본을 채움) → 변환 완료 → 확인 완료. 변환본은 그 사이트 에디터에 맞게 복사한다.
 - requests.json: 변환 요청인 글의 요청문 (Claude 가 읽는다)
 """
+import hmac
 from collections import Counter
 
 from django import forms
 from django.contrib import messages
-from django.http import JsonResponse
+from django.contrib.auth.decorators import login_not_required
+from django.db.models import Prefetch
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
 from apps.blog_types import classify
 from apps.blog_types.models import Placement, SiteCategory
+from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
 from . import paste, prompt
 from .models import PlatformFormat, SiteTemplate
@@ -58,69 +67,152 @@ def _nav(request):
     request.nav_key = "site_templates"
 
 
-def _first_line(text):
-    return next((line.strip() for line in (text or "").splitlines() if line.strip()), "")
-
-
 def _placements(blog=None):
     qs = Placement.objects.select_related("site_category__blog", "site_category__parent", "tistory_post", "naver_post")
     return qs.filter(site_category__blog=blog) if blog else qs
 
 
-def _site_choices(sites):
-    """사이트 골라 변환: 사이트마다 묶은 사이트 카테고리. 카테고리가 없는 사이트는 고를 수 없다 (글 매핑 관리에서 먼저 추가)."""
-    groups = []
-    cats = SiteCategory.objects.filter(parent=None).prefetch_related("children").order_by("order", "pk")
-    by_blog = {}
-    for c in cats:
-        by_blog.setdefault(c.blog_id, []).append(c)
+class CategoryConceptForm(_Styled):
+    class Meta:
+        model = SiteCategory
+        fields = ["concept"]
+        widgets = {"concept": forms.Textarea(attrs={"rows": 4})}
+
+
+def _pick(sel):
+    """?site= 값 → ('site', Blog) · ('sitecat', SiteCategory) · (None, None)"""
+    kind = {"b": "site", "k": "sitecat"}.get((sel or "")[:1])
+    pk = (sel or "")[1:]
+    if not kind or not pk.isdigit():
+        return None, None
+    obj = (Blog if kind == "site" else SiteCategory).objects.filter(pk=pk).first()
+    return (kind, obj) if obj else (None, None)
+
+
+def _scope(kind, obj):
+    """고른 것 아래의 사이트 카테고리 pk (None = 모두)"""
+    if kind == "site":
+        return set(SiteCategory.objects.filter(blog=obj).values_list("pk", flat=True))
+    if kind == "sitecat":
+        return {obj.pk, *obj.children.values_list("pk", flat=True)}
+    return None
+
+
+def _tree(todo_cats):
+    """왼쪽 트리: 사이트 › 카테고리 › 하위. 숫자는 그 아래 변환할 수 있는 글(미변환 매핑) 수."""
+    counts = Counter(todo_cats)
+    top = SiteCategory.objects.filter(parent=None).prefetch_related("children")
+    sites = list(Blog.objects.prefetch_related(Prefetch("site_categories", queryset=top, to_attr="top_cats")))
     for b in sites:
-        rows = []
-        for c in by_blog.get(b.pk, []):
-            rows.append((c.pk, f"{b.name} › {c.name}"))
-            rows += [(k.pk, f"{b.name} › {c.name} › {k.name}") for k in c.children.all()]
-        groups.append({"blog": b, "rows": rows})
-    return groups
+        b.count = 0
+        for c in b.top_cats:
+            kids = list(c.children.all())
+            for k in kids:
+                k.count = counts[k.pk]
+            c.count = counts[c.pk] + sum(k.count for k in kids)
+            b.count += c.count
+    return sites
+
+
+def _todo_posts(scope):
+    """변환할 글: 발행예정글 · 발행 전 · 미변환 (넣은 곳이 없거나, 넣은 곳 중 미변환이 있는 글).
+    글마다 .ready = 고른 범위 안의 미변환 매핑 (변환 버튼). 버튼이 있는 글을 위로."""
+    none = Placement.Convert.NONE
+
+    def narrow(qs):
+        qs = qs.filter(stage="post").exclude(publish_status=qs.model.Publish.DONE)
+        return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements()))
+    out = []
+    for p in classify.all_posts(narrow):
+        pls = list(p.placements.all())
+        if pls and all(pl.convert_status != none for pl in pls):
+            continue
+        p.cls_label = classify.label_of(p)
+        p.todo = [pl for pl in pls if pl.convert_status == none]
+        p.ready = [pl for pl in p.todo if scope is None or pl.site_category_id in scope]
+        out.append(p)
+    out.sort(key=lambda p: p.updated_at, reverse=True)
+    out.sort(key=lambda p: not p.ready)
+    return out
 
 
 def index(request):
     _nav(request)
-    counts = Counter(Placement.objects.values_list("site_category__blog_id", "convert_status"))
-    sites = list(Blog.objects.all())
-    for b in sites:
-        b.cv = {key: counts[(b.pk, key)] for key in Placement.Convert.values}
-    from django.db.models import Prefetch
-    pl_qs = _placements()
-
-    def narrow(qs):
-        qs = qs.filter(stage="post").exclude(publish_status=qs.model.Publish.DONE)
-        return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=pl_qs))
-    posts = classify.all_posts(narrow)
-    posts.sort(key=lambda p: p.updated_at, reverse=True)
-    for p in posts:
-        p.cls_label = classify.label_of(p)
+    sel = request.GET.get("site", "")
+    kind, obj = _pick(sel)
+    if obj is None:
+        sel = ""
+    scope = _scope(kind, obj)
+    concept_form = None
+    if kind == "sitecat":
+        concept_form = CategoryConceptForm(request.POST if request.method == "POST" else None, instance=obj, prefix="k")
+        if request.method == "POST" and concept_form.is_valid():
+            concept_form.save()
+            messages.success(request, f"{obj.blog.name} › {obj} 컨셉을 저장했습니다.")
+            return redirect(f"{reverse('site_templates:index')}?site={sel}")
+    posts = _todo_posts(scope)
+    ready = [pl.pk for p in posts for pl in p.ready]
+    done = _placements().exclude(convert_status=Placement.Convert.NONE).order_by("-updated_at")
+    if scope is not None:
+        done = done.filter(site_category__in=scope)
+    todo_cats = [pl.site_category_id for p in posts for pl in p.todo]
+    blog = obj if kind == "site" else (obj.blog if kind == "sitecat" else None)
+    path = []
+    if blog:
+        path.append((blog.name, f"?site={blog.sel}"))
+    if kind == "sitecat":
+        if obj.parent_id:
+            path.append((obj.parent.name, f"?site={obj.parent.sel}"))
+        path.append((obj.name, f"?site={obj.sel}"))
     return render(request, "site_templates/index.html", {
-        "page_title": "사이트별 템플릿", "sites": sites, "posts": posts, "site_choices": _site_choices(sites),
-        "requested": sum(b.cv["requested"] for b in sites),
+        "page_title": "사이트별 템플릿", "sites": _tree(todo_cats), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
+        "path": path, "concept_form": concept_form, "parent_concept": obj.parent.concept if kind == "sitecat" and obj.parent_id else "",
+        "posts": posts, "ready_ids": ",".join(map(str, ready)), "ready_count": len(ready),
+        "done": list(done[:100]), "has_token": bool(AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)),
+        "requested": Placement.objects.filter(convert_status=Placement.Convert.REQUESTED).count(),
     })
 
 
 @require_POST
-def request_convert(request):
-    """메인에서: 글 하나를 사이트 카테고리에 넣고(없으면) 변환을 요청한다."""
-    cat = get_object_or_404(SiteCategory, pk=request.POST.get("site_category") or 0)
-    writer, _, pk = request.POST.get("post", "").rpartition(":")
-    if writer not in classify.WRITERS or not pk.isdigit():
-        messages.warning(request, "글을 고르세요.")
-        return redirect("site_templates:index")
-    post = get_object_or_404(classify.post_model(writer), pk=pk, stage="post")
-    field = "naver_post" if writer == "naver" else "tistory_post"
-    placement, created = Placement.objects.get_or_create(site_category=cat, **{field: post})
-    placement.convert_status = Placement.Convert.REQUESTED
-    placement.save(update_fields=["convert_status", "updated_at"])
-    messages.success(request, f"'{post.title}' → {cat.blog.name} › {cat} 변환을 요청했습니다. "
-                              "Claude 에게 '변환 요청 처리해줘'라고 하면 변환본을 채웁니다.")
-    return redirect("site_templates:index")
+def run(request):
+    """'변환'·'전체 변환': 고른 매핑을 변환 요청으로 바꾸고, PC 터미널 claude 에게 줄 안내문을 돌려준다 (JSON).
+    화면이 안내문을 복사하고 jbroutine:convert 링크로 터미널을 연다. 변환본은 claude 가 api_save 로 보낸다."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token:
+        return JsonResponse({"error": "설정 화면에서 보고 토큰을 먼저 만드세요. claude 가 변환본을 서버로 보낼 때 씁니다."}, status=400)
+    ids = [int(x) for x in request.POST.get("ids", "").split(",") if x.strip().isdigit()]
+    pls = list(_placements().filter(pk__in=ids, convert_status__in=[Placement.Convert.NONE, Placement.Convert.REQUESTED])
+               .order_by("site_category__blog__order", "pk"))
+    pls = [pl for pl in pls if pl.post is not None and pl.post.stage == "post"]
+    if not pls:
+        return JsonResponse({"error": "변환할 글이 없습니다. 글 매핑 관리에서 카테고리에 먼저 넣으세요."}, status=400)
+    for pl in pls:
+        pl.convert_status = Placement.Convert.REQUESTED
+        pl.save(update_fields=["convert_status", "updated_at"])
+    now = timezone.localtime()
+    return JsonResponse({"prompt": prompt.launcher(request, pls, token), "key": f"cv-{now:%H%M%S}",
+                         "day": now.date().isoformat(), "count": len(pls)})
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def api_save(request, pk):
+    """변환본 받기 (PC 터미널의 claude 가 curl 로 보낸다). 토큰이 맞아야 저장한다. title · body · tags."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    placement = get_object_or_404(Placement, pk=pk)
+    body = request.POST.get("body", "").replace("\r\n", "\n").strip()
+    if not body:
+        return HttpResponseBadRequest("body 가 비었습니다")
+    placement.converted_title = request.POST.get("title", "").strip()[:200]
+    placement.converted_tags = request.POST.get("tags", "").strip()[:500]
+    placement.converted_body = body
+    placement.convert_status = Placement.Convert.DONE
+    placement.converted_at = timezone.now()
+    placement.save()
+    return HttpResponse(f"ok {placement.pk} done", content_type="text/plain; charset=utf-8")
 
 
 def site(request, pk):

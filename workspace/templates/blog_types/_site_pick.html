@@ -1,0 +1,9 @@
+{# 글의 사이트 고르기 (검토글·발행예정글). 고르면 바로 저장. 컨텍스트: ref('tistory:3'), current, site_names, label(글 제목) #}
+<form method="post" action="{% url 'posts:site' %}" class="wr-site-pick">{% csrf_token %}
+  <input type="hidden" name="ids" value="{{ ref }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <select class="input sm" name="site" data-autosubmit aria-label="{{ label }} 사이트">
+    <option value=""{% if not current %} selected{% endif %}>사이트 고르기</option>
+    {% for name in site_names %}<option value="{{ name }}"{% if name == current %} selected{% endif %}>{{ name }}</option>{% endfor %}
+    {% if current and current not in site_names %}<option value="{{ current }}" selected disabled>{{ current }} (없는 사이트)</option>{% endif %}
+  </select>
+</form>

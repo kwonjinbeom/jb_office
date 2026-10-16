@@ -130,8 +130,5 @@
   window.addEventListener("popstate", function () { location.reload(); });
 })();
 
-/* 목록의 고르기 칸(사이트 카테고리에 넣기 등): 고르면 바로 보낸다. */
-document.addEventListener("change", function (e) {
-  if (e.target.matches("select[data-autosubmit]") && e.target.value) e.target.form.submit();
-});
+/* 목록의 고르기 칸(사이트 카테고리에 넣기 등)은 static/js/app.js 의 data-autosubmit 이 바로 보낸다 (빈 첫 줄은 disabled). */
 </script>

@@ -236,9 +236,10 @@ class PostManageTests(TestCase):
         self.TistoryPost.objects.create(title="아직 검토 중", stage="review", bt_category=self.season.category)
         self.TistoryPost.objects.create(title="발행한 글", stage="post", publish_status="done", bt_category=self.season.category)
         self.NaverPost.objects.create(title="네이버 편집기 글", stage="temp", bt_category=self.season.category)
+        self.NaverPost.objects.create(title="네이버 발행예정", stage="post", bt_category=self.season.category)
         res = self.client.get(INDEX, {"sel": self.season.category.sel})
         self.assertEqual(sorted(x.title for x in res.context["posts"]),
-                         ["네이버 편집기 글", "발행한 글", "세일 정리", "아직 검토 중"])  # 모든 단계, 두 편집기 함께
+                         ["네이버 발행예정", "발행한 글", "세일 정리"])  # 아래 목록은 발행예정글만, 두 편집기 함께
 
     def test_tree_counts_unpublished_posts(self):
         cat = self.season.category
@@ -282,9 +283,9 @@ class PostManageTests(TestCase):
         self.TistoryPost.objects.create(title="임시 글", stage="temp")
         res = self.client.get(INDEX, {"sel": java.sel})
         self.assertEqual([pk for pk, _ in res.context["candidates"]], [f"tistory:{post.pk}"])  # 발행예정글만 넣을 수 있다
-        self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": post.pk, "status": "draft"})
+        self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": post.pk})
         placement = Placement.objects.get()
-        self.assertEqual((placement.tistory_post, placement.status), (post, "draft"))
+        self.assertEqual((placement.tistory_post, placement.status), (post, "unsaved"))  # 처음은 미발행
         self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": post.pk})
         self.assertEqual(Placement.objects.count(), 1)  # 같은 곳에 두 번 넣지 않는다
         res = self.client.get(INDEX, {"sel": java.sel})
@@ -293,6 +294,12 @@ class PostManageTests(TestCase):
         self.client.post(reverse("blog_types:place_status", args=[placement.pk]), {"value": "published"})
         placement.refresh_from_db()
         self.assertEqual(placement.status, "published")
+        post.refresh_from_db()
+        self.assertEqual(post.publish_status, "done")  # 넣은 곳을 발행 완료로 바꾸면 글도 발행 완료
+        self.assertIsNotNone(post.published_on)
+        self.client.post(reverse("blog_types:place_status", args=[placement.pk]), {"value": "unsaved"})
+        post.refresh_from_db()
+        self.assertEqual(post.publish_status, "todo")
         res = self.client.get(INDEX)
         self.assertContains(res, "memorily › Java")  # 글 분류 쪽에서도 넣은 곳이 보인다
         self.client.post(reverse("blog_types:place_remove", args=[placement.pk]))
@@ -451,8 +458,9 @@ class PostHubTests(TestCase):
         res = self.client.get(INDEX, {"sel": "u"})
         self.assertEqual([x.title for x in res.context["posts"]], ["분류 없는 포스트"])
         java = SiteCategory.objects.get(blog__name="memorily", name="Java")
-        self.assertIn(java.pk, [pk for pk, _ in res.context["site_options"]])
-        self.assertIn(SiteCategory.objects.get(name="낙서장").pk, [pk for pk, _ in res.context["site_options"]])  # 모든 사이트
+        options = [pk for _, rows in res.context["posts"][0].site_groups for pk, _ in rows]
+        self.assertIn(java.pk, options)
+        self.assertIn(SiteCategory.objects.get(name="낙서장").pk, options)  # 모든 사이트
         back = f"{INDEX}?sel=u"
         res = self.client.post(reverse("blog_types:place_add"), {"site_category": java.pk, "post": f"tistory:{p.pk}", "next": back})
         self.assertRedirects(res, back, fetch_redirect_response=False)
@@ -502,3 +510,90 @@ class MappingPanesTests(TestCase):
         res = self.client.get(INDEX, {"site": spring.sel, "sel": "u", "edit": spring.sel})
         self.assertIsNotNone(res.context["top_form"])
         self.assertIsNone(res.context["bottom_form"])
+
+
+class SitePublishTests(TestCase):
+    """글 관리·글 보기의 사이트 고르기, 발행 완료 (한 건 · 일괄), 글 매핑 관리 아래 목록의 조건 (2026-10-17 사용자)"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester", password="pw-test-1234")
+        self.client.force_login(user)
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        self.T, self.N = Post, NaverPost
+        self.java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        self.a = Post.objects.create(title="자바 정리", stage="post", target="memorily")
+        self.b = NaverPost.objects.create(title="패딩 고르기", stage="post", target="black_lukey")
+        self.pl = Placement.objects.create(site_category=self.java, tistory_post=self.a)
+
+    def test_review_and_post_columns(self):
+        r = self.T.objects.create(title="검토 중 글", stage="review", target="눈잎")
+        res = self.client.get(reverse("posts:index"), {"stage": "review"})
+        self.assertContains(res, 'action="/blog/posts/site/"')
+        self.assertContains(res, f'value="tistory:{r.pk}"')
+        self.assertContains(res, '<option value="눈잎" selected>눈잎</option>', html=False)
+        self.assertNotContains(res, "검토 완료")  # 검토 칸 대신 사이트
+        res = self.client.get(reverse("posts:index"), {"stage": "post"})
+        for th in ["사이트", "넣은 곳", "변환", "발행"]:
+            self.assertContains(res, f">{th}</th>", html=False)
+        self.assertNotContains(res, ">타겟</th>", html=False)
+        self.assertContains(res, "memorily › Java")
+        self.assertContains(res, 'name="publish" value="done"')  # 체크한 것을 발행 완료
+
+    def test_pick_site(self):
+        nxt = reverse("posts:index") + "?stage=review"
+        res = self.client.post(reverse("posts:site"), {"ids": f"naver:{self.b.pk}", "site": "눈잎", "next": nxt})
+        self.assertRedirects(res, nxt, fetch_redirect_response=False)
+        self.b.refresh_from_db()
+        self.assertEqual(self.b.target, "눈잎")
+        self.client.post(reverse("posts:site"), {"ids": f"naver:{self.b.pk}", "site": "없는 사이트"})
+        self.b.refresh_from_db()
+        self.assertEqual(self.b.target, "눈잎")  # 운영 목록에 있는 사이트만
+        self.client.post(reverse("posts:site"), {"ids": [f"naver:{self.b.pk}", f"tistory:{self.a.pk}"], "site": ""})
+        self.a.refresh_from_db()
+        self.assertEqual(self.a.target, "")
+
+    def test_publish_one_and_bulk_moves_placements_too(self):
+        self.client.post(reverse("writing:status", args=[self.a.pk]), {"field": "publish_status", "value": "done"})
+        self.a.refresh_from_db()
+        self.pl.refresh_from_db()
+        self.assertEqual((self.a.publish_status, self.pl.status), ("done", "published"))
+        temp = self.T.objects.create(title="임시", stage="temp")
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{self.a.pk}", f"naver:{self.b.pk}", f"tistory:{temp.pk}"],
+                                                  "publish": "todo"})
+        self.a.refresh_from_db()
+        self.pl.refresh_from_db()
+        self.assertEqual((self.a.publish_status, self.pl.status), ("todo", "unsaved"))
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{self.a.pk}", f"naver:{self.b.pk}", f"tistory:{temp.pk}"],
+                                                  "publish": "done"})
+        self.b.refresh_from_db()
+        temp.refresh_from_db()
+        self.assertEqual((self.b.publish_status, temp.publish_status), ("done", "todo"))  # 발행예정글만
+
+    def test_view_shows_site_and_placements(self):
+        res = self.client.get(reverse("posts:view"), {"stage": "post", "p": f"tistory:{self.a.pk}"})
+        self.assertContains(res, "사이트 고르기")
+        self.assertContains(res, "memorily › Java")
+        self.assertContains(res, "미변환")
+
+    def test_mapping_bottom_filters(self):
+        self.T.objects.create(title="임시 글", stage="temp")
+        res = self.client.get(INDEX)
+        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["자바 정리", "패딩 고르기"])  # 발행예정글만
+        self.assertContains(res, "<th style=\"width:104px\">사이트</th>", html=False)
+        res = self.client.get(INDEX, {"psite": "black_lukey"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["패딩 고르기"])
+        self.assertEqual(res.context["posts"][0].site_groups[0][0], "black_lukey")  # 그 글의 사이트 카테고리가 위
+        self.T.objects.filter(pk=self.a.pk).update(target="")
+        self.assertEqual([p.title for p in self.client.get(INDEX, {"psite": "-"}).context["posts"]], ["자바 정리"])
+        from datetime import timedelta
+
+        from django.utils import timezone
+        self.N.objects.filter(pk=self.b.pk).update(created_at=timezone.now() - timedelta(days=2))
+        res = self.client.get(INDEX, {"today": "1"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])
+        self.assertContains(res, "today=1")
+        res = self.client.get(INDEX, {"site": self.java.sel})
+        self.assertContains(res, ">미발행</button>", html=False)
+        self.assertContains(res, ">발행 완료</button>", html=False)
+        self.assertNotContains(res, "임시저장")

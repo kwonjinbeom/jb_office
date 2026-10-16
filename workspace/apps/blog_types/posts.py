@@ -9,6 +9,9 @@
 
 글을 누르면 글 보기(각 글쓰기 앱의 detail)로 간다. 글 보기 왼쪽에는 분류 트리 대신 같은 조건(단계·분류·검색·오늘)의
 글 목록을 보여 준다 (post_list_for). 조건은 주소에 그대로 실어 보낸다 (2026-10-17 사용자).
+
+단계별 칸 (2026-10-17 사용자): 임시글은 사이트(읽기)·내용, 검토글은 사이트 고르기, 발행예정글은 사이트 고르기 ·
+넣은 곳(사이트 › 카테고리) · 변환 · 발행(미발행/발행 완료, 한 건씩 또는 체크한 것 한꺼번에). 작성 상태는 글 보기에서.
 """
 from urllib.parse import urlencode
 
@@ -19,7 +22,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from . import classify, transfer
+from . import classify, sites, transfer
 from .views import _find, _open_branches, _path, _placements_qs
 
 STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글")]
@@ -69,6 +72,7 @@ def _collect(p, prefetch=False):
             qs = qs.prefetch_related(Prefetch("placements", queryset=_placements_qs()))
         for post in qs:
             post.writer = w
+            post.ref = f"{w}:{post.pk}"
             post.writer_label = "네이버" if w == "naver" else "티스토리"  # 편집기 (분류가 아니다)
             posts.append(post)
     posts.sort(key=lambda x: (x.created_at, x.pk), reverse=True)  # 만든 순서로 고정 (상태를 바꿔도 자리가 그대로)
@@ -102,9 +106,9 @@ def index(request):
         "path": path,
         "posts": posts,
         "groups": classify.grouped(posts),
-        "cols": 8 if stage == "post" else 6,  # 타겟 칸 포함
+        "cols": {"temp": 6, "review": 5, "post": 7}[stage],
+        "site_names": sites.names(),
         "review_choices": classify.post_model("tistory").Review.choices,
-        "write_choices": classify.post_model("tistory").Write.choices,
         "publish_choices": classify.post_model("tistory").Publish.choices,
         "next_to": {"temp": "review", "review": "post"}.get(stage),
         "prev_to": {"review": "temp", "post": "review"}.get(stage),
@@ -129,6 +133,7 @@ def post_list_for(request, post):
     단계가 주소에 없으면 그 글의 단계. 위·아래 화살표, 옮기기·휴지통 뒤에 갈 글도 이 목록 순서를 따른다 (한 건씩 처리)."""
     p = _params(request, stage=post.stage)
     posts, counts = _collect(p)
+    placements = list(post.placements.select_related("site_category__blog", "site_category__parent")) if post.stage == "post" else []
     list_q = _query(p)
     me = (classify.writer_of(post), post.pk)
     current = None
@@ -152,6 +157,9 @@ def post_list_for(request, post):
                      "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
         "pl_index_url": f"{reverse('posts:index')}?{list_q}",
         "pl_next_url": f"{reverse('posts:view')}?{list_q}",  # 옮기기·휴지통 뒤: 목록의 다음 글 (없으면 이 단계 첫 글)
+        "site_names": sites.names(),
+        "post_placements": placements,
+        "post_ref": f"{classify.writer_of(post)}:{post.pk}",
     }
     if current is not None:  # 목록에 없으면(조건에 안 맞는 글) 화살표는 원래대로 그 편집기의 같은 단계 순서
         i = posts.index(current)
@@ -202,14 +210,49 @@ def _picked(request):
     return out
 
 
+def _back(request):
+    nxt = request.POST.get("next", "")
+    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("posts:index"))
+
+
+@require_POST
+def site(request):
+    """글의 사이트 고르기 (글 관리·글 보기의 검토글·발행예정글). ids 는 'tistory:3' 꼴, 여러 개면 한꺼번에. 빈 값은 사이트 지우기."""
+    posts = _picked(request)
+    value = request.POST.get("site", "").strip()
+    if value and value not in sites.names():
+        messages.warning(request, "없는 사이트입니다.")
+        return _back(request)
+    for post in posts:
+        if post.target != value:
+            post.target = value
+            post.save(update_fields=["target", "updated_at"])
+    if not posts:
+        messages.warning(request, "먼저 글을 고르세요.")
+    elif len(posts) > 1:
+        messages.success(request, f"{len(posts)}건의 사이트를 {value or '없음'}(으)로 정했습니다.")
+    return _back(request)
+
+
 @require_POST
 def bulk(request):
-    """체크한 글을 이웃 단계로 옮기거나(to), 상대 글쓰기로 보낸다(send). 두 글쓰기 글이 섞여 있어도 된다."""
+    """체크한 글을 이웃 단계로 옮기거나(to), 상대 글쓰기로 보내거나(send), 발행 상태를 바꾼다(publish=done|todo).
+    두 글쓰기 글이 섞여 있어도 된다."""
     posts = _picked(request)
-    nxt = request.POST.get("next", "")
-    back = redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("posts:index"))
+    back = _back(request)
     if not posts:
         messages.warning(request, "먼저 글을 체크하세요.")
+        return back
+    publish = request.POST.get("publish")
+    if publish in ("done", "todo"):
+        targets = [post for post in posts if post.stage == "post"]
+        for post in targets:
+            sites.publish(post, publish == "done")
+        label = "발행 완료" if publish == "done" else "미발행"
+        if targets:
+            messages.success(request, f"{len(targets)}건을 {label}(으)로 바꿨습니다. 넣은 곳(사이트 카테고리)의 상태도 같이 바꿨습니다.")
+        if len(targets) < len(posts):
+            messages.warning(request, f"{len(posts) - len(targets)}건은 발행예정글이 아니라 그대로 두었습니다.")
         return back
     if request.POST.get("send"):
         for post in posts:

@@ -120,7 +120,8 @@ class PostPipelineTests(TestCase):
         self.assertContains(res, "점선 상자 2곳")
         self.assertNotContains(res, "복사해서 붙여넣기")  # 글 보기는 본문을 넓게 (복사 줄 없음)
         self.assertContains(res, 'data-paper-width="mobile"')  # PC·모바일은 단계 탭 줄에
-        self.assertContains(res, "검토 완료")  # 글 보기에서 바로 상태를 바꾼다
+        self.assertContains(res, 'action="/blog/posts/site/"')  # 검토글은 사이트를 고른다 (검토 상태 대신)
+        self.assertContains(res, "사이트 고르기")
 
     def test_detail_neighbors_follow_list_order(self):
         older = Post.objects.create(title="먼저 쓴 글")
@@ -341,7 +342,7 @@ class DraftImportTests(TestCase):
         self.assertEqual(Post.objects.get(title="새 타겟 원고").target, "memorily")
         self.assertEqual(Post.objects.get(title="시험 원고 제목").target, "")  # 사이트 줄이 없는 원고
         res = self.client.get(reverse("posts:index"))
-        self.assertContains(res, "<th style=\"width:96px\">타겟</th>", html=False)
+        self.assertContains(res, "<th style=\"width:96px\">사이트</th>", html=False)  # 임시글은 읽기만
         self.assertContains(res, "memorily")
         form = PostForm(instance=old)
         self.assertIn(("memorily", "memorily"), form.fields["target"].choices)  # 운영 목록에 없어도 지금 값은 남긴다

@@ -1,12 +1,13 @@
 """글 매핑 관리 화면: 트리 두 칸(사이트 카테고리 · 글 분류) + 오른쪽에 두 목록을 함께 (위 2.5 · 아래 7.5).
 
 - 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 오른쪽 **위** 목록이 그 카테고리에 넣은 글(매핑)로
-  바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 미저장 · 임시저장 · 발행, 그리고 변환 상태.
+  바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 발행 상태(미발행 → 발행 완료, 사용자가 직접 올리고 바꾼다)와 변환 상태.
 - 글 분류 (가운데): 모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위 (티스토리·네이버 나눔 없음). 누르면 오른쪽 **아래** 목록이
-  그 분류의 글(임시 → 검토 → 포스트 전부)로 바뀌고, 발행예정글은 그 자리에서 아무 사이트 카테고리에나 넣는다.
+  그 분류의 발행예정글로 바뀌고 (2026-10-17 사용자: 아래는 발행예정글만, 사이트 칸, 오늘·사이트 조건), 그 자리에서 사이트 카테고리에 넣는다.
   사이트·플랫폼에 맞추는 일은 마지막 단계(사이트별 템플릿의 변환)에서 한다. 숫자는 발행 완료가 아닌 글 수.
 
-주소: ?site=b2|k7 (위) &sel=g1|c3|t5|s9|u (아래) &edit=<고칠 것의 sel>. 두 고르기는 서로 유지된다.
+주소: ?site=b2|k7 (위) &sel=g1|c3|t5|s9|u (아래) &today=1 &psite=<사이트 이름>|- (아래 조건) &edit=<고칠 것의 sel>.
+두 고르기와 아래 조건은 서로 유지된다.
 트리를 누르면 화면 전체를 새로 받지 않고 그 목록 칸만 바꾼다 (요청 머리 X-Partial: top|bottom → 그 칸 HTML 만 돌려준다).
 예전 주소 ?sel=k7 (사이트 카테고리) 도 위 목록으로 받는다.
 트리의 추가·수정·삭제는 각 트리 오른쪽 위 버튼으로 켠다 (켜야 행마다 +, 연필, 휴지통이 보인다).
@@ -20,11 +21,12 @@ from django.db.models import Max, Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
 
-from . import classify
+from . import classify, sites
 from .forms import FORMS
 from .models import Category, Placement, PostType, Section, SiteCategory, SubType
 
@@ -193,28 +195,39 @@ def _placements_qs():
                                             "tistory_post", "naver_post")
 
 
-def _posts(kind, obj):
-    """글 분류 한 단계 아래의 글 (두 편집기의 글 모두, 임시·검토·포스트 모두) + 각 글을 넣은 사이트 카테고리"""
+NO_SITE = "-"  # 아래 조건: 사이트를 아직 안 고른 글
+
+
+def _posts(kind, obj, today=False, psite=""):
+    """글 분류 한 단계 아래의 발행예정글 (두 편집기의 글 모두) + 각 글을 넣은 사이트 카테고리.
+    today: 오늘 만든 글만 (글 관리의 '오늘'과 같다). psite: 그 사이트 글만 ('-' 는 사이트 없는 글)."""
     def narrow(qs):
+        qs = qs.filter(stage="post")
         if kind in CLASS_KINDS:
             qs = qs.filter(classify.node_filter(kind, obj))
+        if today:
+            qs = qs.filter(created_at__date=timezone.localdate())
+        if psite:
+            qs = qs.filter(target="" if psite == NO_SITE else psite)
         return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements_qs()))
     posts = classify.all_posts(narrow)
     posts.sort(key=lambda p: (p.updated_at, p.pk), reverse=True)
     posts.sort(key=classify.sort_key)
+    groups = _site_groups()
     for p in posts:
         p.cls_label = classify.label_of(p)
-        p.step = "발행" if p.is_published else {"temp": "임시글", "review": "검토글", "post": "발행예정"}[p.stage]
+        p.site_groups = sorted(groups, key=lambda g: g[0] != p.target)  # 그 글의 사이트를 맨 위에
     return posts
 
 
-def _site_options():
-    """글 분류 쪽에서 글을 넣을 사이트 카테고리: 모든 사이트 (플랫폼에 맞추는 건 사이트별 템플릿의 변환에서)"""
-    out = []
+def _site_groups():
+    """글을 넣을 사이트 카테고리를 사이트마다 묶어서: [(사이트 이름, [(pk, 이름)])]. 카테고리 없는 사이트는 뺀다."""
+    groups = {}
     for c in SiteCategory.objects.filter(parent=None).select_related("blog").prefetch_related("children").order_by("blog__order", "order", "pk"):
-        out.append((c.pk, f"{c.blog.name} › {c.name}"))
-        out += [(k.pk, f"{c.blog.name} › {c.name} › {k.name}") for k in c.children.all()]
-    return out
+        rows = groups.setdefault(c.blog.name, [])
+        rows.append((c.pk, c.name))
+        rows += [(k.pk, f"{c.name} › {k.name}") for k in c.children.all()]
+    return list(groups.items())
 
 
 def _site_writer(blog):
@@ -232,7 +245,8 @@ def _candidates(cat):
              if (p.writer, p.pk) not in taken]
     posts.sort(key=lambda p: p.updated_at, reverse=True)
     posts.sort(key=classify.sort_key)
-    return [(f"{p.writer}:{p.pk}", f"{p.title} — {classify.label_of(p)}") for p in posts]
+    posts.sort(key=lambda p: p.target != cat.blog.name)  # 이 사이트로 고른 글을 위에
+    return [(f"{p.writer}:{p.pk}", f"{'[' + p.target + '] ' if p.target else ''}{p.title} — {classify.label_of(p)}") for p in posts]
 
 
 def _top(skind, sobj):
@@ -270,6 +284,11 @@ def index(request, form=None, form_sel=""):
     if ckind not in CLASS_KINDS or cobj is None:
         sel, ckind, cobj = "", "all", None
     w = _writer(w_raw)
+    today = g.get("today") == "1"
+    site_names = sites.names()
+    psite = g.get("psite", "")
+    if psite != NO_SITE and psite not in site_names:
+        psite = ""
 
     edit = form_sel or g.get("edit", "")
     if edit == "1":  # 예전 주소: 고른 것을 고친다
@@ -292,8 +311,10 @@ def index(request, form=None, form_sel=""):
         "cobj": cobj, "ckind_label": {"all": "글 분류"}.get(ckind, KIND_LABEL.get(ckind, "")),
         "cpath": _path(ckind, cobj),
         "bottom_form": bottom_form,
-        "posts": _posts(ckind, cobj),
-        "site_options": _site_options(),
+        "posts": _posts(ckind, cobj, today, psite),
+        "today": today, "psite": psite, "no_site": NO_SITE, "site_names": site_names,
+        "today_url": "?" + urlencode({k: v for k, v in {"site": site_sel, "sel": sel, "today": "" if today else "1",
+                                                          "psite": psite}.items() if v}),
         # 위(사이트 카테고리)
         "spath": _path(skind, sobj, w) if sobj else [],
         "top_form": top_form,
@@ -443,11 +464,13 @@ def place_add(request):
 
 @require_POST
 def place_status(request, pk):
+    """넣은 곳의 발행 상태 (미발행 · 발행 완료). 글의 발행 상태도 맞춘다 (sites.sync_post)."""
     placement = get_object_or_404(Placement, pk=pk)
     status = request.POST.get("value")
     if status in Placement.Status.values and status != placement.status:
         placement.status = status
         placement.save(update_fields=["status", "updated_at"])
+        sites.sync_post(placement.post)
     return _back(request, _url(placement.site_category.sel))
 
 

@@ -106,6 +106,8 @@ class SiteCategory(TrashableModel):
                                related_name="children")
     name = models.CharField("카테고리", max_length=60)
     note = models.TextField("메모", blank=True, help_text="메뉴에 보이는 이름이 다르거나, 숨김·글 수 같은 것")
+    concept = models.TextField("컨셉", blank=True,
+                               help_text="이 카테고리 글의 방향·말투·구성 (사이트별 템플릿의 변환 요청문에 사이트 컨셉 다음으로 들어간다)")
     order = models.PositiveIntegerField("순서", default=0)
 
     class Meta:
@@ -120,15 +122,15 @@ class SiteCategory(TrashableModel):
 
 
 class Placement(TrashableModel):
-    """매핑: 발행예정글까지 간 글 하나를 사이트 카테고리 하나에 넣은 것. 상태는 그 사이트에서의 진행.
+    """매핑: 발행예정글까지 간 글 하나를 사이트 카테고리 하나에 넣은 것. 상태는 그 사이트에서의 발행 (사용자가 직접 올리고 바꾼다).
 
-    네이버 사이트에는 네이버 글쓰기 글, 그 밖의 사이트(티스토리·블로거·워드프레스)에는 티스토리 글쓰기 글을 넣는다.
+    어느 글쓰기의 글이든 어느 사이트에나 넣는다 (플랫폼에 맞추는 건 사이트별 템플릿의 변환).
+    상태는 미발행 → 발행 완료 둘 (2026-10-17 사용자). 글의 발행 상태와 같이 움직인다 (sites.publish · sites.sync_post).
     """
 
     class Status(models.TextChoices):
-        UNSAVED = "unsaved", "미저장"
-        DRAFT = "draft", "임시저장"
-        PUBLISHED = "published", "발행"
+        UNSAVED = "unsaved", "미발행"
+        PUBLISHED = "published", "발행 완료"
 
     site_category = models.ForeignKey(SiteCategory, verbose_name="사이트 카테고리", on_delete=models.CASCADE,
                                       related_name="placements")

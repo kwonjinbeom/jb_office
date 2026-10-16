@@ -5,7 +5,7 @@
 {% block heading %}{{ blog.name }} <span class="cnt">{{ blog.get_platform_display }}</span>{% endblock %}
 
 {% block actions %}
-<a class="btn" href="{% url 'site_templates:index' %}">{% include "includes/ic.html" with name="chevron-left" %}뒤로</a>
+<a class="btn" href="{% url 'site_templates:index' %}?site={{ blog.sel }}">{% include "includes/ic.html" with name="chevron-left" %}뒤로</a>
 {% endblock %}
 
 {% block content %}

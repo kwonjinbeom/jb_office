@@ -5,7 +5,7 @@
 {% block heading %}{{ post.title }} <span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% endblock %}
 
 {% block actions %}
-<a class="btn" href="{% url 'site_templates:index' %}">{% include "includes/ic.html" with name="chevron-left" %}뒤로</a>
+<a class="btn" href="{% url 'site_templates:index' %}?site={{ pl.site_category.sel }}">{% include "includes/ic.html" with name="chevron-left" %}뒤로</a>
 <button type="button" class="btn" data-copy="#st-request" data-copy-msg="요청문을 복사했습니다. Claude 에게 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}요청문</button>
 {% endblock %}
 

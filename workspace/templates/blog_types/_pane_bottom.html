@@ -1,35 +1,43 @@
-{# 오른쪽 아래 (7.5): 글 분류를 고르면 그 분류의 글. 발행예정글은 여기서 사이트 카테고리에 넣는다. 트리를 누르면 이 칸만 새로 받는다. #}
+{% comment %}오른쪽 아래 (7.5): 글 분류를 고르면 그 분류의 발행예정글. 여기서 사이트 카테고리에 넣는다. 트리를 누르면 이 칸만 새로 받는다.
+조건 (2026-10-17 사용자): 오늘 만든 글 · 사이트별. 조건은 주소(today · psite)에 남아 트리를 눌러도 유지된다.{% endcomment %}
 <div class="bt-pane-head">
   <span class="badge {% if kind == 'section' or kind == 'all' %}green{% elif kind == 'category' %}blue{% elif kind == 'type' %}violet{% else %}gray outline{% endif %}">{{ ckind_label }}</span>
-  <div class="bt-path">{% for label, url in cpath %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}{% if site_sel %}&amp;site={{ site_sel }}{% endif %}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
-  <span class="cnt">{{ posts|length }}</span>
+  <div class="bt-path">{% for label, url in cpath %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}{% if site_sel %}&amp;site={{ site_sel }}{% endif %}{% if today %}&amp;today=1{% endif %}{% if psite %}&amp;psite={{ psite|urlencode }}{% endif %}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
+  <span class="cnt">발행예정글 {{ posts|length }}</span>
+  <form method="get" class="bt-pane-filter">
+    {% if site_sel %}<input type="hidden" name="site" value="{{ site_sel }}">{% endif %}{% if sel %}<input type="hidden" name="sel" value="{{ sel }}">{% endif %}{% if today %}<input type="hidden" name="today" value="1">{% endif %}
+    <select class="input sm" name="psite" data-autosubmit aria-label="사이트별로 보기">
+      <option value="">모든 사이트</option>
+      {% for name in site_names %}<option value="{{ name }}"{% if name == psite %} selected{% endif %}>{{ name }}</option>{% endfor %}
+      <option value="{{ no_site }}"{% if psite == no_site %} selected{% endif %}>사이트 없음</option>
+    </select>
+    <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 (다시 누르면 전체)">{% include "includes/ic.html" with name="calendar" %}오늘</a>
+  </form>
 </div>
 
 {% if bottom_form %}{% include "blog_types/_edit_card.html" with form=bottom_form ekind=kind eobj=cobj %}{% endif %}
 
 <section class="card bt-list">
   <table class="grid bt-grid">
-    <thead><tr><th>제목</th><th style="width:64px">단계</th><th style="width:28%">넣은 곳 · 변환</th><th style="width:170px">사이트 카테고리에 넣기</th></tr></thead>
+    <thead><tr><th>제목</th><th style="width:104px">사이트</th><th style="width:34%">넣은 곳 · 변환</th><th style="width:168px">사이트 카테고리에 넣기</th></tr></thead>
     <tbody>
       {% for p in posts %}
       <tr>
-        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
-        <td><span class="badge{% if p.step == '발행' %} green{% elif p.step == '발행예정' %} blue{% else %} gray{% endif %}">{{ p.step }}</span></td>
-        <td class="small">{% for pl in p.placements.all %}<div class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} <span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a></div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a>{% if p.is_published %} <span class="badge green">발행 완료</span>{% endif %}<div class="small muted bt-cut">{{ p.cls_label }}</div></td>
+        <td class="small bt-cut">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td class="small">{% for pl in p.placements.all %}<div class="bt-chip bt-chip-wrap"><span>{{ pl.site_category.blog.name }} › {{ pl.site_category.name }}</span> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a>{% if pl.status == 'published' %} <span class="badge pl-published">발행 완료</span>{% endif %}</div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
         <td>
-          {% if p.stage == 'post' %}
           <form method="post" action="{% url 'blog_types:place_add' %}">{% csrf_token %}
             <input type="hidden" name="post" value="{{ p.writer }}:{{ p.pk }}"><input type="hidden" name="next" value="{{ here }}">
             <select class="input sm bt-place-pick" name="site_category" data-autosubmit aria-label="{{ p.title }} 넣을 사이트 카테고리">
-              <option value="">넣을 곳 고르기</option>
-              {% for pk, label in site_options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
+              <option value="" disabled selected>넣을 곳 고르기</option>
+              {% for site_name, rows in p.site_groups %}<optgroup label="{{ site_name }}{% if site_name == p.target %} (이 글의 사이트){% endif %}">{% for pk, label in rows %}<option value="{{ pk }}">{{ site_name }} › {{ label }}</option>{% endfor %}</optgroup>{% endfor %}
             </select>
           </form>
-          {% else %}<span class="muted small">발행예정글로 보내면 넣을 수 있어요</span>{% endif %}
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="4" class="grid-empty">이 분류의 글이 없습니다.</td></tr>
+      <tr><td colspan="4" class="grid-empty">{% if today or psite %}조건에 맞는 발행예정글이 없습니다.{% else %}이 분류의 발행예정글이 없습니다. 글 관리에서 발행예정글로 보내면 여기서 넣을 수 있어요.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>
