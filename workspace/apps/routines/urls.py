@@ -6,6 +6,7 @@ app_name = "routines"
 urlpatterns = [
     path("", views.index, name="index"),
     path("prompts/", views.prompts, name="prompts"),
+    path("extra/", views.extra_page, name="extra_page"),
     path("new/", views.edit, name="create"),
     path("doc/<path:rel>", views.doc, name="doc"),
     path("brief/<slug:key>/", views.brief, name="brief"),

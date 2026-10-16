@@ -42,8 +42,9 @@ class Menu:
 
 MENUS: list[Menu] = [
     Menu(
-        "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(매일 아침 예약 · 더 하고 싶으면 실행) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
+        "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(매일 아침 7시 예약 · 더 하고 싶으면 추가 실행) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
         children=(
+            Menu("routine_extra", "추가 실행", "아침 예약과 별도로 글·아이디어를 더 돌리고, 글쓰기 아침 분량을 고르는 곳", "routines:extra_page", "plus"),
             Menu("routine_prompts", "프롬프트 관리", "루틴마다 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),
     ),

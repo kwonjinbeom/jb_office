@@ -5,11 +5,11 @@
 {% block toolbar %}{% include "includes/period_bar.html" %}{% endblock %}
 
 {% block content %}
-{# 메뉴마다 한 줄: 할 일 · 결과(일별에서 고침) · 실행(PC 터미널, 더 하고 싶을 때. 매일 아침은 클라우드 예약이 돈다) · 상태 #}
+{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 일일 아이디어·글쓰기는 매일 아침 7시 예약. '실행'은 예약이 안 돌았을 때, 더 하려면 '추가 실행'. #}
 <section class="card br-sites">
   <table class="grid br-table rt-table">
-    <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:190px"><col style="width:80px"></colgroup>
-    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
+    <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:230px"><col style="width:80px"></colgroup>
+    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th>실행</th><th class="c">상태</th></tr></thead>
     <tbody>
       {% for r in routines %}
       <tr id="rt-{{ r.key }}">
@@ -23,8 +23,11 @@
           {% else %}<span class="br-num"><strong>{{ r.result }}</strong></span>{% endif %}<span class="br-of">/{{ r.target }}</span>
         </td>
         <td>
-          {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt day=run_day label="실행" %}
-          <textarea id="p-{{ r.key }}" hidden>{{ r.prompt }}</textarea>
+          <div class="rt-acts">
+            {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt day=run_day label="실행" %}
+            {% if r.key in extra_keys %}<a class="btn sm ghost" href="{% url 'routines:extra_page' %}?r={{ r.key }}" title="아침 예약과 별도로 더 돌리기">{% include "includes/ic.html" with name="plus" %}추가 실행</a>{% endif %}
+          </div>
+          {% if r.key in extra_keys %}<div class="br-sub">매일 07:00 예약 · '실행'은 예약이 안 돌았을 때</div>{% endif %}
         </td>
         <td class="c">{% include "includes/state.html" with state=r.state %}</td>
       </tr>
@@ -33,143 +36,30 @@
   </table>
 </section>
 
-{# 아래 두 칸: 왼쪽은 고른 루틴의 프롬프트 원문 (글쓰기를 고르면 그날 쓸 분류 고르기 + 추가로 쓰기), 오른쪽은 모든 루틴의 실행 이력 #}
-<div class="rt-bottom">
-  <div class="rt-left">
-  <section class="card rt-panel" id="rt-prompt">
-    <div class="rt-panel-head">
-      <div class="seg" role="tablist" aria-label="루틴">{% for r in routines %}<button type="button" data-rt-pick="{{ r.key }}"{% if forloop.first %} class="on"{% endif %}>{{ r.name }}</button>{% endfor %}</div>
-      <button class="btn sm ghost rt-right" type="button" data-copy="#rt-view" data-copy-msg="보이는 프롬프트를 복사했습니다.">{% include "includes/ic.html" with name="copy" %}복사</button>
-    </div>
-    <textarea id="rt-view" class="rt-view" readonly aria-label="프롬프트 원문">{% with routines|first as r %}{{ r.prompt }}{% endwith %}</textarea>
-  </section>
-  {% if picker %}
-  <section class="card rt-panel" id="rt-picker" data-picker-key="{{ picker.routine.key }}" hidden>
-    <div class="rt-panel-head">
-      <div class="seg" role="tablist" aria-label="루틴">{% for r in routines %}<button type="button" data-rt-pick="{{ r.key }}"{% if r.key == picker.routine.key %} class="on"{% endif %}>{{ r.name }}</button>{% endfor %}</div>
-      <h2 class="card-title">{{ picker.day|date:"n월 j일" }} 쓸 분류 <span class="cnt"><span data-pk-total>{{ picker.total }}</span>편</span></h2>
-      <span class="badge {% if picker.custom %}blue{% else %}gray{% endif %}">{% if picker.custom %}고름{% else %}기본 · 무작위{% endif %}</span>
-      <div class="rt-right rt-acts" data-pk-cats>
-        <button class="btn sm ghost" type="submit" form="pk-reroll" title="광고 6 · 판매 3 · IT/AI 2 를 새로 무작위로">{% include "includes/ic.html" with name="refresh" %}다시 뽑기</button>
-        {% if picker.custom %}<button class="btn sm ghost" type="submit" form="pk-default" title="그날 기본 무작위로">기본값</button>{% endif %}
-        <button class="btn sm primary" type="submit" form="pk-form">{% include "includes/ic.html" with name="save" %}저장</button>
-      </div>
-    </div>
-    {# 추가로 쓰기: 아침 예약 분량과 별도로 더 쓴다. 분류 고르기(아래 편수, 저장하지 않아도 됨) 또는 코멘트. #}
-    <div class="pk-bar">
-      <div class="seg" role="tablist" aria-label="추가로 쓰기 방식"><button type="button" data-pk-mode="cats" class="on">분류 고르기</button><button type="button" data-pk-mode="comment">코멘트</button></div>
-      <span class="muted small pk-hint" data-pk-cats>아래 편수만큼 더 씁니다 (저장하지 않아도 됨)</span>
-      <span class="muted small pk-hint" data-pk-comment hidden>몇 편을 어떤 주제로 쓸지 적습니다</span>
-      <button class="btn sm primary rt-right" type="button" data-pk-extra data-url="{% url 'routines:extra' picker.routine.pk %}" data-key="{{ picker.routine.key }}" data-name="{{ picker.routine.name }}" data-day="{{ picker.day|date:'Y-m-d' }}" title="PC 에서 새 터미널로 claude 시작">{% include "includes/ic.html" with name="server" %}추가로 쓰기</button>
-    </div>
-    <div class="pk-comment" data-pk-comment hidden><textarea class="input" id="pk-comment" rows="7" maxlength="2000" aria-label="추가로 쓸 글 코멘트" placeholder="예) IT/AI 로 3편 — 아이폰 18 사전예약·가격 비교, 요즘 많이 쓰는 AI 요약 앱&#10;여행·계절 1편 — 11월 단풍 막바지 명소"></textarea></div>
-    <form id="pk-reroll" method="post" action="{% url 'routines:picks' picker.routine.pk %}">{% csrf_token %}<input type="hidden" name="action" value="reroll"><input type="hidden" name="day" value="{{ picker.day|date:'Y-m-d' }}"><input type="hidden" name="keep" value="{{ keep }}"></form>
-    <form id="pk-default" method="post" action="{% url 'routines:picks' picker.routine.pk %}">{% csrf_token %}<input type="hidden" name="action" value="default"><input type="hidden" name="day" value="{{ picker.day|date:'Y-m-d' }}"><input type="hidden" name="keep" value="{{ keep }}"></form>
-    <form id="pk-form" class="rt-runs pk-tree" data-pk-cats method="post" action="{% url 'routines:picks' picker.routine.pk %}">
-      {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="day" value="{{ picker.day|date:'Y-m-d' }}"><input type="hidden" name="keep" value="{{ keep }}">
-      {% for g in picker.tree %}
-      <div class="pk-sec">
-        <div class="pk-row lv0"><span class="nm">{{ g.obj.name }}</span><span class="pk-sum">{% if g.n %}{{ g.n }}편{% endif %}</span></div>
-        {% for c in g.cats %}
-        <label class="pk-row lv1{% if c.n %} on{% endif %}"><span class="bt-code">{{ c.obj.code }}</span><span class="nm" title="{{ c.obj.question }}">{{ c.obj.name }}</span><input class="num-in pk-n" type="number" min="0" max="20" name="n_{{ c.obj.sel }}" value="{{ c.n|default:'' }}" placeholder="0" aria-label="{{ c.obj.name }} 편수"></label>
-        {% for t in c.types %}
-        <label class="pk-row lv2{% if t.n %} on{% endif %}"><span class="nm">{{ t.obj.name }}</span><input class="num-in pk-n" type="number" min="0" max="20" name="n_{{ t.obj.sel }}" value="{{ t.n|default:'' }}" placeholder="0" aria-label="{{ t.obj.name }} 편수"></label>
-        {% endfor %}
-        {% endfor %}
-      </div>
-      {% endfor %}
-      {% if picker.changes %}
-      <div class="pk-changes"><strong>최근 분류 변경 (AI)</strong>{% for ch in picker.changes %}<div title="{{ ch.log }}">{{ ch.applied_at|date:"m-d" }} · {{ ch.name }}{% if not ch.ok %} <span class="badge amber">일부 건너뜀</span>{% endif %}</div>{% endfor %}</div>
-      {% endif %}
-    </form>
-  </section>
-  {% endif %}
+{# 모든 루틴의 실행 이력 (매일 아침 예약 · '실행' · 추가 실행). claude 가 단계마다 서버로 보고한다. #}
+<section class="card rt-panel rt-history" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
+  <div class="rt-panel-head">
+    <h2 class="card-title">실행 이력 <span class="cnt">{{ runs|length }}</span></h2>
+    <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% else %}모든 루틴 · 예약과 실행{% endif %}</span>
   </div>
-
-  <section class="card rt-panel" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
-    <div class="rt-panel-head">
-      <h2 class="card-title">실행 이력 <span class="cnt">{{ runs|length }}</span></h2>
-      <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% else %}모든 루틴 · 예약과 실행{% endif %}</span>
-    </div>
-    <div class="rt-runs">
-      {% for run in runs %}
-      <details class="rt-run">
-        <summary><span class="rt-run-name">{{ run.routine.name }}</span><span class="badge {% if run.via == 'schedule' %}violet{% else %}outline{% endif %}">{{ run.get_via_display }}</span><span class="badge {{ run.badge }}">{{ run.get_status_display }}</span><span class="rt-run-step" title="{{ run.step }}">{{ run.step }}</span><span class="rt-run-time" title="{{ run.updated_at|date:'Y-m-d H:i' }}">{{ run.updated_at|time:"H:i" }}</span></summary>
-        <pre class="rt-log">{{ run.day|date:"Y-m-d" }} · {{ run.get_via_display }} · 시작 {{ run.started_at|date:"H:i" }}
+  <div class="rt-runs">
+    {% for run in runs %}
+    <details class="rt-run">
+      <summary><span class="rt-run-name">{{ run.routine.name }}</span><span class="badge {% if run.via == 'schedule' %}violet{% else %}outline{% endif %}">{{ run.get_via_display }}</span><span class="badge {{ run.badge }}">{{ run.get_status_display }}</span><span class="rt-run-step" title="{{ run.step }}">{{ run.step }}</span><span class="rt-run-time" title="{{ run.updated_at|date:'Y-m-d H:i' }}">{{ run.updated_at|date:"m-d H:i" }}</span></summary>
+      <pre class="rt-log">{{ run.day|date:"Y-m-d" }} · {{ run.get_via_display }} · 시작 {{ run.started_at|date:"H:i" }}
 {{ run.log }}</pre>
-      </details>
-      {% empty %}
-      <div class="rt-empty">이 기간에 실행한 기록이 없습니다.<br>매일 아침 예약 실행과 '실행'으로 돌린 claude 가 단계마다 여기에 남깁니다.</div>
-      {% endfor %}
-    </div>
-  </section>
-</div>
+    </details>
+    {% empty %}
+    <div class="rt-empty">이 기간에 실행한 기록이 없습니다.<br>매일 아침 예약 실행과 '실행'·'추가 실행'으로 돌린 claude 가 단계마다 여기에 남깁니다.</div>
+    {% endfor %}
+  </div>
+</section>
 {% endblock %}
 
 {% block scripts %}
 <script>
 (function () {
-  // 프롬프트 칸: 루틴을 고르면 표의 숨은 원문(#p-키)을 보여 준다. 표의 줄을 눌러도 고른다.
-  var view = document.getElementById("rt-view"), key = "{{ routines.0.key }}";
-  var picker = document.getElementById("rt-picker"), prompt = document.getElementById("rt-prompt");
-  if (picker && location.hash === "#rt-picker") key = picker.dataset.pickerKey;  // 분류 저장 뒤 돌아왔을 때
-  function show() {
-    var src = document.getElementById("p-" + key);
-    if (src) view.value = src.value;
-    if (picker) {  // 글쓰기를 고르면 왼쪽 아래는 분류 고르기
-      var picking = key === picker.dataset.pickerKey;
-      picker.hidden = !picking;
-      prompt.hidden = picking;
-    }
-    document.querySelectorAll("[data-rt-pick]").forEach(function (b) { b.classList.toggle("on", b.dataset.rtPick === key); });
-  }
-  document.addEventListener("click", function (e) {
-    var pick = e.target.closest("[data-rt-pick]");
-    var row = !pick && !e.target.closest("a, button, input, form") && e.target.closest("tr[id^='rt-']");
-    if (pick) key = pick.dataset.rtPick;
-    else if (row) key = row.id.slice(3);
-    else return;
-    show();
-  });
-  show();
-  // 추가로 쓰기: 방식(분류 고르기 · 코멘트)을 바꾸고, 누르면 서버에서 안내문을 받아 '실행'처럼 PC 터미널을 연다.
-  var pkMode = "cats";
-  document.addEventListener("click", function (e) {
-    var m = e.target.closest("[data-pk-mode]");
-    if (m) {
-      pkMode = m.dataset.pkMode;
-      document.querySelectorAll("[data-pk-mode]").forEach(function (b) { b.classList.toggle("on", b === m); });
-      document.querySelectorAll("[data-pk-cats]").forEach(function (el) { el.hidden = pkMode !== "cats"; });
-      document.querySelectorAll("[data-pk-comment]").forEach(function (el) { el.hidden = pkMode !== "comment"; });
-      if (pkMode === "comment") document.getElementById("pk-comment").focus();
-      return;
-    }
-    var go = e.target.closest("[data-pk-extra]");
-    if (!go) return;
-    var data = new FormData(document.getElementById("pk-form"));
-    data.set("mode", pkMode);
-    data.set("comment", document.getElementById("pk-comment").value);
-    go.disabled = true;
-    fetch(go.dataset.url, { method: "POST", body: data, credentials: "same-origin" })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (!res.ok) { App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); return; }
-        App.rtLaunch(res.j.prompt, { kind: "run", key: go.dataset.key, day: go.dataset.day, name: go.dataset.name },
-                     {{ on_server|yesno:"false,true" }});
-      })
-      .catch(function () { App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); })
-      .then(function () { go.disabled = false; });
-  });
-  // 분류 고르기: 편수를 바꾸면 합계와 줄 강조를 바로 맞춘다
-  document.addEventListener("input", function (e) {
-    if (!e.target.classList.contains("pk-n")) return;
-    e.target.closest(".pk-row").classList.toggle("on", Number(e.target.value) > 0);
-    var total = 0;
-    document.querySelectorAll(".pk-n").forEach(function (i) { total += Number(i.value) || 0; });
-    var out = document.querySelector("[data-pk-total]");
-    if (out) out.textContent = total;
-  });
-  // 로컬 현황: 진행 중인 기록이 있으면 그 칸만 다시 읽는다 (펼친 기록은 펼친 채로).
+  // 실행 이력: 진행 중인 기록이 있으면 그 칸만 다시 읽는다 (펼친 기록은 펼친 채로).
   var box = document.getElementById("rt-runs");
   if (box && box.dataset.rtRefresh) {
     setInterval(function () {
