@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'site_templates:index' %}">사이트별 템플릿</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'site_templates:site' blog.pk %}">{{ blog.name }}</a></div>{% endblock %}
+
+{% block heading %}{{ post.title }} <span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% endblock %}
+
+{% block actions %}
+<button type="button" class="btn" data-copy="#st-request" data-copy-msg="요청문을 복사했습니다. Claude 에게 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}요청문 복사</button>
+{% if converted_html %}
+<button type="button" class="btn" data-copy="#st-title" data-copy-msg="제목을 복사했습니다.">{% include "includes/ic.html" with name="copy" %}제목</button>
+<button type="button" class="btn primary" data-copy-rich="#st-paste" data-copy-plain="#st-plain" data-copy-msg="변환본을 서식 그대로 복사했습니다. {{ blog.get_platform_display }} 에디터에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}변환본 (서식 그대로)</button>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<p class="muted small st-where">{{ blog.name }} › {{ pl.site_category }} · {{ blog.get_platform_display }}</p>
+<div class="st-cols">
+  <section class="card st-col">
+    <div class="card-head"><h3 class="card-title">원문</h3><a class="hint" href="{{ post.get_absolute_url }}">글 보기</a></div>
+    <div class="card-body wr-article st-preview">{{ original_html|safe }}</div>
+  </section>
+
+  <section class="card st-col">
+    <div class="card-head"><h3 class="card-title">변환본</h3><span class="hint">{% if pl.converted_at %}{{ pl.converted_at|date:"m-d H:i" }} 변환{% else %}아직 없음{% endif %}</span></div>
+    <form method="post">{% csrf_token %}
+      <div class="card-body form-grid">
+        {% for field in form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
+      </div>
+      <div class="form-foot">
+        {% if pl.convert_status != 'none' %}<button class="btn ghost sm" name="action" value="reset">미변환으로</button>{% endif %}
+        <span style="margin-left:auto"></span>
+        <button class="btn sm" name="action" value="request">변환 요청</button>
+        <button class="btn sm" name="action" value="save">{% include "includes/ic.html" with name="save" %}변환본 저장</button>
+        {% if pl.converted_body %}<button class="btn primary sm" name="action" value="check">확인 완료</button>{% endif %}
+      </div>
+    </form>
+    {% if converted_html %}
+    <div class="card-body wr-article st-preview st-converted">{{ converted_html|safe }}</div>
+    {% endif %}
+  </section>
+</div>
+<textarea id="st-request" hidden>{{ request_text }}</textarea>
+<textarea id="st-title" hidden>{{ pl.converted_title|default:post.title }}</textarea>
+<textarea id="st-paste" hidden>{{ paste_html }}</textarea>
+<textarea id="st-plain" hidden>{{ plain_text }}</textarea>
+{% endblock %}

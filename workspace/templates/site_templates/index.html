@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}사이트별 템플릿{% if requested %} <span class="cnt">변환 요청 {{ requested }}</span>{% endif %}{% endblock %}
+
+{% block content %}
+{# 사이트마다 한 줄 (운영 화면과 같은 격자): 컨셉 · 말투·구성 · 붙여넣기 포맷 · 변환. 사이트를 누르면 고치기와 변환할 글 #}
+<section class="card br-sites">
+  <table class="grid br-table st-table">
+    <colgroup><col style="width:200px"><col style="width:20%"><col><col style="width:22%"><col style="width:190px"></colgroup>
+    <thead><tr><th>사이트</th><th>컨셉</th><th>말투·구성</th><th>붙여넣기 포맷</th><th>변환</th></tr></thead>
+    <tbody>
+      {% for b in sites %}
+      <tr>
+        <td>
+          <div class="br-site"><span class="br-plat">{{ b.get_platform_display }}</span><strong title="{{ b.name }}"><a href="{% url 'site_templates:site' b.pk %}">{{ b.name }}</a></strong></div>
+          {% if b.address %}<span class="br-addr">{{ b.address|cut:"https://"|cut:"http://" }}</span>{% else %}<span class="br-addr">주소 없음</span>{% endif %}
+        </td>
+        <td><div class="br-concept st-clamp">{{ b.content|default:"—" }}</div></td>
+        <td>
+          <div class="st-clamp">{{ b.tone_line|default:"말투 미정" }}</div>
+          <div class="br-sub st-clamp">{{ b.structure_line|default:"구성 미정" }}</div>
+        </td>
+        <td><div class="br-sub st-clamp">{{ b.fmt_line|default:"포맷 미정" }}</div></td>
+        <td>
+          {% if b.cv_total %}
+          <a class="st-cv" href="{% url 'site_templates:site' b.pk %}">
+            {% if b.cv.requested %}<span class="badge cv-requested">요청 {{ b.cv.requested }}</span>{% endif %}
+            {% if b.cv.done %}<span class="badge cv-done">완료 {{ b.cv.done }}</span>{% endif %}
+            {% if b.cv.checked %}<span class="badge cv-checked">확인 {{ b.cv.checked }}</span>{% endif %}
+            {% if b.cv.none %}<span class="badge cv-none">미변환 {{ b.cv.none }}</span>{% endif %}
+          </a>
+          {% else %}<span class="br-sub">넣은 글 없음</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

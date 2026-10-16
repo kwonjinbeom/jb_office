@@ -43,6 +43,8 @@ def _screen_choices():
         for m in (menu, *menu.children):
             if m.url_name and not m.query and m.key != "routines" and (m.url_name, m.title) not in out:
                 out.append((m.url_name, m.title))
+    # 티스토리·네이버 글쓰기는 메뉴에서 '글 관리'로 합쳤지만 각 목록 화면은 그대로 있다 (기존 루틴이 가리킨다)
+    out += [("writing:list", "티스토리 글쓰기"), ("naver_writing:list", "네이버 글쓰기")]
     return out
 
 

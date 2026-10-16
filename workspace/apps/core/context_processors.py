@@ -21,6 +21,8 @@ def navigation(request):
     match = getattr(request, "resolver_match", None)
     # 뷰가 request.nav_key 로 하위 메뉴를 지정했으면 그것을, 아니면 앱 이름을 현재 메뉴로 본다.
     active = getattr(request, "nav_key", "") or (match.app_name if match else "")
+    # 티스토리·네이버 글쓰기의 글 보기·쓰기 화면은 합친 메뉴 '글 관리' 아래에 있다
+    active = {"writing": "posts", "naver_writing": "posts"}.get(active, active)
     try:
         status = gitstate.deploy_status()
     except Exception:  # git 이 없거나 저장소 밖이어도 화면은 떠야 한다

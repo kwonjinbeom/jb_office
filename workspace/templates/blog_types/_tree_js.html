@@ -1,0 +1,76 @@
+{# 글 분류·사이트 카테고리 트리의 접기·펼치기, 오른쪽 위 추가·수정·삭제 버튼, 목록 고르기 칸 자동 보내기 (두 화면 공용) #}
+<script>
+/* 트리 접기·펼치기: 접은 가지는 이 브라우저에 기억한다. 고른 항목의 윗단계는 늘 펼친다 (data-bt-force-open). */
+(function () {
+  var KEY = "bt.collapsed", closed = {};
+  try { closed = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
+  function apply(branch, isOpen) {
+    branch.classList.toggle("collapsed", !isOpen);
+    var btn = branch.querySelector(":scope > .bt-row > [data-bt-toggle]");
+    if (btn) btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  }
+  document.querySelectorAll("[data-bt-branch]").forEach(function (b) {
+    var id = b.getAttribute("data-bt-branch");
+    apply(b, b.hasAttribute("data-bt-force-open") || !closed[id]);
+  });
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-bt-toggle]");
+    if (!btn) return;
+    var b = btn.closest("[data-bt-branch]"), id = b.getAttribute("data-bt-branch");
+    var willOpen = b.classList.contains("collapsed");
+    apply(b, willOpen);
+    if (willOpen) delete closed[id]; else closed[id] = 1;
+    try { localStorage.setItem(KEY, JSON.stringify(closed)); } catch (err) {}
+  });
+})();
+
+/* 트리 오른쪽 위 버튼: 추가(+) · 수정(연필) · 삭제(휴지통)를 켜고 끈다. 켠 상태는 이 탭에서 기억한다.
+   추가를 켜고 행의 + 를 누르면 그 아래에 이름 칸이 열린다 (Enter 로 추가, Esc 로 닫기). */
+(function () {
+  var ADD_URL = "{% url 'blog_types:add' 'KIND' %}";
+  var csrf = (window.APP || {}).csrfToken || "";
+  document.querySelectorAll("[data-bt-tree]").forEach(function (tree) {
+    var key = "bt.mode." + tree.getAttribute("data-bt-tree"), mode = "";
+    try { mode = sessionStorage.getItem(key) || ""; } catch (e) {}
+    function set(next) {
+      mode = next;
+      ["add", "edit", "delete"].forEach(function (m) { tree.classList.toggle("mode-" + m, m === mode); });
+      tree.querySelectorAll("[data-bt-mode]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-bt-mode") === mode ? "true" : "false"); });
+      if (mode !== "add") tree.querySelectorAll(".bt-inline-add").forEach(function (f) { f.remove(); });
+      try { sessionStorage.setItem(key, mode); } catch (e) {}
+    }
+    set(mode);
+    tree.addEventListener("click", function (e) {
+      var tool = e.target.closest("[data-bt-mode]");
+      if (tool) { set(mode === tool.getAttribute("data-bt-mode") ? "" : tool.getAttribute("data-bt-mode")); return; }
+      var add = e.target.closest("[data-bt-add]");
+      if (!add) return;
+      e.preventDefault();
+      var row = add.closest(".bt-row"), next = row.nextElementSibling;
+      if (next && next.classList.contains("bt-inline-add")) { next.querySelector("[name=name]").focus(); return; }
+      var form = document.createElement("form");
+      form.method = "post";
+      form.className = "bt-quickadd bt-inline-add";
+      form.action = ADD_URL.replace("KIND", add.getAttribute("data-kind"));
+      [["csrfmiddlewaretoken", csrf], ["parent", add.getAttribute("data-parent")], ["w", add.getAttribute("data-w")]].forEach(function (pair) {
+        var input = document.createElement("input");
+        input.type = "hidden"; input.name = pair[0]; input.value = pair[1] || "";
+        form.appendChild(input);
+      });
+      var name = document.createElement("input");
+      name.className = "input sm"; name.name = "name"; name.autocomplete = "off";
+      name.placeholder = "+ 이름 입력 후 Enter (Esc 닫기)";
+      name.setAttribute("aria-label", "추가할 이름");
+      name.addEventListener("keydown", function (ev) { if (ev.key === "Escape") form.remove(); });
+      form.appendChild(name);
+      row.parentNode.insertBefore(form, row.nextSibling);
+      name.focus();
+    });
+  });
+})();
+
+/* 목록의 고르기 칸(사이트 카테고리에 넣기 등): 고르면 바로 보낸다. */
+document.addEventListener("change", function (e) {
+  if (e.target.matches("select[data-autosubmit]") && e.target.value) e.target.form.submit();
+});
+</script>

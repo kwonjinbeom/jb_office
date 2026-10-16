@@ -3,14 +3,15 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
-{% block heading %}글 관리{% endblock %}
+{% block heading %}글 매핑 관리{% endblock %}
 
 {% block body_class %}fill{% endblock %}
 
 {% block content %}
 <div class="bt-layout{% if obj or kind == 'writer' %} has-sel{% endif %}">
 
-  {# 왼쪽: 사이트 카테고리 — 사이트 › 카테고리 › 하위 카테고리. 숫자는 넣은 글 수 #}
+  <div class="bt-side">
+  {# 위: 사이트 카테고리 — 사이트 › 카테고리 › 하위 카테고리. 숫자는 넣은 글 수 #}
   <nav class="bt-tree" aria-label="사이트 카테고리" data-bt-tree="site">
     <div class="bt-tree-head">
       <span>사이트 카테고리</span>
@@ -53,83 +54,9 @@
     {% endfor %}
   </nav>
 
-  {# 가운데: 글 분류 — 글쓰기 › 대분류 › 카테고리 › 타입 › 하위. 숫자는 그 아래 발행 완료가 아닌 글 수 #}
-  <nav class="bt-tree" aria-label="글 분류" data-bt-tree="class">
-    <div class="bt-tree-head">
-      <span>글 분류</span>
-      {% include "blog_types/_tools.html" %}
-    </div>
-    {% for wr in writers %}
-    <div class="bt-section" data-bt-branch="{{ wr.key }}"{% if wr.key in open %} data-bt-force-open{% endif %}>
-      <div class="bt-row">
-        <button type="button" class="bt-tog" data-bt-toggle aria-label="{{ wr.label }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>
-        <a class="bt-node lv0{% if kind == 'writer' and w == wr.key %} on{% endif %}" href="?w={{ wr.key }}">
-          <span class="nm">{{ wr.label }}</span>
-          {% if wr.count %}<span class="ct">{{ wr.count }}</span>{% endif %}
-        </a>
-      </div>
-      <div class="bt-kids-tree">
-        {% for g in wr.sections %}
-        {% with gb=wr.key|add:"-"|add:g.obj.sel %}
-        <div class="bt-group bt-sec" data-bt-branch="{{ gb }}"{% if gb in open %} data-bt-force-open{% endif %}>
-          <div class="bt-row">
-            {% if g.cats %}<button type="button" class="bt-tog sm" data-bt-toggle aria-label="{{ g.obj.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>{% else %}<span class="bt-tog-gap"></span>{% endif %}
-            <a {% trash_attrs g.obj %} class="bt-node lvs{% if w == wr.key and sel == g.obj.sel %} on{% endif %}" href="?w={{ wr.key }}&amp;sel={{ g.obj.sel }}">
-              <span class="nm">{{ g.obj.name }}</span>
-              {% if g.count %}<span class="ct">{{ g.count }}</span>{% endif %}
-            </a>
-            {% include "blog_types/_acts.html" with add_kind="category" parent=g.obj.sel wk=wr.key edit_sel=g.obj.sel %}
-          </div>
-          <div class="bt-kids-tree">
-            {% for c in g.cats %}
-            {% with cb=wr.key|add:"-"|add:c.obj.sel %}
-            <div class="bt-group" data-bt-branch="{{ cb }}"{% if cb in open %} data-bt-force-open{% endif %}>
-              <div class="bt-row">
-                {% if c.types %}<button type="button" class="bt-tog sm" data-bt-toggle aria-label="{{ c.obj.name }} 접기·펼치기" aria-expanded="true">{% include "includes/ic.html" with name="chevron-down" %}</button>{% else %}<span class="bt-tog-gap"></span>{% endif %}
-                <a {% trash_attrs c.obj %} class="bt-node lv1{% if w == wr.key and sel == c.obj.sel %} on{% endif %}" href="?w={{ wr.key }}&amp;sel={{ c.obj.sel }}">
-                  <span class="bt-code">{{ c.obj.code }}</span>
-                  <span class="nm">{{ c.obj.name }}</span>
-                  {% if c.count %}<span class="ct">{{ c.count }}</span>{% endif %}
-                </a>
-                {% include "blog_types/_acts.html" with add_kind="type" parent=c.obj.sel wk=wr.key edit_sel=c.obj.sel %}
-              </div>
-              <div class="bt-kids-tree">
-                {% for t in c.types %}
-                <div class="bt-row">
-                  <a {% trash_attrs t.obj %} class="bt-node lv2{% if w == wr.key and sel == t.obj.sel %} on{% endif %}" href="?w={{ wr.key }}&amp;sel={{ t.obj.sel }}">
-                    <span class="nm">{{ t.obj.name }}</span>
-                    {% if t.count %}<span class="ct">{{ t.count }}</span>{% endif %}
-                  </a>
-                  {% include "blog_types/_acts.html" with add_kind="sub" parent=t.obj.sel wk=wr.key edit_sel=t.obj.sel %}
-                </div>
-                {% for s in t.subs %}
-                <div class="bt-row">
-                  <a {% trash_attrs s.obj %} class="bt-node lv3{% if w == wr.key and sel == s.obj.sel %} on{% endif %}" href="?w={{ wr.key }}&amp;sel={{ s.obj.sel }}">
-                    <span class="nm">{{ s.obj.name }}</span>
-                    {% if s.count %}<span class="ct">{{ s.count }}</span>{% endif %}
-                  </a>
-                  {% include "blog_types/_acts.html" with add_kind="" parent="" wk=wr.key edit_sel=s.obj.sel %}
-                </div>
-                {% endfor %}
-                {% endfor %}
-              </div>
-            </div>
-            {% endwith %}
-            {% empty %}
-            <div class="bt-empty-line">카테고리 없음</div>
-            {% endfor %}
-          </div>
-        </div>
-        {% endwith %}
-        {% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-    <form class="bt-quickadd bt-only-add" method="post" action="{% url 'blog_types:add' 'section' %}">
-      {% csrf_token %}<input type="hidden" name="w" value="{{ w }}">
-      <input class="input sm" name="name" placeholder="+ 대분류 (이름 입력 후 Enter)" aria-label="새 대분류 이름" autocomplete="off">
-    </form>
-  </nav>
+  {# 아래: 글 분류 — 글쓰기 › 대분류 · 미분류 › 카테고리 › 타입 › 하위 #}
+  {% include "blog_types/_class_tree.html" with q="" tools=True %}
+  </div>
 
   {# 오른쪽: 글 분류를 고르면 그 분류의 글, 사이트 카테고리를 고르면 넣은 글(매핑) #}
   <section class="bt-panel">
@@ -177,14 +104,24 @@
     <section class="card bt-list">
       <div class="card-head"><h3 class="card-title">글 <span class="cnt">{{ posts|length }}</span></h3></div>
       <table class="grid bt-grid">
-        <thead><tr><th>제목</th><th style="width:64px">단계</th><th style="width:28%">분류</th><th style="width:28%">넣은 곳</th></tr></thead>
+        <thead><tr><th>제목</th><th style="width:64px">단계</th><th style="width:32%">넣은 곳 · 변환</th><th style="width:190px">사이트 카테고리에 넣기</th></tr></thead>
         <tbody>
           {% for p in posts %}
           <tr>
-            <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></td>
+            <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
             <td><span class="badge{% if p.step == '발행' %} green{% elif p.step == '포스트' %} blue{% else %} gray{% endif %}">{{ p.step }}</span></td>
-            <td class="small muted bt-cut">{{ p.cls_label }}</td>
-            <td class="small bt-cut">{% for pl in p.placements.all %}<span class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} <span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span></span>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+            <td class="small">{% for pl in p.placements.all %}<div class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} <span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span> <span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span></div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+            <td>
+              {% if p.stage == 'post' %}
+              <form method="post" action="{% url 'blog_types:place_add' %}">{% csrf_token %}
+                <input type="hidden" name="post" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <select class="input sm bt-place-pick" name="site_category" data-autosubmit aria-label="{{ p.title }} 넣을 사이트 카테고리">
+                  <option value="">넣을 곳 고르기</option>
+                  {% for pk, label in site_options %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}
+                </select>
+              </form>
+              {% else %}<span class="muted small">포스트 관리로 보내면 넣을 수 있어요</span>{% endif %}
+            </td>
           </tr>
           {% empty %}
           <tr><td colspan="4" class="grid-empty">이 분류의 글이 없습니다.</td></tr>
@@ -198,7 +135,7 @@
     <section class="card bt-list">
       <div class="card-head"><h3 class="card-title">넣은 글 <span class="cnt">{{ placements|length }}</span></h3></div>
       <table class="grid bt-grid">
-        <thead><tr>{% if show_cat %}<th style="width:22%">카테고리</th>{% endif %}<th>제목</th><th style="width:236px">상태</th><th style="width:52px"></th></tr></thead>
+        <thead><tr>{% if show_cat %}<th style="width:22%">카테고리</th>{% endif %}<th>제목</th><th style="width:236px">상태</th><th style="width:96px">변환</th><th style="width:52px"></th></tr></thead>
         <tbody>
           {% for pl in placements %}
           <tr>
@@ -210,6 +147,7 @@
                 {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == pl.status %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
               </form>
             </td>
+            <td><a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></td>
             <td class="r">
               <form method="post" action="{% url 'blog_types:place_remove' pl.pk %}" class="inline-form">{% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -218,7 +156,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="{% if show_cat %}4{% else %}3{% endif %}" class="grid-empty">{% if kind == 'sitecat' %}아직 넣은 글이 없습니다. 아래에서 골라 넣으세요.{% else %}카테고리를 고르면 글을 넣을 수 있습니다.{% endif %}</td></tr>
+          <tr><td colspan="{% if show_cat %}5{% else %}4{% endif %}" class="grid-empty">{% if kind == 'sitecat' %}아직 넣은 글이 없습니다. 아래에서 골라 넣으세요.{% else %}카테고리를 고르면 글을 넣을 수 있습니다.{% endif %}</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -252,74 +190,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-/* 트리 접기·펼치기: 접은 가지는 이 브라우저에 기억한다. 고른 항목의 윗단계는 늘 펼친다 (data-bt-force-open). */
-(function () {
-  var KEY = "bt.collapsed", closed = {};
-  try { closed = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
-  function apply(branch, isOpen) {
-    branch.classList.toggle("collapsed", !isOpen);
-    var btn = branch.querySelector(":scope > .bt-row > [data-bt-toggle]");
-    if (btn) btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
-  }
-  document.querySelectorAll("[data-bt-branch]").forEach(function (b) {
-    var id = b.getAttribute("data-bt-branch");
-    apply(b, b.hasAttribute("data-bt-force-open") || !closed[id]);
-  });
-  document.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-bt-toggle]");
-    if (!btn) return;
-    var b = btn.closest("[data-bt-branch]"), id = b.getAttribute("data-bt-branch");
-    var willOpen = b.classList.contains("collapsed");
-    apply(b, willOpen);
-    if (willOpen) delete closed[id]; else closed[id] = 1;
-    try { localStorage.setItem(KEY, JSON.stringify(closed)); } catch (err) {}
-  });
-})();
-
-/* 트리 오른쪽 위 버튼: 추가(+) · 수정(연필) · 삭제(휴지통)를 켜고 끈다. 켠 상태는 이 탭에서 기억한다.
-   추가를 켜고 행의 + 를 누르면 그 아래에 이름 칸이 열린다 (Enter 로 추가, Esc 로 닫기). */
-(function () {
-  var ADD_URL = "{% url 'blog_types:add' 'KIND' %}";
-  var csrf = (window.APP || {}).csrfToken || "";
-  document.querySelectorAll("[data-bt-tree]").forEach(function (tree) {
-    var key = "bt.mode." + tree.getAttribute("data-bt-tree"), mode = "";
-    try { mode = sessionStorage.getItem(key) || ""; } catch (e) {}
-    function set(next) {
-      mode = next;
-      ["add", "edit", "delete"].forEach(function (m) { tree.classList.toggle("mode-" + m, m === mode); });
-      tree.querySelectorAll("[data-bt-mode]").forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-bt-mode") === mode ? "true" : "false"); });
-      if (mode !== "add") tree.querySelectorAll(".bt-inline-add").forEach(function (f) { f.remove(); });
-      try { sessionStorage.setItem(key, mode); } catch (e) {}
-    }
-    set(mode);
-    tree.addEventListener("click", function (e) {
-      var tool = e.target.closest("[data-bt-mode]");
-      if (tool) { set(mode === tool.getAttribute("data-bt-mode") ? "" : tool.getAttribute("data-bt-mode")); return; }
-      var add = e.target.closest("[data-bt-add]");
-      if (!add) return;
-      e.preventDefault();
-      var row = add.closest(".bt-row"), next = row.nextElementSibling;
-      if (next && next.classList.contains("bt-inline-add")) { next.querySelector("[name=name]").focus(); return; }
-      var form = document.createElement("form");
-      form.method = "post";
-      form.className = "bt-quickadd bt-inline-add";
-      form.action = ADD_URL.replace("KIND", add.getAttribute("data-kind"));
-      [["csrfmiddlewaretoken", csrf], ["parent", add.getAttribute("data-parent")], ["w", add.getAttribute("data-w")]].forEach(function (pair) {
-        var input = document.createElement("input");
-        input.type = "hidden"; input.name = pair[0]; input.value = pair[1] || "";
-        form.appendChild(input);
-      });
-      var name = document.createElement("input");
-      name.className = "input sm"; name.name = "name"; name.autocomplete = "off";
-      name.placeholder = "+ 이름 입력 후 Enter (Esc 닫기)";
-      name.setAttribute("aria-label", "추가할 이름");
-      name.addEventListener("keydown", function (ev) { if (ev.key === "Escape") form.remove(); });
-      form.appendChild(name);
-      row.parentNode.insertBefore(form, row.nextSibling);
-      name.focus();
-    });
-  });
-})();
-</script>
+{% include "blog_types/_tree_js.html" %}
 {% endblock %}

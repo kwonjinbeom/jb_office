@@ -16,6 +16,8 @@ urlpatterns = [
     path("blog/writing/", include("apps.writing.urls")),
     path("blog/naver-writing/", include("apps.naver_writing.urls")),
     path("blog/types/", include("apps.blog_types.urls")),
+    path("blog/posts/", include("apps.blog_types.posts_urls")),
+    path("blog/site-templates/", include("apps.site_templates.urls")),
     path("blog/rules/", include("apps.blog_rules.urls")),
     path("blog/ops/", include("apps.blog_ops.urls")),
     path("routines/", include("apps.routines.urls")),

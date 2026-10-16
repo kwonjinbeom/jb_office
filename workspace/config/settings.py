@@ -117,6 +117,7 @@ INSTALLED_APPS = [
     "apps.writing",
     "apps.naver_writing",
     "apps.blog_types",
+    "apps.site_templates",
     "apps.blog_rules",
     "apps.blog_ops",
     "apps.routines",

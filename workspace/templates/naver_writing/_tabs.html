@@ -1,4 +1,4 @@
 {# 세 화면 탭. 글은 임시 템플릿 → 검토 템플릿 → 포스트 관리 순서로 옮겨간다. 컨텍스트: tabs #}
 <nav class="wr-tabs" aria-label="네이버 글쓰기 화면">
-  {% for t in tabs %}<a href="{% url t.url_name %}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
+  {% for t in tabs %}<a href="{% url 'posts:index' %}?stage={{ t.stage }}&amp;w=naver" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
 </nav>

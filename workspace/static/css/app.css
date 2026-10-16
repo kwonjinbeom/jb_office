@@ -1067,8 +1067,19 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .nv-edit .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 
 /* 블로그·카페 > 타입·카테고리: 왼쪽 트리(대분류 › 카테고리 › 타입 › 하위, 이름과 개수만) + 오른쪽 상세 */
-/* 글 관리: 트리 두 개(사이트 카테고리 · 글 분류), 오른쪽 목록은 둘이 함께 쓴다 */
-.bt-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(240px, 300px) minmax(260px, 340px) minmax(0, 1fr); }
+/* 글 매핑 관리: 왼쪽 한 칸에 위 사이트 카테고리(2.5) · 아래 글 분류(7.5), 오른쪽 목록. 글 관리(글쓰기)는 왼쪽에 글 분류만. */
+.bt-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.bt-side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); background: var(--panel); }
+.bt-side > .bt-tree { border-right: 0; min-height: 0; flex: 3 1 0; }
+.bt-side > .bt-tree:first-child { flex: 1 1 0; }
+.bt-side > .bt-tree + .bt-tree { border-top: 1px solid var(--border); }
+.bt-unclassified .nm { color: var(--text-3); }
+.bt-place-pick { width: 100%; }
+.badge.cv-none { color: var(--text-3); }
+.badge.cv-requested { background: var(--warn-weak); color: var(--warn); }
+.badge.cv-done { background: var(--accent-weak); color: var(--accent); }
+.badge.cv-checked { background: var(--ok-weak); color: var(--ok); }
+a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .bt-tree { overflow: auto; background: var(--panel); border-right: 1px solid var(--border); padding: 10px 8px 24px; }
 .bt-tree-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 8px 10px; font-size: 11.5px; font-weight: 700; color: var(--text-3); letter-spacing: .2px; }
 .bt-tools { display: inline-flex; gap: 2px; }
@@ -1159,6 +1170,9 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 @media (max-width: 900px) {
   .bt-layout { grid-template-columns: minmax(0, 1fr); overflow: auto; }
   .bt-tree { border-right: 0; border-bottom: 1px solid var(--border); overflow: visible; }
+  .bt-layout { grid-template-rows: none; }
+  .bt-side { border-right: 0; }
+  .bt-side > .bt-tree, .bt-side > .bt-tree:first-child { flex: none; }
   .bt-panel { overflow: visible; }
   .bt-layout.has-sel .bt-panel { order: -1; border-bottom: 1px solid var(--border); }
   .bt-grid { table-layout: auto; }
@@ -1324,3 +1338,18 @@ a.br-addr:hover { color: var(--accent); }
 .pm-note { flex: none; font-size: 11px; color: var(--text-3); }
 .pm-marks { display: flex; flex-wrap: wrap; gap: 4px; }
 .pm-marks code { font-size: 11.5px; }
+
+/* 글 관리 (티스토리·네이버 합친 글 목록): 왼쪽 글 분류 트리 + 오른쪽 단계 탭·목록 */
+.ph-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.ph-main > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
+.ph-main > .wr-tabs { padding-left: var(--gutter); }
+/* 사이트별 템플릿 */
+.st-table td { vertical-align: top; }
+.st-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.st-cv { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.st-cv:hover { text-decoration: none; }
+.st-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.st-col { display: grid; gap: 14px; min-width: 0; }
+.st-preview { max-height: 70vh; overflow: auto; border-top: 1px solid var(--line-soft); }
+.st-where { margin: 0 0 10px; }
+@media (max-width: 900px) { .st-cols { grid-template-columns: minmax(0, 1fr); } }
