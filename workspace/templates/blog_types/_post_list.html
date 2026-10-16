@@ -1,4 +1,4 @@
-{% comment %}글 보기 왼쪽의 글 목록 (2026-10-17 사용자: 글 보기에는 분류 트리 대신 글 리스트).
+{% comment %}글 보기 왼쪽의 글 목록 (2026-10-17 사용자: 글 보기에는 분류 트리 대신 그 단계의 글 리스트, 행마다 분류).
 글 관리에서 넘어온 조건(단계·분류·검색·오늘)을 그대로 쓴다. 머리의 버튼으로 접는다 (글 분류 트리와 같은 방식, 'list' 로 따로 기억).
 컨텍스트: blog_types.posts.post_list_for{% endcomment %}
 <nav class="bt-tree pl-list" aria-label="글 목록" data-bt-tree="list">
@@ -8,7 +8,7 @@
     <span class="bt-tree-title">{{ pl_stage_label }} <span class="cnt">{{ pl_items|length }}</span></span>
     <a class="pl-back" href="{{ pl_index_url }}" title="글 관리로 (같은 조건)">글 관리</a>
   </div>
-  <form method="get" class="pl-filter">
+  <form method="get" action="{% url 'posts:view' %}" class="pl-filter">
     <input type="hidden" name="stage" value="{{ pl_stage }}">{% if pl_sel %}<input type="hidden" name="sel" value="{{ pl_sel }}">{% endif %}{% if pl_today %}<input type="hidden" name="today" value="1">{% endif %}
     <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ pl_q }}" placeholder="제목, 내용 검색" aria-label="글 목록 검색"></div>
     <a class="btn sm{% if pl_today %} primary{% endif %}" href="{{ pl_today_url }}" aria-pressed="{% if pl_today %}true{% else %}false{% endif %}" title="오늘 만든 글만">오늘</a>
@@ -20,6 +20,7 @@
   <div class="pl-items">
     {% for p in pl_items %}
     <a class="pl-item{% if p == pl_current %} on{% endif %}" href="{{ p.list_url }}"{% if p == pl_current %} aria-current="page"{% endif %}>
+      <span class="pl-path">{{ p.path_label }}</span>
       <span class="pl-title">{{ p.title }}</span>
       <span class="pl-meta">{% if p.target %}{{ p.target }} · {% endif %}{% if pl_stage == 'temp' %}{{ p.created_at|date:"m-d" }}{% else %}{{ p.updated_at|date:"m-d" }}{% endif %}</span>
     </a>

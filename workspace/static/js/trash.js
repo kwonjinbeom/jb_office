@@ -180,6 +180,18 @@
     if (event.target.matches('[data-trash-restore-check], [data-trash-check-all]')) syncSelection();
   });
   document.addEventListener("click", function (event) {
+    // 체크한 행을 한꺼번에 휴지통으로: data-trash-checked="체크칸 name". 체크칸이 든 행의 trash_attrs 를 모은다.
+    var checked = event.target.closest && event.target.closest("[data-trash-checked]");
+    if (checked) {
+      event.preventDefault();
+      var name = checked.getAttribute("data-trash-checked");
+      var items = Array.from(document.querySelectorAll('input[name="' + name + '"]:checked')).map(function (box) {
+        return box.closest("[data-trash-model][data-trash-id]");
+      }).filter(Boolean).map(recordData);
+      if (!items.length) { window.App.toast("먼저 글을 체크하세요.", "warn"); return; }
+      openDelete(items, checked);
+      return;
+    }
     var target = event.target.closest && event.target.closest("[data-trash-single], [data-trash-trigger], [data-trash-restore], [data-trash-bulk], [data-trash-clear], .trash-row-controls");
     if (!target) return;
     if (target.classList.contains("trash-row-controls")) { event.stopPropagation(); return; }

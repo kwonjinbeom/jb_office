@@ -64,7 +64,8 @@ MENUS: list[Menu] = [
         children=(
             Menu("blog_rules", "운영", "사이트별 컨셉·발행·임시저장 현황과 체크", "blog_rules:index", "check-list"),
             Menu("blog_ops", "모니터링", "이번 주 발행 현황, 발행 계획, RSS", "blog_ops:index", "calendar"),
-            Menu("posts", "글 관리", "티스토리·네이버 글: 임시글 → 검토글 → 발행예정글, 글 분류별", "posts:index", "edit"),
+            Menu("posts", "글 관리", "글 분류별로 여러 글을 한 번에: 다음 단계로 옮기기·삭제", "posts:index", "edit"),
+            Menu("posts_view", "글 보기", "한 건씩 보면서 처리: 임시글 → 검토글 → 발행예정글", "posts:view", "file"),
             Menu("blog_types", "글 매핑 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
             Menu("site_templates", "사이트별 템플릿", "사이트 컨셉·플랫폼 포맷에 맞게 글 변환", "site_templates:index", "layers"),
             Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),

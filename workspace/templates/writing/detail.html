@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load trash_tags %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}</div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'posts:view' %}?stage={{ pl_stage }}">글 보기</a></div>{% endblock %}
 
 {% block heading %}글 보기{% endblock %}
 
@@ -19,14 +19,14 @@
 
 {% block toolbar %}
 <div class="wr-tabs-row">
-  {% include "writing/_tabs.html" %}
+  {% include "blog_types/_view_tabs.html" %}
   <div class="wr-tab-actions">
     <form method="post" action="{% url 'writing:move' %}" class="inline-form">
-      {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.path }}{% if pl_keep %}?{{ pl_keep }}{% endif %}">
+      {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ pl_next_url }}">
       {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
       {% if next_label %}<button class="btn sm primary" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
     </form>
-    <a {% trash_attrs post %} data-trash-trigger data-trash-next="{% if below %}{{ below.list_url|default:below.get_absolute_url }}{% elif above %}{{ above.list_url|default:above.get_absolute_url }}{% else %}{{ pl_index_url }}{% endif %}" class="btn sm icon ghost danger" href="{% url 'writing:delete' post.pk %}" title="휴지통으로" aria-label="휴지통으로">{% include "includes/ic.html" with name="trash" %}</a>
+    <a {% trash_attrs post %} data-trash-trigger data-trash-next="{{ pl_next_url }}" class="btn sm icon ghost danger" href="{% url 'writing:delete' post.pk %}" title="휴지통으로" aria-label="휴지통으로">{% include "includes/ic.html" with name="trash" %}</a>
   </div>
 </div>
 <div class="filter-bar wr-copybar">
