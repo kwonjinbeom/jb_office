@@ -51,6 +51,7 @@ MENUS: list[Menu] = [
         "blog", "블로그·카페", "카테고리별 소재·템플릿·글과 게시 기록", "blog:list", "file", "#2f6bd8",
         children=(
             Menu("blog_rules", "규칙", "블로그별 하루 편수·쓰는 글·지표와 매일 지킬 규칙", "blog_rules:index", "check-list"),
+            Menu("blog_ops", "운영", "이번 주 발행 현황, 발행 계획, RSS", "blog_ops:index", "calendar"),
             Menu("blog_types", "타입·카테고리", "수익형 계정의 카테고리(사게 만드는 방향)와 글 타입, 나눠 쓰는 법", "blog_types:index", "tag"),
             Menu("writing", "티스토리 글쓰기", "임시 템플릿 → 검토 템플릿 → 포스트 관리", "writing:list", "edit"),
             Menu("naver_writing", "네이버 글쓰기", "임시 템플릿 → 검토 템플릿 → 포스트 관리", "naver_writing:list", "edit"),

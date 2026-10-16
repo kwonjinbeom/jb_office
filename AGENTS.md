@@ -74,6 +74,7 @@ PR 은 다음 경우에만 쓴다. 어느 경우든 **확인이 끝나면 에이
 - Python 의존성을 추가하면 `requirements.txt` 에 넣고, 커밋 메시지에 "서버 pip install 필요" 를 적는다 (현재 Markdown 패키지가 그렇다).
 - 새 메뉴 추가: 앱 생성 → `config/settings.py` INSTALLED_APPS → `config/urls.py` include → `apps/core/menus.py` MENUS 에 항목 추가. 홈 카드와 좌측 메뉴가 자동으로 생긴다.
 - 템플릿은 `templates/<앱>/` 에 두고 `{% extends "base.html" %}`. 스타일은 `static/css/app.css` 하나, 외부 CSS 프레임워크 없음, 사무적이고 깔끔한 톤 유지.
+- **UI 원칙 (2026-10-16 사용자, 모든 화면):** ① 카드·칸은 **오와 열이 맞는다** — 같은 줄은 같은 크기·같은 격자, 내용 길이로 들쑥날쑥하지 않게 줄 수를 고정한다. ② 공통이 아닌 꾸밈 금지 — 중간에 갑자기 색 띠·색 박스·튀는 안내 문구를 넣지 않는다. ③ 글은 **짧게·요약해서**, 자세한 건 눌러서 본다. 사용자가 여러 번 요구한 원칙이다.
 - 실행: `workspace\run.bat` (가상환경 생성 → 설치 → migrate → runserver).
 
 ## 6. 자동 동기화 (PC 전용)

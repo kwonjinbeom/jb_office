@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}운영 <span class="cnt">{{ week_label }}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn icon" href="?week={{ prev_week }}" title="지난주" aria-label="지난주">{% include "includes/ic.html" with name="chevron-left" %}</a>
+<a class="btn{% if is_this_week %} on{% endif %}" href="{% url 'blog_ops:index' %}">이번 주</a>
+<a class="btn icon" href="?week={{ next_week }}" title="다음 주" aria-label="다음 주">{% include "includes/ic.html" with name="chevron-right" %}</a>
+<form method="post" action="{% url 'blog_ops:sync' %}" class="inline-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn">{% include "includes/ic.html" with name="refresh" %}RSS 새로고침</button></form>
+{% endblock %}
+
+{% block content %}
+<div class="op-page">
+
+  <div class="op-tiles">
+    {% for label, value in tiles %}
+    <div class="card op-tile"><span>{{ label }}</span><strong>{{ value }}</strong></div>
+    {% endfor %}
+  </div>
+
+  {# 블로그 × 요일: 발행 / 목표 #}
+  <section class="card">
+    <table class="grid op-week">
+      <colgroup><col style="width:180px">{% for d in days %}<col>{% endfor %}<col style="width:90px"></colgroup>
+      <thead>
+        <tr><th>블로그</th>{% for d, name, is_today in days %}<th class="c{% if is_today %} is-today{% endif %}">{{ name }} {{ d|date:"j" }}</th>{% endfor %}<th class="c">합계</th></tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="op-blog"><span class="br-plat">{{ r.blog.get_platform_display }}</span>{{ r.blog.name }}</td>
+          {% for c in r.cells %}
+          <td class="c op-cell{% if c.today %} is-today{% endif %}{% if c.future %} is-future{% elif c.count >= c.target %} is-met{% endif %}">{% if c.future and not c.count %}·{% else %}{{ c.count }}<small>/{{ c.target }}</small>{% endif %}</td>
+          {% endfor %}
+          <td class="c op-sum">{{ r.sum }}<small>/{{ r.target }}</small></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="grid-empty">운영 중인 블로그가 없습니다. 규칙 화면에서 블로그를 '운영'으로 바꾸세요.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {# 발행 계획 #}
+  <section class="card">
+    <div class="card-head"><h3 class="card-title">발행 계획</h3><span class="cnt">{{ plans|length }}</span></div>
+    <table class="grid op-plans">
+      <colgroup><col style="width:112px"><col style="width:150px"><col><col style="width:260px"><col style="width:72px"></colgroup>
+      <thead><tr><th>날짜</th><th>블로그</th><th>제목</th><th>상태</th><th></th></tr></thead>
+      <tbody>
+        {% for p in plans %}
+        <tr{% if p.planned_on < today and p.status != 'published' %} class="is-late"{% endif %}>
+          <td class="num">{{ p.planned_on|date:"m-d" }} ({{ p.planned_on|date:"D" }})</td>
+          <td class="op-blogname">{{ p.blog.name }}</td>
+          <td class="op-title" title="{{ p.title }}">{% if p.url %}<a href="{{ p.url }}" target="_blank" rel="noopener">{{ p.title }}</a>{% else %}{{ p.title }}{% endif %}</td>
+          <td>
+            <form method="post" action="{% url 'blog_ops:plan_status' p.pk %}" class="status-seg op-seg">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+              {% for value, label in statuses %}<button name="status" value="{{ value }}" {% if p.status == value %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
+            </form>
+          </td>
+          <td class="r op-tools">
+            <a href="{% url 'blog_ops:plan_edit' p.pk %}" title="수정·발행 주소" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</a>
+            <a href="{% url 'blog_ops:plan_delete' p.pk %}" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="grid-empty">이 주에 계획이 없습니다. 아래에서 추가하세요.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <form class="op-add" method="post" action="{% url 'blog_ops:plan_add' %}">
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <input class="input sm" type="date" name="planned_on" value="{{ today|date:'Y-m-d' }}" aria-label="발행 예정일">
+      <select class="input sm" name="blog" aria-label="블로그">{% for b in all_blogs %}<option value="{{ b.pk }}">{{ b.name }}</option>{% endfor %}</select>
+      <input class="input sm" name="title" placeholder="+ 제목 입력 후 Enter" aria-label="제목" autocomplete="off">
+    </form>
+  </section>
+
+  {# RSS: 실제 발행 글을 블로그에서 읽어 온 결과 #}
+  <section class="card">
+    <table class="grid op-feeds">
+      <colgroup><col style="width:180px"><col><col style="width:140px"><col style="width:320px"></colgroup>
+      <thead><tr><th>RSS</th><th>주소</th><th>마지막 확인</th><th>결과</th></tr></thead>
+      <tbody>
+        {% for b, s in feeds %}
+        <tr>
+          <td>{{ b.name }}</td>
+          <td class="op-url" title="{{ s.feed_url }}">{{ s.feed_url|default:"—" }}</td>
+          <td class="num muted">{% if s.checked_at %}{{ s.checked_at|date:"m-d H:i" }}{% else %}—{% endif %}</td>
+          <td class="op-msg{% if s and not s.ok %} is-bad{% endif %}" title="{{ s.message }}">{% if s %}{{ s.message }}{% else %}아직 안 읽음{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}
