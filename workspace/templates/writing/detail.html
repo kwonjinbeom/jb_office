@@ -21,6 +21,12 @@
 <div class="wr-tabs-row">
   {% include "blog_types/_view_tabs.html" %}
   <div class="wr-tab-actions">
+    <span class="muted small num wr-chars" title="사진·그림 자리 상자는 빼고 센 본문 글자 수">본문 {{ chars }}자 · 공백 제외 {{ chars_no_space }}자</span>
+    <span class="seg" role="group" aria-label="보기 폭">
+      <button type="button" class="on" data-paper-width="pc">PC</button>
+      <button type="button" data-paper-width="mobile">모바일</button>
+    </span>
+    <span class="wr-tab-sep" aria-hidden="true"></span>
     <form method="post" action="{% url 'writing:move' %}" class="inline-form">
       {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ pl_next_url }}">
       {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
@@ -28,20 +34,6 @@
     </form>
     <a {% trash_attrs post %} data-trash-trigger data-trash-next="{{ pl_next_url }}" class="btn sm icon ghost danger" href="{% url 'writing:delete' post.pk %}" title="휴지통으로" aria-label="휴지통으로">{% include "includes/ic.html" with name="trash" %}</a>
   </div>
-</div>
-<div class="filter-bar wr-copybar">
-  <span class="wr-copy-label">복사해서 붙여넣기</span>
-  <button type="button" class="btn sm" data-copy="#wr-copy-title" data-copy-msg="제목을 복사했습니다." title="블로그 글쓰기 화면의 제목 칸에 붙여넣기">{% include "includes/ic.html" with name="copy" %}제목</button>
-  <button type="button" class="btn sm primary" data-copy-rich="#wr-copy-html" data-copy-plain="#wr-copy-text" data-copy-msg="본문을 서식 그대로 복사했습니다. 네이버 에디터·티스토리 기본 모드에 붙여넣으세요." title="네이버 스마트에디터, 티스토리 기본 모드에 붙여넣기 (소제목·굵게·표·상자 서식 유지)" {% if not post.body %}disabled{% endif %}>{% include "includes/ic.html" with name="copy" %}본문 (서식 그대로)</button>
-  <button type="button" class="btn sm" data-copy="#wr-copy-html" data-copy-msg="본문 HTML을 복사했습니다. 티스토리 HTML 모드에 붙여넣으세요." title="티스토리 글쓰기의 HTML 모드에 붙여넣기" {% if not post.body %}disabled{% endif %}>{% include "includes/ic.html" with name="copy" %}본문 HTML</button>
-  <button type="button" class="btn sm" data-copy="#wr-copy-tags" data-copy-msg="태그를 복사했습니다." title="태그 칸에 붙여넣기 (쉼표로 구분)" {% if not post.tag_list %}disabled{% endif %}>{% include "includes/ic.html" with name="tag" %}태그</button>
-  <span class="wr-copy-meta">
-    <span class="muted small num" title="사진·그림 자리 상자는 빼고 센 본문 글자 수">본문 {{ chars }}자 · 공백 제외 {{ chars_no_space }}자</span>
-    <span class="seg" role="group" aria-label="보기 폭">
-      <button type="button" class="on" data-paper-width="pc">PC</button>
-      <button type="button" data-paper-width="mobile">모바일</button>
-    </span>
-  </span>
 </div>
 {% endblock %}
 
