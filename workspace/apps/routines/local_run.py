@@ -9,9 +9,11 @@ claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineR
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from datetime import date
+from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from django.conf import settings
@@ -107,7 +109,24 @@ def _open_run(routine, day, step):
     run.report(RoutineRun.Status.RUNNING, step, timezone.localtime())
 
 
-def open_terminal(name, title):
+def find_claude():
+    """claude 실행 파일. PATH 에 없으면 데스크톱 앱에 든 것 중 최신 버전 (%APPDATA%/Claude/claude-code/<버전>/<해시>/claude.exe).
+    2026-10-17: 이 PC 는 데스크톱 앱만 있어 PATH 의 'claude' 를 못 찾고 터미널이 바로 닫혔다."""
+    found = shutil.which("claude")
+    if found:
+        return found
+    base = Path(os.environ.get("APPDATA", "")) / "Claude" / "claude-code"
+
+    def version(p):
+        return tuple(int(n) if n.isdigit() else 0 for n in p.parent.parent.name.split("."))
+
+    exes = sorted(base.glob("*/*/claude.exe"), key=version) if base.is_dir() else []
+    if not exes:
+        raise RuntimeError("claude 를 찾지 못했습니다. Claude 데스크톱 앱이나 Claude Code CLI 를 설치하세요.")
+    return str(exes[-1])
+
+
+def open_terminal(name, title, claude="claude"):
     """새 터미널에서 claude 를 연다 (미리 허용한 것 + 브라우저 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
@@ -117,7 +136,7 @@ def open_terminal(name, title):
     ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
     if not WINDOWS:
         return f'claude "{ask}" --settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json'
-    subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", "claude", ask,
+    subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", claude, ask,
                       "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN])
     return ""
 
@@ -128,6 +147,7 @@ def start(link, text):
     text = text.replace("\r\n", "\n")
     if not text.startswith(PROMPT_HEAD):
         raise ValueError("클립보드에 일일루틴 안내문이 없습니다. 화면에서 '실행'을 다시 누르세요.")
+    claude = find_claude() if WINDOWS else "claude"  # 못 찾으면 현황을 남기기 전에 멈춘다
     kind, key, day = req["kind"], req["key"], req["day"]
     if kind == "all":
         for k in req["keys"]:
@@ -143,5 +163,5 @@ def start(link, text):
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
     (folder / name).write_text(text, encoding="utf-8")
-    manual = open_terminal(name, title)
+    manual = open_terminal(name, title, claude)
     return f"저장소 폴더에서 실행하세요: {manual}" if manual else done

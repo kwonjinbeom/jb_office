@@ -16,7 +16,7 @@ from apps.naver_writing.models import Post as NaverPost
 from apps.writing.models import Post as TistoryPost
 
 from .models import Evaluation, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
-from .local_run import parse_link, start
+from .local_run import find_claude, parse_link, start
 from .views import capture_version, launcher, references
 
 INDEX = reverse("routines:index")
@@ -91,8 +91,9 @@ class TempRepoTests(Login):
         self.assertIn("검색 표준", ideas)
 
     @patch("apps.routines.local_run.WINDOWS", True)
+    @patch("apps.routines.local_run.find_claude", return_value="claude")
     @patch("apps.routines.local_run.subprocess.Popen")
-    def test_link_opens_terminal_with_clipboard_prompt(self, popen):
+    def test_link_opens_terminal_with_clipboard_prompt(self, popen, _claude):
         link = "jbroutine:run?key=writing&day=2026-10-16&name=%EA%B8%80%EC%93%B0%EA%B8%B0"
         with patch("apps.routines.local_run.read_clipboard", return_value="# 일일루틴 · 글쓰기\r\n할 일"):
             call_command("routine_open", link, stdout=StringIO())
@@ -125,6 +126,20 @@ class TempRepoTests(Login):
         with patch("apps.routines.local_run.read_clipboard", return_value="아무 글"), self.assertRaises(SystemExit):
             call_command("routine_open", "jbroutine:run?key=writing", stdout=StringIO(), stderr=StringIO())
         popen.assert_not_called()
+
+    def test_find_claude_falls_back_to_desktop_app(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for ver in ["2.1.9", "2.1.295", "2.1.271"]:
+                d = Path(tmp) / "Claude" / "claude-code" / ver / "abc"
+                d.mkdir(parents=True)
+                (d / "claude.exe").write_text("")
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp}):
+                self.assertIn("2.1.295", find_claude())  # PATH 에 없으면 데스크톱 앱의 최신 버전
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none"}):
+                with self.assertRaises(RuntimeError):
+                    find_claude()
+        with patch("apps.routines.local_run.shutil.which", return_value="/usr/bin/claude"):
+            self.assertEqual(find_claude(), "/usr/bin/claude")
 
     def test_run_button_copies_and_opens_link(self):
         with override_settings(IS_SERVER=True):
@@ -289,8 +304,9 @@ class WritingPickTests(Login):
         self.client.post(self.url, {"day": "2026-10-16", "action": "default"})
         self.assertFalse(RoutinePick.objects.exists())
 
+    @patch("apps.routines.local_run.find_claude", return_value="claude")
     @patch("apps.routines.local_run.subprocess.Popen")
-    def test_launch_all_runs_every_routine_in_one_terminal(self, popen):
+    def test_launch_all_runs_every_routine_in_one_terminal(self, popen, _claude):
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         text = res.context["all_prompt"]
         self.assertIn("1. 일일 아이디어 → 2. 글쓰기 → 3. 프롬프트 최신화", text)
