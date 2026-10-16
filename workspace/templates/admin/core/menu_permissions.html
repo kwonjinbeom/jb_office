@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">관리화면</a> › 메뉴 › 메뉴 권한</div>
+{% endblock %}
+
+{% block content %}
+{% comment %}대메뉴마다 한 묶음(tbody): ↑↓ 로 대메뉴는 묶음째, 중메뉴는 그 안에서 옮긴다. 이름을 비우면 기본 이름.
+볼 수 있는 그룹을 하나도 고르지 않으면 모두에게 보인다. 슈퍼유저는 늘 본다.{% endcomment %}
+<div id="content-main" class="mp">
+  <p class="mp-help">이름·순서·보이기와 <strong>볼 수 있는 그룹</strong>을 정합니다. 그룹을 고르지 않으면 모두에게 보이고, 고르면 그 그룹 사용자만 메뉴를 보고 들어갈 수 있습니다 (슈퍼유저는 늘).
+  {% if not groups %}<br>아직 그룹이 없습니다 — <a href="{% url 'admin:auth_group_add' %}">인증 및 권한 › 그룹</a>에서 만든 뒤, 사용자에게 그룹을 주세요.{% endif %}</p>
+  <form id="mp-reset" method="post">{% csrf_token %}<input type="hidden" name="action" value="reset"></form>
+  <form id="mp-form" method="post">
+    {% csrf_token %}
+    <table class="mp-table">
+      <thead><tr><th style="width:72px">순서</th><th style="width:260px">메뉴 이름</th><th style="width:150px">기본 이름</th><th>볼 수 있는 그룹</th><th style="width:64px">보이기</th></tr></thead>
+      {% for row in rows %}
+      {% if not row.child %}{% if not forloop.first %}</tbody>{% endif %}<tbody class="mp-group">{% endif %}
+        <tr class="{% if row.child %}mp-child{% else %}mp-top{% endif %}{% if row.hidden %} is-off{% endif %}">
+          <td>
+            <input type="hidden" name="key" value="{{ row.menu.key }}">
+            <button type="button" class="mp-move" data-mp-move="up" title="위로" aria-label="{{ row.default }} 위로">↑</button><button type="button" class="mp-move" data-mp-move="down" title="아래로" aria-label="{{ row.default }} 아래로">↓</button>
+          </td>
+          <td><span class="mp-name">{% if row.child %}<span class="mp-branch" aria-hidden="true">└</span>{% endif %}<input type="text" name="title_{{ row.menu.key }}" value="{{ row.menu.title }}" placeholder="{{ row.default }}" maxlength="40" aria-label="{{ row.default }} 이름"></span></td>
+          <td class="mp-muted">{{ row.default }}</td>
+          <td>
+            {% for g in groups %}<label class="mp-group-pick"><input type="checkbox" name="groups_{{ row.menu.key }}" value="{{ g.pk }}"{% if g.pk in row.group_ids %} checked{% endif %}> {{ g.name }}</label>{% empty %}<span class="mp-muted">모두</span>{% endfor %}
+          </td>
+          <td class="mp-c"><input type="checkbox" name="show_{{ row.menu.key }}"{% if not row.hidden %} checked{% endif %} aria-label="{{ row.default }} 보이기"></td>
+        </tr>
+      {% if forloop.last %}</tbody>{% endif %}
+      {% endfor %}
+    </table>
+    <div class="submit-row">
+      <input type="submit" class="default" value="저장">
+      {% if changed %}<button type="submit" form="mp-reset" class="button mp-reset" title="이름·순서·보이기·그룹을 처음 상태로">기본값으로</button>{% endif %}
+    </div>
+  </form>
+</div>
+<script>
+(function () {
+  // ↑↓: 대메뉴 줄이면 묶음(tbody)째, 중메뉴 줄이면 같은 묶음 안의 중메뉴끼리만 바꾼다.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-mp-move]");
+    if (!btn) return;
+    var up = btn.getAttribute("data-mp-move") === "up", row = btn.closest("tr");
+    if (row.classList.contains("mp-top")) {
+      var group = row.closest("tbody"), other = up ? group.previousElementSibling : group.nextElementSibling;
+      if (!other || other.tagName !== "TBODY") return;
+      group.parentNode.insertBefore(up ? group : other, up ? other : group);
+    } else {
+      var sib = up ? row.previousElementSibling : row.nextElementSibling;
+      if (!sib || !sib.classList.contains("mp-child")) return;
+      row.parentNode.insertBefore(up ? row : sib, up ? sib : row);
+    }
+    btn.focus();
+  });
+  document.addEventListener("change", function (e) {
+    if (e.target.name && e.target.name.indexOf("show_") === 0) e.target.closest("tr").classList.toggle("is-off", !e.target.checked);
+  });
+})();
+</script>
+{% endblock %}
