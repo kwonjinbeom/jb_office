@@ -135,6 +135,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.core.trash_cleanup.TrashCleanupMiddleware",
+    "apps.core.middleware.MenuPermissionMiddleware",  # 관리화면 › 메뉴 권한: 볼 수 없는 메뉴의 화면은 403
 ]
 if REQUIRE_LOGIN:
     # 모든 화면에 로그인을 요구한다. 로그인/로그아웃/관리자 로그인 화면은 Django 가 예외 처리한다.

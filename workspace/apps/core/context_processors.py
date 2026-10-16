@@ -28,8 +28,8 @@ def navigation(request):
     except Exception:  # git 이 없거나 저장소 밖이어도 화면은 떠야 한다
         status = None
     return {
-        "MENUS": get_menus(),
-        "NAV": build_nav(active),
+        "MENUS": get_menus(getattr(request, "user", None)),
+        "NAV": build_nav(active, getattr(request, "user", None)),
         "ACTIVE_MENU": active or "home",
         "today": timezone.localdate(),
         "ASSET_VER": _asset_version(),

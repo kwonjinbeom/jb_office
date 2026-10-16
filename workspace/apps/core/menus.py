@@ -14,7 +14,8 @@
 - query: 같은 화면을 조건만 달리해 여는 하위 메뉴에 쓴다 (예: "?area=blog").
 - listing=False: '<상위 메뉴명> 리스트' 를 만들지 않는다. 하위 메뉴들이 곧 그 묶음의 화면일 때 (예: 아이디어 = 일일 + 내 아이디어).
 
-메뉴 관리 화면(core:menus)에서 이름·순서·보이기를 고치면 MenuSetting 에 남고, get_menus()·build_nav() 가 그 값을 입힌다.
+관리화면 › 메뉴 권한(admin, apps/core/admin.py)에서 이름·순서·보이기·볼 수 있는 그룹을 고치면 MenuSetting 에 남고,
+get_menus()·build_nav() 가 그 값을 입힌다. 사용자를 주면 그 사용자가 볼 수 있는 메뉴만 남긴다 (allowed).
 주소·하위 구조·새 메뉴는 여기서 고친다.
 """
 from dataclasses import dataclass, replace
@@ -86,32 +87,71 @@ def _settings() -> dict:
 
     from .models import MenuSetting
     try:
-        return {s.key: s for s in MenuSetting.objects.all()}
+        out = {}
+        for s in MenuSetting.objects.prefetch_related("groups"):
+            s.group_ids = {g.pk for g in s.groups.all()}
+            out[s.key] = s
+        return out
     except DatabaseError:  # migrate 전
         return {}
 
 
-def _apply(menus, saved, keep_hidden=False):
-    """기본 순서(코드) 위에 화면에서 고친 순서·이름·숨김을 입힌다."""
+def _user_groups(user):
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    if not hasattr(user, "_menu_group_ids"):
+        user._menu_group_ids = set(user.groups.values_list("pk", flat=True))
+    return user._menu_group_ids
+
+
+def allowed(key, user, saved=None) -> bool:
+    """이 사용자가 이 메뉴를 볼 수 있나. 그룹을 안 정한 메뉴는 모두, 슈퍼유저는 늘."""
+    if user is None or getattr(user, "is_superuser", False):
+        return True
+    saved = _settings() if saved is None else saved
+    s = saved.get(key)
+    if s is None or not getattr(s, "group_ids", None):
+        return True
+    return bool(s.group_ids & (_user_groups(user) or set()))
+
+
+def _apply(menus, saved, keep_hidden=False, user=None):
+    """기본 순서(코드) 위에 화면에서 고친 순서·이름·숨김을 입힌다. user 를 주면 볼 수 없는 메뉴를 뺀다."""
     out = []
     for i, menu in enumerate(menus):
         s = saved.get(menu.key)
         if s and s.hidden and not keep_hidden:
             continue
+        if not allowed(menu.key, user, saved):
+            continue
         menu = replace(menu, title=(s.title if s and s.title else menu.title),
-                       children=tuple(_apply(menu.children, saved, keep_hidden)))
+                       children=tuple(_apply(menu.children, saved, keep_hidden, user)))
         out.append(((s.order if s else 1000 + i), i, menu))  # 화면에서 아직 안 정한 메뉴(새 메뉴)는 뒤로
     return [m for _, _, m in sorted(out, key=lambda t: (t[0], t[1]))]
 
 
-def get_menus() -> list[Menu]:
-    """화면에 보이는 메뉴 (메뉴 관리에서 고친 이름·순서·숨김을 입힌 것)."""
-    return _apply(MENUS, _settings())
+def get_menus(user=None) -> list[Menu]:
+    """화면에 보이는 메뉴 (메뉴 권한에서 고친 이름·순서·숨김을 입히고, user 를 주면 볼 수 있는 것만)."""
+    return _apply(MENUS, _settings(), user=user)
 
 
 def all_menus() -> list[Menu]:
-    """메뉴 관리 화면용: 숨긴 것도 포함해 순서·이름만 입힌 목록."""
+    """메뉴 권한 화면용: 숨긴 것도 포함해 순서·이름만 입힌 목록."""
     return _apply(MENUS, _settings(), keep_hidden=True)
+
+
+def menu_keys_for(app_name: str, url_name: str) -> list[str]:
+    """이 화면(주소 이름)이 속한 메뉴 key 들. 권한 검사(middleware)에 쓴다.
+    core 앱은 화면마다(홈·설정 등은 메뉴가 아니다), 나머지는 앱 단위로 본다. 글쓰기 두 앱은 '글 관리' 아래다."""
+    app_name = {"writing": "posts", "naver_writing": "posts"}.get(app_name, app_name)
+    full = f"{app_name}:{url_name}"
+    keys = []
+    for menu in MENUS:
+        for m in (menu, *menu.children):
+            ns = m.url_name.split(":")[0]
+            if (app_name == "core" and m.url_name == full) or (app_name != "core" and ns == app_name):
+                keys.append(m.key)
+    return keys
 
 
 def find_menu(key: str) -> Menu | None:
@@ -125,10 +165,10 @@ def find_menu(key: str) -> Menu | None:
     return None
 
 
-def build_nav(active_key: str) -> list[dict]:
-    """좌측 메뉴용 트리. 현재 화면이 속한 가지는 펼친 채로 내보낸다."""
+def build_nav(active_key: str, user=None) -> list[dict]:
+    """좌측 메뉴용 트리. 현재 화면이 속한 가지는 펼친 채로 내보낸다. user 를 주면 볼 수 있는 메뉴만."""
     nav = []
-    for menu in get_menus():
+    for menu in get_menus(user):
         if not menu.children:
             nav.append({"menu": menu, "active": menu.key == active_key, "open": False, "children": []})
             continue

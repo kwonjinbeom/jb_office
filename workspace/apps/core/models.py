@@ -100,16 +100,21 @@ WEBHOOK_SECRET_KEY = "deploy_webhook_secret"
 
 
 class MenuSetting(models.Model):
-    """메뉴 관리 화면에서 고친 메뉴 이름·순서·보이기. 메뉴 자체(주소·하위 구조)는 apps/core/menus.py 에 있다."""
+    """관리화면 › 메뉴 권한에서 고친 메뉴 이름·순서·보이기와 볼 수 있는 그룹. 메뉴 자체(주소·하위 구조)는 apps/core/menus.py 에 있다.
+
+    groups 가 비어 있으면 모두에게 보인다. 고르면 그 그룹 사용자(와 슈퍼유저)만 보고 들어갈 수 있다 (menus.allowed, middleware).
+    """
 
     key = models.CharField("메뉴 키", max_length=60, unique=True)
     title = models.CharField("이름", max_length=40, blank=True, help_text="비우면 기본 이름")
     order = models.PositiveSmallIntegerField("순서", default=0)
     hidden = models.BooleanField("숨김", default=False)
+    groups = models.ManyToManyField("auth.Group", verbose_name="볼 수 있는 그룹", blank=True, related_name="menu_settings",
+                                    help_text="비우면 모두. 고르면 그 그룹 사용자와 슈퍼유저만")
 
     class Meta:
         ordering = ["order", "key"]
-        verbose_name = "메뉴 설정"
+        verbose_name = "메뉴 권한"
         verbose_name_plural = verbose_name
 
     def __str__(self):
