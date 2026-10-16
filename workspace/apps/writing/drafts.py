@@ -9,7 +9,9 @@ T26 부터(일일루틴 글쓰기)는 글 관리를 열 때 저절로 들어간�
   제작 정보의 `사이트: …` · `분류: 대 > 중 > 소` 줄(일일루틴 글쓰기)은 가져올 때 사이트·글 분류로 쓴다.
 """
 import re
+import subprocess
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 from django.conf import settings
@@ -80,3 +82,19 @@ def list_drafts(root: Path | None = None) -> list[Draft]:
         if d:
             out.append(d)
     return out
+
+
+def written_at(draft: "Draft", root: Path | None = None) -> datetime:
+    """원고를 쓴 때 = 원고.md 가 git 에 처음 올라온 시각 (없으면 파일 수정 시각).
+
+    가져온 글의 '만든 날'로 쓴다 — 가져온 때로 찍으면 밤에 쓴 원고가 다음 날 글이 된다 (2026-10-16 사용자).
+    """
+    f = (root or drafts_dir()) / draft.key / "원고.md"
+    try:
+        out = subprocess.run(["git", "log", "--diff-filter=A", "--format=%cI", "-1", "--", f.name],
+                             cwd=f.parent, capture_output=True, text=True, timeout=10).stdout.strip()
+        if out:
+            return datetime.fromisoformat(out)
+    except (OSError, subprocess.SubprocessError, ValueError):
+        pass
+    return datetime.fromtimestamp(draft.modified, tz=timezone.utc)
