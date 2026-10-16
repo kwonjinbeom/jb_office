@@ -81,6 +81,8 @@ def _draft_post(d):
     post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site)
     _classify_draft(post, d)
     post.save()
+    post.created_at = drafts_mod.written_at(d)  # 만든 날 = 원고를 쓴 날 (가져온 날이 아니라)
+    Post.all_objects.filter(pk=post.pk).update(created_at=post.created_at)
     return post
 
 
