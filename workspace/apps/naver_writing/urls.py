@@ -10,6 +10,7 @@ urlpatterns = [
     path("posts/", views.post_list, {"stage": Post.Stage.POST}, name="posts"),
     path("new/", views.create, name="create"),
     path("move/", views.move, name="move"),
+    path("send/", views.send, name="send"),
     path("convert/", views.convert, name="convert"),
     path("import/", views.import_drafts, name="import"),
     path("<int:pk>/", views.detail, name="detail"),

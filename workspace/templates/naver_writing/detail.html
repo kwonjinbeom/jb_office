@@ -15,6 +15,10 @@
   {% if prev_label %}<button class="btn" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
   {% if next_label %}<button class="btn" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
 </form>
+<form method="post" action="{% url 'naver_writing:send' %}" class="inline-form">
+  {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.path }}">
+  <button class="btn" title="복사본을 티스토리 글쓰기 임시 템플릿에 만든다">티스토리로 보내기</button>
+</form>
 <a class="btn primary" href="{% url 'naver_writing:edit' post.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>
 {% endblock %}
 
