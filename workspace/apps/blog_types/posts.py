@@ -86,7 +86,7 @@ def index(request):
     posts, counts = _collect(p, prefetch=stage == "post")
     list_q = _query(p)
     for post in posts:
-        post.list_url = f"{post.get_absolute_url()}?{list_q}"  # 글 보기 왼쪽 목록이 같은 조건을 쓰게
+        post.list_url = _view_url(post, list_q)  # 글 보기 (같은 조건의 목록과 함께)
 
     path = [label for label, _ in _path(kind, obj)][1:] if kind else []  # 맨 앞 '모든 글'은 빼고
     keep = f"stage={stage}&" + ("today=1&" if today else "")
@@ -111,34 +111,83 @@ def index(request):
     })
 
 
+def _view_url(post, list_q=""):
+    """글 보기 주소: 목록 조건 + 고른 글 (p=tistory:3)."""
+    pick = f"p={classify.writer_of(post)}:{post.pk}"
+    return f"{reverse('posts:view')}?{list_q + '&' if list_q else ''}{pick}"
+
+
+def _one(value):
+    writer, _, pk = (value or "").partition(":")
+    if writer in classify.WRITERS and pk.isdigit():
+        return classify.post_model(writer).objects.filter(pk=pk).first()
+    return None
+
+
 def post_list_for(request, post):
-    """글 보기 왼쪽의 글 목록: 글 관리에서 넘어온 조건(단계·분류·검색·오늘) 그대로. 조건이 없으면 그 글의 단계 전체.
-    위·아래 화살표도 이 목록 순서를 따른다 (티스토리·네이버 글이 섞여 있어도)."""
+    """글 보기 왼쪽의 글 목록: 단계 탭(임시글·검토글·발행예정글)의 글 + 글 관리에서 넘어온 조건(분류·검색·오늘).
+    단계가 주소에 없으면 그 글의 단계. 위·아래 화살표, 옮기기·휴지통 뒤에 갈 글도 이 목록 순서를 따른다 (한 건씩 처리)."""
     p = _params(request, stage=post.stage)
     posts, counts = _collect(p)
     list_q = _query(p)
+    me = (classify.writer_of(post), post.pk)
     current = None
     for item in posts:
-        item.list_url = f"{item.get_absolute_url()}?{list_q}"
-        if item.pk == post.pk and item._meta.label == post._meta.label:
+        item.list_url = _view_url(item, list_q)
+        item.path_label = classify.label_of(item)
+        if (item.writer, item.pk) == me:
             current = item
+    keep = _query(p, stage="")
     ctx = {
         "pl_items": posts,
         "pl_current": current,
         "pl_stage": p["stage"], "pl_stage_label": dict(STAGES)[p["stage"]],
         "pl_q": p["q"], "pl_sel": p["sel"], "pl_today": p["today"],
         "pl_path": [label for label, _ in _path(p["kind"], p["obj"])][1:] if p["kind"] else [],
-        "pl_today_url": "?" + _query(p, today="" if p["today"] else "1"),
-        "pl_clear_url": "?" + _query(p, sel="", q="", today=""),
+        "pl_today_url": f"{reverse('posts:view')}?{_query(p, today='' if p['today'] else '1')}",
+        "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='')}",
         "pl_query": list_q,
-        "pl_keep": _query(p, stage=""),  # 단계는 빼고 (단계를 옮긴 뒤 그 글의 새 단계 목록으로)
+        "pl_keep": keep,
+        "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
+                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
         "pl_index_url": f"{reverse('posts:index')}?{list_q}",
+        "pl_next_url": f"{reverse('posts:view')}?{list_q}",  # 옮기기·휴지통 뒤: 목록의 다음 글 (없으면 이 단계 첫 글)
     }
     if current is not None:  # 목록에 없으면(조건에 안 맞는 글) 화살표는 원래대로 그 편집기의 같은 단계 순서
         i = posts.index(current)
         ctx["above"] = posts[i - 1] if i > 0 else None
         ctx["below"] = posts[i + 1] if i + 1 < len(posts) else None
+        nxt = ctx["below"] or ctx["above"]
+        if nxt is not None:
+            ctx["pl_next_url"] = nxt.list_url
     return ctx
+
+
+def view(request):
+    """블로그·카페 › 글 보기: 한 건씩 보면서 처리한다. ?stage=…&p=tistory:3 (+ 분류·검색·오늘).
+    고른 글이 없으면 그 단계 목록의 첫 글. 단계에 글이 없으면 빈 화면."""
+    request.nav_key = "posts_view"
+    post = _one(request.GET.get("p"))
+    if post is None:
+        posts, _ = _collect(_params(request))
+        post = posts[0] if posts else None
+    if post is not None:
+        if classify.writer_of(post) == "naver":
+            from apps.naver_writing.views import render_detail
+        else:
+            from apps.writing.views import render_detail
+        return render_detail(request, post)
+    p = _params(request)
+    _, counts = _collect(p)
+    return render(request, "blog_types/view_empty.html", {
+        "page_title": "글 보기",
+        "pl_stage_label": dict(STAGES)[p["stage"]],
+        "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
+                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
+        "pl_index_url": f"{reverse('posts:index')}?{_query(p)}",
+        "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='')}",
+        "has_filter": bool(p["sel"] or p["q"] or p["today"]),
+    })
 
 
 def _picked(request):

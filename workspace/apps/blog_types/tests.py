@@ -370,24 +370,35 @@ class PostHubTests(TestCase):
         self.T, self.N = TistoryPost, NaverPost
         self.season = PostType.objects.get(name="시즌 달력")
 
-    def test_detail_shows_post_list_with_same_conditions(self):
-        """글 관리에서 글을 누르면 글 보기로 가고, 왼쪽에는 분류 트리 대신 같은 조건의 글 목록이 나온다."""
+    def test_view_screen_lists_stage_posts_with_category(self):
+        """글 관리는 여러 건을 한 번에, 글 보기는 한 건씩. 글 관리 행을 누르면 글 보기(같은 조건)로 가고,
+        글 보기 왼쪽에는 그 단계의 글 목록이 행마다 분류와 함께 나온다."""
         t1 = self.T.objects.create(title="티 글 하나", stage="temp", bt_category=self.season.category, bt_type=self.season)
         n1 = self.N.objects.create(title="네 글 둘", stage="temp", bt_category=self.season.category, bt_type=self.season)
         self.T.objects.create(title="다른 분류 글", stage="temp")
+        self.T.objects.create(title="검토 중인 글", stage="review")
+        view = reverse("posts:view")
         res = self.client.get(reverse("posts:index"), {"stage": "temp", "sel": self.season.sel})
-        self.assertContains(res, f'href="{t1.get_absolute_url()}?stage=temp&amp;sel={self.season.sel}"')
+        self.assertContains(res, f'href="{view}?stage=temp&amp;sel={self.season.sel}&amp;p=tistory:{t1.pk}"')
+        self.assertContains(res, "data-trash-checked")  # 체크한 것을 한꺼번에 삭제
 
-        res = self.client.get(t1.get_absolute_url(), {"stage": "temp", "sel": self.season.sel})
+        res = self.client.get(view, {"stage": "temp", "sel": self.season.sel, "p": f"tistory:{t1.pk}"})
+        self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")
         self.assertNotContains(res, 'data-bt-tree="class"')  # 글 보기에는 분류 트리가 없다
-        self.assertContains(res, 'data-bt-tree="list"')
-        titles = [p.title for p in res.context["pl_items"]]
-        self.assertEqual(sorted(titles), ["네 글 둘", "티 글 하나"])  # 같은 분류, 두 편집기 글을 함께
+        self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 글 둘", "티 글 하나"])
         self.assertEqual(res.context["pl_current"].title, "티 글 하나")
-        self.assertIn(n1.get_absolute_url(), res.content.decode())  # 네이버 글도 목록에서 바로 연다
+        self.assertContains(res, f"{self.season.category.section.name} › {self.season.category.code}. {self.season.category.name} › {self.season.name}")
+        self.assertContains(res, f"p=naver:{n1.pk}")  # 네이버 글도 같은 화면에서
 
-        res = self.client.get(t1.get_absolute_url())  # 조건 없이 열면 그 글의 단계 전체
-        self.assertEqual(len(res.context["pl_items"]), 3)
+        res = self.client.get(view, {"stage": "review"})  # 고른 글이 없으면 그 단계의 첫 글
+        self.assertEqual(res.context["post"].title, "검토 중인 글")
+        self.assertEqual([p.title for p in res.context["pl_items"]], ["검토 중인 글"])
+        res = self.client.get(view, {"stage": "post"})  # 글이 없는 단계
+        self.assertContains(res, "발행예정글에 글이 없습니다")
+
+    def test_menu_has_view_screen(self):
+        res = self.client.get(reverse("posts:index"))
+        self.assertContains(res, f'href="{reverse("posts:view")}"')
 
     def test_today_filter(self):
         from datetime import timedelta
@@ -450,8 +461,9 @@ class PostHubTests(TestCase):
     def test_writer_pages_highlight_post_hub_menu(self):
         p = self.T.objects.create(title="글", stage="temp")
         res = self.client.get(p.get_absolute_url())
-        self.assertEqual(res.context["ACTIVE_MENU"], "posts")
-        self.assertContains(res, f'{reverse("posts:index")}?stage=temp"')
+        self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")  # 글 하나를 보는 화면은 '글 보기' 메뉴
+        self.assertContains(res, f'{reverse("posts:view")}?stage=review"')  # 단계 탭은 글 보기 안에서
+        self.assertContains(res, f'{reverse("posts:index")}?stage=temp"')  # 목록 머리의 '글 관리'
 
 
 class MappingPanesTests(TestCase):

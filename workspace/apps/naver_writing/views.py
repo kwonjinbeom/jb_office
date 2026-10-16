@@ -112,7 +112,12 @@ def _neighbors(post):
 
 def detail(request, pk):
     """글 보기: 블로그에 올라간 모습 그대로 보여 주고, 그대로 복사해 붙여넣게 한다."""
-    post = get_object_or_404(Post, pk=pk)
+    return render_detail(request, get_object_or_404(Post, pk=pk))
+
+
+def render_detail(request, post):
+    """글 보기 화면 (블로그·카페 › 글 보기, posts:view 도 이것을 그린다). 왼쪽은 같은 단계의 글 목록."""
+    request.nav_key = "posts_view"
     body_html = render_body(post.body)
     counted = plain_text(body_html, drop_slots=True)
     above, below = _neighbors(post)

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}글 보기{% endblock %}
+
+{% block toolbar %}
+<div class="wr-tabs-row">{% include "blog_types/_view_tabs.html" %}</div>
+{% endblock %}
+
+{% block content %}
+<div class="empty">
+  <p>{{ pl_stage_label }}에 {% if has_filter %}조건에 맞는 {% endif %}글이 없습니다.</p>
+  <p class="small muted">{% if has_filter %}<a href="{{ pl_clear_url }}">조건 없이 보기</a> · {% endif %}<a href="{{ pl_index_url }}">글 관리로</a></p>
+</div>
+{% endblock %}

@@ -1427,6 +1427,8 @@ a.br-addr:hover { color: var(--accent); }
 .pl-item:hover { background: var(--hover); text-decoration: none; }
 .pl-item.on { background: var(--accent-weak); }
 .pl-item.on .pl-title { color: var(--accent); font-weight: 600; }
+.pl-path { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-item.on .pl-path { color: var(--accent); opacity: .8; }
 .pl-title { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pl-meta { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 사이트별 템플릿 */
