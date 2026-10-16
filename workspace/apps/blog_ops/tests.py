@@ -37,7 +37,7 @@ class BlogOpsTests(TestCase):
         self.assertEqual(feeds.feed_url(Blog.objects.get(name="black_lukey")), "https://rss.blog.naver.com/black_lukey.xml")
         self.assertEqual(feeds.feed_url(Blog.objects.get(platform="blogger")),
                          "https://bambam2222.blogspot.com/feeds/posts/default?alt=rss")
-        self.assertEqual(feeds.feed_url(Blog.objects.get(name="memorily")), "")  # 주소가 아직 없다
+        self.assertEqual(feeds.feed_url(Blog.objects.get(name="memorily")), "https://jinbaam.tistory.com/rss")
 
     def test_parse_rss_and_atom(self):
         now = timezone.now().strftime("%a, %d %b %Y %H:%M:%S +0000")
@@ -64,7 +64,8 @@ class BlogOpsTests(TestCase):
         state = feeds.sync(self.nunip, fetch=blocked)
         self.assertFalse(state.ok)
         self.assertIn("허용 목록", state.message)
-        state = feeds.sync(Blog.objects.get(name="memorily"))
+        no_addr = Blog.objects.get(platform="wordpress")
+        state = feeds.sync(no_addr)
         self.assertIn("주소가 없어", state.message)
 
     def test_week_counts_plan_and_feed_once(self):
