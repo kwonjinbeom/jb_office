@@ -162,7 +162,7 @@
     confirm.textContent = "이동 중…";
     post(cfg.trashMoveUrl, {items: pending}).then(function (data) {
       flash({message: data.count + "개 항목을 휴지통으로 이동했어요.", entries: data.entries},
-        opener && opener.hasAttribute("data-trash-trigger") ? cfg.trashListUrl : null);
+        opener && opener.hasAttribute("data-trash-trigger") ? (opener.getAttribute("data-trash-next") || cfg.trashListUrl) : null);
     }).catch(function (err) {
       showError(err.message);
       busy = false;

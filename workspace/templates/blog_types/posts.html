@@ -22,23 +22,24 @@
     </nav>
     <div class="filter-bar">
       <form method="get" class="inline-form">
-        <input type="hidden" name="stage" value="{{ stage }}">{% if sel %}<input type="hidden" name="sel" value="{{ sel }}">{% endif %}
+        <input type="hidden" name="stage" value="{{ stage }}">{% if sel %}<input type="hidden" name="sel" value="{{ sel }}">{% endif %}{% if today %}<input type="hidden" name="today" value="1">{% endif %}
         <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용 검색  ( / )"></div>
         <button class="btn sm" type="submit">검색</button>
-        {% if q or sel %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
+        <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 보기 (다시 누르면 전체)">{% include "includes/ic.html" with name="calendar" %}오늘</a>
+        {% if q or sel or today %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
       </form>
       {% if posts %}
       <span class="wr-bulk">
         <span class="muted small">체크한 것을</span>
-        {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시로{% else %}검토로{% endif %}</button>{% endif %}
-        {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토로{% else %}포스트로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+        {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시글로{% else %}검토글로{% endif %}</button>{% endif %}
+        {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토글로{% else %}발행예정으로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
       </span>
       {% endif %}
     </div>
     <form id="ph-bulk" method="post" action="{% url 'posts:bulk' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 
     <div class="grid-wrap">
-      <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}1076{% else %}916{% endif %}px">
+      <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}1040{% else %}800{% endif %}px">
         <thead>
           <tr>
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
@@ -48,16 +49,16 @@
             {% if stage == 'review' %}<th style="width:220px">검토</th>{% endif %}
             {% if stage == 'post' %}<th style="width:186px">작성</th><th style="width:128px">발행</th><th style="width:150px">넣은 곳 · 변환</th>{% endif %}
             <th style="width:92px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>
-            <th style="width:{% if stage == 'review' %}180{% else %}100{% endif %}px"></th>
+            <th style="width:{% if stage == 'review' %}226{% else %}120{% endif %}px"></th>
           </tr>
         </thead>
         <tbody>
           {% for g in groups %}
           <tr class="wr-group"><td colspan="{{ cols }}">{{ g.label }} <span class="cnt">{{ g.posts|length }}</span></td></tr>
           {% for p in g.posts %}
-          <tr {% trash_attrs p %} data-href="{{ p.get_absolute_url }}">
+          <tr {% trash_attrs p %} data-href="{{ p.list_url }}">
             <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
-            <td class="title-cell mid"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a></td>
+            <td class="title-cell mid"><a href="{{ p.list_url }}">{{ p.title }}</a></td>
             <td class="mid small wr-target" title="이 글을 쓴 대상 계정">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
             {% if stage == 'temp' %}<td class="mid small muted"><span class="wr-excerpt">{{ p.excerpt|default:"-" }}</span></td>{% endif %}
             {% if stage == 'review' %}
@@ -72,14 +73,14 @@
             <td class="mid r">
               <form method="post" action="{% if p.writer == 'naver' %}{% url 'naver_writing:move' %}{% else %}{% url 'writing:move' %}{% endif %}" class="inline-form">
                 {% csrf_token %}<input type="hidden" name="pk" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
-                {% if prev_to %}<button class="btn sm" name="to" value="{{ p.prev_stage|default:'' }}" {% if not p.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시로{% else %}검토로{% endif %}</button>{% endif %}
-                {% if next_to %}<button class="btn sm primary" name="to" value="{{ p.next_stage }}">{% if stage == 'temp' %}검토로{% else %}포스트로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+                {% if prev_to %}<button class="btn sm" name="to" value="{{ p.prev_stage|default:'' }}" {% if not p.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시글로{% else %}검토글로{% endif %}</button>{% endif %}
+                {% if next_to %}<button class="btn sm primary" name="to" value="{{ p.next_stage }}">{% if stage == 'temp' %}검토글로{% else %}발행예정으로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
               </form>
             </td>
           </tr>
           {% endfor %}
           {% empty %}
-          <tr><td colspan="{{ cols }}" class="grid-empty">{% if q %}검색 결과가 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>
+          <tr><td colspan="{{ cols }}" class="grid-empty">{% if q or today %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>
           {% endfor %}
         </tbody>
       </table>

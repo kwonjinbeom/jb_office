@@ -7,7 +7,7 @@
 
 {% block actions %}
 {% if stage == 'temp' %}<a class="btn" href="{% url 'naver_writing:import' %}" title="저장소의 네이버원고 폴더(일일루틴이 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
-<a class="btn primary" href="{% url 'naver_writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}{% if stage == 'post' %}새 포스트{% else %}새 템플릿{% endif %}</a>
+<a class="btn primary" href="{% url 'naver_writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}새 글</a>
 {% endblock %}
 
 {% block toolbar %}
@@ -22,7 +22,7 @@
   <span class="wr-bulk">
     <span class="muted small">체크한 것을</span>
     {% if prev_label %}<button class="btn sm" form="wr-bulk" name="to" value="{% if stage == 'review' %}temp{% else %}review{% endif %}">{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
-    <button class="btn sm" form="wr-bulk" formaction="{% url 'naver_writing:send' %}" title="복사본을 티스토리 글쓰기 임시 템플릿에 만든다">티스토리로 보내기</button>
+    <button class="btn sm" form="wr-bulk" formaction="{% url 'naver_writing:send' %}" title="복사본을 티스토리 글쓰기 임시글에 만든다">티스토리로 보내기</button>
     {% if next_label %}<button class="btn sm" form="wr-bulk" name="to" value="{% if stage == 'temp' %}review{% else %}post{% endif %}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
   </span>
   {% endif %}
@@ -65,7 +65,7 @@
         <td class="mid r">
           <form method="post" action="{% url 'naver_writing:move' %}" class="inline-form">
             {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
-            {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 포스트는 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
+            {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
             {% if next_label %}<button class="btn sm primary" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
           </form>
         </td>
@@ -74,9 +74,9 @@
       {% empty %}
       <tr><td colspan="{% if stage == 'post' %}7{% elif stage == 'review' %}6{% else %}5{% endif %}" class="grid-empty">
         {% if q %}검색 결과가 없습니다.
-        {% elif stage == 'temp' %}아직 임시 템플릿이 없습니다. 오른쪽 위 <strong>새 템플릿</strong>으로 추가하세요.
-        {% elif stage == 'review' %}검토할 템플릿이 없습니다. 임시 템플릿에서 <strong>검토로</strong> 보내면 여기에 모입니다.
-        {% else %}관리할 포스트가 없습니다. 검토 템플릿에서 <strong>포스트로</strong> 보내면 여기에 모입니다.{% endif %}
+        {% elif stage == 'temp' %}아직 임시글이 없습니다. 오른쪽 위 <strong>새 글</strong>으로 추가하세요.
+        {% elif stage == 'review' %}검토할 글이 없습니다. 임시글에서 <strong>검토글로</strong> 보내면 여기에 모입니다.
+        {% else %}발행 예정 글이 없습니다. 검토글에서 <strong>발행예정으로</strong> 보내면 여기에 모입니다.{% endif %}
       </td></tr>
       {% endfor %}
     </tbody>

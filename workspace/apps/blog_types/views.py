@@ -3,7 +3,7 @@
 - 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 오른쪽 **위** 목록이 그 카테고리에 넣은 글(매핑)로
   바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 미저장 · 임시저장 · 발행, 그리고 변환 상태.
 - 글 분류 (가운데): 모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위 (티스토리·네이버 나눔 없음). 누르면 오른쪽 **아래** 목록이
-  그 분류의 글(임시 → 검토 → 포스트 전부)로 바뀌고, 포스트 관리 글은 그 자리에서 아무 사이트 카테고리에나 넣는다.
+  그 분류의 글(임시 → 검토 → 포스트 전부)로 바뀌고, 발행예정글은 그 자리에서 아무 사이트 카테고리에나 넣는다.
   사이트·플랫폼에 맞추는 일은 마지막 단계(사이트별 템플릿의 변환)에서 한다. 숫자는 발행 완료가 아닌 글 수.
 
 주소: ?site=b2|k7 (위) &sel=g1|c3|t5|s9|u (아래) &edit=<고칠 것의 sel>. 두 고르기는 서로 유지된다.
@@ -204,7 +204,7 @@ def _posts(kind, obj):
     posts.sort(key=classify.sort_key)
     for p in posts:
         p.cls_label = classify.label_of(p)
-        p.step = "발행" if p.is_published else {"temp": "임시", "review": "검토", "post": "포스트"}[p.stage]
+        p.step = "발행" if p.is_published else {"temp": "임시글", "review": "검토글", "post": "발행예정"}[p.stage]
     return posts
 
 
@@ -225,7 +225,7 @@ FIELD = {"tistory": "tistory_post", "naver": "naver_post"}
 
 
 def _candidates(cat):
-    """이 사이트 카테고리에 넣을 수 있는 글: 포스트 관리 글 중 아직 안 넣은 것 (두 편집기의 글 모두). 값은 'tistory:3' 꼴."""
+    """이 사이트 카테고리에 넣을 수 있는 글: 발행예정글 중 아직 안 넣은 것 (두 편집기의 글 모두). 값은 'tistory:3' 꼴."""
     taken = {(w, pk) for w in FIELD for pk in Placement.objects.filter(
         site_category=cat, **{f"{FIELD[w]}__isnull": False}).values_list(f"{FIELD[w]}_id", flat=True)}
     posts = [p for p in classify.all_posts(lambda qs: classify.with_classification(qs.filter(stage="post")))
