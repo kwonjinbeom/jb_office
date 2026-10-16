@@ -1,10 +1,10 @@
 """타입·카테고리 화면: 트리 두 개 + 오른쪽 상세.
 
 - 글 분류: 대분류 › 카테고리 › 타입 › 하위
-- 사이트 카테고리: 사이트(규칙 화면의 블로그) › 카테고리 › 하위 카테고리 — 각 블로그에 실제로 있는 메뉴 이름
+- 사이트 카테고리: 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리 — 각 블로그에 실제로 있는 메뉴 이름
 
 한 화면에서 고른다: ?sel=g1 (대분류) · c3 (카테고리) · t5 (타입) · s9 (하위) · b2 (사이트) · k7 (사이트 카테고리).
-트리에는 이름과 하위 개수만, 설명은 고른 뒤 오른쪽에서 본다. 사이트 자체는 규칙 화면에서 고친다.
+트리에는 이름과 하위 개수만, 설명은 고른 뒤 오른쪽에서 본다. 사이트 자체는 운영 화면에서 고친다.
 """
 import string
 
@@ -26,7 +26,7 @@ PREFIX = {"g": "section", "c": "category", "t": "type", "s": "sub", "b": "site",
 KIND_LABEL = {"section": "대분류", "category": "카테고리", "type": "타입", "sub": "하위",
               "site": "사이트", "sitecat": "사이트 카테고리"}
 CHILD = {"section": "category", "category": "type", "type": "sub", "site": "sitecat"}
-EDITABLE = {"section", "category", "type", "sub", "sitecat"}  # 사이트는 규칙 화면에서 고친다
+EDITABLE = {"section", "category", "type", "sub", "sitecat"}  # 사이트는 운영 화면에서 고친다
 
 
 def _nav(request):
