@@ -1073,8 +1073,9 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 /* 글 매핑 관리 오른쪽: 위 매핑 2.5 · 아래 글 7.5 를 함께, 각자 스크롤 */
 .bt-panes { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .bt-pane { min-height: 0; overflow: auto; padding: 12px var(--gutter) 16px; display: grid; gap: 10px; align-content: start; transition: opacity .12s; }
-.bt-pane-top { flex: 1 1 0; border-bottom: 1px solid var(--border); }
-.bt-pane-bottom { flex: 3 1 0; }
+/* 위 칸은 내용만큼 늘어난다 (최소 25% · 최대 55%), 넘치면 그때만 칸 안에서 스크롤. 아래 칸이 나머지 */
+.bt-pane-top { flex: 0 0 auto; min-height: 25%; max-height: 55%; border-bottom: 1px solid var(--border); }
+.bt-pane-bottom { flex: 1 1 0; }
 .bt-pane.is-loading { opacity: .55; }
 .bt-pane-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .bt-pane-head .bt-path { font-size: 13.5px; min-width: 0; }
