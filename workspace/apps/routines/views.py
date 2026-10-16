@@ -8,15 +8,15 @@
 PC 서버가 안내문을 workspace/.routine/ 에 쓰고 새 터미널에서 claude 를 연다. 실서버 화면에서 눌러도 PC 에서 돈다.
 claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
-갱신: 평가(Evaluation)와 루틴의 점검 관점을 담은 갱신 안내문으로 AI 가 프롬프트 md 를 고쳐 main 에 올린다.
-바뀐 md 는 프롬프트 관리 화면을 열 때 PromptVersion 으로 남는다.
+프롬프트 최신화: 리스트의 한 줄(루틴 키 prompt_update). 오늘의 자료 'evaluations'(루틴별 평가·점검 관점)를 보고
+AI 가 각 루틴의 프롬프트 md 를 고쳐 main 에 올린다. 바뀐 md 는 화면을 열 때 PromptVersion 으로 남는다.
 """
 import hashlib
 import os
 import re
 import subprocess
 from collections import Counter
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -119,6 +119,11 @@ def _auto(key, lo, hi):
     if key == "naver":
         from apps.naver_writing.models import Post
         return _by_created(Post, lo, hi)
+    if key == "prompt_update":  # 그날 바뀐 프롬프트 수 (첫 버전은 빼고)
+        out = Counter()
+        for at in PromptVersion.objects.filter(number__gt=1, captured_at__date__range=(lo, hi)).values_list("captured_at", flat=True):
+            out[timezone.localtime(at).date()] += 1
+        return out
     return Counter()
 
 
@@ -175,7 +180,23 @@ def _standard(day):
     return request_text(standard, day.isoformat())
 
 
-DATA_TITLES = {"sites": "사이트·체크 (운영 화면)", "existing": "이미 있는 글 (겹치지 않게)", "standard": "검색 표준 (최신판)"}
+def _evaluations():
+    """루틴마다 프롬프트 md · 점검 관점 · 나의 평가 (마지막으로 프롬프트가 바뀐 뒤 남긴 것은 [새])."""
+    blocks = []
+    for r in Routine.objects.all():
+        since = _last_update(r)
+        evals = list(r.evaluations.order_by("-day")[:40])
+        new = sum(1 for e in evals if since is None or e.updated_at > since)
+        lines = [f"### {r.name} — `{r.prompt_doc or '프롬프트 md 없음'}`",
+                 f"점검 관점: {r.review_focus or '(없음)'}", f"나의 평가 ({len(evals)}개, 새 {new}개):"]
+        lines += [f"- {e.day} · {e.score}점{' [새]' if since is None or e.updated_at > since else ''} · {e.comment or '(코멘트 없음)'}"
+                  for e in evals] or ["- (평가 없음: 점검 관점만으로 손본다)"]
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+DATA_TITLES = {"sites": "사이트·체크 (운영 화면)", "existing": "이미 있는 글 (겹치지 않게)", "standard": "검색 표준 (최신판)",
+               "evaluations": "루틴별 평가·점검 관점"}
 
 
 def data_text(routine, key, day):
@@ -185,6 +206,8 @@ def data_text(routine, key, day):
         return _existing(routine.key, day)
     if key == "standard":
         return _standard(day)
+    if key == "evaluations":
+        return _evaluations()
     return ""
 
 
@@ -225,39 +248,17 @@ def launcher(routine, mode, day):
     return text
 
 
-def update_prompt(routine, mode, day, restore=None):
-    """갱신 안내문: 평가와 점검 관점으로 프롬프트 md 를 고친다. restore 면 그 버전 내용으로 되돌린다."""
-    evals = list(Evaluation.objects.filter(routine=routine).order_by("-day")[:60])
-    since = _last_update(routine)
-    lines = [f"# 일일루틴 프롬프트 갱신 · {routine.name} — {day} ({'로컬 PC' if mode == 'local' else '클라우드'})", "",
-             f"대상 프롬프트: `{routine.prompt_doc}` (로컬·클라우드가 함께 보는 지시)",
-             f"클라우드에만 해당하는 제약은 `{CLOUD_DOC}` 에 고친다.", "", "## 할 일"]
-    if restore is not None:
-        lines += [f"1. 대상 프롬프트를 아래 'v{restore.number} 내용'으로 되돌린다 (사용자가 좋았던 버전으로 고름).",
-                  "2. 맨 아래 '평가에서 배운 점'에 되돌린 날짜와 이유를 한 줄 더한다.",
-                  f"3. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} v{restore.number} 로 되돌림`.",
-                  "", f"## v{restore.number} 내용", "", restore.content]
-    else:
-        lines += [
-            "1. 대상 프롬프트와 그 안에서 읽게 하는 md 를 읽는다.",
-            "2. 아래 '나의 평가'를 분석한다: 점수가 낮은 날과 높은 날의 차이, 코멘트에서 반복되는 요구, [새] 표시 평가를 먼저.",
-            f"3. 이 루틴의 일 자체도 점검한다. 갱신 때 볼 관점: {routine.review_focus or '(없음)'}. 필요하면 웹에서 최신 기준(플랫폼 정책 등)을 확인한다.",
-            "4. 대상 프롬프트를 고친다. 지시는 짧고 구체적으로, 서로 부딪히는 지시는 정리한다. 맨 아래 '평가에서 배운 점'에 이번 갱신 날짜와 바꾼 이유를 한 줄씩 더한다.",
-            "5. 프롬프트 md 만 고친다. 루틴 결과물이나 다른 안내 md 는 고치지 않고, 고칠 점이 있으면 마지막 보고에 적는다.",
-            f"6. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} 갱신 (평가 {len(evals)}개)`.",
-            "", "## 나의 평가"]
-        for e in evals:
-            new = " [새]" if since is None or e.updated_at > since else ""
-            lines.append(f"- {e.day} · {e.score}점{new} · {e.comment or '(코멘트 없음)'}")
-        if not evals:
-            lines.append("- (아직 없음: 점검 관점만으로 손본다)")
-        today = timezone.localdate()
-        counts = _auto(routine.key, today - timedelta(days=13), today)
-        fixed = {d.day: d.done for d in RoutineDay.objects.filter(routine=routine, day__gte=today - timedelta(days=13))}
-        lines += ["", f"## 최근 14일 결과 수 (하루 {routine.daily}{routine.unit} 목표)"]
-        lines += [f"- {d}: {fixed.get(d, counts[d])}" for d in period.days_between(today - timedelta(days=13), today)]
+def restore_prompt(version, mode, day):
+    """좋았던 버전으로 되돌리는 안내문: AI 가 프롬프트 md 를 그 버전 내용으로 고쳐 main 에 올린다."""
+    routine = version.routine
+    lines = [f"# 일일루틴 프롬프트 되돌리기 · {routine.name} v{version.number} — {day} ({'로컬 PC' if mode == 'local' else '클라우드'})", "",
+             f"대상 프롬프트: `{routine.prompt_doc}`", "", "## 할 일",
+             f"1. 대상 프롬프트를 아래 'v{version.number} 내용'으로 되돌린다 (사용자가 좋았던 버전으로 고름).",
+             "2. 맨 아래 '평가에서 배운 점'에 되돌린 날짜와 이유를 한 줄 더한다.",
+             f"3. main 에 커밋·push 한다. 커밋 메시지: `prompt: {routine.name} v{version.number} 로 되돌림`."]
     if mode == "cloud":
-        lines += ["", f"(클라우드: `{CLOUD_DOC}` 도 따른다)"]
+        lines.append(f"(클라우드: `{CLOUD_DOC}` 도 따른다)")
+    lines += ["", f"## v{version.number} 내용", "", version.content]
     text = "\n".join(lines).rstrip() + "\n"
     if mode == "local":
         text += REPORT.format(key=routine.key, day=day)
@@ -398,6 +399,8 @@ def index(request):
     start, end = period.bounds(mode, sel)
     lo, hi = period.strip_bounds(mode, sel)
     routines = list(Routine.objects.all())
+    for r in routines:  # 프롬프트 md 가 바뀌었으면 버전으로 남긴다 (프롬프트 최신화 결과 수)
+        capture_version(r)
     fixed = {(r.routine_id, r.day): r.done for r in RoutineDay.objects.filter(day__range=(lo, hi))}
     auto = {r.pk: _auto(r.key, lo, hi) for r in routines}
 
@@ -495,8 +498,6 @@ def prompts(request):
         "today": today,
         "on_server": settings.IS_SERVER,
         "launch_action": launch_action(),
-        "update_local": update_prompt(routine, "local", today),
-        "update_cloud": update_prompt(routine, "cloud", today),
     })
 
 
@@ -538,14 +539,14 @@ def version_star(request, pk):
 
 
 def version_restore(request, pk):
-    """좋았던 버전으로 되돌리는 갱신 안내문 (로컬 실행 / 클라우드 복사)."""
+    """좋았던 버전으로 되돌리는 안내문 (로컬 실행 / 클라우드 복사)."""
     _nav(request, "routine_prompts")
     v = get_object_or_404(PromptVersion, pk=pk)
     today = timezone.localdate()
     return render(request, "routines/restore.html", {
         "page_title": f"{v.routine.name} v{v.number} 로 되돌리기", "version": v, "routine": v.routine, "today": today,
         "on_server": settings.IS_SERVER, "launch_action": launch_action(),
-        "local": update_prompt(v.routine, "local", today, restore=v), "cloud": update_prompt(v.routine, "cloud", today, restore=v)})
+        "local": restore_prompt(v, "local", today), "cloud": restore_prompt(v, "cloud", today)})
 
 
 def doc(request, rel):
