@@ -173,3 +173,20 @@ class Placement(TrashableModel):
         """휴지통 목록에 보이는 이름"""
         post = self.post
         return f"{post.title if post else '글'} → {self.site_category.blog.name} › {self.site_category}"
+
+
+class ClassChange(models.Model):
+    """AI 가 저장소에 남긴 분류 변경 파일(일일루틴/분류변경/*.json) 한 개를 DB 에 반영한 기록. 같은 파일은 한 번만."""
+
+    name = models.CharField("파일", max_length=120, unique=True)
+    applied_at = models.DateTimeField("반영한 때", auto_now_add=True)
+    ok = models.BooleanField("모두 반영", default=True)
+    log = models.TextField("결과", blank=True)
+
+    class Meta:
+        ordering = ["-applied_at", "-pk"]
+        verbose_name = "분류 변경 기록"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name

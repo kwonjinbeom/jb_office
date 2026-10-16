@@ -8,11 +8,16 @@
 PC 서버가 안내문을 workspace/.routine/ 에 쓰고 새 터미널에서 claude 를 연다. 실서버 화면에서 눌러도 PC 에서 돈다.
 claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
+글쓰기(키 writing): 티스토리·네이버 구분 없이 하루 11편. 그날 쓸 분류·편수는 RoutinePick (없으면 기본 무작위:
+광고 수익 하위 6 · 판매 수익 하위 3 · IT/AI 2). 리스트에서 글쓰기 줄을 누르면 왼쪽 아래가 분류 고르기 칸이 된다.
+전체 실행: 모든 루틴의 로컬 안내문을 한 번에 이어 붙여 한 터미널에서 차례로 돈다.
+
 프롬프트 최신화: 리스트의 한 줄(루틴 키 prompt_update). 오늘의 자료 'evaluations'(루틴별 평가·점검 관점)를 보고
 AI 가 각 루틴의 프롬프트 md 를 고쳐 main 에 올린다. 바뀐 md 는 화면을 열 때 PromptVersion 으로 남는다.
 """
 import hashlib
 import os
+import random
 import re
 import subprocess
 from collections import Counter
@@ -35,7 +40,7 @@ from apps.blog_ops.models import FeedEntry
 from apps.blog_rules.models import Blog
 from apps.core import period
 
-from .models import DATA_CHOICES, Evaluation, PromptVersion, Routine, RoutineDay, RoutineRun
+from .models import DATA_CHOICES, Evaluation, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
 
 NAVER_DRAFTS = ("콘텐츠", "블로그_카페", "포스팅자동화", "네이버원고")
 CLOUD_DOC = "일일루틴/클라우드_제약.md"
@@ -113,6 +118,10 @@ def _auto(key, lo, hi):
             if lo <= d <= hi:
                 out[d] += len(batch["items"])
         return out
+    if key == "writing":
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        return _by_created(Post, lo, hi) + _by_created(NaverPost, lo, hi)
     if key == "tistory":
         from apps.writing.models import Post
         return _by_created(Post, lo, hi)
@@ -134,7 +143,8 @@ PLATFORMS = {"tistory": [Blog.Platform.TISTORY], "naver": [Blog.Platform.NAVER]}
 
 def _sites(key):
     lines = []
-    for b in Blog.objects.filter(platform__in=PLATFORMS.get(key, [])).exclude(status=Blog.Status.HOLD).prefetch_related("checks"):
+    blogs = Blog.objects.all() if key == "writing" else Blog.objects.filter(platform__in=PLATFORMS.get(key, []))
+    for b in blogs.exclude(status=Blog.Status.HOLD).prefetch_related("checks"):
         head = f"- {b.name} ({b.address or '주소 없음'}) · {b.content or '컨셉 미정'}"
         head += f" · 하루 {b.daily}편" if b.status == Blog.Status.ACTIVE else f" · {b.get_status_display()}"
         lines.append(head)
@@ -151,6 +161,14 @@ def _existing(key, day):
                 titles += [f"{batch['date']} · {item['title']}" for item in batch["items"]]
             if len(titles) >= 80:
                 break
+    elif key == "writing":
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing import drafts
+        from apps.writing.models import Post
+        titles += [d.title for d in drafts.list_drafts()] + [d.title for d in drafts.list_drafts(naver_drafts_dir())]
+        for model in (Post, NaverPost):
+            titles += list(model.all_objects.order_by("-created_at").values_list("title", flat=True)[:60])
+        titles += list(FeedEntry.objects.order_by("-published_at").values_list("title", flat=True)[:80])
     elif key in PLATFORMS:
         from apps.writing import drafts
         if key == "tistory":
@@ -195,8 +213,79 @@ def _evaluations():
     return "\n\n".join(blocks)
 
 
+# 글쓰기 기본: 대분류 이름 앞부분 → 그 아래 중분류에서 무작위로 고를 편수
+WRITING_MIX = [("광고 수익", 6), ("판매 수익", 3), ("IT/AI", 2)]
+
+
+def _sections():
+    from apps.blog_types.models import Section
+    return list(Section.objects.prefetch_related("categories__types"))
+
+
+def default_picks(day, salt=""):
+    """그날의 기본 분류: 날짜로 정해지는 무작위 (같은 날은 같은 결과). salt 를 주면 다시 뽑는다."""
+    rng = random.Random(f"{day}{salt}")
+    sections = _sections()
+    picks = {}
+    for prefix, n in WRITING_MIX:
+        section = next((s for s in sections if s.name.startswith(prefix)), None)
+        cats = list(section.categories.all()) if section else []
+        if not cats:
+            continue
+        chosen = rng.sample(cats, min(n, len(cats)))
+        for i in range(n):  # 중분류가 모자라면 같은 중분류에 한 편 더
+            sel = chosen[i % len(chosen)].sel
+            picks[sel] = picks.get(sel, 0) + 1
+    return picks
+
+
+def day_picks(routine, day):
+    """(분류별 편수, 사용자가 고른 것인지)."""
+    saved = RoutinePick.objects.filter(routine=routine, day=day).first()
+    return (saved.picks, True) if saved else (default_picks(day), False)
+
+
+def _node_path(sel):
+    from apps.blog_types.models import Category, PostType, SubType
+    model = {"c": Category, "t": PostType, "s": SubType}.get(sel[:1])
+    pk = sel[1:]
+    node = model.objects.filter(pk=pk).first() if model and pk.isdigit() else None
+    if node is None:
+        return None, ""
+    if isinstance(node, Category):
+        return node, f"{node.section.name} > {node.name}"
+    if isinstance(node, PostType):
+        return node, f"{node.category.section.name} > {node.category.name} > {node.name}"
+    return node, f"{node.post_type.category.section.name} > {node.post_type.category.name} > {node.post_type.name} > {node.name}"
+
+
+def _picks_text(routine, day):
+    picks, custom = day_picks(routine, day)
+    lines = [f"(총 {sum(picks.values())}편 · {'사용자가 고른 분류' if custom else '기본: 오늘 무작위'})"]
+    for sel, n in picks.items():
+        node, path = _node_path(sel)
+        if node is None:
+            continue
+        line = f"- {path} — {n}편"
+        cat = node if node.sel.startswith("c") else (node.category if node.sel.startswith("t") else None)
+        if cat is not None and (cat.direction or cat.question):
+            line += f" (방향: {cat.direction or '-'} / 독자의 질문: {cat.question or '-'})"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _categories_text():
+    lines = []
+    for s in _sections():
+        lines.append(f"- {s.name}")
+        for c in s.categories.all():
+            lines.append(f"  - {c.code} {c.name}" + (f" — {c.question}" if c.question else ""))
+            lines += [f"    - {t.name}" for t in c.types.all()]
+    return "\n".join(lines) or "- (분류 없음)"
+
+
 DATA_TITLES = {"sites": "사이트·체크 (운영 화면)", "existing": "이미 있는 글 (겹치지 않게)", "standard": "검색 표준 (최신판)",
-               "evaluations": "루틴별 평가·점검 관점"}
+               "evaluations": "루틴별 평가·점검 관점", "picks": "오늘 쓸 분류", "categories": "글 분류 전체 (대 > 중 > 소)"}
 
 
 def data_text(routine, key, day):
@@ -208,6 +297,10 @@ def data_text(routine, key, day):
         return _standard(day)
     if key == "evaluations":
         return _evaluations()
+    if key == "picks":
+        return _picks_text(routine, day)
+    if key == "categories":
+        return _categories_text()
     return ""
 
 
@@ -362,9 +455,11 @@ def launch(request):
         return HttpResponseForbidden("허용하지 않은 화면에서 보낸 실행 요청입니다.")
     key = request.POST.get("key", "")
     text = request.POST.get("prompt", "")
-    kind = "update" if request.POST.get("kind") == "update" else "run"
-    if not re.fullmatch(r"[a-z0-9_-]{1,30}", key) or not text.strip() or len(text) > 200_000:
+    kind = request.POST.get("kind") if request.POST.get("kind") in ("update", "all") else "run"
+    if not re.fullmatch(r"[a-z0-9_-]{1,30}", key) or not text.strip() or len(text) > 600_000:
         return HttpResponseForbidden("실행 요청이 올바르지 않습니다.")
+    if kind == "all":
+        return _launch_all(request, text)
     try:
         day = date.fromisoformat(request.POST.get("day", ""))
     except ValueError:
@@ -390,10 +485,102 @@ def launch(request):
     return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
 
 
+def _day(request):
+    try:
+        return date.fromisoformat(request.POST.get("day", ""))
+    except ValueError:
+        return timezone.localdate()
+
+
+def _open_terminal(request, name, title):
+    ask = f"Read workspace/.routine/{name} and follow it exactly."
+    if os.name == "nt":
+        subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", "claude", ask])
+        return True
+    messages.info(request, f'저장소 폴더에서 실행하세요: claude "{ask}"')
+    return False
+
+
+def _launch_all(request, text):
+    """전체 실행: 루틴마다 기록을 열고, 이어 붙인 안내문 하나로 터미널 하나를 연다."""
+    day = _day(request)
+    keys = [k for k in request.POST.get("keys", "").split(",") if re.fullmatch(r"[a-z0-9_-]{1,30}", k)]
+    for k in keys:
+        routine = Routine.objects.filter(key=k).first() or Routine.objects.create(
+            key=k, name=k, url_name="routines:index", task="(실서버에서 보낸 루틴)")
+        run = RoutineRun.objects.filter(routine=routine, day=day).first()
+        if run is None or not run.is_open:
+            run = RoutineRun.objects.create(routine=routine, day=day)
+        run.report(RoutineRun.Status.RUNNING, "전체 실행 · 차례를 기다립니다", timezone.localtime())
+    folder = settings.BASE_DIR / ".routine"
+    folder.mkdir(exist_ok=True)
+    name = f"all-{day}.md"
+    (folder / name).write_text(text, encoding="utf-8")
+    if _open_terminal(request, name, "일일루틴 전체 실행"):
+        messages.success(request, f"새 터미널에서 전체 실행을 시작했습니다 ({len(keys)}개 루틴, 차례로). 아래 로컬 현황에 단계가 쌓입니다.")
+    return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
+
+
+def all_prompt(routines, day):
+    """전체 실행 안내문: 루틴 순서대로 각 로컬 안내문을 이어 붙인다."""
+    head = [f"# 일일루틴 전체 실행 — {day} (로컬 PC)", "",
+            "아래 루틴을 위에서부터 차례로 끝까지 진행한다. 오래 걸려도 된다.",
+            "- 한 루틴을 끝내고(완료 보고) 다음 루틴으로 넘어간다.",
+            "- 한 루틴이 막히면 막힘으로 보고하고 다음 루틴으로 간다. 내가 할 일이 생기면 대기로 보고하고 기다린다.",
+            "- 순서: " + " → ".join(f"{i}. {r.name}" for i, r in enumerate(routines, start=1)), ""]
+    parts = ["\n".join(head)]
+    for i, r in enumerate(routines, start=1):
+        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, "local", day))
+    return "\n".join(parts)
+
+
+# ---- 분류 고르기 (글쓰기)
+
+def _picker(routine, day):
+    picks, custom = day_picks(routine, day)
+    tree = []
+    for s in _sections():
+        cats = []
+        for c in s.categories.all():
+            cats.append({"obj": c, "n": picks.get(c.sel, 0),
+                         "types": [{"obj": t, "n": picks.get(t.sel, 0)} for t in c.types.all()]})
+        total = sum(c["n"] + sum(t["n"] for t in c["types"]) for c in cats)
+        tree.append({"obj": s, "cats": cats, "n": total})
+    from apps.blog_types.models import ClassChange
+    return {"routine": routine, "tree": tree, "total": sum(picks.values()), "custom": custom, "day": day,
+            "changes": list(ClassChange.objects.all()[:3])}
+
+
+@require_POST
+def picks(request, pk):
+    """글쓰기의 그날 분류·편수: 저장 / 다시 뽑기(무작위) / 기본값(그날 무작위)."""
+    routine = get_object_or_404(Routine, pk=pk)
+    day = _day(request)
+    action = request.POST.get("action", "save")
+    if action == "default":
+        RoutinePick.objects.filter(routine=routine, day=day).delete()
+    else:
+        if action == "reroll":
+            value = default_picks(day, salt=timezone.now().timestamp())
+        else:
+            value = {}
+            for name, raw in request.POST.items():
+                sel = name[2:]
+                if name.startswith("n_") and re.fullmatch(r"[ct]\d+", sel) and raw.strip().isdigit() and int(raw) > 0:
+                    value[sel] = min(int(raw), 20)
+        RoutinePick.objects.update_or_create(routine=routine, day=day, defaults={"picks": value})
+    return _back(request, "#rt-picker")
+
+
 # ---- 일일루틴 리스트
 
 def index(request):
     _nav(request)
+    try:  # AI 가 남긴 분류 변경 파일을 먼저 반영한다 (일일루틴/분류변경)
+        from apps.blog_types import changes
+        changes.sync()
+    except Exception:  # 분류 변경이 잘못돼도 화면은 뜬다 (기록은 관리화면)
+        pass
     today = timezone.localdate()
     mode, sel = period.parse(request, today)
     start, end = period.bounds(mode, sel)
@@ -419,6 +606,8 @@ def index(request):
     for r in routines:
         r.result = total(r, start, end)
         r.target = r.daily * days
+        if "picks" in r.data_keys and mode == "day":  # 그날 고른 편수가 목표
+            r.target = sum(day_picks(r, sel)[0].values())
         r.state = ("done" if r.result >= r.target else "todo") if r.target and start <= today else ""
         r.auto = auto[r.pk][sel]
         r.fixed = (r.pk, sel) in fixed
@@ -438,6 +627,9 @@ def index(request):
         "done_total": sum(1 for r in routines if r.state == "done"),
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
+        "all_prompt": all_prompt(routines, run_day) if routines else "",
+        "all_keys": ",".join(r.key for r in routines),
+        "picker": next((_picker(r, run_day) for r in routines if "picks" in r.data_keys), None),
         "on_server": settings.IS_SERVER,
         "launch_action": launch_action(),
         "local_url": settings.ROUTINE_LOCAL_URL.rstrip("/") + reverse("routines:index"),

@@ -8,7 +8,8 @@ from django.db import models
 
 from apps.core.models import TrashableModel
 
-DATA_CHOICES = [("sites", "사이트·체크"), ("existing", "이미 있는 글"), ("standard", "검색 표준"), ("evaluations", "루틴별 평가·점검 관점")]
+DATA_CHOICES = [("sites", "사이트·체크"), ("existing", "이미 있는 글"), ("standard", "검색 표준"), ("evaluations", "루틴별 평가·점검 관점"),
+                ("picks", "오늘 쓸 분류"), ("categories", "글 분류 전체")]
 
 
 class Routine(TrashableModel):
@@ -137,3 +138,20 @@ class PromptVersion(models.Model):
 
     def __str__(self):
         return f"{self.routine} v{self.number}"
+
+
+class RoutinePick(models.Model):
+    """글쓰기 루틴의 그날 분류·편수 ({"c3": 2, "t5": 1}). 없으면 그날의 기본 무작위(광고 6 · 판매 3 · IT/AI 2)."""
+
+    routine = models.ForeignKey(Routine, verbose_name="루틴", on_delete=models.CASCADE, related_name="picks")
+    day = models.DateField("날짜")
+    picks = models.JSONField("분류별 편수", default=dict)
+    updated_at = models.DateTimeField("고친 때", auto_now=True)
+
+    class Meta:
+        verbose_name = "루틴 분류 고르기"
+        verbose_name_plural = verbose_name
+        constraints = [models.UniqueConstraint(fields=["routine", "day"], name="routines_routinepick_unique")]
+
+    def __str__(self):
+        return f"{self.routine} {self.day}"

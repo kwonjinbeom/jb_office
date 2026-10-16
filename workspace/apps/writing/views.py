@@ -66,6 +66,17 @@ def post_list(request, stage):
     )
 
 
+def _classify_draft(post, draft):
+    """원고의 '분류: 대 > 중 > 소' 줄로 글 분류를 붙인다. ('사이트:' 줄은 원고 제작 정보에만 둔다. 소개는 게시하는 글이라 건드리지 않는다)"""
+    from apps.blog_types import classify
+    from apps.blog_types.changes import resolve
+    from apps.blog_types.models import Section
+
+    node = resolve(draft.classification) if draft.classification else None
+    if node is not None and not isinstance(node, Section):
+        classify.assign(post, node.sel)
+
+
 def import_drafts(request):
     """저장소 원고 폴더의 원고.md 를 골라 임시 템플릿으로 가져온다. 같은 제목이 이미 있으면 건너뛴다."""
     drafts = drafts_mod.list_drafts()
@@ -75,7 +86,9 @@ def import_drafts(request):
         added = 0
         for d in drafts:
             if d.key in chosen and d.title not in existing:
-                Post.objects.create(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary)
+                post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary)
+                _classify_draft(post, d)
+                post.save()
                 existing.add(d.title)
                 added += 1
         if added:
