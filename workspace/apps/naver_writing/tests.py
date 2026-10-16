@@ -41,7 +41,8 @@ class NaverWorkflowTests(TestCase):
         response = self.client.get(post.get_absolute_url())
         self.assertContains(response, "#가을")
         self.assertContains(response, "font-size:19px;color:#123456")
-        self.assertContains(response, 'data-copy-rich="#wr-copy-html"')
+        self.assertNotContains(response, "복사해서 붙여넣기")  # 글 보기는 본문을 넓게 (복사 줄 없음)
+        self.assertContains(response, 'data-paper-width="mobile"')  # PC·모바일은 단계 탭 줄에
         self.assertNotContains(response, "티스토리 HTML")
         self.assertContains(self.client.get(reverse("naver_writing:list"), {"q": "검색용"}), post.title)
         response = self.client.post(reverse("naver_writing:edit", args=[post.pk]), {

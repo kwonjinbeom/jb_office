@@ -118,7 +118,8 @@ class PostPipelineTests(TestCase):
         self.assertContains(res, "#단풍절정")
         self.assertContains(res, "#가을여행")
         self.assertContains(res, "점선 상자 2곳")
-        self.assertContains(res, 'data-copy-rich="#wr-copy-html"')
+        self.assertNotContains(res, "복사해서 붙여넣기")  # 글 보기는 본문을 넓게 (복사 줄 없음)
+        self.assertContains(res, 'data-paper-width="mobile"')  # PC·모바일은 단계 탭 줄에
         self.assertContains(res, "검토 완료")  # 글 보기에서 바로 상태를 바꾼다
 
     def test_detail_neighbors_follow_list_order(self):
