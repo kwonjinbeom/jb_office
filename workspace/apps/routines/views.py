@@ -16,6 +16,7 @@ claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineR
 AI 가 각 루틴의 프롬프트 md 를 고쳐 main 에 올린다. 바뀐 md 는 화면을 열 때 PromptVersion 으로 남는다.
 """
 import hashlib
+import json
 import os
 import random
 import re
@@ -29,7 +30,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Avg, Max, Q
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpResponse, HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -314,7 +315,7 @@ REPORT = """
 
 - 시작: 맨 처음, 오늘 할 일 한 줄
 - 진행: 단계가 바뀔 때 (예: "사이트 최근 글 확인", "원고 2/4편 저장")
-- 대기: 내가 해야 할 일이 있을 때 (예: "티스토리 로그인 필요"). 보고하고 멈춰서 나를 기다린다
+- 대기: 권한이 없어 실행이 막혀 내 허락이 필요할 때만 (예: "git push 권한 필요"). 보고하고 기다린다. 그 밖의 판단은 묻지 않고 스스로 한다
 - 막힘: 접속 차단·자료 없음 등으로 그 단계를 못 할 때. 이유를 적고 할 수 있는 다음 단계로 간다
 - 완료: 끝나면 결과 요약 (예: "원고 4편 저장, main push abc1234")
 - 실패: 더 진행할 수 없을 때 이유
@@ -459,45 +460,106 @@ def _origin_ok(request):
     return origin in {a.rstrip("/") for a in allowed}
 
 
+# 로컬 실행 claude 에 미리 허용하는 것: 루틴이 늘 하는 일 (저장소 안 읽기·쓰기, 웹 검색, git 올리기, 진행 보고).
+# 묻는 건 권한이 없어 막힐 때만 (2026-10-16 사용자). 방법·선택을 묻는 질문 도구와 브라우저 자동화는 막는다.
+ROUTINE_ALLOW = [
+    "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch",
+    "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
+    "Bash(git status *)", "Bash(git log *)", "Bash(git diff *)", "Bash(ls *)", "Bash(mkdir *)",
+    "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_report *)",
+    "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
+]
+ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome", "mcp__playwright"]
+KOREAN = ("모든 말과 진행 보고는 한국어로 한다. 루틴은 스스로 판단해 끝까지 진행하고, 방법·선택·확인을 사용자에게 묻지 않는다. "
+          "사용자에게 묻는 건 권한이 없어 실행이 막힐 때뿐이고, 그때는 무엇을 왜 하려는지 한국어로 한 줄 먼저 말한다. "
+          "블로그·사이트 확인은 WebFetch·WebSearch 로 하고 브라우저 자동화는 쓰지 않는다. 읽히지 않는 페이지는 막힘으로 보고하고 넘어간다. "
+          "셸 명령은 Bash 도구로 저장소 폴더에서 실행한다.")
+
+
+def _open_terminal(name, title):
+    """새 터미널에서 claude 를 연다 (미리 허용한 것 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
+    folder = settings.BASE_DIR / ".routine"
+    folder.mkdir(exist_ok=True)
+    conf = folder / "settings.json"
+    conf.write_text(json.dumps({"permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
+    ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
+    if os.name != "nt":
+        return f'claude "{ask}" --settings workspace/.routine/settings.json'
+    subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", "claude", ask,
+                      "--settings", str(conf), "--append-system-prompt", KOREAN])
+    return ""
+
+
+def _cors(request, response):
+    origin = request.headers.get("Origin")
+    if origin and _origin_ok(request):
+        response["Access-Control-Allow-Origin"] = origin
+        response["Access-Control-Allow-Methods"] = "POST"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        response["Access-Control-Allow-Private-Network"] = "true"
+        response["Vary"] = "Origin"
+    return response
+
+
+def _reply(request, ok, message, day=None):
+    """화면의 '실행'은 새 탭 없이 보내고(fmt=json) 결과 한 줄을 받는다. 그 밖에는 예전처럼 PC 화면으로."""
+    if request.POST.get("fmt") == "json":
+        return _cors(request, JsonResponse({"ok": ok, "message": message}, status=200 if ok else 403))
+    if not ok:
+        return HttpResponseForbidden(message)
+    messages.success(request, message)
+    return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
+
+
+def _open_run(routine, day, step):
+    run = RoutineRun.objects.filter(routine=routine, day=day).first()
+    if run is None or not run.is_open:
+        run = RoutineRun.objects.create(routine=routine, day=day)
+    run.report(RoutineRun.Status.RUNNING, step, timezone.localtime())
+
+
+def _routine_for(key, name=""):
+    return Routine.objects.filter(key=key).first() or Routine.objects.create(
+        key=key, name=(name or key)[:40], url_name="routines:index", task="(실서버에서 보낸 루틴)")
+
+
 @csrf_exempt
-@require_POST
 def launch(request):
     """안내문을 받아 새 터미널에서 claude 를 연다. PC 서버에서만, 허용한 화면(실서버·PC)에서 보낸 것만."""
+    if request.method == "OPTIONS":  # 브라우저가 먼저 묻는 경우 (다른 주소 → PC)
+        return _cors(request, HttpResponse(status=204))
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
     if settings.IS_SERVER:
-        return HttpResponseForbidden("로컬 실행은 PC 에서 띄운 서버에서만 됩니다.")
+        return _reply(request, False, "로컬 실행은 PC 에서 띄운 서버에서만 됩니다.")
     if not _origin_ok(request):
         got = request.headers.get("Origin") or "없음"
-        return HttpResponseForbidden(f"허용하지 않은 화면에서 보낸 실행 요청입니다. (보낸 곳: {got})")
+        return _reply(request, False, f"허용하지 않은 화면에서 보낸 실행 요청입니다. (보낸 곳: {got})")
     key = request.POST.get("key", "")
     text = request.POST.get("prompt", "")
     kind = request.POST.get("kind") if request.POST.get("kind") in ("update", "all") else "run"
     if not re.fullmatch(r"[a-z0-9_-]{1,30}", key) or not text.strip() or len(text) > 600_000:
-        return HttpResponseForbidden("실행 요청이 올바르지 않습니다.")
-    if kind == "all":
-        return _launch_all(request, text)
-    try:
-        day = date.fromisoformat(request.POST.get("day", ""))
-    except ValueError:
-        day = timezone.localdate()
-    routine = Routine.objects.filter(key=key).first() or Routine.objects.create(
-        key=key, name=request.POST.get("name", key)[:40] or key, url_name="routines:index", task="(실서버에서 보낸 루틴)")
+        return _reply(request, False, "실행 요청이 올바르지 않습니다.")
+    day = _day(request)
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
-    name = f"{key}-{'update-' if kind == 'update' else ''}{day}.md"
-    (folder / name).write_text(text, encoding="utf-8")
-    label = "갱신" if kind == "update" else "루틴"
-    run = RoutineRun.objects.filter(routine=routine, day=day).first()
-    if run is None or not run.is_open:
-        run = RoutineRun.objects.create(routine=routine, day=day)
-    run.report(RoutineRun.Status.RUNNING, f"{label} · 터미널을 열었습니다 (claude 시작 대기)", timezone.localtime())
-    ask = f"Read workspace/.routine/{name} and follow it exactly."
-    if os.name == "nt":
-        subprocess.Popen(["cmd", "/c", "start", f"일일루틴 {routine.name} {label}", "/D", str(settings.REPO_ROOT),
-                          "cmd", "/k", "claude", ask])
-        messages.success(request, f"새 터미널에서 {routine.name} {label}을 시작했습니다. 아래 로컬 현황에 단계가 쌓입니다.")
+    if kind == "all":
+        keys = [k for k in request.POST.get("keys", "").split(",") if re.fullmatch(r"[a-z0-9_-]{1,30}", k)]
+        for k in keys:
+            _open_run(_routine_for(k), day, "전체 실행 · 차례를 기다립니다")
+        name, title = f"all-{day}.md", "일일루틴 전체 실행"
+        done = f"PC 터미널에서 전체 실행을 시작했습니다 ({len(keys)}개 루틴, 차례로)."
     else:
-        messages.info(request, f'저장소 폴더에서 실행하세요: claude "{ask}"')
-    return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
+        routine = _routine_for(key, request.POST.get("name", ""))
+        label = "갱신" if kind == "update" else "루틴"
+        _open_run(routine, day, f"{label} · 터미널을 열었습니다 (claude 시작 대기)")
+        name, title = f"{key}-{'update-' if kind == 'update' else ''}{day}.md", f"일일루틴 {routine.name} {label}"
+        done = f"PC 터미널에서 {routine.name} {label}을 시작했습니다."
+    (folder / name).write_text(text, encoding="utf-8")
+    manual = _open_terminal(name, title)
+    if manual:
+        return _reply(request, True, f"저장소 폴더에서 실행하세요: {manual}", day)
+    return _reply(request, True, done + " 진행은 PC 화면의 로컬 현황에 쌓입니다.", day)
 
 
 def _day(request):
@@ -505,35 +567,6 @@ def _day(request):
         return date.fromisoformat(request.POST.get("day", ""))
     except ValueError:
         return timezone.localdate()
-
-
-def _open_terminal(request, name, title):
-    ask = f"Read workspace/.routine/{name} and follow it exactly."
-    if os.name == "nt":
-        subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", "claude", ask])
-        return True
-    messages.info(request, f'저장소 폴더에서 실행하세요: claude "{ask}"')
-    return False
-
-
-def _launch_all(request, text):
-    """전체 실행: 루틴마다 기록을 열고, 이어 붙인 안내문 하나로 터미널 하나를 연다."""
-    day = _day(request)
-    keys = [k for k in request.POST.get("keys", "").split(",") if re.fullmatch(r"[a-z0-9_-]{1,30}", k)]
-    for k in keys:
-        routine = Routine.objects.filter(key=k).first() or Routine.objects.create(
-            key=k, name=k, url_name="routines:index", task="(실서버에서 보낸 루틴)")
-        run = RoutineRun.objects.filter(routine=routine, day=day).first()
-        if run is None or not run.is_open:
-            run = RoutineRun.objects.create(routine=routine, day=day)
-        run.report(RoutineRun.Status.RUNNING, "전체 실행 · 차례를 기다립니다", timezone.localtime())
-    folder = settings.BASE_DIR / ".routine"
-    folder.mkdir(exist_ok=True)
-    name = f"all-{day}.md"
-    (folder / name).write_text(text, encoding="utf-8")
-    if _open_terminal(request, name, "일일루틴 전체 실행"):
-        messages.success(request, f"새 터미널에서 전체 실행을 시작했습니다 ({len(keys)}개 루틴, 차례로). 아래 로컬 현황에 단계가 쌓입니다.")
-    return redirect(f"{reverse('routines:index')}?date={day}#rt-runs")
 
 
 def all_prompt(routines, day):
