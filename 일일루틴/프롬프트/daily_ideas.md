@@ -16,7 +16,15 @@
 5. 끝나면 main 에 반영한다: `git pull --rebase origin main` 뒤 `git push origin HEAD:main`. main 으로 push 가 막히는 환경이면 지금 브랜치에 push 하고 main 으로 PR 을 만들어 바로 병합한다. 병합까지 해야 서버에 들어간다 (웹훅이 자동 반영).
 
 ## 잘 되는 출처 (프롬프트 최신화가 쌓는다)
-- (아직 없음. 최신화 때 WebSearch·WebFetch 로 잘 읽히는 출처와 요즘 신호가 많은 곳이 쌓인다)
+WebFetch 로 지금 열리는 곳 (2026-10-19 확인). 돈 흐름 신호(판매·모금·가격)와 트렌드 신호를 구분해 쓴다.
+- Product Hunt — https://www.producthunt.com/ · 오늘 출시 신제품의 업보트·댓글로 "지금 뜨는 도구/수요" 트렌드 신호(돈 흐름은 간접) · WebFetch 열림
+- itch.io — https://itch.io/games/new-and-popular · 인디 게임·툴의 가격·할인율(-80% 등)로 직접 판매 신호 · WebFetch 열림
+- 크몽 — https://kmong.com/category/1 · 프리랜서 서비스 가격대·평점·랭킹으로 "돈 내고 사는 수요" 신호(돈 흐름) · 카테고리 열림, 가격·판매 수치는 개별 서비스 상세에서
+- 텀블벅 — https://tumblbug.com/discover · 크라우드펀딩 모금액·후원자 수로 직접 돈 흐름 · 목록은 부분, 개별 프로젝트에서 모금액 확인
+- 아이디어스 — https://www.idus.com/v2/category · 핸드메이드 상품 가격·찜·후기로 돈 흐름 · 카테고리 열림, 수치는 상품 상세에서
+- 클리앙 모두의공원 — https://www.clien.net/service/board/park · 글 조회·댓글 수로 국내 생활밀착 관심 신호 · WebFetch 열림(수치 노출)
+- 구글 트렌드(실시간, 한국) — https://trends.google.co.kr/trending?geo=KR · 급상승 검색어 트렌드 신호 · 열리나 목록이 잘림 → 개별 키워드 explore URL 이나 WebSearch 보조
+- 막힌 곳과 대안: 네이버 데이터랩·네이버 블로그탭(WebFetch 차단) → 구글 트렌드 KR + WebSearch 로. 쿠팡·G마켓 베스트(403) → itch.io/크몽/텀블벅 가격 신호, 또는 WebSearch "쿠팡 베스트 <품목>". 레딧 r/sideproject·r/Entrepreneur(크롤러 차단) → Product Hunt + indiehackers/substack 수익 리포트를 WebSearch 로.
 
 ## 평가에서 배운 점
-- (아직 없음. 갱신 때 쌓인다)
+- 2026-10-19: '잘 되는 출처'를 처음 채움(평가 0건 → 점검 관점으로). WebFetch 로 열리는 돈 흐름 출처(itch.io·크몽·텀블벅·아이디어스)와 트렌드 출처(Product Hunt·구글 트렌드·클리앙)를 가리고, 막힌 곳(네이버 데이터랩·쿠팡/G마켓 베스트·레딧)의 대안을 박아 둠. 검색 표준의 '수요 신호 + 돈 흐름 겹침' 판정이 WebSearch만으로도 서게 하기 위함.

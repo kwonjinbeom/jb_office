@@ -33,4 +33,6 @@ PC 에서 화면의 '실행'·'전체 실행'(맨 처음)으로 돌린다. 시�
 2. 결과를 daily_ideas.md '잘 되는 출처'에 넣는다 (주소·무엇을 보는지·막히면 대신 볼 곳).
 
 ## 평가에서 배운 점
-- (아직 없음. 최신화 때 쌓인다)
+- 2026-10-19: 첫 최신화. 11개 중분류 + 아이디어 출처를 병렬 조사(general-purpose 에이전트 4개, WebSearch·WebFetch)해 writing.md·daily_ideas.md 의 쌓는 칸을 처음 채움. 평가 0건이라 점검 관점만으로 손봄.
+- 조사 한계(다음에도 같음): PC 크롬 playwright 는 이 환경에서 못 띄웠고, `search.naver.com` 블로그 탭은 WebFetch 403, `site:tistory.com` WebSearch 는 US 엔진이라 티스토리가 안 걸림. → 상위 글은 직접 티스토리/velog URL WebFetch + 동형 블로그로 대체 확인. 다음 최신화 때 playwright 가 뜨면 네이버 블로그 상위 글을 직접 열어 더 정확히 보강.
+- 보고 curl: 한글을 인자로 직접 넘기면 서버에서 status 매칭 실패(깨짐), 경로에 공백·한글이 있으면 `@파일`도 못 연다. `workspace/.routine/_report.sh`(스크립트 폴더로 cd 후 상대 파일명)로 보낼 것.
