@@ -99,13 +99,14 @@ class TempRepoTests(Login):
         f = self.root / "workspace" / ".routine" / "writing-2026-10-16.md"
         conf = json.loads((self.root / "workspace" / ".routine" / "settings.json").read_text(encoding="utf-8"))
         self.assertIn("Bash(git push *)", conf["permissions"]["allow"])
+        self.assertEqual((conf["model"], conf["env"]["CLAUDE_CODE_SUBAGENT_MODEL"]), ("sonnet", "sonnet"))  # 루틴은 Sonnet
         self.assertIn("AskUserQuestion", conf["permissions"]["deny"])  # 방법·선택은 묻지 않는다
         self.assertIn("mcp__playwright", conf["permissions"]["allow"])  # 브라우저를 열어 직접 본다
         mcp = json.loads((self.root / "workspace" / ".routine" / "mcp.json").read_text(encoding="utf-8"))
         self.assertIn("@playwright/mcp@", " ".join(mcp["mcpServers"]["playwright"]["args"]))
         self.assertEqual(f.read_text(encoding="utf-8"), "# 일일루틴 · 글쓰기\n할 일")
         script = decoded(popen.call_args[0][0])
-        self.assertIn("& 'claude' 'workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.' '--settings'", script)
+        self.assertIn("& 'claude' 'workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.' '--model' 'sonnet' '--settings'", script)
         self.assertIn("mcp.json' '--append-system-prompt' '모든 말과", script)
         self.assertNotIn("cmd", popen.call_args[0][0][:1])  # cmd /k 를 거치지 않는다 (띄어쓰기 경로에서 깨졌다)
         run = RoutineRun.objects.get()
