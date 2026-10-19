@@ -104,11 +104,10 @@ class TempRepoTests(Login):
         mcp = json.loads((self.root / "workspace" / ".routine" / "mcp.json").read_text(encoding="utf-8"))
         self.assertIn("@playwright/mcp@", " ".join(mcp["mcpServers"]["playwright"]["args"]))
         self.assertEqual(f.read_text(encoding="utf-8"), "# 일일루틴 · 글쓰기\n할 일")
-        args = popen.call_args[0][0]
-        self.assertEqual(args[args.index("claude") + 1], "workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.")
-        self.assertIn("--settings", args)
-        self.assertTrue(args[args.index("--mcp-config") + 1].endswith("mcp.json"))
-        self.assertIn("한국어", args[args.index("--append-system-prompt") + 1])
+        script = decoded(popen.call_args[0][0])
+        self.assertIn("& 'claude' 'workspace/.routine/writing-2026-10-16.md 파일을 읽고 그대로 진행해.' '--settings'", script)
+        self.assertIn("mcp.json' '--append-system-prompt' '모든 말과", script)
+        self.assertNotIn("cmd", popen.call_args[0][0][:1])  # cmd /k 를 거치지 않는다 (띄어쓰기 경로에서 깨졌다)
         run = RoutineRun.objects.get()
         self.assertEqual((run.status, run.day), ("running", date(2026, 10, 16)))
         # 실서버에만 있는 루틴이면 PC DB 에 만들어 기록한다 (브라우저가 끝에 / 를 붙여도 된다)
@@ -138,9 +137,18 @@ class TempRepoTests(Login):
         folder = self.root / "workspace" / ".routine"
         self.assertEqual((folder / "cv-101530-2026-10-17.md").read_text(encoding="utf-8"), "# 사이트 변환 · 2026-10-17 · 1편\n본문")
         self.assertTrue((folder / "convert").is_dir())
-        args = popen.call_args[0][0]
-        self.assertEqual(args[args.index("claude") + 1], "workspace/.routine/cv-101530-2026-10-17.md 파일을 읽고 그대로 진행해.")
+        self.assertIn("'workspace/.routine/cv-101530-2026-10-17.md 파일을 읽고 그대로 진행해.'", decoded(popen.call_args[0][0]))
         self.assertFalse(RoutineRun.objects.exists())
+
+    def test_terminal_command_keeps_spaced_paths_and_quotes(self):
+        """C:\\Program Files 처럼 띄어쓰기·괄호 든 claude 경로와 ' 가 든 인자도 PowerShell 문자열로 그대로 넘긴다."""
+        from .local_run import terminal_command
+        cmd = terminal_command("일일루틴 글쓰기", r"C:\Program Files (x86)\nodejs\claude.cmd", ["읽고 진행해.", "it's 50% & <끝>"])
+        self.assertEqual(cmd[:2], ["powershell.exe", "-NoLogo"])
+        self.assertIn("-NoExit", cmd)
+        script = decoded(cmd)
+        self.assertIn("& 'C:\\Program Files (x86)\\nodejs\\claude.cmd' '읽고 진행해.' 'it''s 50% & <끝>'", script)
+        self.assertIn("$Host.UI.RawUI.WindowTitle = '일일루틴 글쓰기'", script)
 
     def test_find_claude_falls_back_to_desktop_app(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -480,3 +488,9 @@ class DraftAutoImportTests(Login):
         self.assertEqual(TistoryPost.objects.get(title="새 원고").created_at, written)
         early.refresh_from_db()
         self.assertEqual(early.created_at, written)
+
+
+def decoded(cmd):
+    """terminal_command 가 -EncodedCommand 로 넘긴 PowerShell 스크립트."""
+    import base64
+    return base64.b64decode(cmd[cmd.index("-EncodedCommand") + 1]).decode("utf-16-le")

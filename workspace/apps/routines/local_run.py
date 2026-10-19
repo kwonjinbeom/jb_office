@@ -8,6 +8,7 @@ claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineR
 convert: 사이트별 템플릿의 '변환'·'전체 변환' (2026-10-17 사용자). 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
 루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
 """
+import base64
 import json
 import os
 import re
@@ -134,6 +135,27 @@ def find_claude():
     return str(exes[-1])
 
 
+def _ps(value):
+    """PowerShell 작은따옴표 문자열 (안의 ' 는 '' 로)."""
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def terminal_command(title, claude, args):
+    """새 콘솔 창에서 claude 를 여는 명령 (PowerShell, 스크립트는 -EncodedCommand 로 넘긴다).
+
+    2026-10-19: 예전에는 cmd /c start … cmd /k "C:/Program Files/…/claude.cmd" "…" 로 열었는데, cmd /k 는 줄이 따옴표로
+    시작하고 따옴표가 여럿이면 맨 앞·맨 뒤 따옴표를 떼어 버려 "'C:/Program'은(는) … 명령이 아닙니다" 로 터미널이 바로 실패했다
+    (claude 가 띄어쓰기 든 경로에 깔린 PC 마다). cmd 를 거치지 않으면 띄어쓰기·괄호·한글 경로와 인자가 그대로 간다.
+    """
+    script = "; ".join([
+        f"$Host.UI.RawUI.WindowTitle = {_ps(title)}",
+        f"Set-Location -LiteralPath {_ps(settings.REPO_ROOT)}",
+        "& " + _ps(claude) + " " + " ".join(_ps(a) for a in args),
+    ])
+    encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    return ["powershell.exe", "-NoLogo", "-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded]
+
+
 def open_terminal(name, title, claude="claude"):
     """새 터미널에서 claude 를 연다 (미리 허용한 것 + 브라우저 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
     folder = settings.BASE_DIR / ".routine"
@@ -144,8 +166,9 @@ def open_terminal(name, title, claude="claude"):
     ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
     if not WINDOWS:
         return f'claude "{ask}" --settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json'
-    subprocess.Popen(["cmd", "/c", "start", title, "/D", str(settings.REPO_ROOT), "cmd", "/k", claude, ask,
-                      "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN])
+    args = [ask, "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN]
+    subprocess.Popen(terminal_command(title, claude, args), cwd=str(settings.REPO_ROOT),
+                     creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
     return ""
 
 
