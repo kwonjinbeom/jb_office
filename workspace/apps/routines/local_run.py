@@ -46,6 +46,8 @@ ROUTINE_ALLOW = [
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
 ]
 ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome"]
+# 루틴은 Sonnet 으로 (2026-10-19 사용자: Opus 는 한 번에 5시간 한도를 많이 쓴다). 보조 claude(서브에이전트)도 같은 모델.
+ROUTINE_MODEL = "sonnet"
 KOREAN = ("모든 말과 진행 보고는 한국어로 한다. 루틴은 스스로 판단해 끝까지 진행하고, 방법·선택·확인을 사용자에게 묻지 않는다. "
           "사용자에게 묻는 건 권한이 없어 실행이 막힐 때뿐이고, 그때는 무엇을 왜 하려는지 한국어로 한 줄 먼저 말한다. "
           "블로그·검색·트렌드 사이트는 브라우저(playwright 도구: browser_navigate·browser_snapshot·browser_click)로 직접 열어 보고, "
@@ -161,12 +163,13 @@ def open_terminal(name, title, claude="claude"):
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
     conf, mcp = folder / "settings.json", folder / "mcp.json"
-    conf.write_text(json.dumps({"permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
+    conf.write_text(json.dumps({"model": ROUTINE_MODEL, "env": {"CLAUDE_CODE_SUBAGENT_MODEL": ROUTINE_MODEL},
+                                "permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
     mcp.write_text(json.dumps({"mcpServers": MCP_SERVERS}, indent=2), encoding="utf-8")
     ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
     if not WINDOWS:
-        return f'claude "{ask}" --settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json'
-    args = [ask, "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN]
+        return f'claude "{ask}" --model {ROUTINE_MODEL} --settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json'
+    args = [ask, "--model", ROUTINE_MODEL, "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN]
     subprocess.Popen(terminal_command(title, claude, args), cwd=str(settings.REPO_ROOT),
                      creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
     return ""
