@@ -5,7 +5,7 @@
 로컬·클라우드 구분은 없다 (2026-10-17 사용자). 진행 보고는 서버의 보고 주소(report_api)로 보내 '실행 이력'에 쌓인다
 (토큰이 없으면 PC 의 manage.py routine_report).
 모든 실행은 PC 에서 손으로 한다 (2026-10-17 사용자: 클라우드 예약은 지웠다). 리스트의 '실행'(루틴 하나),
-'전체 실행'(ALL_ORDER 순서로 한 터미널에서 차례로), 중메뉴 '추가 실행'(EXTRA_KEYS 를 하루 분량과 별도로 더).
+'전체 실행'(ALL_ORDER 순서로 루틴마다 새 터미널에서 차례로), 중메뉴 '추가 실행'(EXTRA_KEYS 를 하루 분량과 별도로 더).
 추가 실행: 글쓰기는 분류 고르기(기본) · 코멘트, 일일 아이디어는 개수 + 방향. 글쓰기 하루 분량(그날 쓸 분류)도 이 화면에서 고친다.
 보고 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
 
@@ -14,7 +14,7 @@ PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine
 
 글쓰기(키 writing): 티스토리·네이버 구분 없이 하루 11편. 그날 쓸 분류·편수는 RoutinePick (없으면 기본 무작위:
 광고 수익 하위 6 · 판매 수익 하위 3 · IT/AI 2). 리스트에서 글쓰기 줄을 누르면 왼쪽 아래가 분류 고르기 칸이 된다.
-전체 실행: 모든 루틴의 로컬 안내문을 한 번에 이어 붙여 한 터미널에서 차례로 돈다.
+전체 실행: 모든 루틴의 로컬 안내문을 이어 붙여 보내고, PC 가 루틴마다 나눠 새 터미널에서 차례로 돌린다 (local_run.open_chain).
 
 프롬프트 최신화: 리스트의 한 줄(루틴 키 prompt_update). 오늘의 자료 'evaluations'(루틴별 평가·점검 관점)를 보고
 AI 가 각 루틴의 프롬프트 md 를 고쳐 main 에 올린다. 바뀐 md 는 화면을 열 때 PromptVersion 으로 남는다.
@@ -169,7 +169,7 @@ def _existing(key, day):
         from apps.naver_writing.models import Post as NaverPost
         from apps.writing import drafts
         from apps.writing.models import Post
-        titles += [d.title for d in drafts.list_drafts()] + [d.title for d in drafts.list_drafts(naver_drafts_dir())]
+        titles += _newest_drafts(drafts.list_drafts()) + _newest_drafts(drafts.list_drafts(naver_drafts_dir()))
         for model in (Post, NaverPost):
             titles += list(model.all_objects.order_by("-created_at").values_list("title", flat=True)[:60])
         titles += list(FeedEntry.objects.order_by("-published_at").values_list("title", flat=True)[:80])
@@ -181,7 +181,7 @@ def _existing(key, day):
         else:
             from apps.naver_writing.models import Post
             folder = naver_drafts_dir()
-        titles += [d.title for d in drafts.list_drafts(folder)]
+        titles += _newest_drafts(drafts.list_drafts(folder))
         titles += list(Post.all_objects.order_by("-created_at").values_list("title", flat=True)[:60])
         titles += list(FeedEntry.objects.filter(blog__platform__in=PLATFORMS[key])
                        .order_by("-published_at").values_list("title", flat=True)[:60])
@@ -190,7 +190,18 @@ def _existing(key, day):
         if t and t not in seen:
             seen.add(t)
             out.append(f"- {t}")
-    return "\n".join(out[:120]) or "- (아직 없음)"
+    return "\n".join(out[:EXISTING_LINES]) or "- (아직 없음)"
+
+
+EXISTING_LINES = 40  # 이미 있는 글은 최근 것만 (2026-10-19 사용자: 120줄이 안내문을 키웠다. 더 옛 원고는 원고 폴더에서 찾는다)
+
+
+def _newest_drafts(items):
+    """원고 폴더를 최근 것(T번호 큰 것)부터. 폴더 이름순이면 T100 이 T11 앞에 온다."""
+    def number(d):
+        digits = re.sub(r"\D", "", d.key.split("_", 1)[0])
+        return int(digits) if digits else -1
+    return [d.title for d in sorted(items, key=number, reverse=True)]
 
 
 def _standard(day):
@@ -279,6 +290,10 @@ def _picks_lines(picks, how):
         if cat is not None and (cat.direction or cat.question):
             line += f" (방향: {cat.direction or '-'} / 독자의 질문: {cat.question or '-'})"
         lines.append(line)
+        if node.sel.startswith("c"):  # 분류 전체 트리 대신 고른 중분류의 소분류만 (원고의 '분류:' 줄에 쓴다)
+            types = [t.name for t in node.types.all()]
+            if types:
+                lines.append("  - 소분류: " + " · ".join(types))
     return "\n".join(lines)
 
 
@@ -354,9 +369,11 @@ def _report(routine, day, report):
     return REPORT.format(cmd=REPORT_URL.format(url=report))
 
 
-def launcher(routine, day, report=None, extra=""):
+def launcher(routine, day, report=None, extra="", tree=False):
     """실행 안내문: 날짜·하루 양 + 읽을 md + 오늘의 자료 (+ 진행 보고).
-    extra 는 추가 실행의 내용: '오늘 쓸 분류'(없으면 맨 끝) 자리에 '이번에 할 것'으로 들어간다."""
+    extra 는 추가 실행의 내용: '오늘 쓸 분류'(없으면 맨 끝) 자리에 '이번에 할 것'으로 들어간다.
+    분류를 고르는 루틴(picks)은 '글 분류 전체'를 빼고 그날 분류만 싣는다 (2026-10-19 사용자: 안내문 줄이기).
+    tree=True 면 싣는다 — 분류 없이 코멘트로 시키는 추가 실행은 트리에서 골라야 한다."""
     if extra:
         head = [f"# 일일루틴 · {routine.name} (추가 실행) — {day}", "",
                 f"할 일: 하루 분량과 별도로 더 한다 — 아래 '{EXTRA_TITLE}'만큼만."]
@@ -368,6 +385,8 @@ def launcher(routine, day, report=None, extra=""):
     if keys:
         lines += ["", "## 오늘의 자료 (서버에서 가져옴)"]
         for k in keys:
+            if k == "categories" and "picks" in keys and not tree:
+                continue
             if extra and k == "picks":
                 lines += ["", f"### {EXTRA_TITLE}", extra]
             else:
@@ -468,17 +487,22 @@ def _in_all_order(routines):
     return sorted(routines, key=lambda r: ALL_ORDER.index(r.key) if r.key in ALL_ORDER else len(ALL_ORDER))
 
 
+ALL_PART = "<!-- 일일루틴 루틴: {key} -->"  # 전체 실행 안내문의 루틴 경계 (local_run.split_all 이 나눈다)
+
+
 def all_prompt(routines, day, report_for=lambda r: True):
-    """전체 실행 안내문: ALL_ORDER 순서로 각 안내문(진행 보고 포함)을 이어 붙여 한 터미널에서 차례로 돈다."""
+    """전체 실행 안내문: ALL_ORDER 순서로 각 안내문(진행 보고 포함)을 이어 붙인다.
+    PC 는 이것을 루틴마다 나눠 새 터미널에서 차례로 돌린다 (local_run.start). 2026-10-19: 한 대화로 이으면
+    답할 때마다 앞 루틴의 대화까지 다시 읽어 토큰이 크게 늘었다."""
     routines = _in_all_order(routines)
     head = [f"# 일일루틴 전체 실행 — {day}", "",
-            "아래 루틴을 위에서부터 차례로 끝까지 진행한다. 오래 걸려도 된다.",
-            "- 한 루틴을 끝내고(완료 보고) 다음 루틴으로 넘어간다. 앞 루틴이 고친 프롬프트 md 는 다음 루틴이 새로 읽는다.",
-            "- 한 루틴이 막히면 막힘으로 보고하고 다음 루틴으로 간다. 내가 할 일이 생기면 대기로 보고하고 기다린다.",
+            "아래 루틴을 위에서부터 차례로 끝까지 진행한다. PC 에서는 루틴마다 새 터미널이 열리고, 앞 루틴이 끝나면 다음 루틴이 시작된다.",
+            "- 앞 루틴이 고친 프롬프트 md 는 다음 루틴이 새로 읽는다.",
+            "- 한 루틴이 막히면 막힘으로 보고하고 끝낸다. 내가 할 일이 생기면 대기로 보고하고 기다린다.",
             "- 순서: " + " → ".join(f"{i}. {r.name}" for i, r in enumerate(routines, start=1)), ""]
     parts = ["\n".join(head)]
-    for i, r in enumerate(routines, start=1):
-        parts.append(f"\n{'=' * 8} {i}. {r.name} {'=' * 8}\n\n" + launcher(r, day, report=report_for(r)))
+    for r in routines:
+        parts.append(f"\n{ALL_PART.format(key=r.key)}\n" + launcher(r, day, report=report_for(r)))
     return "\n".join(parts)
 
 
@@ -751,7 +775,8 @@ def extra(request, pk):
         if not value:
             return JsonResponse({"error": "더 쓸 분류의 편수를 넣으세요."}, status=400)
         body = _picks_lines(value, "추가로 고른 분류")
-    return JsonResponse({"prompt": launcher(routine, day, report=report_url(request, routine, day), extra=body)})
+    return JsonResponse({"prompt": launcher(routine, day, report=report_url(request, routine, day), extra=body,
+                                            tree=mode == "comment")})
 
 
 def doc(request, rel):

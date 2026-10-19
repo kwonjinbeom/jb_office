@@ -158,8 +158,8 @@ def terminal_command(title, claude, args):
     return ["powershell.exe", "-NoLogo", "-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded]
 
 
-def open_terminal(name, title, claude="claude"):
-    """새 터미널에서 claude 를 연다 (미리 허용한 것 + 브라우저 + 한국어). Windows 가 아니면 돌릴 명령을 돌려준다."""
+def _claude_args(name):
+    """claude 에 넘길 인자 (미리 허용한 것 + 브라우저 + 한국어). 설정 파일을 .routine 에 쓴다."""
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
     conf, mcp = folder / "settings.json", folder / "mcp.json"
@@ -167,11 +167,64 @@ def open_terminal(name, title, claude="claude"):
                                 "permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
     mcp.write_text(json.dumps({"mcpServers": MCP_SERVERS}, indent=2), encoding="utf-8")
     ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
+    return [ask, "--model", ROUTINE_MODEL, "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN]
+
+
+def _manual(name):
+    return (f'claude "workspace/.routine/{name} 파일을 읽고 그대로 진행해." --model {ROUTINE_MODEL} '
+            "--settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json")
+
+
+def _popen(command):
+    subprocess.Popen(command, cwd=str(settings.REPO_ROOT), creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+
+
+def open_terminal(name, title, claude="claude"):
+    """새 터미널에서 claude 를 연다. Windows 가 아니면 돌릴 명령을 돌려준다."""
+    args = _claude_args(name)
     if not WINDOWS:
-        return f'claude "{ask}" --model {ROUTINE_MODEL} --settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json'
-    args = [ask, "--model", ROUTINE_MODEL, "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN]
-    subprocess.Popen(terminal_command(title, claude, args), cwd=str(settings.REPO_ROOT),
-                     creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
+        return _manual(name)
+    _popen(terminal_command(title, claude, args))
+    return ""
+
+
+# 전체 실행: 루틴마다 새 터미널 (2026-10-19 사용자: 한 대화로 이으면 답할 때마다 앞 루틴 대화까지 다시 읽어 토큰이 크게 는다).
+# 작은 창(차례 창)이 루틴 터미널을 하나씩 열고, claude 가 끝 표시 파일(.routine/done/)을 남기거나 창이 닫히면 다음 루틴을 연다.
+ALL_PART = re.compile(r"^<!-- 일일루틴 루틴: ([a-z0-9_-]{1,30}) -->\n", re.M)  # views.ALL_PART
+DONE_TAIL = """
+## 끝나면 (전체 실행)
+완료(또는 막힘·실패) 보고를 남긴 뒤, 맨 마지막에 Write 도구로 저장소 폴더의 `workspace/.routine/done/{name}` 파일을 만든다 (내용: 완료).
+이 파일이 생기면 다음 루틴이 새 터미널에서 시작된다. 그 뒤에는 아무것도 하지 않는다.
+"""
+
+
+def split_all(text):
+    """전체 실행 안내문 → [(루틴 키, 그 루틴의 안내문)]."""
+    pieces = ALL_PART.split(text)
+    return [(pieces[i], pieces[i + 1].strip() + "\n") for i in range(1, len(pieces) - 1, 2)]
+
+
+def open_chain(steps, title, claude="claude"):
+    """steps: [(안내문 파일 이름, 창 제목)]. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다."""
+    folder = settings.BASE_DIR / ".routine"
+    done = folder / "done"
+    done.mkdir(parents=True, exist_ok=True)
+    if not WINDOWS:
+        return " → 끝나면 ".join(_manual(name) for name, _ in steps)
+    lines = [f"$Host.UI.RawUI.WindowTitle = {_ps(title)}", f"Set-Location -LiteralPath {_ps(settings.REPO_ROOT)}"]
+    for name, step_title in steps:
+        (done / name).unlink(missing_ok=True)  # 같은 날 다시 누르면 처음부터
+        argv = terminal_command(step_title, claude, _claude_args(name))
+        lines += [
+            f"Write-Host {_ps(f'{step_title} 시작 (새 터미널)')}",
+            f"$p = Start-Process -FilePath {_ps(argv[0])} -ArgumentList {','.join(_ps(a) for a in argv[1:])} -PassThru",
+            f"while (-not (Test-Path -LiteralPath {_ps(done / name)}) -and -not $p.HasExited) {{ Start-Sleep -Seconds 10 }}",
+            f"Write-Host {_ps(f'{step_title} 끝')}",
+        ]
+    lines.append(f"Write-Host {_ps('전체 실행을 마쳤습니다. 이 창은 닫아도 됩니다.')}")
+    script = folder / "all-chain.ps1"
+    script.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
+    _popen(["powershell.exe", "-NoLogo", "-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", str(script)])
     return ""
 
 
@@ -190,10 +243,21 @@ def start(link, text):
         name, title = f"{key}-{day}.md", "사이트 변환"
         done = "PC 터미널에서 사이트 변환을 시작했습니다. 끝나면 사이트별 템플릿을 새로고침하세요."
     elif kind == "all":
-        for k in req["keys"]:
-            _open_run(_routine_for(k), day, "전체 실행 · 차례를 기다립니다")
-        name, title = f"all-{day}.md", "일일루틴 전체 실행"
-        done = f"PC 터미널에서 전체 실행을 시작했습니다 ({len(req['keys'])}개 루틴, 차례로)."
+        parts = split_all(text)
+        if not parts:
+            raise ValueError("전체 실행 안내문에 루틴이 없습니다. 화면에서 '전체 실행'을 다시 누르세요.")
+        folder = settings.BASE_DIR / ".routine"
+        folder.mkdir(exist_ok=True)
+        steps = []
+        for i, (k, body) in enumerate(parts, start=1):
+            routine = _routine_for(k)
+            _open_run(routine, day, "전체 실행 · 차례를 기다립니다")
+            name = f"all-{day}-{i}-{k}.md"
+            (folder / name).write_text(body + DONE_TAIL.format(name=name), encoding="utf-8")
+            steps.append((name, f"일일루틴 {i}/{len(parts)} {routine.name}"))
+        manual = open_chain(steps, "일일루틴 전체 실행 (차례 창)", claude)
+        return (f"저장소 폴더에서 차례로 실행하세요: {manual}" if manual else
+                f"PC 에서 전체 실행을 시작했습니다 ({len(parts)}개 루틴, 루틴마다 새 터미널로 차례로).")
     else:
         routine = _routine_for(key, req["name"])
         label = "갱신" if kind == "update" else "루틴"

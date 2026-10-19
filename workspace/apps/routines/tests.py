@@ -85,6 +85,17 @@ class TempRepoTests(Login):
             self.assertNotIn("클라우드", text)  # 로컬·클라우드 구분 없음
         self.assertIn("routine_report writing <상태>", run)
         self.assertNotIn("routine_report", scheduled)
+        # 글쓰기는 분류 전체 트리 대신 그날 분류(+ 고른 중분류의 소분류)만
+        self.assertNotIn("### 글 분류 전체", run)
+        self.assertIn("  - 소분류: ", run)
+        self.assertIn("### 글 분류 전체", launcher(Routine.objects.get(key="prompt_update"), day))
+        # 이미 있는 글은 최근 40줄만
+        for i in range(60):
+            NaverPost.objects.create(title=f"쌓인 글 {i:02d}")
+        existing = launcher(naver, day).split("### 이미 있는 글")[1].split("###")[0]
+        self.assertEqual(existing.count("\n- "), 40)
+        self.assertIn("쌓인 글 59", existing)
+        self.assertNotIn("쌓인 글 10", existing)
         ideas = launcher(Routine.objects.get(key="daily_ideas"), day)
         self.assertIn("2026-10-14 · 지난 후보", ideas)
         self.assertIn("검색 표준", ideas)
@@ -212,9 +223,11 @@ class RepoTests(Login):
         refs = references(tistory)
         self.assertEqual([r["kind"] for r in refs][:1], ["프롬프트"])
         labels = [r["label"] for r in refs]
-        for label in ["일일루틴/프롬프트/writing.md", "AGENTS.md", "workspace/TISTORY_WRITER.md", "일일루틴/분류변경/README.md", "오늘 쓸 분류",
-                      "콘텐츠/블로그_카페/포스팅자동화/원고/README.md", "사이트·체크 (운영 화면)"]:
+        for label in ["일일루틴/프롬프트/writing.md", "AGENTS.md", "일일루틴/프롬프트/writing_checklist.md", "일일루틴/분류변경/README.md",
+                      "오늘 쓸 분류", "사이트·체크 (운영 화면)"]:
             self.assertIn(label, labels)
+        self.assertNotIn("workspace/TISTORY_WRITER.md", labels)  # 보조는 짧은 체크리스트만 읽는다 (2026-10-19)
+        self.assertEqual(labels.count("일일루틴/프롬프트/writing_checklist.md"), 1)  # 짧게 다시 적은 경로는 같은 파일
         self.assertTrue(all(r["ok"] for r in refs))
         self.assertFalse(any("T번호" in label for label in labels))  # 쓰는 곳은 '보는 md'가 아니다
 
@@ -222,7 +235,7 @@ class RepoTests(Login):
         res = self.client.get(PROMPTS, {"r": "writing"})
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.context["routine"].key, "writing")
-        for text in ["글쓰기", "프롬프트 최신화", "workspace/TISTORY_WRITER.md", "나의 평가", "프롬프트 이력", "v1",
+        for text in ["글쓰기", "프롬프트 최신화", "writing_checklist.md", "나의 평가", "프롬프트 이력", "v1",
                      'class="input pm-comment-in"']:
             self.assertContains(res, text)
         self.assertNotContains(res, "프롬프트 (원문)")
@@ -277,10 +290,32 @@ class RepoTests(Login):
         self.assertEqual(text.count("## 진행 보고"), 3)
         self.assertEqual(res.context["all_keys"], "prompt_update,writing,daily_ideas")
         with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
-            start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text)
-            self.assertTrue((Path(tmp) / ".routine" / "all-2026-10-16.md").is_file())
-        self.assertEqual(popen.call_count, 1)
+            folder = Path(tmp) / ".routine"
+            (folder / "done").mkdir(parents=True)
+            (folder / "done" / "all-2026-10-16-2-writing.md").write_text("완료", encoding="utf-8")  # 앞서 누른 것
+            msg = start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text.replace("\n", "\r\n"))
+            self.assertIn("루틴마다 새 터미널로 차례로", msg)
+            # 루틴마다 따로 된 안내문 (한 대화로 잇지 않는다) + 끝 표시 파일 지시
+            names = ["all-2026-10-16-1-prompt_update.md", "all-2026-10-16-2-writing.md", "all-2026-10-16-3-daily_ideas.md"]
+            bodies = [(folder / n).read_text(encoding="utf-8") for n in names]
+            self.assertTrue(bodies[1].startswith("# 일일루틴 · 글쓰기"))
+            self.assertNotIn("# 일일루틴 · 프롬프트 최신화", bodies[1])
+            self.assertEqual(bodies[1].count("## 진행 보고"), 1)
+            self.assertIn("`workspace/.routine/done/all-2026-10-16-2-writing.md` 파일을 만든다", bodies[1])
+            self.assertFalse((folder / "done" / names[1]).exists())  # 다시 누르면 처음부터
+            # 차례 창: 루틴 터미널을 하나씩 열고, 끝 표시나 창 닫힘을 기다린 뒤 다음
+            raw = (folder / "all-chain.ps1").read_bytes()
+            self.assertTrue(raw.startswith(b"\xef\xbb\xbf"))
+            chain = raw.decode("utf-8-sig")
+            self.assertEqual(chain.count("Start-Process"), 3)
+            self.assertLess(chain.index("1/3 프롬프트 최신화"), chain.index("2/3 글쓰기"))
+            self.assertIn(f"Test-Path -LiteralPath '{folder / 'done' / names[0]}'", chain)
+            self.assertIn("$p.HasExited", chain)
+            self.assertIn("-File", popen.call_args[0][0])
+        self.assertEqual(popen.call_count, 1)  # 창은 차례 창 하나만 바로 연다
         self.assertEqual(RoutineRun.objects.count(), 3)
+        with self.assertRaises(ValueError):
+            start("jbroutine:all?key=all&day=2026-10-16", "# 일일루틴 전체 실행 — 2026-10-16\n루틴 없음")
 
     def test_report_api_records_run_history(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
@@ -317,6 +352,8 @@ class RepoTests(Login):
         self.assertFalse(RoutinePick.objects.exists())  # 추가 실행은 그날 아침 분량을 저장하지 않는다
         res = self.client.post(url, {"day": "2026-10-16", "mode": "comment", "comment": "IT/AI 로 3편, 아이폰 18 가격 비교"})
         self.assertIn("사용자 코멘트: IT/AI 로 3편, 아이폰 18 가격 비교", res.json()["prompt"])
+        self.assertIn("### 글 분류 전체", res.json()["prompt"])  # 코멘트로 시키면 분류를 골라야 해서 트리를 싣는다
+        self.assertNotIn("### 글 분류 전체", text)
         self.assertEqual(self.client.post(url, {"mode": "comment", "comment": " "}).status_code, 400)
         self.assertEqual(self.client.post(url, {"mode": "cats"}).status_code, 400)
         page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
@@ -349,7 +386,7 @@ class RepoTests(Login):
         self.assertEqual((v1.number, v2.number, v2.content), (1, 2, "새 내용"))
 
     def test_doc_only_for_referenced_md(self):
-        self.assertContains(self.client.get(reverse("routines:doc", args=["workspace/TISTORY_WRITER.md"])), "티스토리")
+        self.assertContains(self.client.get(reverse("routines:doc", args=["일일루틴/프롬프트/writing_checklist.md"])), "원고 체크리스트")
         self.assertEqual(self.client.get(reverse("routines:doc", args=["workspace/DEPLOY.md"])).status_code, 404)
         self.assertEqual(self.client.get(reverse("routines:doc", args=["../secret.md"])).status_code, 404)
 
