@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- D: 매끈하게 뭉친 눈으로 만든 하트 네 장. 청록 원 바탕, 잎마다 빛 반사 -->
+  <defs>
+    <radialGradient id="ball" cx="40%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.6" stop-color="#eef7f8"/>
+      <stop offset="1" stop-color="#b9dadf"/>
+    </radialGradient>
+    <g id="unit">
+      <path d="M256 246 C 232 224, 172 202, 176 148 C 180 106, 228 98, 256 130 C 284 98, 332 106, 336 148 C 340 202, 280 224, 256 246 Z" fill="url(#ball)"/>
+      <ellipse cx="222" cy="142" rx="14" ry="8" transform="rotate(-35 222 142)" fill="#ffffff" opacity="0.9"/>
+    </g>
+  </defs>
+  <rect width="512" height="512" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="240" fill="#2F6F62"/>
+  <!-- 줄기는 잎 뒤에: 두 아래 잎 사이로 나온다 -->
+  <path d="M256 256 C 262 330, 282 402, 322 448" fill="none" stroke="#eef7f8" stroke-width="16" stroke-linecap="round"/>
+  <use href="#unit" transform="rotate(45 256 256)"/>
+  <use href="#unit" transform="rotate(135 256 256)"/>
+  <use href="#unit" transform="rotate(225 256 256)"/>
+  <use href="#unit" transform="rotate(315 256 256)"/>
+</svg>

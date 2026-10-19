@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- B: 흰 바탕 + 청록 선 네잎, 잎마다 눈 결정 무늬 -->
+  <defs>
+    <path id="leaf" d="M256 248 C 231 225, 164 202, 169 144 C 174 101, 227 92, 256 126 C 285 92, 338 101, 343 144 C 348 202, 281 225, 256 248 Z"/>
+    <g id="flake" stroke="#2F6F62" stroke-width="5" stroke-linecap="round" fill="none">
+      <line x1="0" y1="-30" x2="0" y2="30"/>
+      <line x1="-26" y1="-15" x2="26" y2="15"/>
+      <line x1="-26" y1="15" x2="26" y2="-15"/>
+      <path d="M-8 -22 L0 -14 L8 -22 M-8 22 L0 14 L8 22"/>
+    </g>
+    <g id="unit">
+      <use href="#leaf" fill="#F4FAF8" stroke="#2F6F62" stroke-width="9" stroke-linejoin="round"/>
+      <use href="#flake" transform="translate(256 166) scale(0.9)"/>
+    </g>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <!-- 줄기는 잎 뒤에: 두 아래 잎 사이로 나온다 -->
+  <path d="M256 256 C 262 330, 282 402, 322 448" fill="none" stroke="#2F6F62" stroke-width="10" stroke-linecap="round"/>
+  <use href="#unit" transform="rotate(45 256 256)"/>
+  <use href="#unit" transform="rotate(135 256 256)"/>
+  <use href="#unit" transform="rotate(225 256 256)"/>
+  <use href="#unit" transform="rotate(315 256 256)"/>
+  <circle cx="256" cy="256" r="10" fill="#2F6F62"/>
+</svg>
