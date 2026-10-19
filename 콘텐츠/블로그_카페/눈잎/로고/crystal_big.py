@@ -72,7 +72,7 @@ def svg(name, bg, color, width, sil_fill=0.0, outline=0.0):
 
 
 svg("M_큰결정_청록바탕.svg", f'<rect width="512" height="512" rx="112" fill="{TEAL}"/>', "#FFFFFF", 3.4, sil_fill=0.16)
-svg("N_큰결정_흰바탕.svg", '<rect width="512" height="512" rx="112" fill="#FFFFFF"/>', TEAL, 3.4, sil_fill=0.12)
+svg("N_큰결정_흰바탕.svg", '<rect width="512" height="512" fill="#FFFFFF"/>', TEAL, 3.4, sil_fill=0.12)
 svg("O_큰결정_청록원_외곽선.svg", f'<rect width="512" height="512" fill="#FFFFFF"/><circle cx="256" cy="256" r="240" fill="{TEAL}"/>',
     "#FFFFFF", 3.4, outline=3)
 svg("P_큰결정_민트바탕_외곽선.svg", '<rect width="512" height="512" rx="112" fill="#EAF4F1"/>', TEAL, 3.4, outline=3)
