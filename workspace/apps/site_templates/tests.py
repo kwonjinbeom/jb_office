@@ -162,11 +162,21 @@ class PasteFormatTests(TestCase):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
         self.assertContains(res, 'data-copy-rich="#st-paste"')  # 네이버: 서식 그대로
         self.assertIn("style=", res.context["paste_html"])  # 네이버는 인라인 style 을 단 서식 HTML
+        tistory = self.place("memorily")
+        tistory.converted_body = "| 항목 | 값 |\n|---|---|\n| 가 | **10%**를 |"
+        tistory.save()
+        res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
+        html = res.context["clean_html"]  # 티스토리: 티스토리 글쓰기와 같은 인라인 style HTML
+        self.assertIn('<table style="border-collapse:collapse', html)
+        self.assertNotIn("<th", html)  # 머리글 줄이 표 밖으로 빠지지 않게 보통 칸
+        self.assertIn("<strong>10%</strong>를", html)
+        self.assertEqual(res.context["paste_html"], html)
         res = self.client.get(reverse("site_templates:convert", args=[self.place("밤밤").pk]))
         self.assertContains(res, "본문 HTML (HTML 보기)")
-        self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")  # 꾸밈 없는 HTML
+        self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")
         res = self.client.get(reverse("site_templates:convert", args=[self.place("워드프레스").pk]))
         self.assertContains(res, 'data-copy="#st-raw"')  # 워드프레스: 마크다운 그대로
+        self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")  # 꾸밈 없는 HTML
         self.assertContains(res, "태그1, 태그2")
         self.assertIn("## 돌려줄 것", res.context["request_text"])
         self.assertIn("블록 에디터", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다

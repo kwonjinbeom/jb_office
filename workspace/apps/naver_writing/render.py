@@ -10,6 +10,8 @@ from html.parser import HTMLParser
 
 import markdown
 
+from apps.writing.render import fix_bold
+
 SLOT_STYLE = {
     "photo": "margin:18px 0;padding:14px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;"
              "text-align:center;color:#374151;font-size:14px",
@@ -24,7 +26,9 @@ QUOTE_STYLE = "margin:18px 0;padding:12px 16px;border-left:4px solid #d1d5db;bac
 HR_STYLE = "border:0;border-top:1px solid #e5e7eb;margin:28px 0"
 IMG_STYLE = "max-width:100%;height:auto"
 
-LINE_MARK = re.compile(r"^\s*(?:>\s*)?(?:\[(사진|그림|캡션)\]|(📷|🖼️?))\s*[:：]?\s*(.*)$")
+# [사진] 설명 · [사진: 설명] (변환 요청문이 쓰는 꼴) · 📷 설명
+LINE_MARK = re.compile(r"^\s*(?:>\s*)?(?:\[(?P<kind>사진|그림|캡션)(?:\s*[:：]\s*(?P<inner>[^\]]*))?\]|(?P<emoji>📷|🖼️?))"
+                       r"\s*[:：]?\s*(?P<rest>.*)$")
 
 
 def _mark_lines(text: str) -> str:
@@ -35,8 +39,8 @@ def _mark_lines(text: str) -> str:
         if not m:
             out.append(line)
             continue
-        kind = m.group(1) or ("사진" if m.group(2) == "📷" else "그림")
-        body = html.escape(m.group(3).strip())
+        kind = m["kind"] or ("사진" if m["emoji"] == "📷" else "그림")
+        body = html.escape(" ".join(t for t in (m["inner"], m["rest"]) if t and t.strip()).strip())
         if kind == "캡션":
             block = f'<p style="{CAPTION_STYLE}">{body}</p>'
         elif kind == "사진":
@@ -273,7 +277,7 @@ def render_body(text: str) -> str:
     if is_html(text):
         return _decorate(clean_html(text))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(_mark_lines(text), extensions=["tables", "sane_lists", "nl2br"]))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return clean_html(out)  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 
