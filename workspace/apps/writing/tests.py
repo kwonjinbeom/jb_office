@@ -152,6 +152,14 @@ class RenderTests(TestCase):
         self.assertIn("<strong>(괄호)</strong>도", out)
         self.assertIn("<code>**코드**</code>", out)
 
+    def test_bracket_colon_slot(self):
+        # 변환 요청문은 [사진: 설명] 꼴로 돌려받는다 → 사진 자리 상자
+        out = render_body("[사진: 세일 달력]\n\n[그림: 그림1.png]")
+        self.assertIn('class="wr-slot"', out)
+        self.assertIn("📷 세일 달력", out)
+        self.assertIn("<strong>그림1.png</strong>", out)
+        self.assertNotIn("[사진", out)
+
     def test_slots_and_captions(self):
         out = render_body("📷 사진 1: 직접 찍은 사진\n[그림] 그림1.png\n[캡션] 설명 <b>")
         self.assertIn("📷 사진 1: 직접 찍은 사진", out)
