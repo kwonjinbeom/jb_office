@@ -158,6 +158,24 @@ class PasteFormatTests(TestCase):
         self.assertTrue(PlatformFormat.objects.get(platform="naver").guide.startswith("붙이는 곳: 본문에 '서식 그대로'"))
         self.assertIn("HTML 보기", PlatformFormat.objects.get(platform="blogger").guide)
 
+    def test_naver_paste_gaps_tags_and_check_date(self):
+        """네이버 (2026-10-20 사용자): 문단 사이 빈 줄, 태그는 '#태그 #태그', 출처 줄 확인 날짜는 괄호 안 작은 회색"""
+        pl = self.place("black_lukey", "낙서장")
+        pl.converted_body = "첫 문단\n\n## 소제목\n\n둘째 문단\n\n참고: [출처](https://a.com) (2026년 10월 20일 확인)"
+        pl.converted_tags = "태그1, 태그 2, #태그3"
+        pl.save()
+        res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
+        rich = res.context["paste_html"]
+        self.assertEqual(rich.count("&nbsp;</p>"), 3)  # 블록 네 개 사이에 빈 줄 셋
+        self.assertEqual(res.context["converted_html"], rich)  # 미리보기도 붙여넣을 HTML 그대로
+        self.assertIn('<span style="color:#999999;font-size:13px">(10.20 확인)</span>', rich)
+        self.assertNotIn("2026년 10월 20일 확인", rich)
+        self.assertContains(res, '<textarea id="st-tags" hidden>#태그1 #태그2 #태그3</textarea>', html=False)
+        tistory = self.place("memorily")
+        res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
+        self.assertContains(res, '<textarea id="st-tags" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
+        self.assertNotIn("&nbsp;</p>", res.context["paste_html"])
+
     def test_copy_buttons_follow_platform(self):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
         self.assertContains(res, 'data-copy-rich="#st-paste"')  # 네이버: 서식 그대로

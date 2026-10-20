@@ -270,13 +270,22 @@ def _render_for(placement, text):
     꾸밈 없는 HTML 을 붙이면 표 테두리·머리글 색이 빠지고 머리글 줄이 표 밖으로 빠진다 (2026-10-20 사용자).
     워드프레스만 꾸밈 없는 HTML (블록 에디터가 인라인 style 을 지운다)."""
     platform = placement.site_category.blog.platform
-    if platform == Blog.Platform.NAVER:
-        from apps.naver_writing.render import paste_html, plain_text, render_body
+    if platform == Blog.Platform.NAVER:  # 미리보기도 붙여넣을 HTML 그대로 (문단 사이 빈 줄까지 네이버와 같게)
+        from apps.naver_writing.render import is_html, paste_html, plain_text, render_body
         html = render_body(text)
-        return html, paste_html(html), plain_text(html), paste.clean_html(text)
+        rich = paste_html(html, gaps=not is_html(text))
+        return rich, rich, plain_text(html), paste.clean_html(text)
     from apps.writing.render import plain_text, render_body
     html = paste.clean_html(text) if platform == Blog.Platform.WORDPRESS else render_body(text)
     return html, html, plain_text(html), html
+
+
+def _tags_for(placement):
+    """태그 칸에 붙일 꼴. 네이버는 '#태그 #태그' (쉼표로 붙이면 한 태그로 붙는다), 나머지는 쉼표 그대로."""
+    if placement.site_category.blog.platform == Blog.Platform.NAVER:
+        from apps.naver_writing.render import tag_line
+        return tag_line(placement.converted_tags)
+    return placement.converted_tags
 
 
 class ConvertForm(_Styled):
@@ -337,6 +346,8 @@ def convert(request, pk):
         "page_title": "변환", "pl": placement, "blog": placement.site_category.blog, "post": post, "form": form,
         "original_html": original_html, "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
+        "is_naver": placement.site_category.blog.platform == Blog.Platform.NAVER,
+        "tags_copy": _tags_for(placement),
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
     })

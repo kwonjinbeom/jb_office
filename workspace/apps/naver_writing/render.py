@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 
 import markdown
 
-from apps.writing.render import fix_bold
+from apps.writing.render import fix_bold, soft_check_dates
 
 SLOT_STYLE = {
     "photo": "margin:18px 0;padding:14px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;"
@@ -278,16 +278,32 @@ def render_body(text: str) -> str:
         return _decorate(clean_html(text))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
     out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
-    return clean_html(out)  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+    return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+
+
+GAP = '<p style="font-family:나눔고딕;font-size:15px;line-height:1.8;margin:0">&nbsp;</p>'  # 네이버 빈 줄 한 칸 (본문 한 줄 높이)
+BLOCKS = {"p", "h2", "h3", "h4", "ul", "ol", "table", "blockquote", "hr", "pre", "div"}
+VOID = {"br", "img", "hr"}
 
 
 class _PasteStyles(HTMLParser):
-    """Clipboard HTML needs explicit typography: Naver cannot see our stylesheet."""
-    def __init__(self):
+    """Clipboard HTML needs explicit typography: Naver cannot see our stylesheet.
+    gaps: 맨 바깥 블록(문단·소제목·표·목록·인용) 사이에 빈 문단을 끼운다. 스마트에디터는 margin 을 버려서
+    서버 화면(문단 아래 여백)과 달리 문단이 붙는다 (2026-10-20 사용자, 포스팅자동화/13 문서 '문단 사이 여백')."""
+    def __init__(self, gaps=False):
         super().__init__(convert_charrefs=True)
         self.out = []
+        self.gaps = gaps
+        self.depth = 0
+        self.seen_block = False
 
     def handle_starttag(self, tag, attrs):
+        if self.depth == 0 and tag in BLOCKS:
+            if self.gaps and self.seen_block:
+                self.out.append(GAP)
+            self.seen_block = True
+        if tag not in VOID:
+            self.depth += 1
         attrs = dict(attrs)
         styles = {}
         if tag in {"p", "h2", "h3", "h4", "li", "td", "th"}:
@@ -307,17 +323,28 @@ class _PasteStyles(HTMLParser):
         self.out.append("<" + tag + "".join(f' {key}="{html.escape(value or "", quote=True)}"' for key, value in attrs.items()) + ">")
 
     def handle_endtag(self, tag):
+        if tag not in VOID:
+            self.depth = max(0, self.depth - 1)
         self.out.append(f"</{tag}>")
 
     def handle_data(self, data):
         self.out.append(html.escape(data, quote=False))
 
 
-def paste_html(body_html: str) -> str:
-    parser = _PasteStyles()
+def paste_html(body_html: str, gaps: bool = False) -> str:
+    """네이버에 서식 그대로 붙일 HTML. gaps 는 마크다운으로 쓴 글(빈 줄로 문단을 나눈 글)일 때:
+    문단 사이에 빈 줄을 넣어 서버 화면과 같은 간격으로. 네이버 편집기에서 쓴 글은 빈 줄이 이미 문단으로 들어 있다."""
+    parser = _PasteStyles(gaps=gaps)
     parser.feed(clean_html(body_html))
     parser.close()
     return "".join(parser.out)
+
+
+def tag_line(tags: str) -> str:
+    """네이버 태그 칸에 붙일 꼴: '#태그 #태그'. 쉼표로 붙여 넣으면 한 태그로 붙는다 (2026-10-20 사용자).
+    네이버 태그에는 띄어쓰기가 안 들어가므로 태그 안의 빈칸은 뺀다."""
+    items = [re.sub(r"\s+", "", t.strip().lstrip("#")) for t in re.split(r"[,\n]|(?<=\S)\s+(?=#)", tags or "")]
+    return " ".join(f"#{t}" for t in items if t)
 
 
 def plain_text(body_html: str, drop_slots: bool = False) -> str:
