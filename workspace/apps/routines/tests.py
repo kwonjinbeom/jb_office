@@ -83,6 +83,9 @@ class TempRepoTests(Login):
             self.assertIn("### 오늘 쓸 분류", text)
             self.assertIn("체크: 쇼핑커넥트 링크는", text)
             self.assertIn("이미 쓴 네이버 글", text)
+            # 처음 쓸 때부터 사이트별 템플릿·카테고리 컨셉에 맞춘다 (2026-10-20 사용자)
+            self.assertRegex(text, r"\n  - 말투: .*개발자")
+            self.assertRegex(text, r"\n  - 카테고리: .*Java")
             self.assertNotIn("클라우드", text)  # 로컬·클라우드 구분 없음
         self.assertIn("routine_report writing <상태>", run)
         self.assertNotIn("routine_report", scheduled)

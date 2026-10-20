@@ -146,14 +146,37 @@ PLATFORMS = {"tistory": [Blog.Platform.TISTORY], "naver": [Blog.Platform.NAVER]}
 
 
 def _sites(key):
+    """사이트마다 컨셉 · 체크 + 사이트별 템플릿(말투·구성·꼭 지킬 것) + 카테고리 컨셉.
+    글을 처음 쓸 때부터 그 사이트·카테고리 컨셉에 맞춰 쓰게 한다 (2026-10-20 사용자). 변환은 다듬기만."""
+    from apps.blog_types.models import SiteCategory
+    from apps.site_templates.models import SiteTemplate
     lines = []
     blogs = Blog.objects.all() if key == "writing" else Blog.objects.filter(platform__in=PLATFORMS.get(key, []))
-    for b in blogs.exclude(status=Blog.Status.HOLD).prefetch_related("checks"):
+    blogs = blogs.exclude(status=Blog.Status.HOLD).prefetch_related("checks")
+    templates = {t.blog_id: t for t in SiteTemplate.objects.filter(blog__in=blogs)}
+    cats = SiteCategory.objects.filter(blog__in=blogs, parent=None).prefetch_related("children").order_by("order", "pk")
+    by_blog = {}
+    for c in cats:
+        by_blog.setdefault(c.blog_id, []).append(c)
+    for b in blogs:
         head = f"- {b.name} ({b.address or '주소 없음'}) · {b.content or '컨셉 미정'}"
         head += f" · 하루 {b.daily}편" if b.status == Blog.Status.ACTIVE else f" · {b.get_status_display()}"
         lines.append(head)
         lines += [f"  - 체크: {c.body}" for c in b.checks.all()]
+        tpl = templates.get(b.pk)
+        if tpl:
+            lines += [f"  - {label}: {_one_line(value)}" for label, value in
+                      (("말투", tpl.tone), ("구성", tpl.structure), ("꼭 지킬 것", tpl.rules)) if value.strip()]
+        all_cats = [(f"{c.name} › {k.name}" if k is not c else c.name, k)
+                    for c in by_blog.get(b.pk, []) for k in (c, *c.children.all())]
+        if all_cats:
+            lines.append("  - 카테고리: " + " · ".join(name for name, _ in all_cats))
+            lines += [f"  - 카테고리 {name} 컨셉: {_one_line(k.concept)}" for name, k in all_cats if k.concept.strip()]
     return "\n".join(lines) or "- (해당 사이트 없음)"
+
+
+def _one_line(text):
+    return " ".join((text or "").split())
 
 
 def _existing(key, day):
