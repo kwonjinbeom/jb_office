@@ -314,6 +314,10 @@ class DraftImportTests(TestCase):
         self.assertNotIn("본문 끝", d.body)
         self.assertEqual((d.tags, d.summary, d.code), ("가, 나, 다", "시험 원고 소개 한 줄.", "T99"))
         self.assertIsNone(parse("# 메모만\n"))
+        # 본문에 제목 줄이 없으면 맨 위 '# [원고] T번호 · 제목' 에서 (T61·T62)
+        d = parse("# [원고] T61 · iOS 27 업데이트 해도 되나?\n\n제작 정보\n<!-- 본문 시작 -->\n\n**결론부터** 올려도 됩니다.\n<!-- 본문 끝 -->\n")
+        self.assertEqual((d.title, d.body), ("iOS 27 업데이트 해도 되나?", "**결론부터** 올려도 됩니다."))
+        self.assertIsNone(parse("제작 정보\n<!-- 본문 시작 -->\n제목 없는 본문\n<!-- 본문 끝 -->\n"))
 
     def test_import_page_lists_only_real_drafts(self):
         res = self.client.get(reverse("writing:import"))
