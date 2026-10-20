@@ -223,7 +223,8 @@ class RepoTests(Login):
         refs = references(tistory)
         self.assertEqual([r["kind"] for r in refs][:1], ["프롬프트"])
         labels = [r["label"] for r in refs]
-        for label in ["일일루틴/프롬프트/writing.md", "AGENTS.md", "일일루틴/프롬프트/writing_checklist.md", "일일루틴/분류변경/README.md",
+        for label in ["일일루틴/프롬프트/writing.md", "AGENTS.md", "일일루틴/프롬프트/writing_checklist.md", "일일루틴/프롬프트/writing_sources.md",
+                      "일일루틴/분류변경/README.md",
                       "오늘 쓸 분류", "사이트·체크 (운영 화면)"]:
             self.assertIn(label, labels)
         self.assertNotIn("workspace/TISTORY_WRITER.md", labels)  # 보조는 짧은 체크리스트만 읽는다 (2026-10-19)
