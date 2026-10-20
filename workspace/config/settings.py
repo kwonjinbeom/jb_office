@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     "apps.blog_rules",
     "apps.blog_ops",
     "apps.routines",
+    "apps.series",
 ]
 
 MIDDLEWARE = [
