@@ -40,7 +40,7 @@ class SeriesTests(TestCase):
         # 연재 구성대로, 흐름 줄은 말머리(처음 · 부족 · 바꿈 …)에 따라 나뉘어 들어간다
         for head in ("## 필요했던 것\nPC 에서만", "## 처음 만든 것\n\n- (10-13) PythonAnywhere",
                      "## 써 보니 부족했던 점\n\n- 바꿀 때마다", "## 이렇게 바꿨다\n\n- (10-13) '서버 코드 갱신'",
-                     "[사진] 바꾼 뒤 화면", "## 지금 모습"):
+                     "\n[사진] ", "## 지금 모습"):
             self.assertIn(head, post.body)
         self.assertRedirects(res, f"{reverse('posts:view')}?stage=temp&p=tistory:{post.pk}", fetch_redirect_response=False)
         self.client.post(reverse("series:make_post", args=[ep.pk]))  # 두 번 눌러도 글은 하나
@@ -53,3 +53,41 @@ class SeriesTests(TestCase):
         res = self.client.post(f"{INDEX}?new=1", {"number": 16, "title": "새 회차", "hook": "", "period": "",
                                                   "points": "", "sources": ""})
         self.assertTrue(Episode.objects.filter(number=16, title="새 회차").exists())
+
+
+class ShotTests(TestCase):
+    """회차 사진: SERIES_SHOTS_DIR/EP01/<순서>_<말머리>_<설명>.jpg"""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        folder = Path(self.tmp.name) / "EP02"
+        folder.mkdir()
+        (folder / "1_처음_서버 첫 화면.jpg").write_bytes(b"jpg-1")
+        (folder / "2_그때_설정 (10-14).jpg").write_bytes(b"jpg-2")
+        (folder / "메모.txt").write_text("사진 아님", encoding="utf-8")
+
+    def test_list_serve_and_skeleton(self):
+        from django.test import override_settings
+        with override_settings(SERIES_SHOTS_DIR=self.tmp.name):
+            ep = Episode.objects.get(number=2)
+            res = self.client.get(INDEX, {"ep": ep.pk})
+            self.assertEqual([(s["word"], s["label"], s["original"]) for s in res.context["shots"]],
+                             [("처음", "서버 첫 화면", False), ("그때", "설정 (10-14)", True)])
+            url = reverse("series:shot", args=[2, "1_처음_서버 첫 화면.jpg"])
+            self.assertContains(res, f'src="{url}"')
+            res = self.client.get(url)
+            self.assertEqual(b"".join(res.streaming_content), b"jpg-1")
+            res.close()
+            self.assertEqual(self.client.get(reverse("series:shot", args=[2, "메모.txt"])).status_code, 404)
+            self.assertEqual(self.client.get(reverse("series:shot", args=[2, "..%2F..%2Fsettings.py"])).status_code, 404)
+            self.client.post(reverse("series:make_post", args=[ep.pk]))
+            ep.refresh_from_db()
+            body = ep.post.body
+            self.assertIn("[사진] 서버 첫 화면 — EP02/1_처음_서버 첫 화면.jpg", body)  # 처음 만든 것 아래
+            self.assertIn("[사진] 설정 (10-14) — EP02/2_그때_설정 (10-14).jpg", body)  # 그때 사진은 '이렇게 바꿨다' 아래
+            self.assertLess(body.index("## 처음 만든 것"), body.index("서버 첫 화면"))
+            self.assertLess(body.index("## 이렇게 바꿨다"), body.index("설정 (10-14)"))

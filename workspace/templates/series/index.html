@@ -56,6 +56,15 @@
       {% if current.hook %}<div class="sr-k">필요했던 것</div><p class="sr-hook">{{ current.hook }}</p>{% endif %}
       <div class="sr-k">흐름</div>
       <ul class="sr-steps">{% for word, text in current.steps %}<li><span class="sr-step">{{ word|default:"·" }}</span><span>{{ text }}</span></li>{% empty %}<li class="muted">아직 없음</li>{% endfor %}</ul>
+      {% if shots %}
+      <div class="sr-k">화면 <span class="cnt">{{ shots|length }}</span></div>
+      <div class="sr-shots">{% for s in shots %}
+        <a class="sr-shot" href="{{ s.url }}" target="_blank" rel="noopener" title="{{ s.word }} · {{ s.label }}">
+          <img src="{{ s.url }}" alt="{{ s.label }}" loading="lazy">
+          <span class="sr-shot-cap"><span class="badge {% if s.original %}blue{% else %}gray{% endif %}">{% if s.original %}그때{% else %}{{ s.word }}{% endif %}</span><span class="sr-shot-label">{{ s.label }}</span></span>
+        </a>{% endfor %}
+      </div>
+      {% endif %}
       {% if current.source_list %}
       <div class="sr-k">근거</div>
       <ul class="sr-sources">{% for s in current.source_list %}<li>{{ s }}</li>{% endfor %}</ul>

@@ -34,3 +34,6 @@ workspace/.routine/
 
 # 일일루틴 브라우저(playwright) 스냅샷
 .playwright-mcp/
+
+# Playwright MCP 작업 파일
+.playwright-mcp/

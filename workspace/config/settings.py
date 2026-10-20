@@ -96,6 +96,8 @@ DAILY_IDEAS_DIR = REPO_ROOT / "시장조사" / "일일아이디어"
 ROUTINE_LOCAL_URL = _env("ROUTINE_LOCAL_URL", "http://127.0.0.1:8000")
 # 논의 글(md). Claude·Codex 가 쓰고 push 하면 논의 현황·진행현황에 올라온다 (apps/discussions/docs.py)
 DISCUSSIONS_DIR = REPO_ROOT / "논의"
+# memorily 연재 회차별 화면 사진: EP01/<순서>_<말머리>_<설명>.jpg (apps/series)
+SERIES_SHOTS_DIR = REPO_ROOT / "콘텐츠" / "블로그_카페" / "memorily_연재"
 # ---------------------------------------------------------------------------
 
 INSTALLED_APPS = [
