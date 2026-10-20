@@ -250,7 +250,25 @@ def render_body(text: str) -> str:
         return _decorate(clean_html(text))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
     out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
-    return clean_html(out)  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+    return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+
+
+# 출처 줄 끝의 확인 날짜: "2026년 10월 20일 확인" · "(2026-10-20 확인)" · "10.20 확인" (2026-10-20 사용자: 부자연스럽다)
+# → 괄호 안 작은 회색 글씨 "(10.20 확인)". 인라인 style 이라 네이버·티스토리에 붙여도 남는다 (네이버 글자 크기 단계 13).
+CHECK_DATE = re.compile(r"(?:\([ \t]*)?(?:(\d{4})[ \t]*(?:년|[.\-/])[ \t]*)?(\d{1,2})[ \t]*(?:월|[.\-/])[ \t]*(\d{1,2})[ \t]*일?"
+                        r"[ \t]*확인(?![가-힣])(?:[ \t]*\))?")
+CHECK_DATE_STYLE = "color:#999999;font-size:13px"
+
+
+def soft_check_dates(body_html: str) -> str:
+    """글자 부분(태그 밖)의 확인 날짜만 바꾼다. 해는 쓰지 않는다 (사용자가 든 꼴 '10.20')."""
+    def one(m: re.Match) -> str:
+        month, day = int(m.group(2)), int(m.group(3))
+        if not (1 <= month <= 12 and 1 <= day <= 31):
+            return m.group(0)
+        return f'<span style="{CHECK_DATE_STYLE}">({month}.{day} 확인)</span>'
+    parts = re.split(r"(<[^>]+>)", body_html)
+    return "".join(part if part.startswith("<") else CHECK_DATE.sub(one, part) for part in parts)
 
 
 def plain_text(body_html: str, drop_slots: bool = False) -> str:
