@@ -8,6 +8,7 @@
   <span class="badge gray">매핑</span><strong class="bt-pane-title">모든 사이트</strong>
   {% endif %}
   <span class="cnt">{{ placements|length }}</span>
+  <a class="btn sm bt-pane-go" href="{% url 'site_templates:index' %}{% if site_sel %}?site={{ site_sel }}{% endif %}" title="사이트별 템플릿에서 변환">변환하러 가기{% include "includes/ic.html" with name="chevron-right" %}</a>
 </div>
 
 {% if top_form %}{% include "blog_types/_edit_card.html" with form=top_form ekind=skind eobj=sobj %}{% endif %}

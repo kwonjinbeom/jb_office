@@ -1106,6 +1106,7 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .bt-pane-title { font-size: 15px; }
 .bt-unclassified .nm { color: var(--text-3); }
 .bt-place-pick { width: 100%; }
+.bt-pane-go { margin-left: auto; flex: none; }
 .bt-pane-filter { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; flex: none; }
 .bt-pane-filter select { width: 130px; }
 /* 글 관리·글 보기의 사이트 고르기 (검토글·발행예정글) */
