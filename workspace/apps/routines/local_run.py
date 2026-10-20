@@ -191,6 +191,7 @@ def open_terminal(name, title, claude="claude"):
 # 전체 실행: 루틴마다 새 터미널 (2026-10-19 사용자: 한 대화로 이으면 답할 때마다 앞 루틴 대화까지 다시 읽어 토큰이 크게 는다).
 # 작은 창(차례 창)이 루틴 터미널을 하나씩 열고, claude 가 끝 표시 파일(.routine/done/)을 남기거나 창이 닫히면 다음 루틴을 연다.
 ALL_PART = re.compile(r"^<!-- 일일루틴 루틴: ([a-z0-9_-]{1,30}) -->\n", re.M)  # views.ALL_PART
+CLOSE_AFTER = 90  # 끝 표시 뒤 루틴 창을 닫기까지 (초)
 DONE_TAIL = """
 ## 끝나면 (전체 실행)
 완료(또는 막힘·실패) 보고를 남긴 뒤, 맨 마지막에 Write 도구로 저장소 폴더의 `workspace/.routine/done/{name}` 파일을 만든다 (내용: 완료).
@@ -205,26 +206,40 @@ def split_all(text):
 
 
 def open_chain(steps, title, claude="claude"):
-    """steps: [(안내문 파일 이름, 창 제목)]. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다."""
+    """steps: [(안내문 파일 이름, 창 제목)]. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다.
+    끝난 루틴 창은 CLOSE_AFTER 초 뒤 닫고(마지막 답·Stop 훅의 git 동기화가 끝나게), 다 끝나면 차례 창도 닫힌다
+    (2026-10-20 사용자: 끝났으면 창을 닫았으면). 끝 표시 없이 사람이 창을 닫은 루틴은 그대로 다음으로 간다."""
     folder = settings.BASE_DIR / ".routine"
     done = folder / "done"
     done.mkdir(parents=True, exist_ok=True)
     if not WINDOWS:
         return " → 끝나면 ".join(_manual(name) for name, _ in steps)
-    lines = [f"$Host.UI.RawUI.WindowTitle = {_ps(title)}", f"Set-Location -LiteralPath {_ps(settings.REPO_ROOT)}"]
+    lines = [
+        f"$Host.UI.RawUI.WindowTitle = {_ps(title)}", f"Set-Location -LiteralPath {_ps(settings.REPO_ROOT)}",
+        "$prev = $null; $prevAt = Get-Date",
+        "function Close-Done([int]$wait) { if ($script:prev) { $left = $wait - ((Get-Date) - $script:prevAt).TotalSeconds; "
+        "if ($left -gt 0) { Start-Sleep -Seconds ([int]$left) }; "
+        "if (-not $script:prev.HasExited) { taskkill /PID $script:prev.Id /T /F | Out-Null }; $script:prev = $null } }",
+    ]
     for name, step_title in steps:
         (done / name).unlink(missing_ok=True)  # 같은 날 다시 누르면 처음부터
+        flag = _ps(done / name)
         argv = terminal_command(step_title, claude, _claude_args(name))
         lines += [
             f"Write-Host {_ps(f'{step_title} 시작 (새 터미널)')}",
             f"$p = Start-Process -FilePath {_ps(argv[0])} -ArgumentList {','.join(_ps(a) for a in argv[1:])} -PassThru",
-            f"while (-not (Test-Path -LiteralPath {_ps(done / name)}) -and -not $p.HasExited) {{ Start-Sleep -Seconds 10 }}",
+            f"while (-not (Test-Path -LiteralPath {flag}) -and -not $p.HasExited) {{ Start-Sleep -Seconds 10; "
+            f"if ($prev -and ((Get-Date) - $prevAt).TotalSeconds -ge {CLOSE_AFTER}) {{ Close-Done 0 }} }}",
+            f"Close-Done {CLOSE_AFTER}",
+            f"if (Test-Path -LiteralPath {flag}) {{ $prev = $p; $prevAt = Get-Date }}",
             f"Write-Host {_ps(f'{step_title} 끝')}",
         ]
-    lines.append(f"Write-Host {_ps('전체 실행을 마쳤습니다. 이 창은 닫아도 됩니다.')}")
+    lines += [f"Close-Done {CLOSE_AFTER}", f"Write-Host {_ps('전체 실행을 마쳤습니다. 이 창은 10초 뒤 닫힙니다.')}", "Start-Sleep -Seconds 10"]
     script = folder / "all-chain.ps1"
-    script.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
-    _popen(["powershell.exe", "-NoLogo", "-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", str(script)])
+    script.write_text("
+".join(lines) + "
+", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
+    _popen(["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)])
     return ""
 
 
