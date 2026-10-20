@@ -1,4 +1,4 @@
-"""memorily 연재 화면 하나: 왼쪽 회차 목록, 오른쪽 고른 회차 (다룰 것 · 근거 · 상태 · 글로 만들기 · 고치기)."""
+"""memorily 연재 화면 하나: 왼쪽 회차 목록(화면별), 오른쪽 고른 회차 (흐름 · 근거 · 상태 · 글로 만들기 · 고치기)."""
 from django import forms
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,20 +9,20 @@ from .models import Episode
 
 SITE = "memorily"
 SERIES = "AI 와 블로그 자동화 만들기"
-# 연재 방향: memorily 사이트 템플릿(개발자 1인칭 · 겪은 것만)에 맞춘 한 줄씩
+# 연재 방향 (2026-10-20 사용자): 필요한 화면을 하나씩 더하고 바꾸고 메우며 체계가 잡혀 가는 모습. memorily 템플릿(개발자 1인칭)
 DIRECTION = [
-    ("독자", "AI 로 일을 자동화해 보고 싶은 개발자·1인 사업자"),
-    ("말투", "개발자 1인칭, 겪은 것만 담백하게 (과장·홍보 없이)"),
-    ("구성", "겪은 상황 → 해 본 것(코드·화면) → 결과와 느낀 점 → 다음에 해 볼 것"),
-    ("제목", f"[{SERIES} EP.N] 한 문장"),
+    ("보여줄 것", "첫 화면부터 필요한 화면을 하나씩 더하고, 써 보며 바꾸고, 프롬프트를 다듬고, 부족한 점을 메워 체계가 잡혀 가는 과정"),
+    ("구성", "필요했던 것 → 처음 만든 것 → 써 보니 부족했던 점 → 이렇게 바꿨다 → 지금 모습"),
+    ("말투", "개발자 1인칭, 겪은 것만 담백하게 · 화면 캡처 전/후"),
+    ("제목", f"[{SERIES} EP.N] 화면 이름 + 한 문장"),
 ]
 
 
 class EpisodeForm(forms.ModelForm):
     class Meta:
         model = Episode
-        fields = ["number", "title", "hook", "period", "points", "sources"]
-        widgets = {"points": forms.Textarea(attrs={"rows": 6}), "sources": forms.Textarea(attrs={"rows": 4})}
+        fields = ["number", "title", "screen", "period", "hook", "points", "sources"]
+        widgets = {"points": forms.Textarea(attrs={"rows": 7}), "sources": forms.Textarea(attrs={"rows": 4})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,16 +72,21 @@ def set_status(request, pk):
     return redirect(f"{reverse('series:index')}?ep={ep.pk}")
 
 
+SECTIONS = [  # (소제목, 그 아래 갈 흐름 말머리, 사진 자리)
+    ("처음 만든 것", ("처음",), "[사진] 처음 화면"),
+    ("써 보니 부족했던 점", ("부족",), ""),
+    ("이렇게 바꿨다", ("바꿈", "메움", "나눔", "합침", "넓힘", "정리", "고침", "다듬음", ""), "[사진] 바꾼 뒤 화면"),
+    ("지금 모습", ("지금",), ""),
+]
+
+
 def _skeleton(ep):
-    """memorily 구성대로 비어 있는 뼈대. 다룰 것은 '해 본 것' 아래 메모로, 근거는 끝에."""
-    points = "\n".join(f"- {p}" for p in ep.point_list) or "- "
+    """연재 구성대로 뼈대: 필요했던 것 → 처음 만든 것 → 써 보니 부족했던 점 → 이렇게 바꿨다 → 지금 모습. 흐름 줄은 말머리대로 나눠 넣는다."""
+    parts = [f"## 필요했던 것\n{ep.hook}"]
+    for head, words, photo in SECTIONS:
+        lines = "\n".join(f"- {text}" for word, text in ep.steps if word in words)
+        parts.append("\n\n".join(x for x in (f"## {head}", lines or "- ", photo) if x))
     sources = "\n".join(f"- {s}" for s in ep.source_list)
-    parts = [
-        f"## 겪은 상황\n{ep.hook}",
-        f"## 해 본 것\n{points}\n\n[그림] 그때 화면이나 코드",
-        "## 결과와 느낀 점\n",
-        "## 다음에 해 볼 것\n",
-    ]
     if sources:
         parts.append(f"참고 (근거):\n{sources}")
     return "\n\n".join(parts)

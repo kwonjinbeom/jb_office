@@ -18,13 +18,13 @@
   {# 왼쪽: 회차 목록 #}
   <section class="card sr-list">
     <table class="grid clickable">
-      <thead><tr><th style="width:56px">회차</th><th>제목</th><th style="width:118px">기간</th><th style="width:72px">상태</th></tr></thead>
+      <thead><tr><th style="width:56px">회차</th><th style="width:34%">화면</th><th>제목</th><th style="width:72px">상태</th></tr></thead>
       <tbody>
         {% for e in episodes %}
         <tr data-href="?ep={{ e.pk }}"{% if e == current %} class="on"{% endif %}>
           <td class="mid num">EP.{{ e.number }}</td>
-          <td class="title-cell mid"><a href="?ep={{ e.pk }}">{{ e.title }}</a></td>
-          <td class="mid small muted num">{{ e.period|default:"-" }}</td>
+          <td class="mid small sr-screen" title="{{ e.screen }}">{{ e.screen|default:"-" }}</td>
+          <td class="title-cell mid"><a href="?ep={{ e.pk }}" title="{{ e.title }}">{{ e.title }}</a></td>
           <td class="mid"><span class="badge {% if e.status == 'done' %}green{% elif e.status == 'doing' %}blue{% else %}gray{% endif %}">{{ e.get_status_display }}</span></td>
         </tr>
         {% empty %}
@@ -52,9 +52,10 @@
       <a class="btn ghost sm icon" href="?ep={{ current.pk }}&amp;edit=1" title="고치기" aria-label="고치기">{% include "includes/ic.html" with name="edit" %}</a>
     </div>
     <div class="card-body sr-body">
-      {% if current.hook %}<p class="sr-hook">{{ current.hook }}</p>{% endif %}
-      <div class="sr-k">다룰 것</div>
-      <ul class="sr-points">{% for p in current.point_list %}<li>{{ p }}</li>{% empty %}<li class="muted">아직 없음</li>{% endfor %}</ul>
+      <div class="sr-meta">{% if current.screen %}<span class="badge blue">{{ current.screen }}</span>{% endif %}{% if current.period %}<span class="muted small num">{{ current.period }}</span>{% endif %}</div>
+      {% if current.hook %}<div class="sr-k">필요했던 것</div><p class="sr-hook">{{ current.hook }}</p>{% endif %}
+      <div class="sr-k">흐름</div>
+      <ul class="sr-steps">{% for word, text in current.steps %}<li><span class="sr-step">{{ word|default:"·" }}</span><span>{{ text }}</span></li>{% empty %}<li class="muted">아직 없음</li>{% endfor %}</ul>
       {% if current.source_list %}
       <div class="sr-k">근거</div>
       <ul class="sr-sources">{% for s in current.source_list %}<li>{{ s }}</li>{% endfor %}</ul>
