@@ -182,13 +182,16 @@ class PasteFormatTests(TestCase):
         self.assertIn("블록 에디터", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
 
     def test_convert_finds_free_photos(self):
-        # 티스토리 요청문: 무료 사진을 찾아 넣으라는 안내 + 포맷 규칙도 같은 말 (네이버는 붙여넣기로 사진이 안 옮겨져 빼기)
+        # 티스토리·네이버 요청문: 무료 사진을 찾아 넣으라는 안내 + 포맷 규칙도 같은 말. 워드프레스는 빼기
         tistory = self.place("memorily")
         request_text = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["request_text"]
         self.assertIn("## 사진 (변환할 때 찾아 넣기)", request_text)
         self.assertIn("Unsplash", PlatformFormat.objects.get(platform="tistory").guide)
         naver = self.place("black_lukey", "낙서장")
-        self.assertNotIn("## 사진", self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"])
+        self.assertIn("## 사진", self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"])
+        self.assertIn("내려받아 그 자리에 올린다", PlatformFormat.objects.get(platform="naver").guide)
+        wordpress = self.place("워드프레스")
+        self.assertNotIn("## 사진", self.client.get(reverse("site_templates:convert", args=[wordpress.pk])).context["request_text"])
         # 찾아 넣은 사진 + 출처 캡션 → 붙여넣기 HTML 에 실제 이미지와 캡션
         tistory.converted_body = "글\n\n![병원 대기실](https://images.unsplash.com/photo-1?w=1200&q=80)\n*사진: 홍길동 · Unsplash*"
         tistory.save()
