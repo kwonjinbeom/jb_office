@@ -21,6 +21,19 @@ FACT_CHECK = """## 사실 점검 (변환할 때 꼭)
 - 무엇을 왜 고쳤는지 출처 주소와 함께 '점검 기록'으로 남긴다 (아래 '돌려줄 것')."""
 
 
+# 변환 때 사진 찾아 넣기 (2026-10-20 사용자: 사진 자리를 비워 두지 말고 변환할 때 찾아 넣는다).
+# 저작권 때문에 상업적 사용이 무료인 사진 사이트만. 티스토리·블로거만 (네이버는 붙여넣기로 사진이 안 옮겨진다).
+PHOTO_PLATFORMS = {"tistory", "blogger"}
+PHOTOS = """## 사진 (변환할 때 찾아 넣기)
+- 원문의 [사진: 설명]·📷 자리마다 내용에 맞는 사진을 찾아 넣는다. 자리가 없으면 소제목 두세 개마다 한 장, 글 전체 1~3장.
+- 쓸 곳은 Unsplash · Pexels · Pixabay 만 (상업적 사용 무료, 허락 필요 없음). 구글 이미지 검색·뉴스 사진·다른 블로그·기관 홈페이지 사진은 저작권 때문에 쓰지 않는다.
+- 사진 페이지에서 이미지 파일 주소(images.unsplash.com · images.pexels.com · cdn.pixabay.com)를 찾아 `![설명](https://주소)` 한 줄로 넣는다. Unsplash·Pexels 는 주소 끝에 너비(w=1200)를 붙인다.
+- 바로 다음 줄에 출처 캡션 `*사진: 작가 이름 · Unsplash*`.
+- 분위기·대상을 보여 주는 사진만 (병원, 달력, 주사 장면 같은 것). 숫자·일정이 든 그림처럼 쓰지 않는다. 상표·실존 인물 얼굴이 중심인 사진은 피한다.
+- 직접 찍어야 하는 사진(내 경험·현장)이나 맞는 사진이 없으면 [사진: 설명] 자리를 그대로 둔다. 표·도식으로 만들 그림은 [그림: 파일명] 자리로 둔다.
+- 점검 기록에 `- 사진: 설명 · 사진 페이지 주소` 로 한 장씩 남긴다."""
+
+
 def template_for(blog):
     tpl, _ = SiteTemplate.objects.get_or_create(blog=blog)
     return tpl
@@ -44,6 +57,8 @@ def build(placement):
         f"## {blog.get_platform_display()} 붙여넣기 포맷\n{fmt.guide or '-'}",
     ]
     parts.append(FACT_CHECK)
+    if blog.platform in PHOTO_PLATFORMS:
+        parts.append(PHOTOS)
     if placement.convert_note:
         parts.append(f"## 이 글만\n{placement.convert_note}")
     parts.append(f"## 원문\n### 제목\n{post.title}\n### 본문\n{post.body}")
