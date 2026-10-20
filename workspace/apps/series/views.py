@@ -1,4 +1,6 @@
-"""memorily 연재 화면 하나: 왼쪽 회차 목록(화면별), 오른쪽 고른 회차 (흐름 · 근거 · 상태 · 글로 만들기 · 고치기)."""
+"""블로그·카페 › memorily 연재: 세 칸 (2026-10-20 사용자).
+왼쪽 회차 목록(글 보기 왼쪽 목록과 같은 크기) · 가운데 고른 회차 요약(흐름 · 화면 · 근거 · 상태 · 내 추가 설명) ·
+오른쪽 글쓰기(버튼, 만든 뒤에는 그 글)."""
 from pathlib import Path
 
 from django import forms
@@ -13,13 +15,8 @@ from .models import Episode
 
 SITE = "memorily"
 SERIES = "AI 와 블로그 자동화 만들기"
-# 연재 방향 (2026-10-20 사용자): 필요한 화면을 하나씩 더하고 바꾸고 메우며 체계가 잡혀 가는 모습. memorily 템플릿(개발자 1인칭)
-DIRECTION = [
-    ("보여줄 것", "첫 화면부터 필요한 화면을 하나씩 더하고, 써 보며 바꾸고, 프롬프트를 다듬고, 부족한 점을 메워 체계가 잡혀 가는 과정"),
-    ("구성", "필요했던 것 → 처음 만든 것 → 써 보니 부족했던 점 → 이렇게 바꿨다 → 지금 모습"),
-    ("말투", "개발자 1인칭, 겪은 것만 담백하게 · 화면 캡처 전/후"),
-    ("제목", f"[{SERIES} EP.N] 화면 이름 + 한 문장"),
-]
+# 연재 방향: 필요한 화면을 하나씩 더하고 바꾸고 메우며 체계가 잡혀 가는 모습. memorily 템플릿(개발자 1인칭).
+# 글 구성: 필요했던 것 → 처음 만든 것 → 써 보니 부족했던 점 → 이렇게 바꿨다 → 지금 모습 (_skeleton)
 
 
 class EpisodeForm(forms.ModelForm):
@@ -84,15 +81,29 @@ def index(request):
             ep = form.save()
             messages.success(request, f"EP.{ep.number} 을(를) 저장했습니다.")
             return redirect(f"{reverse('series:index')}?ep={ep.pk}")
-    counts = {s: sum(1 for e in episodes if e.status == s) for s, _ in Episode.Status.choices}
     for e in episodes:
         e.post_link = post_url(e.post) if e.post else ""
+    post_html = ""
+    if current is not None and current.post is not None and not new:
+        from apps.writing.render import render_body
+        post_html = render_body(current.post.body)
     return render(request, "series/index.html", {
-        "page_title": "memorily 연재", "series": SERIES, "direction": DIRECTION,
+        "page_title": "memorily 연재", "series": SERIES,
         "episodes": episodes, "current": None if new else current, "form": form, "new": new,
-        "status_choices": Episode.Status.choices, "counts": counts,
+        "status_choices": Episode.Status.choices,
         "shots": shots(current.number) if current and not new else [],
+        "post_html": post_html,
     })
+
+
+@require_POST
+def set_note(request, pk):
+    """가운데 요약의 '내 추가 설명' 저장. 글쓰기 때 '필요했던 것' 아래에 들어간다."""
+    ep = get_object_or_404(Episode, pk=pk)
+    ep.note = request.POST.get("note", "").replace("\r\n", "\n").strip()
+    ep.save(update_fields=["note", "updated_at"])
+    messages.success(request, f"EP.{ep.number} 추가 설명을 저장했습니다.")
+    return redirect(f"{reverse('series:index')}?ep={ep.pk}")
 
 
 @require_POST
@@ -116,7 +127,7 @@ SECTIONS = [  # (소제목, 그 아래 갈 흐름·사진 말머리, 사진이 �
 def _skeleton(ep):
     """연재 구성대로 뼈대: 필요했던 것 → 처음 만든 것 → 써 보니 부족했던 점 → 이렇게 바꿨다 → 지금 모습.
     흐름 줄과 회차 사진은 말머리대로 나눠 넣는다 (사진은 '[사진] 설명 — EP01/파일' 한 줄, 블로그에 직접 올린다)."""
-    parts = [f"## 필요했던 것\n{ep.hook}"]
+    parts = ["## 필요했던 것\n" + "\n\n".join(x for x in (ep.hook, ep.note) if x)]  # 내 추가 설명은 내 말 그대로
     photos = shots(ep.number)
     for head, words, placeholder in SECTIONS:
         lines = "\n".join(f"- {text}" for word, text in ep.steps if word in words)
@@ -130,7 +141,7 @@ def _skeleton(ep):
 
 @require_POST
 def make_post(request, pk):
-    """회차 → memorily 임시글 (이미 있으면 그 글로)."""
+    """회차 → memorily 임시글 (이미 있으면 그대로). 만든 글은 이 화면 오른쪽에 보인다."""
     from apps.writing.models import Post
     ep = get_object_or_404(Episode, pk=pk)
     if ep.post_id is None:
@@ -142,4 +153,4 @@ def make_post(request, pk):
             ep.status = Episode.Status.WRITING
         ep.save()
         messages.success(request, f"EP.{ep.number} 을(를) memorily 임시글로 만들었습니다.")
-    return redirect(post_url(ep.post))
+    return redirect(f"{reverse('series:index')}?ep={ep.pk}")

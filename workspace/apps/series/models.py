@@ -25,6 +25,7 @@ class Episode(models.Model):
     points = models.TextField("흐름", blank=True,
                               help_text="한 줄에 하나, 앞에 '처음:' · '부족:' · '바꿈:' · '메움:' · '지금:' 같은 말을 붙인다")
     sources = models.TextField("근거", blank=True, help_text="커밋·문서·PR, 한 줄에 하나")
+    note = models.TextField("내 추가 설명", blank=True, help_text="글쓰기 때 '필요했던 것' 아래에 내 말로 들어간다")
     status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.PLAN)
     post = models.ForeignKey("writing.Post", verbose_name="글", null=True, blank=True, on_delete=models.SET_NULL,
                              related_name="episodes")

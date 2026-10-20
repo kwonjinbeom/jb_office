@@ -1,44 +1,39 @@
 {% extends "base.html" %}
+{# 블로그·카페 › memorily 연재: 왼쪽 회차 목록 · 가운데 요약(+ 내 추가 설명) · 오른쪽 글쓰기 (2026-10-20 사용자) #}
 
-{% block heading %}memorily 연재 <span class="cnt">{{ episodes|length }}</span>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}memorily 연재 <span class="cnt">{{ series }}</span>{% endblock %}
 
 {% block actions %}
-<a class="btn primary" href="?new=1">{% include "includes/ic.html" with name="plus" %}회차 추가</a>
+<a class="btn" href="?new=1">{% include "includes/ic.html" with name="plus" %}회차 추가</a>
 {% endblock %}
 
+{% block body_class %}fill{% endblock %}
+
 {% block content %}
-{# 연재 방향 (memorily 사이트 템플릿에 맞춘 것) #}
-<div class="wr-read-info sr-direction">
-  <div class="wr-info-row"><span class="k">연재</span><strong>{{ series }}</strong>
-    <span class="muted small">계획 {{ counts.todo }} · 쓰는 중 {{ counts.doing }} · 발행 {{ counts.done }}</span></div>
-  {% for k, v in direction %}<div class="wr-info-row"><span class="k">{{ k }}</span><span class="wr-info-text">{{ v }}</span></div>{% endfor %}
-</div>
+<div class="bt-layout sr-layout">
+  {# 왼쪽: 회차 목록 (글 보기 왼쪽 글 목록과 같은 크기·모양) #}
+  <nav class="bt-tree pl-list" aria-label="회차 목록">
+    <div class="bt-tree-head"><span class="bt-tree-title">회차 <span class="cnt">{{ episodes|length }}</span></span></div>
+    <div class="pl-items">
+      {% for e in episodes %}
+      <a class="pl-item{% if e == current %} on{% endif %}" href="?ep={{ e.pk }}"{% if e == current %} aria-current="page"{% endif %}>
+        <span class="pl-path">EP.{{ e.number }} · {{ e.screen|default:"-" }}</span>
+        <span class="pl-title">{{ e.title }}</span>
+        <span class="pl-meta">{{ e.get_status_display }}{% if e.period %} · {{ e.period }}{% endif %}</span>
+      </a>
+      {% empty %}
+      <div class="bt-empty-line">아직 회차가 없습니다.</div>
+      {% endfor %}
+    </div>
+  </nav>
 
-<div class="sr-layout">
-  {# 왼쪽: 회차 목록 #}
-  <section class="card sr-list">
-    <table class="grid clickable">
-      <thead><tr><th style="width:56px">회차</th><th style="width:34%">화면</th><th>제목</th><th style="width:72px">상태</th></tr></thead>
-      <tbody>
-        {% for e in episodes %}
-        <tr data-href="?ep={{ e.pk }}"{% if e == current %} class="on"{% endif %}>
-          <td class="mid num">EP.{{ e.number }}</td>
-          <td class="mid small sr-screen" title="{{ e.screen }}">{{ e.screen|default:"-" }}</td>
-          <td class="title-cell mid"><a href="?ep={{ e.pk }}" title="{{ e.title }}">{{ e.title }}</a></td>
-          <td class="mid"><span class="badge {% if e.status == 'done' %}green{% elif e.status == 'doing' %}blue{% else %}gray{% endif %}">{{ e.get_status_display }}</span></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="4" class="grid-empty">아직 회차가 없습니다.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
-
-  {# 오른쪽: 고른 회차 · 고치기 · 새 회차 #}
-  <section class="card sr-detail">
+  {# 가운데: 고른 회차 요약 · 고치기 · 새 회차 #}
+  <section class="sr-pane sr-summary">
     {% if form %}
-    <div class="card-head"><h3 class="card-title">{% if new %}새 회차{% else %}EP.{{ current.number }} 고치기{% endif %}</h3></div>
-    <form method="post">{% csrf_token %}
+    <div class="sr-pane-head"><h2 class="sr-pane-title">{% if new %}새 회차{% else %}EP.{{ current.number }} 고치기{% endif %}</h2></div>
+    <form method="post" class="card">{% csrf_token %}
       <div class="card-body form-grid">{% for field in form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}</div>
       <div class="form-foot">
         <a class="btn ghost sm" href="?{% if current and not new %}ep={{ current.pk }}{% endif %}">취소</a>
@@ -47,12 +42,18 @@
       </div>
     </form>
     {% elif current %}
-    <div class="card-head">
-      <h3 class="card-title">EP.{{ current.number }} · {{ current.title }}</h3>
+    <div class="sr-pane-head">
+      <h2 class="sr-pane-title">EP.{{ current.number }} · {{ current.title }}</h2>
       <a class="btn ghost sm icon" href="?ep={{ current.pk }}&amp;edit=1" title="고치기" aria-label="고치기">{% include "includes/ic.html" with name="edit" %}</a>
     </div>
-    <div class="card-body sr-body">
-      <div class="sr-meta">{% if current.screen %}<span class="badge blue">{{ current.screen }}</span>{% endif %}{% if current.period %}<span class="muted small num">{{ current.period }}</span>{% endif %}</div>
+    <div class="sr-meta">
+      {% if current.screen %}<span class="badge blue">{{ current.screen }}</span>{% endif %}
+      {% if current.period %}<span class="muted small num">{{ current.period }}</span>{% endif %}
+      <form method="post" action="{% url 'series:status' current.pk %}" class="status-seg sr-status">{% csrf_token %}
+        {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == current.status %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
+      </form>
+    </div>
+    <div class="sr-body">
       {% if current.hook %}<div class="sr-k">필요했던 것</div><p class="sr-hook">{{ current.hook }}</p>{% endif %}
       <div class="sr-k">흐름</div>
       <ul class="sr-steps">{% for word, text in current.steps %}<li><span class="sr-step">{{ word|default:"·" }}</span><span>{{ text }}</span></li>{% empty %}<li class="muted">아직 없음</li>{% endfor %}</ul>
@@ -69,22 +70,43 @@
       <div class="sr-k">근거</div>
       <ul class="sr-sources">{% for s in current.source_list %}<li>{{ s }}</li>{% endfor %}</ul>
       {% endif %}
-    </div>
-    <div class="form-foot">
-      <form method="post" action="{% url 'series:status' current.pk %}" class="status-seg">{% csrf_token %}
-        {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == current.status %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
+      <div class="sr-k">내 추가 설명</div>
+      <form method="post" action="{% url 'series:note' current.pk %}" class="sr-note">{% csrf_token %}
+        <textarea class="input" name="note" rows="5" placeholder="그때 겪은 일·느낀 점을 내 말로 (글쓰기 때 '필요했던 것' 아래에 들어갑니다)" aria-label="내 추가 설명">{{ current.note }}</textarea>
+        <div class="sr-note-foot"><button class="btn sm">{% include "includes/ic.html" with name="save" %}저장</button></div>
       </form>
-      <span style="margin-left:auto"></span>
-      {% if current.post %}
-      <a class="btn sm" href="{{ current.post_link }}">{% include "includes/ic.html" with name="file" %}글 보기</a>
-      {% else %}
-      <form method="post" action="{% url 'series:make_post' current.pk %}" class="inline-form">{% csrf_token %}
-        <button class="btn primary sm" title="memorily 임시글로 만든다 (겪은 상황 → 해 본 것 → 결과와 느낀 점 → 다음에 해 볼 것)">{% include "includes/ic.html" with name="plus" %}글로 만들기</button>
-      </form>
-      {% endif %}
     </div>
     {% else %}
-    <div class="card-body muted">회차를 고르세요.</div>
+    <div class="empty"><p>회차를 고르세요.</p></div>
+    {% endif %}
+  </section>
+
+  {# 오른쪽: 글쓰기 — 버튼, 만든 뒤에는 그 글 #}
+  <section class="sr-pane sr-write">
+    {% if current and not form %}
+    <div class="sr-pane-head">
+      <h2 class="sr-pane-title">글쓰기</h2>
+      {% if current.post %}
+      <a class="btn sm" href="{{ current.post_link }}">{% include "includes/ic.html" with name="file" %}글 보기</a>
+      <a class="btn primary sm" href="{% url 'writing:edit' current.post.pk %}">{% include "includes/ic.html" with name="edit" %}수정</a>
+      {% endif %}
+    </div>
+    {% if current.post %}
+    <article class="wr-paper sr-paper">
+      <header class="wr-post-head">
+        <div class="wr-post-cat">memorily · {{ current.post.get_stage_display }}</div>
+        <h1 class="wr-post-title">{{ current.post.title }}</h1>
+      </header>
+      <div class="wr-article">{{ post_html|safe }}</div>
+    </article>
+    {% else %}
+    <div class="sr-write-empty">
+      <form method="post" action="{% url 'series:make_post' current.pk %}">{% csrf_token %}
+        <button class="btn primary">{% include "includes/ic.html" with name="edit" %}글쓰기</button>
+      </form>
+      <p class="muted small">memorily 임시글로 만듭니다.</p>
+    </div>
+    {% endif %}
     {% endif %}
   </section>
 </div>
