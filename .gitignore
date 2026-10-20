@@ -26,6 +26,8 @@ Thumbs.db
 
 # Claude Code personal overrides
 .claude/settings.local.json
+# Claude Code 작업 폴더 (worktree). 자동 동기화가 main 에 쓸어 올리지 않게
+.claude/worktrees/
 
 # 일일루틴 로컬 실행 때 쓰는 프롬프트 파일
 workspace/.routine/
