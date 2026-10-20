@@ -36,6 +36,14 @@
   </section>
 </div>
 
+{# 사실 점검 (2026-10-20 사용자): 변환 때 숫자·날짜·일정을 출처에서 다시 확인한 기록. 고친 것 · 미정 · 확인한 출처 #}
+{% if converted_html or check_html %}
+<section class="card st-check">
+  <div class="card-head"><h3 class="card-title">사실 점검</h3><span class="hint">고친 것 · 미정 · 확인한 출처</span></div>
+  <div class="card-body st-check-body">{% if check_html %}{{ check_html|safe }}{% else %}<p class="muted">점검 기록이 없습니다. 다시 변환하면 남습니다.</p>{% endif %}</div>
+</section>
+{% endif %}
+
 {% if converted_html %}
 {# 붙여넣기: 변환본을 통째로 복사해 그 사이트 글쓰기 화면에 붙인다. 순서대로 제목 → 본문 → 태그. #}
 <section class="card st-paste">

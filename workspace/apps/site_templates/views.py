@@ -11,9 +11,11 @@
 - requests.json: 변환 요청인 글의 요청문 (Claude 가 읽는다)
 """
 import hmac
+import re
 from collections import Counter
 from urllib.parse import parse_qsl
 
+import markdown
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
@@ -22,6 +24,7 @@ from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbid
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -219,7 +222,7 @@ def _form_fields(request):
 @login_not_required
 @require_POST
 def api_save(request, pk):
-    """변환본 받기 (PC 터미널의 claude 가 curl 로 보낸다). 토큰이 맞아야 저장한다. title · body · tags."""
+    """변환본 받기 (PC 터미널의 claude 가 curl 로 보낸다). 토큰이 맞아야 저장한다. title · body · tags · check(사실 점검 기록)."""
     token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
     if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
         return HttpResponseForbidden("token")
@@ -230,6 +233,8 @@ def api_save(request, pk):
         return HttpResponseBadRequest("body 가 비었습니다")
     placement.converted_title = data.get("title", "").strip()[:200]
     placement.converted_tags = data.get("tags", "").strip()[:500]
+    if "check" in data:  # 사실 점검 기록 (고친 것 · 미정 · 확인한 출처)
+        placement.converted_check = data["check"].replace("\r\n", "\n").strip()
     placement.converted_body = body
     placement.convert_status = Placement.Convert.DONE
     placement.converted_at = timezone.now()
@@ -274,8 +279,21 @@ def _render_for(placement, text):
 class ConvertForm(_Styled):
     class Meta:
         model = Placement
-        fields = ["convert_note", "converted_title", "converted_body", "converted_tags"]
-        widgets = {"converted_body": forms.Textarea(attrs={"rows": 18, "spellcheck": "false"})}
+        fields = ["convert_note", "converted_title", "converted_body", "converted_tags", "converted_check"]
+        widgets = {"converted_body": forms.Textarea(attrs={"rows": 18, "spellcheck": "false"}),
+                   "converted_check": forms.Textarea(attrs={"rows": 6, "spellcheck": "false"})}
+
+
+_URL = re.compile(r'(?<![="\w>])(https?://[^\s<)]+)')
+
+
+def _check_html(text):
+    """사실 점검 기록(마크다운 목록) → HTML. 글은 이스케이프하고, 출처 주소는 누르면 열리게."""
+    text = (text or "").strip()
+    if not text:
+        return ""
+    html = markdown.markdown(escape(text), extensions=["sane_lists"])
+    return _URL.sub(r'<a href="\1" target="_blank" rel="noopener">\1</a>', html)
 
 
 def convert(request, pk):
@@ -316,6 +334,7 @@ def convert(request, pk):
         "page_title": "변환", "pl": placement, "blog": placement.site_category.blog, "post": post, "form": form,
         "original_html": original_html, "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
+        "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
     })
 
