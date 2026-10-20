@@ -313,6 +313,9 @@ class RepoTests(Login):
             self.assertIn(f"Test-Path -LiteralPath '{folder / 'done' / names[0]}'", chain)
             self.assertIn("$p.HasExited", chain)
             self.assertIn("-File", popen.call_args[0][0])
+            self.assertIn("taskkill /PID $script:prev.Id /T /F", chain)  # 끝난 루틴 창은 닫는다 (2026-10-20 사용자)
+            self.assertEqual(chain.count("Close-Done 90"), 4)  # 루틴마다 + 마지막
+            self.assertNotIn("-NoExit", popen.call_args[0][0])  # 다 끝나면 차례 창도 닫힌다
         self.assertEqual(popen.call_count, 1)  # 창은 차례 창 하나만 바로 연다
         self.assertEqual(RoutineRun.objects.count(), 3)
         with self.assertRaises(ValueError):
