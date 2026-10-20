@@ -246,8 +246,8 @@ def _decorate(out: str) -> str:
 
 def render_body(text: str) -> str:
     """본문 → 블로그에 붙여넣을 HTML. 편집기 HTML 이면 걸러 내고, 마크다운이면 변환한다."""
-    if is_html(text):
-        return _decorate(clean_html(text))
+    if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
+        return soft_check_dates(_decorate(clean_html(text)))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
     out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
@@ -267,8 +267,13 @@ def soft_check_dates(body_html: str) -> str:
         if not (1 <= month <= 12 and 1 <= day <= 31):
             return m.group(0)
         return f'<span style="{CHECK_DATE_STYLE}">({month}.{day} 확인)</span>'
+    opened = f'<span style="{CHECK_DATE_STYLE}">'
     parts = re.split(r"(<[^>]+>)", body_html)
-    return "".join(part if part.startswith("<") else CHECK_DATE.sub(one, part) for part in parts)
+    out = []
+    for i, part in enumerate(parts):  # 이미 바꾼 것(그 span 바로 안의 글)은 다시 감싸지 않는다
+        done = part.startswith("<") or (i >= 2 and parts[i - 1] == opened)
+        out.append(part if done else CHECK_DATE.sub(one, part))
+    return "".join(out)
 
 
 def plain_text(body_html: str, drop_slots: bool = False) -> str:

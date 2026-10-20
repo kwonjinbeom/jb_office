@@ -274,8 +274,8 @@ def _decorate(out: str) -> str:
 
 def render_body(text: str) -> str:
     """본문 → 블로그에 붙여넣을 HTML. 편집기 HTML 이면 걸러 내고, 마크다운이면 변환한다."""
-    if is_html(text):
-        return _decorate(clean_html(text))
+    if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
+        return soft_check_dates(_decorate(clean_html(text)))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
     out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
@@ -338,6 +338,15 @@ def paste_html(body_html: str, gaps: bool = False) -> str:
     parser.feed(clean_html(body_html))
     parser.close()
     return "".join(parser.out)
+
+
+EMPTY_P = re.compile(r"<p[^>]*>(?:\s|&nbsp;|\xa0|<br\s*/?>)*</p>")
+
+
+def needs_gaps(text: str, body_html: str) -> bool:
+    """문단 사이 빈 줄을 넣을지: 마크다운 글, 또는 빈 문단이 하나도 없는 HTML (HTML 로 저장한 변환본).
+    네이버 편집기에서 쓴 글은 빈 줄이 빈 문단으로 이미 들어 있다."""
+    return not is_html(text) or not EMPTY_P.search(body_html)
 
 
 def tag_line(tags: str) -> str:

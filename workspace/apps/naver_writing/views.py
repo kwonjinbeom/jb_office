@@ -8,7 +8,7 @@ from apps.blog_types import classify
 
 from .forms import PostForm
 from .models import Post
-from .render import FONTS, QUOTE_STYLES, HR_STYLES, clean_html, is_html, paste_html, plain_text, render_body, tag_line, text_to_html
+from .render import FONTS, QUOTE_STYLES, HR_STYLES, clean_html, needs_gaps, paste_html, plain_text, render_body, tag_line, text_to_html
 from apps.blog_types.posts import post_list_for
 
 Stage = Post.Stage
@@ -129,7 +129,7 @@ def render_detail(request, post):
             "stage": post.stage,
             "tabs": _tabs(post.stage),
             "body_html": body_html,
-            "paste_html": paste_html(body_html, gaps=not is_html(post.body)),
+            "paste_html": paste_html(body_html, gaps=needs_gaps(post.body, body_html)),
             "tags_copy": tag_line(post.tags),
             "body_text": plain_text(body_html),
             "chars": len(counted),
