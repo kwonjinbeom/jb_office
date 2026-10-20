@@ -98,7 +98,7 @@
 <textarea id="wr-copy-title" hidden>{{ post.title }}</textarea>
 <textarea id="wr-copy-html" hidden>{{ paste_html }}</textarea>
 <textarea id="wr-copy-text" hidden>{{ body_text }}</textarea>
-<textarea id="wr-copy-tags" hidden>{{ post.tag_list|join:", " }}</textarea>
+<textarea id="wr-copy-tags" hidden>{% for t in post.tag_list %}#{{ t|cut:" " }}{% if not forloop.last %} {% endif %}{% endfor %}</textarea>{# 네이버 태그 칸은 #태그 꼴로 붙여야 나뉜다 #}
 <textarea id="wr-copy-summary" hidden>{{ post.summary }}</textarea>
 {% endblock %}
 

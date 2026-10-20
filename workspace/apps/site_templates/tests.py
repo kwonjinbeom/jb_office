@@ -181,6 +181,17 @@ class PasteFormatTests(TestCase):
         self.assertIn("## 돌려줄 것", res.context["request_text"])
         self.assertIn("블록 에디터", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
 
+    def test_naver_tags_copy_with_hash_and_naver_preview(self):
+        # 네이버 태그 칸은 쉼표로 붙이면 안 나뉜다 → #태그 #태그 (띄어쓰기 없이). 티스토리는 쉼표 그대로
+        naver = self.place("black_lukey", "낙서장")
+        naver.converted_tags = "롤드컵, #LCK, 롤 입문"
+        naver.save()
+        res = self.client.get(reverse("site_templates:convert", args=[naver.pk]))
+        self.assertEqual(res.context["tags_copy"], "#롤드컵 #LCK #롤입문")
+        self.assertContains(res, "st-col nv-document")  # 네이버 글쓰기와 같은 글꼴·크기로 미리보기
+        tistory = self.place("memorily")
+        self.assertEqual(self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["tags_copy"], "태그1, 태그2")
+
     def test_convert_finds_free_photos(self):
         # 티스토리·네이버 요청문: 무료 사진을 찾아 넣으라는 안내 + 포맷 규칙도 같은 말. 워드프레스는 빼기
         tistory = self.place("memorily")

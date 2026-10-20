@@ -338,6 +338,7 @@ def convert(request, pk):
         "original_html": original_html, "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
         "check_html": _check_html(placement.converted_check),
+        "tags_copy": paste.tags_for(placement.site_category.blog.platform, placement.converted_tags),
         "request_text": prompt.build(placement),
     })
 

@@ -313,11 +313,17 @@ class _PasteStyles(HTMLParser):
         self.out.append(html.escape(data, quote=False))
 
 
+BLANK_LINE = '<p style="font-family:나눔고딕;font-size:15px;line-height:1.8;margin:0"><br></p>'
+
+
 def paste_html(body_html: str) -> str:
+    """네이버는 붙여넣을 때 margin 을 버린다. 소제목 위 여백이 사라져 앞 문단에 붙으므로 (2026-10-20 발행 글로 확인)
+    네이버식으로 소제목 앞에 빈 줄 하나를 넣는다. 맨 앞 소제목은 그대로."""
     parser = _PasteStyles()
     parser.feed(clean_html(body_html))
     parser.close()
-    return "".join(parser.out)
+    out = "".join(parser.out)
+    return re.sub(r"(?<=.)(?=<h[234][\s>])", BLANK_LINE, out, flags=re.S)
 
 
 def plain_text(body_html: str, drop_slots: bool = False) -> str:

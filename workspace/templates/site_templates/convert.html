@@ -22,13 +22,13 @@
       {% if post.tag_list %}<p class="st-ptags">{% for t in post.tag_list %}#{{ t }} {% endfor %}</p>{% endif %}
     </div>
   </section>
-  <section class="card st-col">
+  <section class="card st-col{% if blog.platform == 'naver' %} nv-document{% endif %}">{# 네이버는 네이버 글쓰기와 같은 글꼴·크기로 미리보기 #}
     <div class="card-head"><h3 class="card-title">변환본</h3><span class="hint">{% if pl.converted_at %}{{ pl.converted_at|date:"m-d H:i" }} 변환{% else %}아직 없음{% endif %}</span></div>
     <div class="card-body wr-article st-preview st-converted">
       {% if converted_html %}
       <h2 class="st-ptitle">{{ pl.converted_title|default:post.title }}</h2>
       {{ converted_html|safe }}
-      {% if pl.converted_tags %}<p class="st-ptags">{{ pl.converted_tags }}</p>{% endif %}
+      {% if pl.converted_tags %}<p class="st-ptags">{{ tags_copy }}</p>{% endif %}
       {% else %}
       <p class="muted">아직 변환본이 없습니다.</p>
       {% endif %}
@@ -80,5 +80,5 @@
 <textarea id="st-html" hidden>{{ clean_html }}</textarea>
 <textarea id="st-raw" hidden>{{ pl.converted_body }}</textarea>
 <textarea id="st-plain" hidden>{{ plain_text }}</textarea>
-<textarea id="st-tags" hidden>{{ pl.converted_tags }}</textarea>
+<textarea id="st-tags" hidden>{{ tags_copy }}</textarea>
 {% endblock %}

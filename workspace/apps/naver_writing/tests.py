@@ -160,3 +160,9 @@ class NaverFormattingTests(TestCase):
         self.assertIn('font-family:나눔명조', out)
         self.assertIn('font-family:나눔고딕', out)
         self.assertIn('text-align:center', out)
+
+    def test_clipboard_blank_line_before_headings(self):
+        # 네이버는 margin 을 버려 소제목이 앞 문단에 붙는다 → 소제목 앞에 빈 줄 (맨 앞 소제목은 빼고)
+        out = paste_html("<h2>첫 제목</h2><p>본문</p><h2>둘째</h2><p>끝</p>")
+        self.assertTrue(out.startswith("<h2"))
+        self.assertEqual(out.count("<br></p><h2"), 1)
