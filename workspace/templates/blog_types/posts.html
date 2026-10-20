@@ -3,7 +3,7 @@
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
-{% block heading %}글 관리{% for label in path %} <span class="cnt">{{ label }}</span>{% endfor %}{% endblock %}
+{% block heading %}{{ page_title }}{% for label in path %} <span class="cnt">{{ label }}</span>{% endfor %}{% endblock %}
 
 {% block actions %}
 {% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
@@ -18,7 +18,7 @@
 
   <section class="ph-main">
     <nav class="wr-tabs" aria-label="글 단계">
-      {% for t in tabs %}<a href="?stage={{ t.key }}{% if filter_q %}&amp;{{ filter_q }}{% endif %}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
+      {% for t in tabs %}<a href="{{ tab_base }}?stage={{ t.key }}{% if filter_q %}&amp;{{ filter_q }}{% endif %}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
     </nav>
     <div class="filter-bar">
       <form method="get" class="inline-form">

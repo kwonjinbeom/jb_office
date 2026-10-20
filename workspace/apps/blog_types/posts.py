@@ -85,7 +85,11 @@ def index(request):
     added = auto_import_drafts()  # 루틴이 새로 쓴 원고를 임시글으로
     if added:
         messages.success(request, f"새 원고 {added}편을 임시글으로 가져왔습니다.")
-    p = _params(request)
+    return _list_page(request, _params(request))
+
+
+def _list_page(request, p, view=False):
+    """글 관리 목록 (트리 + 단계 탭 + 표). view=True 면 글 보기의 발행예정글 (탭·제목만 글 보기)."""
     stage, sel, kind, obj, q, today = p["stage"], p["sel"], p["kind"], p["obj"], p["q"], p["today"]
     posts, counts = _collect(p, prefetch=stage == "post")
     list_q = _query(p)
@@ -94,8 +98,10 @@ def index(request):
 
     path = [label for label, _ in _path(kind, obj)][1:] if kind else []  # 맨 앞 '모든 글'은 빼고
     keep = f"stage={stage}&" + ("today=1&" if today else "")
+    base = reverse("posts:view") if view else ""
     return render(request, "blog_types/posts.html", {
-        "page_title": "글 관리",
+        "page_title": "글 보기" if view else "글 관리",
+        "view_mode": view, "tab_base": base,
         "tree": classify.class_tree(),
         "sel": sel, "kind": kind,
         "open": _open_branches(kind, obj) if kind else set(),
@@ -173,9 +179,11 @@ def post_list_for(request, post):
 
 def view(request):
     """블로그·카페 › 글 보기: 한 건씩 보면서 처리한다. ?stage=…&p=tistory:3 (+ 분류·검색·오늘).
-    고른 글이 없으면 그 단계 목록의 첫 글. 단계에 글이 없으면 빈 화면."""
+    고른 글이 없으면 그 단계 목록의 첫 글. 단계에 글이 없으면 빈 화면. 발행예정글은 고른 글이 없으면 글 관리와 같은 전체 목록."""
     request.nav_key = "posts_view"
     post = _one(request.GET.get("p"))
+    if post is None and request.GET.get("stage") == "post":
+        return _list_page(request, _params(request), view=True)  # 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
     if post is None:
         posts, _ = _collect(_params(request))
         post = posts[0] if posts else None

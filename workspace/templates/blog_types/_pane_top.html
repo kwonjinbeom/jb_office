@@ -14,7 +14,7 @@
 
 <section class="card bt-list">
   <table class="grid bt-grid">
-    <thead><tr>{% if show_site %}<th style="width:96px">사이트</th>{% endif %}{% if show_cat %}<th style="width:16%">카테고리</th>{% endif %}<th>제목</th><th style="width:168px">발행</th><th style="width:84px">변환</th><th style="width:44px"></th></tr></thead>
+    <thead><tr>{% if show_site %}<th style="width:96px">사이트</th>{% endif %}{% if show_cat %}<th style="width:16%">카테고리</th>{% endif %}<th>제목</th><th style="width:140px">발행</th><th class="bt-cv-col" style="width:104px">변환</th><th style="width:44px"></th></tr></thead>
     <tbody>
       {% for pl in placements %}
       <tr>
@@ -27,7 +27,7 @@
             {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == pl.status %}class="on" disabled{% endif %} title="{% if value == 'published' %}그 사이트에 올렸으면 발행 완료로 (글의 발행 상태도 같이){% else %}아직 안 올림{% endif %}">{{ label }}</button>{% endfor %}
           </form>
         </td>
-        <td><a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></td>
+        <td class="bt-cv-col"><a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></td>
         <td class="r">
           <form method="post" action="{% url 'blog_types:place_remove' pl.pk %}" class="inline-form">{% csrf_token %}
             <input type="hidden" name="next" value="{{ here }}">

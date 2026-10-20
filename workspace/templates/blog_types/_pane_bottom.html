@@ -19,13 +19,14 @@
 
 <section class="card bt-list">
   <table class="grid bt-grid">
-    <thead><tr><th>제목</th><th style="width:104px">사이트</th><th style="width:34%">넣은 곳 · 변환</th><th style="width:168px">사이트 카테고리에 넣기</th></tr></thead>
+    <thead><tr><th>제목</th><th style="width:76px">사이트</th><th style="width:21%">넣은 곳 · 변환</th><th style="width:140px">발행</th><th style="width:136px">넣을 곳</th></tr></thead>
     <tbody>
       {% for p in posts %}
       <tr>
-        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a>{% if p.is_published %} <span class="badge green">발행 완료</span>{% endif %}<div class="small muted bt-cut">{{ p.cls_label }}</div></td>
+        <td class="title-cell"><a href="{{ p.get_absolute_url }}">{{ p.title }}</a><div class="small muted bt-cut">{{ p.cls_label }}</div></td>
         <td class="small bt-cut">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
         <td class="small">{% for pl in p.placements.all %}<div class="bt-chip bt-chip-wrap"><span>{{ pl.site_category.blog.name }} › {{ pl.site_category.name }}</span> <a class="badge cv-{{ pl.convert_status }}" href="{% url 'site_templates:convert' pl.pk %}">{{ pl.get_convert_status_display }}</a>{% if pl.status == 'published' %} <span class="badge pl-published">발행 완료</span>{% endif %}</div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+        <td>{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices next=here %}{% else %}{% include "writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices next=here %}{% endif %}</td>
         <td>
           <form method="post" action="{% url 'blog_types:place_add' %}">{% csrf_token %}
             <input type="hidden" name="post" value="{{ p.writer }}:{{ p.pk }}"><input type="hidden" name="next" value="{{ here }}">
@@ -37,7 +38,7 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="4" class="grid-empty">{% if today or psite %}조건에 맞는 발행예정글이 없습니다.{% else %}이 분류의 발행예정글이 없습니다. 글 관리에서 발행예정글로 보내면 여기서 넣을 수 있어요.{% endif %}</td></tr>
+      <tr><td colspan="5" class="grid-empty">{% if today or psite %}조건에 맞는 발행예정글이 없습니다.{% else %}이 분류의 발행예정글이 없습니다. 글 관리에서 발행예정글로 보내면 여기서 넣을 수 있어요.{% endif %}</td></tr>
       {% endfor %}
     </tbody>
   </table>

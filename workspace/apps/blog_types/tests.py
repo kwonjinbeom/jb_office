@@ -400,8 +400,20 @@ class PostHubTests(TestCase):
         res = self.client.get(view, {"stage": "review"})  # 고른 글이 없으면 그 단계의 첫 글
         self.assertEqual(res.context["post"].title, "검토 중인 글")
         self.assertEqual([p.title for p in res.context["pl_items"]], ["검토 중인 글"])
-        res = self.client.get(view, {"stage": "post"})  # 글이 없는 단계
-        self.assertContains(res, "발행예정글에 글이 없습니다")
+        self.T.objects.filter(stage="review").delete()
+        res = self.client.get(view, {"stage": "review"})  # 글이 없는 단계
+        self.assertContains(res, "검토글에 글이 없습니다")
+
+        # 발행예정글은 한 건 대신 글 관리와 같은 전체 목록 (2026-10-20 사용자). 글을 누르면 그 글을 본다
+        p1 = self.T.objects.create(title="발행할 글 하나", stage="post")
+        self.N.objects.create(title="발행할 글 둘", stage="post")
+        res = self.client.get(view, {"stage": "post"})
+        self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")
+        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["발행할 글 둘", "발행할 글 하나"])
+        self.assertContains(res, f'href="{view}?stage=temp"')  # 단계 탭은 글 보기에 머문다
+        self.assertContains(res, f'href="{view}?stage=post&amp;p=tistory:{p1.pk}"')
+        res = self.client.get(view, {"stage": "post", "p": f"tistory:{p1.pk}"})
+        self.assertEqual(res.context["post"].title, "발행할 글 하나")
 
     def test_menu_has_view_screen(self):
         res = self.client.get(reverse("posts:index"))
