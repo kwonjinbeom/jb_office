@@ -4,6 +4,7 @@ from datetime import date
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import unquote_plus
 
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -316,7 +317,8 @@ class RepoTests(Login):
             self.assertIn("taskkill /PID $script:prev.Id /T /F", chain)  # 끝난 루틴 창은 닫는다 (2026-10-20 사용자)
             self.assertEqual(chain.count("Close-Done 90"), 4)  # 루틴마다 + 마지막
             self.assertNotIn("-NoExit", popen.call_args[0][0])  # 다 끝나면 차례 창도 닫힌다
-        self.assertEqual(popen.call_count, 1)  # 창은 차례 창 하나만 바로 연다
+        windows = [c for c in popen.call_args_list if c[0][0][0] == "powershell.exe"]
+        self.assertEqual(len(windows), 1)  # 창은 차례 창 하나만 바로 연다 (나머지는 원고 가져오기의 git)
         self.assertEqual(RoutineRun.objects.count(), 3)
         with self.assertRaises(ValueError):
             start("jbroutine:all?key=all&day=2026-10-16", "# 일일루틴 전체 실행 — 2026-10-16\n루틴 없음")
@@ -330,7 +332,11 @@ class RepoTests(Login):
         q = "?token=tok&day=2026-10-17&via=schedule"
         self.assertEqual(self.client.post(url + q, {"status": "아무말"}).status_code, 400)
         self.assertEqual(self.client.post(url + q, {"status": "시작", "step": "오늘 11편"}).status_code, 200)
-        self.client.post(url + q, {"status": "완료", "step": "원고 11편, main push"})
+        # Windows curl 은 한글을 cp949 로 보낸다 (2026-10-20 보고가 모두 400 이었다)
+        cp949 = "status=%BF%CF%B7%E1&step=%BF%F8%B0%ED+11%C6%ED%2C+main+push"  # 완료 / 원고 11편, main push
+        self.assertEqual(unquote_plus(cp949, encoding="cp949"), "status=완료&step=원고 11편, main push")
+        res = self.client.post(url + q, cp949, content_type="application/x-www-form-urlencoded")
+        self.assertEqual(res.status_code, 200)
         run = RoutineRun.objects.get()
         self.assertEqual((run.via, run.status, run.day, run.log.count("\n")), ("schedule", "done", date(2026, 10, 17), 1))
         self.client.force_login(get_user_model().objects.get(username="tester"))
@@ -510,6 +516,15 @@ class DraftAutoImportTests(Login):
             self.assertContains(res, "새 원고 1편을 임시글으로 가져왔습니다.")
             self.client.get(reverse("posts:index"))  # 두 번 열어도 한 번만
         self.assertEqual(list(TistoryPost.objects.values_list("title", "stage")), [("새 원고", "temp")])
+
+    def test_routines_screen_imports_new_drafts_for_count(self):
+        """글 관리를 안 열어도 일일루틴 화면이 새 원고를 가져와 글쓰기 결과에 센다 (2026-10-20)."""
+        with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
+            (Path(tmp) / "T61_새원고").mkdir()
+            (Path(tmp) / "T61_새원고" / "원고.md").write_text(DRAFT.replace("네이버 첫 원고", "오늘 쓴 원고"), encoding="utf-8")
+            row = next(r for r in self.client.get(INDEX).context["routines"] if r.key == "writing")
+        self.assertTrue(TistoryPost.objects.filter(title="오늘 쓴 원고").exists())
+        self.assertEqual(row.result, 1)
 
     def test_created_at_is_when_draft_was_written(self):
         import importlib

@@ -40,5 +40,5 @@ PC 에서 화면의 '실행'·'전체 실행'(맨 처음)으로 돌린다. 시�
 ## 평가에서 배운 점
 - 2026-10-19: 첫 최신화. 11개 중분류 + 아이디어 출처를 병렬 조사(general-purpose 에이전트 4개, WebSearch·WebFetch)해 writing.md·daily_ideas.md 의 쌓는 칸을 처음 채움. 평가 0건이라 점검 관점만으로 손봄.
 - 조사 한계(다음에도 같음): PC 크롬 playwright 는 이 환경에서 못 띄웠고, `search.naver.com` 블로그 탭은 WebFetch 403, `site:tistory.com` WebSearch 는 US 엔진이라 티스토리가 안 걸림. → 상위 글은 직접 티스토리/velog URL WebFetch + 동형 블로그로 대체 확인. 다음 최신화 때 playwright 가 뜨면 네이버 블로그 상위 글을 직접 열어 더 정확히 보강.
-- 보고 curl: 한글을 인자로 직접 넘기면 서버에서 status 매칭 실패(깨짐), 경로에 공백·한글이 있으면 `@파일`도 못 연다. `workspace/.routine/_report.sh`(스크립트 폴더로 cd 후 상대 파일명)로 보낼 것.
+- 보고 curl: Windows curl 은 한글을 cp949 로 보내 서버가 400 으로 거절했다 → 2026-10-20 서버가 cp949 도 읽게 고침. 안내문의 curl 명령을 그대로 쓰면 된다 (`_report.sh` 같은 우회 스크립트는 만들지 않는다 — 날짜가 박혀 다음 날 틀린다).
 - 2026-10-20: playwright 가 떠서 네이버 블로그 검색 탭이 열림(WebFetch 는 계속 403). 한 번에 3분류만 봐도 충분 — 결과 페이지는 snapshot 파일을 grep 으로 제목만 뽑으면 토큰이 덜 든다. 보고 스크립트 `_report.sh` 의 day 는 오늘 날짜로 맞춰 쓴다(날짜 고정돼 있어 고침). 안 본 분류 우선순위: 금융·시장, 콘텐츠·엔터, 스포츠, IT·앱, 개발·코딩, 문제 해결.

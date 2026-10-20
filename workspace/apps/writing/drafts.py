@@ -41,15 +41,19 @@ class Draft:
 
 
 def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
-    """원고.md 한 편. 본문 표시가 없거나 제목(# …)이 없으면 None."""
+    """원고.md 한 편. 본문 표시가 없거나 제목(본문 첫 줄 # … 또는 맨 위 # [원고] T번호 · …)이 없으면 None."""
     if START not in text:
         return None
     body = text.split(START, 1)[1].split(END, 1)[0].strip()
     m = re.match(r"#\s+(.+)\n*", body)
-    if not m:
-        return None
-    title = m.group(1).strip()
-    body = body[m.end():]
+    if m:
+        title = m.group(1).strip()
+        body = body[m.end():]
+    else:  # 본문에 제목 줄이 없으면 맨 위 '# [원고] T61 · 제목' 에서 (2026-10-20: T61·T62 가 이래서 안 들어왔다)
+        head_title = re.match(r"#\s*\[원고\]\s*\S+\s*·\s*(.+)", text.lstrip())
+        if not head_title:
+            return None
+        title = head_title.group(1).strip()
     body = re.sub(r"^> 제목 대안:.*\n+", "", body, flags=re.M).strip()  # 제목 후보 줄은 제작 정보
     tail = text.split(END, 1)[1] if END in text else ""
     head = text.split(START, 1)[0]

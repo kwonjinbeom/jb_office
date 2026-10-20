@@ -26,7 +26,7 @@ import re
 from collections import Counter
 from datetime import date
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode
 
 from django import forms
 from django.conf import settings
@@ -571,6 +571,11 @@ def index(request):
         changes.sync()
     except Exception:  # 분류 변경이 잘못돼도 화면은 뜬다 (기록은 관리화면)
         pass
+    try:  # 루틴이 새로 쓴 원고를 임시글으로 — 글쓰기 결과 수는 글을 센다 (2026-10-20: 글 관리를 열기 전엔 0 이었다)
+        from apps.writing.views import auto_import_drafts
+        auto_import_drafts()
+    except Exception:  # 원고 하나가 잘못돼도 화면은 뜬다
+        pass
     today = timezone.localdate()
     mode, sel = period.parse(request, today)
     start, end = period.bounds(mode, sel)
@@ -727,6 +732,20 @@ def version_restore(request, pk):
         "prompt": restore_prompt(v, today, report=report_url(request, v.routine, today))})
 
 
+def _report_form(request):
+    """보고 본문 {status, step}. Windows 의 curl 은 --data-urlencode 의 한글을 cp949 로 보낸다
+    (2026-10-20: '시작'이 깨져 보고가 모두 400 으로 거절됐다) → UTF-8 로 안 읽히면 cp949 로 읽는다."""
+    if request.content_type != "application/x-www-form-urlencoded":
+        return request.POST
+    raw = request.body.decode("ascii", "replace")
+    for encoding in ("utf-8", "cp949"):
+        try:
+            return {k: v[0] for k, v in parse_qs(raw, encoding=encoding, errors="strict").items()}
+        except UnicodeDecodeError:
+            continue
+    return {k: v[0] for k, v in parse_qs(raw, encoding="utf-8", errors="replace").items()}
+
+
 @csrf_exempt
 @login_not_required
 @require_POST
@@ -736,7 +755,8 @@ def report_api(request, key):
     if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
         return HttpResponseForbidden("token")
     routine = get_object_or_404(Routine, key=key)
-    word = request.POST.get("status", "").strip()
+    form = _report_form(request)
+    word = form.get("status", "").strip()
     if word not in RoutineRun.WORDS:
         return HttpResponseBadRequest("status: " + " · ".join(RoutineRun.WORDS))
     try:
@@ -744,7 +764,7 @@ def report_api(request, key):
     except ValueError:
         day = timezone.localdate()
     via = request.GET.get("via") if request.GET.get("via") in RoutineRun.Via.values else RoutineRun.Via.RUN
-    run = RoutineRun.record(routine, day, word, request.POST.get("step", "").strip()[:500], via)
+    run = RoutineRun.record(routine, day, word, form.get("step", "").strip()[:500], via)
     return HttpResponse(f"ok {routine.key} {day} {run.status}", content_type="text/plain; charset=utf-8")
 
 
