@@ -56,6 +56,23 @@ def _mark_lines(text: str) -> str:
     return "\n".join(out)
 
 
+BOLD = re.compile(r"\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*")
+
+
+def fix_bold(text: str) -> str:
+    """**굵게** 를 <strong> 으로 먼저 바꾼다. 마크다운 변환기는 **"따옴표"**는 · **10%**를 처럼
+    문장부호로 끝나고 바로 한글 조사가 붙으면 굵게로 보지 않아 ** 가 글자로 남는다. 코드(`…`, ```)는 건드리지 않는다."""
+    out, fence = [], False
+    for line in text.split("\n"):
+        if line.lstrip().startswith("```"):
+            fence = not fence
+        if not fence:
+            parts = re.split(r"(`[^`]*`)", line)
+            line = "".join(p if p.startswith("`") else BOLD.sub(r"<strong>\1</strong>", p) for p in parts)
+        out.append(line)
+    return "\n".join(out)
+
+
 def _cell(tag: str, align: str | None) -> str:
     base = HEAD_STYLE if tag == "th" else CELL_STYLE
     return f'<{tag} style="{base};text-align:{align or "left"}">'
@@ -230,7 +247,7 @@ def render_body(text: str) -> str:
     if is_html(text):
         return _decorate(clean_html(text))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(_mark_lines(text), extensions=["tables", "sane_lists", "nl2br"]))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return clean_html(out)  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 

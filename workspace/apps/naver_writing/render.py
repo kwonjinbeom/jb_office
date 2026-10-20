@@ -10,6 +10,8 @@ from html.parser import HTMLParser
 
 import markdown
 
+from apps.writing.render import fix_bold
+
 SLOT_STYLE = {
     "photo": "margin:18px 0;padding:14px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;"
              "text-align:center;color:#374151;font-size:14px",
@@ -273,7 +275,7 @@ def render_body(text: str) -> str:
     if is_html(text):
         return _decorate(clean_html(text))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(_mark_lines(text), extensions=["tables", "sane_lists", "nl2br"]))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return clean_html(out)  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 

@@ -265,15 +265,18 @@ def site(request, pk):
 
 
 def _render_for(placement, text):
-    """그 사이트 플랫폼에 맞는 (미리보기 HTML, 서식 복사용 HTML, 글자만, 깨끗한 HTML).
-    네이버만 인라인 style 을 단 서식 HTML 을 쓴다. 나머지는 꾸밈 없는 HTML (포스팅자동화/13 문서)."""
-    if placement.site_category.blog.platform == Blog.Platform.NAVER:
+    """그 사이트 플랫폼에 맞는 (미리보기 HTML, 서식 복사용 HTML, 글자만, 복사용 HTML).
+    네이버는 네이버 글쓰기와, 티스토리·블로거는 티스토리 글쓰기와 같은 인라인 style HTML 을 쓴다.
+    꾸밈 없는 HTML 을 붙이면 표 테두리·머리글 색이 빠지고 머리글 줄이 표 밖으로 빠진다 (2026-10-20 사용자).
+    워드프레스만 꾸밈 없는 HTML (블록 에디터가 인라인 style 을 지운다)."""
+    platform = placement.site_category.blog.platform
+    if platform == Blog.Platform.NAVER:
         from apps.naver_writing.render import paste_html, plain_text, render_body
         html = render_body(text)
         return html, paste_html(html), plain_text(html), paste.clean_html(text)
-    from apps.writing.render import plain_text
-    clean = paste.clean_html(text)
-    return clean, clean, plain_text(clean), clean
+    from apps.writing.render import plain_text, render_body
+    html = paste.clean_html(text) if platform == Blog.Platform.WORDPRESS else render_body(text)
+    return html, html, plain_text(html), html
 
 
 class ConvertForm(_Styled):
