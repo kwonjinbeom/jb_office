@@ -271,9 +271,9 @@ def _render_for(placement, text):
     워드프레스만 꾸밈 없는 HTML (블록 에디터가 인라인 style 을 지운다)."""
     platform = placement.site_category.blog.platform
     if platform == Blog.Platform.NAVER:  # 미리보기도 붙여넣을 HTML 그대로 (문단 사이 빈 줄까지 네이버와 같게)
-        from apps.naver_writing.render import is_html, paste_html, plain_text, render_body
+        from apps.naver_writing.render import needs_gaps, paste_html, plain_text, render_body
         html = render_body(text)
-        rich = paste_html(html, gaps=not is_html(text))
+        rich = paste_html(html, gaps=needs_gaps(text, html))
         return rich, rich, plain_text(html), paste.clean_html(text)
     from apps.writing.render import plain_text, render_body
     html = paste.clean_html(text) if platform == Blog.Platform.WORDPRESS else render_body(text)

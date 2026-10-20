@@ -176,6 +176,23 @@ class PasteFormatTests(TestCase):
         self.assertContains(res, '<textarea id="st-tags" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
         self.assertNotIn("&nbsp;</p>", res.context["paste_html"])
 
+    def test_naver_fixes_apply_to_html_saved_conversion(self):
+        """HTML 로 저장한 변환본(예: 롤드컵 입문)도 빈 줄 · 확인 날짜가 같게. 다시 그려도 두 번 감싸지 않는다."""
+        from apps.writing.render import render_body
+        pl = self.place("black_lukey", "낙서장")
+        pl.converted_body = "<p>LoL 공식 안내 기준, 한국 시간, 10월 15일 확인</p><h2>보는 법</h2><p>골드 차이</p>"
+        pl.save()
+        rich = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
+        self.assertEqual(rich.count("&nbsp;</p>"), 2)
+        self.assertEqual(rich.count("(10.15 확인)</span>"), 1)
+        once = render_body(pl.converted_body)
+        self.assertEqual(render_body(once), once)
+        editor = self.place("black_lukey", "낙서장")
+        editor.converted_body = "<p>가</p><p><br></p><p>나</p>"  # 네이버 편집기 꼴: 빈 줄이 이미 있다
+        editor.save()
+        rich = self.client.get(reverse("site_templates:convert", args=[editor.pk])).context["paste_html"]
+        self.assertNotIn("&nbsp;</p>", rich)
+
     def test_copy_buttons_follow_platform(self):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
         self.assertContains(res, 'data-copy-rich="#st-paste"')  # 네이버: 서식 그대로
