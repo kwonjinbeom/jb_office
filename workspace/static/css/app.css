@@ -1530,7 +1530,7 @@ a.br-addr:hover { color: var(--accent); }
 /* 사이트별 템플릿 메인: 사이트 카드(같은 크기) + 변환할 글 */
 
 /* memorily 연재: 연재 방향 · 왼쪽 회차 목록 · 오른쪽 고른 회차 */
-.sr-direction .k { width: 40px; }
+.sr-direction .k { width: 64px; }
 .sr-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .sr-list .grid tbody tr.on td { background: var(--accent-weak); }
 .sr-list .grid td.title-cell a { font-weight: 600; }
@@ -1543,3 +1543,8 @@ a.br-addr:hover { color: var(--accent); }
 .sr-sources { font-size: 12.5px; color: var(--text-2); }
 .sr-detail .form-foot { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 900px) { .sr-layout { grid-template-columns: minmax(0, 1fr); } }
+.sr-list .sr-screen { color: var(--text-2); }
+.sr-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sr-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.sr-steps li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.sr-step { font-size: 12px; font-weight: 700; color: var(--text-3); }
