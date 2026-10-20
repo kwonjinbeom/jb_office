@@ -6,6 +6,7 @@
 {% block heading %}{{ page_title }}{% for label in path %} <span class="cnt">{{ label }}</span>{% endfor %}{% endblock %}
 
 {% block actions %}
+{% if view_mode and stage == 'post' %}<a class="btn" href="{% url 'blog_types:index' %}{% if sel or today %}?{% if sel %}sel={{ sel }}{% endif %}{% if sel and today %}&amp;{% endif %}{% if today %}today=1{% endif %}{% endif %}" title="사이트 카테고리에 넣기 (같은 분류)">글 매핑 관리{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
 {% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
 <a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}새 글</a>
 {% endblock %}

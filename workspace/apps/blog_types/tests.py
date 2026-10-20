@@ -412,6 +412,9 @@ class PostHubTests(TestCase):
         self.assertEqual(sorted(p.title for p in res.context["posts"]), ["발행할 글 둘", "발행할 글 하나"])
         self.assertContains(res, f'href="{view}?stage=temp"')  # 단계 탭은 글 보기에 머문다
         self.assertContains(res, f'href="{view}?stage=post&amp;p=tistory:{p1.pk}"')
+        self.assertContains(res, f'<a class="btn" href="{reverse("blog_types:index")}" title="사이트 카테고리에 넣기')  # 글 매핑 관리로 가기
+        res = self.client.get(reverse("blog_types:index"))
+        self.assertContains(res, f'class="btn sm bt-pane-go" href="{reverse("site_templates:index")}"')  # 변환하러 가기
         res = self.client.get(view, {"stage": "post", "p": f"tistory:{p1.pk}"})
         self.assertEqual(res.context["post"].title, "발행할 글 하나")
 
@@ -592,7 +595,7 @@ class SitePublishTests(TestCase):
         self.T.objects.create(title="임시 글", stage="temp")
         res = self.client.get(INDEX)
         self.assertEqual(sorted(p.title for p in res.context["posts"]), ["자바 정리", "패딩 고르기"])  # 발행예정글만
-        self.assertContains(res, "<th style=\"width:104px\">사이트</th>", html=False)
+        self.assertContains(res, "<th style=\"width:76px\">사이트</th><th style=\"width:21%\">넣은 곳 · 변환</th><th style=\"width:140px\">발행</th>", html=False)
         res = self.client.get(INDEX, {"psite": "black_lukey"})
         self.assertEqual([p.title for p in res.context["posts"]], ["패딩 고르기"])
         self.assertEqual(res.context["posts"][0].site_groups[0][0], "black_lukey")  # 그 글의 사이트 카테고리가 위
