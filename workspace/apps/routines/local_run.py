@@ -236,9 +236,7 @@ def open_chain(steps, title, claude="claude"):
         ]
     lines += [f"Close-Done {CLOSE_AFTER}", f"Write-Host {_ps('전체 실행을 마쳤습니다. 이 창은 10초 뒤 닫힙니다.')}", "Start-Sleep -Seconds 10"]
     script = folder / "all-chain.ps1"
-    script.write_text("
-".join(lines) + "
-", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
+    script.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
     _popen(["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)])
     return ""
 
