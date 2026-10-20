@@ -70,6 +70,9 @@ class SiteTemplateTests(TestCase):
         self.assertIn("token=tok-123", data["prompt"])
         self.assertIn(f"workspace/.routine/convert/{self.pl.pk}.md", data["prompt"])
         self.assertIn("## 원문", data["prompt"])
+        self.assertIn("## 사실 점검", data["prompt"])  # 변환 때 숫자·날짜·일정을 출처에서 다시 확인
+        self.assertIn(f'check@workspace/.routine/convert/{self.pl.pk}-check.md', data["prompt"])
+        self.assertIn("- 고침: 원래 값 → 고친 값", data["prompt"])
         self.pl.refresh_from_db()
         self.assertEqual(self.pl.convert_status, "requested")
         api = reverse("site_templates:api_save", args=[self.pl.pk])
@@ -89,6 +92,16 @@ class SiteTemplateTests(TestCase):
         self.pl.refresh_from_db()
         self.assertEqual((self.pl.converted_title, self.pl.converted_tags, self.pl.converted_body),
                          ("자바 제목", "자바, 기초", "## 본문 소제목"))
+        # 사실 점검 기록: 저장하고 변환 화면에 보인다 (출처 주소는 링크, 글은 이스케이프)
+        check = "- 고침: 11/27 → 11/28 · 거래소 공지 · https://example.com/a?x=1&y=2\r\n- 미정: 12월 일정 · <아직 발표 없음>"
+        self.client.post(f"{api}?token=tok-123", {"title": "t", "body": "b", "tags": "", "check": check})
+        self.pl.refresh_from_db()
+        self.assertTrue(self.pl.converted_check.startswith("- 고침: 11/27 → 11/28"))
+        self.client.force_login(get_user_model().objects.get(username="tester"))
+        res = self.client.get(reverse("site_templates:convert", args=[self.pl.pk]))
+        self.assertContains(res, "사실 점검")
+        self.assertContains(res, '<a href="https://example.com/a?x=1&amp;y=2" target="_blank" rel="noopener">')
+        self.assertContains(res, "&lt;아직 발표 없음&gt;")
 
     def test_site_page_saves_template_and_format(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])

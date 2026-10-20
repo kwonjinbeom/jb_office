@@ -152,6 +152,8 @@ class Placement(TrashableModel):
     converted_title = models.CharField("변환 제목", max_length=200, blank=True)
     converted_body = models.TextField("변환 본문", blank=True, help_text="그 사이트 에디터에 붙여넣을 원고 (마크다운 또는 HTML)")
     converted_tags = models.CharField("변환 태그", max_length=500, blank=True, help_text="그 사이트 태그·라벨 칸에 넣을 것")
+    converted_check = models.TextField("사실 점검", blank=True,
+                                       help_text="변환 때 숫자·날짜·일정을 출처에서 다시 확인한 기록 (고친 것 · 미정 · 확인한 출처)")
     converted_at = models.DateTimeField("변환한 때", null=True, blank=True)
     created_at = models.DateTimeField("넣은 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)

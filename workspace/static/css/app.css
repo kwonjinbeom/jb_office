@@ -1477,6 +1477,12 @@ a.br-addr:hover { color: var(--accent); }
 .st-paste .st-paste-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .st-paste .st-after { border-top: 1px solid var(--line-soft); padding-top: 10px; font-size: 13px; color: var(--text-2); }
 .st-paste { margin-bottom: 14px; }
+/* 변환 화면: 사실 점검 기록 */
+.st-check { margin-bottom: 14px; }
+.st-check-body { font-size: 13.5px; line-height: 1.7; }
+.st-check-body ul { margin: 0; padding-left: 18px; }
+.st-check-body p { margin: 0; }
+.st-check-body a { overflow-wrap: anywhere; }
 
 /* 일일루틴: 전체 실행(로컬 칸 머리) · 글쓰기 분류 고르기 */
 .rt-th-run { display: flex; align-items: center; gap: 8px; }
