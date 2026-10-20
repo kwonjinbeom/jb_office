@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block heading %}memorily 연재 <span class="cnt">{{ episodes|length }}</span>{% endblock %}
+
+{% block actions %}
+<a class="btn primary" href="?new=1">{% include "includes/ic.html" with name="plus" %}회차 추가</a>
+{% endblock %}
+
+{% block content %}
+{# 연재 방향 (memorily 사이트 템플릿에 맞춘 것) #}
+<div class="wr-read-info sr-direction">
+  <div class="wr-info-row"><span class="k">연재</span><strong>{{ series }}</strong>
+    <span class="muted small">계획 {{ counts.todo }} · 쓰는 중 {{ counts.doing }} · 발행 {{ counts.done }}</span></div>
+  {% for k, v in direction %}<div class="wr-info-row"><span class="k">{{ k }}</span><span class="wr-info-text">{{ v }}</span></div>{% endfor %}
+</div>
+
+<div class="sr-layout">
+  {# 왼쪽: 회차 목록 #}
+  <section class="card sr-list">
+    <table class="grid clickable">
+      <thead><tr><th style="width:56px">회차</th><th>제목</th><th style="width:118px">기간</th><th style="width:72px">상태</th></tr></thead>
+      <tbody>
+        {% for e in episodes %}
+        <tr data-href="?ep={{ e.pk }}"{% if e == current %} class="on"{% endif %}>
+          <td class="mid num">EP.{{ e.number }}</td>
+          <td class="title-cell mid"><a href="?ep={{ e.pk }}">{{ e.title }}</a></td>
+          <td class="mid small muted num">{{ e.period|default:"-" }}</td>
+          <td class="mid"><span class="badge {% if e.status == 'done' %}green{% elif e.status == 'doing' %}blue{% else %}gray{% endif %}">{{ e.get_status_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="grid-empty">아직 회차가 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {# 오른쪽: 고른 회차 · 고치기 · 새 회차 #}
+  <section class="card sr-detail">
+    {% if form %}
+    <div class="card-head"><h3 class="card-title">{% if new %}새 회차{% else %}EP.{{ current.number }} 고치기{% endif %}</h3></div>
+    <form method="post">{% csrf_token %}
+      <div class="card-body form-grid">{% for field in form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}</div>
+      <div class="form-foot">
+        <a class="btn ghost sm" href="?{% if current and not new %}ep={{ current.pk }}{% endif %}">취소</a>
+        <span style="margin-left:auto"></span>
+        <button class="btn primary sm">{% include "includes/ic.html" with name="save" %}저장</button>
+      </div>
+    </form>
+    {% elif current %}
+    <div class="card-head">
+      <h3 class="card-title">EP.{{ current.number }} · {{ current.title }}</h3>
+      <a class="btn ghost sm icon" href="?ep={{ current.pk }}&amp;edit=1" title="고치기" aria-label="고치기">{% include "includes/ic.html" with name="edit" %}</a>
+    </div>
+    <div class="card-body sr-body">
+      {% if current.hook %}<p class="sr-hook">{{ current.hook }}</p>{% endif %}
+      <div class="sr-k">다룰 것</div>
+      <ul class="sr-points">{% for p in current.point_list %}<li>{{ p }}</li>{% empty %}<li class="muted">아직 없음</li>{% endfor %}</ul>
+      {% if current.source_list %}
+      <div class="sr-k">근거</div>
+      <ul class="sr-sources">{% for s in current.source_list %}<li>{{ s }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+    <div class="form-foot">
+      <form method="post" action="{% url 'series:status' current.pk %}" class="status-seg">{% csrf_token %}
+        {% for value, label in status_choices %}<button name="value" value="{{ value }}" {% if value == current.status %}class="on" disabled{% endif %}>{{ label }}</button>{% endfor %}
+      </form>
+      <span style="margin-left:auto"></span>
+      {% if current.post %}
+      <a class="btn sm" href="{{ current.post_link }}">{% include "includes/ic.html" with name="file" %}글 보기</a>
+      {% else %}
+      <form method="post" action="{% url 'series:make_post' current.pk %}" class="inline-form">{% csrf_token %}
+        <button class="btn primary sm" title="memorily 임시글로 만든다 (겪은 상황 → 해 본 것 → 결과와 느낀 점 → 다음에 해 볼 것)">{% include "includes/ic.html" with name="plus" %}글로 만들기</button>
+      </form>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="card-body muted">회차를 고르세요.</div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

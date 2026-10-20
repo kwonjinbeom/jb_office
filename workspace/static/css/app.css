@@ -1528,3 +1528,18 @@ a.br-addr:hover { color: var(--accent); }
 .pk-changes strong { display: block; color: var(--text-2); }
 
 /* 사이트별 템플릿 메인: 사이트 카드(같은 크기) + 변환할 글 */
+
+/* memorily 연재: 연재 방향 · 왼쪽 회차 목록 · 오른쪽 고른 회차 */
+.sr-direction .k { width: 40px; }
+.sr-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.sr-list .grid tbody tr.on td { background: var(--accent-weak); }
+.sr-list .grid td.title-cell a { font-weight: 600; }
+.sr-detail .card-head { display: flex; align-items: center; gap: 8px; }
+.sr-detail .card-head .card-title { flex: 1; min-width: 0; }
+.sr-body { display: grid; gap: 8px; font-size: 14px; line-height: 1.7; }
+.sr-hook { margin: 0; color: var(--text); }
+.sr-k { font-size: 12px; font-weight: 700; color: var(--text-3); margin-top: 4px; }
+.sr-points, .sr-sources { margin: 0; padding-left: 18px; }
+.sr-sources { font-size: 12.5px; color: var(--text-2); }
+.sr-detail .form-foot { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 900px) { .sr-layout { grid-template-columns: minmax(0, 1fr); } }

@@ -71,6 +71,8 @@ MENUS: list[Menu] = [
             Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),
         ),
     ),
+    # memorily 연재 (2026-10-20 사용자): AI 와 블로그 자동화를 만든 과정을 에피소드로 나눠 쓰는 화면 하나
+    Menu("series", "memorily 연재", "AI 와 블로그 자동화를 만든 과정을 에피소드로 나눠 쓰는 곳", "series:index", "book", "#0f766e"),
     Menu(
         "video", "영상 콘텐츠", "시리즈별 소재·대본과 플랫폼별 버전", "video:list", "layers", "#7c3aed",
         children=(
