@@ -224,7 +224,7 @@ class PasteFormatTests(TestCase):
         self.assertIn("Unsplash", PlatformFormat.objects.get(platform="tistory").guide)
         naver = self.place("black_lukey", "낙서장")
         self.assertIn("## 사진", self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"])
-        self.assertIn("내려받아 그 자리에 올린다", PlatformFormat.objects.get(platform="naver").guide)
+        self.assertIn("사진으로 옮겨진다", PlatformFormat.objects.get(platform="naver").guide)
         wordpress = self.place("워드프레스")
         self.assertNotIn("## 사진", self.client.get(reverse("site_templates:convert", args=[wordpress.pk])).context["request_text"])
         # 찾아 넣은 사진 + 출처 캡션 → 붙여넣기 HTML 에 실제 이미지와 캡션
