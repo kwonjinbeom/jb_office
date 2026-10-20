@@ -307,6 +307,7 @@ def index(request, form=None, form_sel=""):
         "class_q": urlencode({"sel": sel}) if sel else "",
         "here": here,
         "status_choices": Placement.Status.choices,
+        "publish_choices": classify.post_model("tistory").Publish.choices,  # 아래 글 목록의 발행 칸
         # 아래(글 분류)
         "cobj": cobj, "ckind_label": {"all": "글 분류"}.get(ckind, KIND_LABEL.get(ckind, "")),
         "cpath": _path(ckind, cobj),

@@ -533,6 +533,9 @@ a.code:hover { text-decoration: none; background: #dce8fb; }
 .status-seg button.on[value="doing"] { background: var(--accent-weak); border-color: var(--accent-line); color: var(--accent); }
 .status-seg button.on[value="done"] { background: var(--ok-weak); border-color: #a9dcb9; color: var(--ok); }
 .status-seg button.on[value="hold"] { background: var(--warn-weak); border-color: #f5d49a; color: var(--warn); }
+/* 매핑(넣은 곳)의 발행 상태: 미발행 = todo, 발행 완료 = done 과 같은 색 */
+.status-seg button.on[value="unsaved"] { background: var(--muted-weak); border-color: var(--border-strong); color: var(--text-2); }
+.status-seg button.on[value="published"] { background: var(--ok-weak); border-color: #a9dcb9; color: var(--ok); }
 
 /* ---------------------------------------------------------------------
    표 (그리드)
@@ -1120,6 +1123,9 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .st-noconcept { color: var(--warn); font-weight: 700; }
 .bt-chip.muted { opacity: .55; }
 .bt-chip.bt-chip-wrap { white-space: normal; flex-wrap: wrap; row-gap: 2px; }
+.bt-chip.bt-chip-wrap > .badge { margin-left: 6px; }
+.bt-grid .bt-cv-col { padding-left: 22px; }  /* 변환: 옆 발행 버튼과 띄운다 */
+.bt-grid .status-seg { flex-wrap: nowrap; }
 .badge.cv-none { color: var(--text-3); }
 .badge.cv-requested { background: var(--warn-weak); color: var(--warn); }
 .badge.cv-done { background: var(--accent-weak); color: var(--accent); }
@@ -1459,7 +1465,13 @@ a.br-addr:hover { color: var(--accent); }
 .st-col { display: grid; gap: 14px; min-width: 0; }
 .st-preview { max-height: 70vh; overflow: auto; border-top: 1px solid var(--line-soft); }
 .st-where { margin: 0 0 10px; }
-@media (max-width: 900px) { .st-cols { grid-template-columns: minmax(0, 1fr); } }
+/* 변환 화면 비교: 원문 ↔ 변환본 같은 크기·높이, 각자 스크롤 */
+.st-compare { align-items: stretch; margin-bottom: 14px; }
+.st-compare .st-col { grid-template-rows: auto minmax(0, 1fr); gap: 0; }
+.st-compare .st-preview { height: calc(100vh - 230px); min-height: 360px; max-height: none; }
+.st-compare .st-ptitle { margin: 0 0 .8em; }
+.st-compare .st-ptags { margin: 1.6em 0 0; font-size: 14px; color: var(--text-3); }
+@media (max-width: 900px) { .st-cols { grid-template-columns: minmax(0, 1fr); } .st-compare .st-preview { height: 60vh; } }
 /* 변환 화면: 붙여넣기 줄 (제목 → 본문 → 태그) */
 .st-paste .st-paste-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .st-paste .st-after { border-top: 1px solid var(--line-soft); padding-top: 10px; font-size: 13px; color: var(--text-2); }

@@ -81,6 +81,14 @@ class SiteTemplateTests(TestCase):
         self.assertEqual((self.pl.convert_status, self.pl.converted_title, self.pl.converted_body, self.pl.converted_tags),
                          ("done", "바꾼 제목", "## 바꾼\n본문", "자바, 기초"))
         self.assertIsNotNone(self.pl.converted_at)
+        # Windows curl: 명령줄의 제목·태그는 cp949, 파일로 보낸 본문은 UTF-8 (2026-10-20 제목·태그가 깨졌다)
+        from urllib.parse import quote_plus
+        mixed = "&".join([f"title={quote_plus('자바 제목', encoding='cp949')}", f"tags={quote_plus('자바, 기초', encoding='cp949')}",
+                          f"body={quote_plus('## 본문 소제목', encoding='utf-8')}"])
+        self.client.post(f"{api}?token=tok-123", mixed, content_type="application/x-www-form-urlencoded")
+        self.pl.refresh_from_db()
+        self.assertEqual((self.pl.converted_title, self.pl.converted_tags, self.pl.converted_body),
+                         ("자바 제목", "자바, 기초", "## 본문 소제목"))
 
     def test_site_page_saves_template_and_format(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])

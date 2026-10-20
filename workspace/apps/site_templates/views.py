@@ -12,6 +12,7 @@
 """
 import hmac
 from collections import Counter
+from urllib.parse import parse_qsl
 
 from django import forms
 from django.contrib import messages
@@ -194,6 +195,26 @@ def run(request):
                          "day": now.date().isoformat(), "count": len(pls)})
 
 
+def _form_fields(request):
+    """변환본 보내기의 title · body · tags. 칸마다 따로 글자를 맞춘다 (2026-10-20: 제목·태그가 깨졌다).
+    Windows 의 curl 은 명령줄에 쓴 한글(title=… · tags=…)을 cp949 로 보내고, 파일(body@…)은 UTF-8 그대로 보낸다.
+    Django 는 한 요청을 한 글자셋(UTF-8)으로 읽으므로 cp949 칸이 깨진다 → 칸마다 UTF-8 로 안 읽히면 cp949 로 읽는다."""
+    if request.content_type != "application/x-www-form-urlencoded":
+        return request.POST
+    out = {}
+    for key, value in parse_qsl(request.body.decode("ascii", "replace"), keep_blank_values=True, encoding="latin-1"):
+        raw = value.encode("latin-1")  # 퍼센트 풀기만 한 바이트
+        for encoding in ("utf-8", "cp949"):
+            try:
+                out[key] = raw.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+        else:
+            out[key] = raw.decode("utf-8", "replace")
+    return out
+
+
 @csrf_exempt
 @login_not_required
 @require_POST
@@ -203,11 +224,12 @@ def api_save(request, pk):
     if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
         return HttpResponseForbidden("token")
     placement = get_object_or_404(Placement, pk=pk)
-    body = request.POST.get("body", "").replace("\r\n", "\n").strip()
+    data = _form_fields(request)
+    body = data.get("body", "").replace("\r\n", "\n").strip()
     if not body:
         return HttpResponseBadRequest("body 가 비었습니다")
-    placement.converted_title = request.POST.get("title", "").strip()[:200]
-    placement.converted_tags = request.POST.get("tags", "").strip()[:500]
+    placement.converted_title = data.get("title", "").strip()[:200]
+    placement.converted_tags = data.get("tags", "").strip()[:500]
     placement.converted_body = body
     placement.convert_status = Placement.Convert.DONE
     placement.converted_at = timezone.now()
