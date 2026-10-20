@@ -1548,3 +1548,10 @@ a.br-addr:hover { color: var(--accent); }
 .sr-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .sr-steps li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: baseline; }
 .sr-step { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.sr-shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.sr-shot { display: grid; gap: 4px; color: inherit; min-width: 0; }
+.sr-shot:hover { text-decoration: none; }
+.sr-shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); }
+.sr-shot:hover img { border-color: var(--accent-line); }
+.sr-shot-cap { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; }
+.sr-shot-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
