@@ -41,21 +41,26 @@ def _filtered(writer, kind, obj, q, today=False):
     return qs
 
 
+PUBLISH_FILTERS = [("", "전체"), ("todo", "미발행"), ("done", "발행 완료")]
+
+
 def _params(request, stage=None):
-    """목록 조건: 단계 · 분류(sel) · 검색어 · 오늘. 모르는 값은 버린다."""
+    """목록 조건: 단계 · 분류(sel) · 검색어 · 오늘 · 발행(pub, 발행예정글만). 모르는 값은 버린다.
+    발행예정글은 분류로 나누지 않는다 (2026-10-21 사용자: 트리·분류 줄 없이 미발행 → 날짜순)."""
     get = request.GET
     stage = get.get("stage") if get.get("stage") in STAGE_KEYS else (stage or "temp")
-    sel = get.get("sel", "")
+    sel = get.get("sel", "") if stage != "post" else ""
     kind, obj = _find(sel)
     if kind not in CLASS_KINDS or obj is None:
         sel, kind, obj = "", None, None
-    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj,
+    pub = get.get("pub", "") if stage == "post" and get.get("pub") in ("todo", "done") else ""
+    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "pub": pub,
             "q": get.get("q", "").strip(), "today": get.get("today") == "1"}
 
 
 def _query(p, **override):
     """조건을 주소 뒤에 붙일 문자열로 (빈 값은 뺀다)."""
-    vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else ""}
+    vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "", "pub": p.get("pub", "")}
     vals.update(override)
     return urlencode({k: v for k, v in vals.items() if v})
 
@@ -68,6 +73,8 @@ def _collect(p, prefetch=False):
         for key in STAGE_KEYS:
             counts[key] += base.filter(stage=key).count()
         qs = classify.with_classification(base.filter(stage=p["stage"]))
+        if p.get("pub"):
+            qs = qs.filter(publish_status=p["pub"])
         if prefetch:
             qs = qs.prefetch_related(Prefetch("placements", queryset=_placements_qs()))
         for post in qs:
@@ -76,6 +83,8 @@ def _collect(p, prefetch=False):
             post.writer_label = "네이버" if w == "naver" else "티스토리"  # 편집기 (분류가 아니다)
             posts.append(post)
     posts.sort(key=lambda x: (x.created_at, x.pk), reverse=True)  # 만든 순서로 고정 (상태를 바꿔도 자리가 그대로)
+    if p["stage"] == "post":  # 발행예정글: 미발행이 위, 그 안에서 최신 순
+        posts.sort(key=lambda x: x.publish_status == x.Publish.DONE)
     return posts, counts
 
 
@@ -111,8 +120,10 @@ def _list_page(request, p, view=False):
         "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == stage} for k, label in STAGES],
         "path": path,
         "posts": posts,
-        "groups": classify.grouped(posts),
-        "cols": {"temp": 6, "review": 5, "post": 7}[stage],
+        "groups": classify.grouped(posts) if stage != "post" else [],  # 발행예정글은 분류 줄 없이
+        "cols": {"temp": 6, "review": 5, "post": 8}[stage],
+        "pub": p["pub"],
+        "pub_filters": [{"key": k, "label": label, "on": k == p["pub"], "url": "?" + _query(p, pub=k)} for k, label in PUBLISH_FILTERS],
         "site_names": sites.names(),
         "review_choices": classify.post_model("tistory").Review.choices,
         "publish_choices": classify.post_model("tistory").Publish.choices,

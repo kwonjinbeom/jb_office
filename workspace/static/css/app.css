@@ -1147,6 +1147,7 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .bt-hide:hover { background: var(--hover); color: var(--text); }
 .bt-hide .ic { width: 15px; height: 15px; }
 .bt-layout.tree-off { grid-template-columns: 42px minmax(0, 1fr); }
+.bt-layout.bt-layout-1 { grid-template-columns: minmax(0, 1fr); }  /* 트리 없는 목록 (글 관리 발행예정글) */
 .bt-layout-3.tree-off { grid-template-columns: minmax(210px, 250px) 42px minmax(0, 1fr); }
 .bt-layout.tree-off .bt-tree { padding: 10px 8px; overflow: hidden; }
 .bt-layout.tree-off .bt-tree > :not(.bt-tree-head) { display: none; }

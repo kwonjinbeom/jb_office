@@ -1,0 +1,27 @@
+{# 글 관리 표 한 줄 (posts.html). 발행예정글은 분류 줄 없이 바로, 나머지는 분류 묶음 안에서 #}
+{% load trash_tags %}
+<tr {% trash_attrs p %} data-href="{{ p.list_url }}">
+  <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
+  <td class="title-cell mid"><a href="{{ p.list_url }}">{{ p.title }}</a></td>
+  {% if stage == 'temp' %}
+  <td class="mid small wr-target" title="이 글을 올릴 사이트">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
+  <td class="mid small muted"><span class="wr-excerpt">{{ p.excerpt|default:"-" }}</span></td>
+  {% else %}
+  <td class="mid">{% include "blog_types/_site_pick.html" with ref=p.ref current=p.target label=p.title %}</td>
+  {% endif %}
+  {% if stage == 'post' %}
+  <td class="mid small">{% for pl in p.placements.all %}<div class="bt-chip bt-cut" title="{{ pl.site_category.blog.name }} › {{ pl.site_category }}">{{ pl.site_category.blog.name }} › {{ pl.site_category.name }}</div>{% empty %}<a class="muted" href="{% url 'blog_types:index' %}?{% if p.target %}psite={{ p.target|urlencode }}&amp;{% endif %}{% if p.bt_category_id %}sel=c{{ p.bt_category_id }}{% else %}sel=u{% endif %}" title="글 매핑 관리에서 사이트 카테고리에 넣기">카테고리에 넣기</a>{% endfor %}</td>
+  <td class="mid small">{% for pl in p.placements.all %}<div class="bt-chip"><a class="badge cv-{{ pl.convert_status }}" href="{% if pl.convert_status == 'none' %}{% url 'site_templates:index' %}?site={{ pl.site_category.sel }}{% else %}{% url 'site_templates:convert' pl.pk %}{% endif %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+  <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% else %}{% include "writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% endif %}</td>
+  <td class="mid small muted num">{{ p.created_at|date:"m-d H:i" }}</td>
+  {% else %}
+  <td class="mid small muted num">{% if stage == 'temp' %}{{ p.created_at|date:"m-d H:i" }}{% else %}{{ p.updated_at|date:"m-d H:i" }}{% endif %}</td>
+  {% endif %}
+  <td class="mid r">
+    <form method="post" action="{% if p.writer == 'naver' %}{% url 'naver_writing:move' %}{% else %}{% url 'writing:move' %}{% endif %}" class="inline-form">
+      {% csrf_token %}<input type="hidden" name="pk" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+      {% if prev_to %}<button class="btn sm" name="to" value="{{ p.prev_stage|default:'' }}" {% if not p.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시글로{% else %}검토글로{% endif %}</button>{% endif %}
+      {% if next_to %}<button class="btn sm primary" name="to" value="{{ p.next_stage }}">{% if stage == 'temp' %}검토글로{% else %}발행예정으로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+    </form>
+  </td>
+</tr>

@@ -4,6 +4,7 @@
   바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 발행 상태(미발행 → 발행 완료, 사용자가 직접 올리고 바꾼다)와 변환 상태.
 - 글 분류 (가운데): 모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위 (티스토리·네이버 나눔 없음). 누르면 오른쪽 **아래** 목록이
   그 분류의 발행예정글로 바뀌고 (2026-10-17 사용자: 아래는 발행예정글만, 사이트 칸, 오늘·사이트 조건), 그 자리에서 사이트 카테고리에 넣는다.
+  발행 완료 · 변환 완료한 글은 아래에서 뺀다 (2026-10-21 사용자). 순서는 최신 순.
   사이트·플랫폼에 맞추는 일은 마지막 단계(사이트별 템플릿의 변환)에서 한다. 숫자는 발행 완료가 아닌 글 수.
 
 주소: ?site=b2|k7 (위) &sel=g1|c3|t5|s9|u (아래) &today=1 &psite=<사이트 이름>|- (아래 조건) &edit=<고칠 것의 sel>.
@@ -200,9 +201,12 @@ NO_SITE = "-"  # 아래 조건: 사이트를 아직 안 고른 글
 
 def _posts(kind, obj, today=False, psite=""):
     """글 분류 한 단계 아래의 발행예정글 (두 편집기의 글 모두) + 각 글을 넣은 사이트 카테고리.
-    today: 오늘 만든 글만 (글 관리의 '오늘'과 같다). psite: 그 사이트 글만 ('-' 는 사이트 없는 글)."""
+    today: 오늘 만든 글만 (글 관리의 '오늘'과 같다). psite: 그 사이트 글만 ('-' 는 사이트 없는 글).
+    발행 완료한 글과 넣은 곳이 모두 변환 완료(확인 포함)인 글은 빼고, 최신 순 (2026-10-21 사용자: 글 관리 발행예정글과 같은 순서)."""
+    converted = {Placement.Convert.DONE, Placement.Convert.CHECKED}
+
     def narrow(qs):
-        qs = qs.filter(stage="post")
+        qs = qs.filter(stage="post").exclude(publish_status=qs.model.Publish.DONE)
         if kind in CLASS_KINDS:
             qs = qs.filter(classify.node_filter(kind, obj))
         if today:
@@ -210,9 +214,9 @@ def _posts(kind, obj, today=False, psite=""):
         if psite:
             qs = qs.filter(target="" if psite == NO_SITE else psite)
         return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements_qs()))
-    posts = classify.all_posts(narrow)
-    posts.sort(key=lambda p: (p.updated_at, p.pk), reverse=True)
-    posts.sort(key=classify.sort_key)
+    posts = [p for p in classify.all_posts(narrow)
+             if not (p.placements.all() and all(pl.convert_status in converted for pl in p.placements.all()))]
+    posts.sort(key=lambda p: (p.created_at, p.pk), reverse=True)  # 미발행만 남으니 '미발행 → 최신 순'
     groups = _site_groups()
     for p in posts:
         p.cls_label = classify.label_of(p)
