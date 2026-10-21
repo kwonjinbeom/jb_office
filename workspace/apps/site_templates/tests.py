@@ -240,7 +240,8 @@ class PasteFormatTests(TestCase):
         tistory = self.place("memorily")
         request_text = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["request_text"]
         self.assertIn("## 사진 (변환할 때 찾아 넣기)", request_text)
-        self.assertIn("## 직접 만든 그림 (변환할 때 · 과하지 않게)", request_text)  # 대표·한눈에 그림 (2026-10-21 사용자)
+        self.assertIn("## 가공이미지 (변환할 때 · 필요한 만큼만)", request_text)  # 직접 만든 그림 (2026-10-21 사용자)
+        self.assertIn("## 글 다듬기", request_text)
         self.assertIn("Unsplash", PlatformFormat.objects.get(platform="tistory").guide)
         naver = self.place("black_lukey", "낙서장")
         self.assertIn("## 사진", self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"])
@@ -248,7 +249,7 @@ class PasteFormatTests(TestCase):
         wordpress = self.place("워드프레스")
         wp_text = self.client.get(reverse("site_templates:convert", args=[wordpress.pk])).context["request_text"]
         self.assertNotIn("## 사진", wp_text)
-        self.assertNotIn("## 직접 만든 그림", wp_text)
+        self.assertNotIn("## 가공이미지", wp_text)
         # 찾아 넣은 사진 + 출처 캡션 → 붙여넣기 HTML 에 실제 이미지와 캡션
         tistory.converted_body = "글\n\n![병원 대기실](https://images.unsplash.com/photo-1?w=1200&q=80)\n*사진: 홍길동 · Unsplash*"
         tistory.save()
