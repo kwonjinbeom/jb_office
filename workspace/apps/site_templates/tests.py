@@ -212,6 +212,21 @@ class PasteFormatTests(TestCase):
         rich = self.client.get(reverse("site_templates:convert", args=[editor.pk])).context["paste_html"]
         self.assertNotIn("&nbsp;</p>", rich)
 
+    def test_naver_summary_quote_is_naver_quotation(self):
+        """네이버 맨 위 결론 인용은 네이버 '따옴표' 인용구로 (2026-10-21 사용자). 미리보기도 그 모양, 티스토리는 세로줄 인용"""
+        pl = self.place("black_lukey", "낙서장")
+        pl.converted_body = "> 롤을 몰라도 롤드컵은 즐길 수 있어요.\n\n본문"
+        pl.save()
+        res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
+        self.assertIn("<blockquote", res.context["paste_html"])
+        self.assertContains(res, "st-converted st-naver")
+        self.assertContains(res, "따옴표")
+        tistory = self.place("memorily")
+        tistory.converted_body = pl.converted_body
+        tistory.save()
+        res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
+        self.assertIn('data-ke-style="style2"', res.context["paste_html"])
+
     def test_copy_buttons_follow_platform(self):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
         self.assertContains(res, 'data-copy-rich="#st-paste"')  # 네이버: 서식 그대로
