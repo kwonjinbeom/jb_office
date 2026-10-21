@@ -56,6 +56,19 @@ class SiteTemplateTests(TestCase):
         self.assertEqual([pl.pk for pl in res.context["done"]], [self.pl.pk])
         self.assertTrue(unmapped)
 
+    def test_requested_can_be_run_again(self):
+        """변환 요청에서 멈춘 글 (서버가 다시 켜지는 순간 눌러 터미널이 안 열림): 다시 변환 버튼 · 다시 안내문"""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok-1")
+        self.pl.convert_status = "requested"
+        self.pl.save()
+        res = self.client.get(reverse("site_templates:index"))
+        self.assertEqual((res.context["stuck_ids"], res.context["stuck_count"]), (str(self.pl.pk), 1))
+        self.assertContains(res, "요청 중인 글 다시 변환 (1)")
+        self.assertContains(res, f'data-st-run="{self.pl.pk}" title="PC 터미널 claude 로 다시 변환"')
+        data = self.client.post(reverse("site_templates:run"), {"ids": str(self.pl.pk)}).json()
+        self.assertTrue(data["prompt"].startswith("# 사이트 변환"))
+
     def test_run_needs_token_then_launches_and_api_saves(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
         run = reverse("site_templates:run")

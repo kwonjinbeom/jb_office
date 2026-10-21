@@ -116,9 +116,11 @@
 
     {# 변환 요청 · 완료 · 확인한 것 (고른 범위). 누르면 변환 화면 (원문 ↔ 변환본, 붙여넣기 복사) #}
     <section class="card">
-      <div class="card-head"><h3 class="card-title">변환한 글 <span class="cnt">{{ done|length }}</span></h3><span class="hint">요청 중이면 claude 가 끝낸 뒤 새로고침</span></div>
+      <div class="card-head"><h3 class="card-title">변환한 글 <span class="cnt">{{ done|length }}</span></h3><span class="hint">요청 중이면 claude 가 끝낸 뒤 새로고침 · PC 터미널이 안 열렸으면 다시 변환</span>
+        {% if stuck_ids %}<span style="margin-left:auto"></span><button type="button" class="btn sm" data-st-run="{{ stuck_ids }}" data-st-count="{{ stuck_count }}" title="변환 요청에서 멈춘 글을 PC 터미널 claude 로 다시">{% include "includes/ic.html" with name="refresh" %}요청 중인 글 다시 변환 ({{ stuck_count }})</button>{% endif %}
+      </div>
       <table class="grid bt-grid clickable">
-        <thead><tr><th>제목</th><th style="width:30%">넣은 곳</th><th style="width:96px">변환</th><th style="width:96px">발행</th><th style="width:92px">수정일</th></tr></thead>
+        <thead><tr><th>제목</th><th style="width:30%">넣은 곳</th><th style="width:96px">변환</th><th style="width:96px">발행</th><th style="width:92px">수정일</th><th style="width:104px"></th></tr></thead>
         <tbody>
           {% for pl in done %}
           <tr data-href="{% url 'site_templates:convert' pl.pk %}">
@@ -127,9 +129,10 @@
             <td><span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span></td>
             <td><span class="badge pl-{{ pl.status }}">{{ pl.get_status_display }}</span></td>
             <td class="small muted num">{{ pl.updated_at|date:"m-d H:i" }}</td>
+            <td class="r">{% if pl.convert_status == 'requested' %}<button type="button" class="btn sm" data-st-run="{{ pl.pk }}" title="PC 터미널 claude 로 다시 변환">{% include "includes/ic.html" with name="refresh" %}다시 변환</button>{% endif %}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="grid-empty">아직 변환한 글이 없습니다.</td></tr>
+          <tr><td colspan="6" class="grid-empty">아직 변환한 글이 없습니다.</td></tr>
           {% endfor %}
         </tbody>
       </table>

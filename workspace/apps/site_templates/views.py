@@ -172,7 +172,10 @@ def index(request):
         "page_title": "사이트별 템플릿", "sites": _tree(todo_cats), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
         "path": path, "concept_form": concept_form, "parent_concept": obj.parent.concept if kind == "sitecat" and obj.parent_id else "",
         "posts": posts, "ready_ids": ",".join(map(str, ready)), "ready_count": len(ready),
-        "done": list(done[:100]), "has_token": bool(AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)),
+        "done": (done := list(done[:100])), "has_token": bool(AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)),
+        # 변환 요청에서 멈춘 것 (2026-10-21: 서버가 다시 켜지는 순간 누르면 터미널이 안 열려 요청으로만 남았다) → 다시 변환
+        "stuck_ids": ",".join(str(pl.pk) for pl in done if pl.convert_status == Placement.Convert.REQUESTED),
+        "stuck_count": sum(1 for pl in done if pl.convert_status == Placement.Convert.REQUESTED),
         "requested": Placement.objects.filter(convert_status=Placement.Convert.REQUESTED).count(),
     })
 
