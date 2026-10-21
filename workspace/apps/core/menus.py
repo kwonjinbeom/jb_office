@@ -83,6 +83,17 @@ MENUS: list[Menu] = [
             Menu("video_discussions", "논의 현황", "영상 콘텐츠에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=video"),
         ),
     ),
+    # 창작콘텐츠 (2026-10-22 사용자): 상상 소재 하나를 여러 방식으로 만들어 보는 검증. 게시용이 아니다.
+    Menu(
+        "studio", "창작콘텐츠", "상상 소재 하나를 카툰·숏폼·글 등 여러 방식으로 만들어 비교하는 곳", "studio:index", "palette", "#b45309",
+        children=(
+            Menu("studio_cartoon", "인스타 카툰", "10장 카툰을 그림판·연필·깔끔 세 가지 마감으로", "studio:cartoon", "image"),
+            Menu("studio_shorts", "숏폼 영상", "9:16 영상 재생 · 효과음 · 내 목소리 녹음 · MP4 저장", "studio:shorts", "film"),
+            Menu("studio_thread", "쓰레드 글", "같은 소재를 글타래와 한 줄 글로", "studio:thread", "message"),
+            Menu("studio_prompts", "AI 이미지 설정집", "이미지 AI 에 넘길 캐릭터·화풍·컷별 지시문", "studio:prompts", "edit"),
+            Menu("studio_review", "검증 기록", "방식별로 AI 티·품질·손이 가는 정도를 따져 본 결과", "studio:review", "check-list"),
+        ),
+    ),
     Menu("discussions", "진행현황", "전체 주제별 현재 핵심과 다음 행동을 한곳에서", "discussions:list", "list", "#0f766e"),
     Menu("memos", "메모", "떠오른 생각, 참고 사항을 빠르게 기록", "memos:list", "memo", "#64748b"),
     Menu("trash", "휴지통", "모든 화면의 삭제 항목 · 7일간 복원", "core:trash", "trash", "#64748b"),

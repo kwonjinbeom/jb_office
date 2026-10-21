@@ -129,6 +129,7 @@ INSTALLED_APPS = [
     "apps.routines",
     "apps.series",
     "apps.anime",
+    "apps.studio",
 ]
 
 MIDDLEWARE = [

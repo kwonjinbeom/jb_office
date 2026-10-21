@@ -1,0 +1,5 @@
+{% load static %}{# 창작콘텐츠 공용: 작품 데이터 + 그리기 엔진 + 이 작품의 컷 그림 #}
+{{ work_js|json_script:"cc-work" }}
+<script src="{% static 'studio/js/doodle.js' %}?v={{ ASSET_VER }}"></script>
+<script src="{% static 'studio/js/frames.js' %}?v={{ ASSET_VER }}"></script>
+<script src="{% static 'studio/js/works/' %}{{ work.key }}.js?v={{ ASSET_VER }}"></script>

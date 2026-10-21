@@ -1648,3 +1648,30 @@ a.br-addr:hover { color: var(--accent); }
 .sr-shot:hover img { border-color: var(--accent-line); }
 .sr-shot-cap { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; }
 .sr-shot-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+
+/* =====================================================================
+   창작콘텐츠 (apps/studio, 2026-10-22) — 접두어 cc-
+   그림 글꼴: 개구(손글씨)·주아. 상용 한글만 남긴 woff (static/studio/fonts, OFL)
+   ===================================================================== */
+@font-face { font-family: "CC Gaegu"; font-weight: 400; font-display: swap; src: url("../studio/fonts/Gaegu-Regular.woff") format("woff"); }
+@font-face { font-family: "CC Gaegu"; font-weight: 700; font-display: swap; src: url("../studio/fonts/Gaegu-Bold.woff") format("woff"); }
+@font-face { font-family: "CC Jua"; font-weight: 400; font-display: swap; src: url("../studio/fonts/Jua-Regular.woff") format("woff"); }
+.cc-svg { display: block; width: 100%; height: auto; }
+/* 인스타 카툰: 가운데 큰 장 · 오른쪽 본문과 장 목록 */
+.cc-cartoon { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+.cc-stage { display: grid; grid-template-columns: 32px minmax(0, 1fr) 32px; gap: 12px; align-items: center; }
+.cc-slide { width: min(100%, calc((100vh - 170px) * .8)); justify-self: center; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #fff; box-shadow: var(--shadow-sm); }
+.cc-all { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.cc-thumb { padding: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: #fff; cursor: pointer; }
+.cc-thumb:hover { border-color: var(--accent-line); }
+.cc-side { display: grid; gap: 14px; }
+.cc-caption { font-size: 13px; line-height: 1.6; }
+.cc-tags { margin-top: 6px; color: var(--accent); }
+.cc-list { list-style: none; margin: 0; padding: 6px; display: grid; gap: 1px; }
+.cc-list button { width: 100%; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 6px; align-items: center; height: 30px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; font: inherit; color: var(--text-2); text-align: left; cursor: pointer; }
+.cc-list button:hover { background: var(--hover); }
+.cc-list button.on { background: var(--accent-weak); color: var(--accent); font-weight: 600; }
+.cc-no { font-size: 11.5px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.cc-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1100px) { .cc-cartoon { grid-template-columns: minmax(0, 1fr); } .cc-all { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .cc-all { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cc-stage { grid-template-columns: 26px minmax(0, 1fr) 26px; gap: 6px; } }

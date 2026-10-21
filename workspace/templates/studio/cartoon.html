@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{# 창작콘텐츠 › 인스타 카툰: 10장(4:5)을 마감 셋으로. 한 장씩 / 전체, PNG·ZIP 저장 (2026-10-22 사용자) #}
+
+{% block breadcrumb %}{% include "studio/_head.html" %}{% endblock %}
+{% block heading %}인스타 카툰 <span class="cnt">{{ work.cuts|length }}장</span>{% endblock %}
+
+{% block actions %}
+<div class="seg" role="group" aria-label="마감" data-cc-finish>
+  <button type="button" data-v="paint" class="on">그림판</button>
+  <button type="button" data-v="pencil">연필 손그림</button>
+  <button type="button" data-v="clean">깔끔 일러스트</button>
+</div>
+<div class="seg" role="group" aria-label="보기" data-cc-view>
+  <button type="button" data-v="one" class="on">한 장씩</button>
+  <button type="button" data-v="all">전체</button>
+</div>
+<button class="btn" type="button" data-cc-png>{% include "includes/ic.html" with name="download" %}이 장 PNG</button>
+<button class="btn primary" type="button" data-cc-zip>{% include "includes/ic.html" with name="download" %}10장 ZIP</button>
+{% endblock %}
+
+{% block content %}
+<div class="cc-cartoon" data-cc-cartoon>
+  <section class="cc-stage" data-cc-one>
+    <button class="btn icon cc-nav" type="button" data-cc-prev aria-label="이전 장">{% include "includes/ic.html" with name="chevron-left" %}</button>
+    <div class="cc-slide" data-cc-slide aria-live="polite"></div>
+    <button class="btn icon cc-nav" type="button" data-cc-next aria-label="다음 장">{% include "includes/ic.html" with name="chevron-right" %}</button>
+  </section>
+  <section class="cc-all" data-cc-all hidden></section>
+  <aside class="cc-side">
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">인스타 본문</h2>
+        <button class="btn sm ghost" type="button" style="margin-left:auto" data-copy-text="{{ work.insta.caption }}{% for t in work.insta.tags %}{% if forloop.first %}
+
+{% endif %}#{{ t }}{% if not forloop.last %} {% endif %}{% endfor %}">{% include "includes/ic.html" with name="copy" %}복사</button></div>
+      <div class="card-body cc-caption">{{ work.insta.caption|linebreaksbr }}<div class="cc-tags">{% for t in work.insta.tags %}#{{ t }} {% endfor %}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2 class="card-title">장 목록</h2><span class="hint" data-cc-pos></span></div>
+      <ol class="cc-list" data-cc-list>
+        {% for r in rows %}<li><button type="button" data-i="{{ r.i }}"><span class="cc-no">{{ r.no }}</span><span class="cc-cap">{{ r.cap }}</span></button></li>{% endfor %}
+      </ol>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+{% include "studio/_scripts.html" %}
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="{% static 'studio/js/cartoon.js' %}?v={{ ASSET_VER }}"></script>
+{% endblock %}

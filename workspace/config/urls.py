@@ -27,6 +27,7 @@ urlpatterns = [
     path("routines/", include("apps.routines.urls")),
     path("series/", include("apps.series.urls")),
     path("anime/", include("apps.anime.urls")),
+    path("studio/", include("apps.studio.urls")),
     path("blog/", include(("apps.content.urls", "blog"), namespace="blog")),
     path("video/", include(("apps.content.urls", "video"), namespace="video")),
     path("discussions/", include("apps.discussions.urls")),
