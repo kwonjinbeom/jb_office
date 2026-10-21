@@ -180,6 +180,16 @@
       return;
     }
 
+    // 글 그대로 복사: data-copy-text="글". 누른 버튼은 .done 으로 표시한다 (네이버 태그를 하나씩 넣을 때 어디까지 했는지).
+    var ct = e.target.closest("[data-copy-text]");
+    if (ct) {
+      copyText(ct.getAttribute("data-copy-text")).then(
+        function () { ct.classList.add("done"); toast(ct.getAttribute("data-copy-msg") || "복사했습니다.", "ok"); },
+        function () { toast("복사하지 못했습니다.", "warn"); }
+      );
+      return;
+    }
+
     // 복사 버튼: data-copy="#입력칸" 의 값을 복사한다. data-copy-msg 가 있으면 그 문구로 알린다.
     var cp = e.target.closest("[data-copy]");
     if (cp) {

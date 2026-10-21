@@ -1123,6 +1123,11 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .st-concept-foot { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
 .st-noconcept { color: var(--warn); font-weight: 700; }
 .bt-chip.muted { opacity: .55; }
+/* 변환 화면 네이버 태그: 북마클릿 + 하나씩 복사 (누른 것은 흐리게) */
+.st-tags-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.st-tag { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 2px 10px; font-size: 13px; cursor: pointer; color: var(--text); }
+.st-tag:hover { border-color: var(--accent); }
+.st-tag.done { opacity: .45; text-decoration: line-through; }
 /* 변환 화면 네이버 미리보기: 붙여넣을 HTML 그대로, 스마트에디터처럼 margin 없이 (문단 사이는 빈 줄) */
 .st-naver p, .st-naver h2, .st-naver h3, .st-naver h4, .st-naver li { margin: 0 !important; }
 .bt-chip.bt-chip-wrap { white-space: normal; flex-wrap: wrap; row-gap: 2px; }

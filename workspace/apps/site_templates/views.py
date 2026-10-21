@@ -348,6 +348,8 @@ def convert(request, pk):
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
         "is_naver": placement.site_category.blog.platform == Blog.Platform.NAVER,
         "tags_copy": _tags_for(placement),
+        "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if placement.site_category.blog.platform == Blog.Platform.NAVER else [],
+        "tag_bookmarklet": paste.naver_tag_bookmarklet(),
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
     })

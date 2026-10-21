@@ -171,9 +171,15 @@ class PasteFormatTests(TestCase):
         self.assertIn('<span style="color:#999999;font-size:13px">(10.20 확인)</span>', rich)
         self.assertNotIn("2026년 10월 20일 확인", rich)
         self.assertContains(res, '<textarea id="st-tags" hidden>#태그1 #태그2 #태그3</textarea>', html=False)
+        self.assertEqual(res.context["tag_items"], ["태그1", "태그2", "태그3"])  # 하나씩 복사 (태그 칸은 Enter 로 하나씩)
+        self.assertContains(res, 'data-copy-text="태그2"')
+        self.assertTrue(res.context["tag_bookmarklet"].startswith("javascript:"))
+        self.assertNotIn(" ", res.context["tag_bookmarklet"])
+        self.assertNotIn("#", res.context["tag_bookmarklet"])  # 주소에 # 이 있으면 뒤가 잘린다
         tistory = self.place("memorily")
         res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
         self.assertContains(res, '<textarea id="st-tags" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
+        self.assertEqual(res.context["tag_items"], [])
         self.assertNotIn("&nbsp;</p>", res.context["paste_html"])
 
     def test_naver_fixes_apply_to_html_saved_conversion(self):
