@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{# 블로그·카페 › memorily 연재: 왼쪽 회차 목록 · 가운데 요약(+ 내 추가 설명) · 오른쪽 글쓰기 (2026-10-20 사용자) #}
+{# 블로그·카페 › memorily 티스토리 › 블로그 자동화(예전 memorily 연재): 왼쪽 회차 목록 · 가운데 요약(+ 내 추가 설명) · 오른쪽 글쓰기 (2026-10-20 사용자) #}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a> › memorily 티스토리</div>{% endblock %}
 
-{% block heading %}memorily 연재 <span class="cnt">{{ series }}</span>{% endblock %}
+{% block heading %}블로그 자동화 <span class="cnt">{{ series }}</span>{% endblock %}
 
 {% block actions %}
 <a class="btn" href="?new=1">{% include "includes/ic.html" with name="plus" %}회차 추가</a>
