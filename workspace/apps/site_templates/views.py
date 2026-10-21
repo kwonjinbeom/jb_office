@@ -20,7 +20,7 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.db.models import Prefetch
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -349,24 +349,45 @@ def convert_context(placement, form=None):
     }
 
 
+def _panel_context(request, post, nxt):
+    pls = list(post.placements.select_related("site_category__blog", "site_category__parent"))
+    pick = request.GET.get("pl", "")
+    pl = next((x for x in pls if str(x.pk) == pick), pls[0] if pls else None)
+    ctx = convert_context(pl) if pl else {"post": post}
+    if pl is None:
+        from apps.blog_types.views import _site_groups
+        from apps.writing.render import render_body
+        ctx["original_html"] = render_body(post.body)
+        ctx["site_groups"] = sorted(_site_groups(), key=lambda g: g[0] != post.target)  # 여기서 바로 카테고리에 넣는다
+        ctx["post_ref"] = request.GET.get("p", "")
+    ctx.update({"placements": pls, "next": nxt if nxt.startswith("/") and not nxt.startswith("//") else "",
+                "panel_url": f"{reverse('site_templates:panel')}?p={request.GET.get('p')}&next={quote(nxt)}"})
+    return ctx
+
+
+def post_page(request):
+    """글 관리 발행예정글의 제목을 누르면 여는 화면 (2026-10-22 사용자): 사이트별 템플릿의 변환 화면 그대로 —
+    원문 ↔ 변환본 · 사실 점검 · 붙여넣기 · 변환본 고치기. ?p=tistory:3 [&pl=] [&back=<글 관리 목록 주소>]. 저장하면 이 화면으로."""
+    from apps.blog_types.posts import _one
+    request.nav_key = "posts_view"
+    post = _one(request.GET.get("p"))
+    if post is None:
+        raise Http404
+    back = request.GET.get("back", "")
+    back = back if back.startswith("/") and not back.startswith("//") else f"{reverse('posts:view')}?stage={post.stage}"
+    ctx = _panel_context(request, post, request.get_full_path())
+    ctx.update({"page_title": post.title, "back": back})
+    return render(request, "site_templates/post_page.html", ctx)
+
+
 def panel(request):
-    """글 관리에서 글 줄을 누르면 그 아래에 펼치는 변환 칸 (2026-10-22 사용자: 사이트별 템플릿의 변환 화면을 글 관리로).
+    """변환 칸 조각 (2026-10-22): 한 건 보기의 '원문 ↔ 변환본 보기'와 변환 화면의 넣은 곳 고르기가 받아 넣는다.
     ?p=tistory:3 [&pl=<매핑 번호>] [&next=<저장 뒤 돌아갈 주소>]. 넣은 곳이 없으면 원문만, 변환 전이면 변환본은 비어 있다."""
     from apps.blog_types.posts import _one
     post = _one(request.GET.get("p"))
     if post is None:
         return HttpResponse("글을 찾지 못했습니다.", status=404)
-    pls = list(post.placements.select_related("site_category__blog", "site_category__parent"))
-    pick = request.GET.get("pl", "")
-    pl = next((x for x in pls if str(x.pk) == pick), pls[0] if pls else None)
-    nxt = request.GET.get("next", "")
-    ctx = convert_context(pl) if pl else {"post": post}
-    if pl is None:
-        from apps.writing.render import render_body
-        ctx["original_html"] = render_body(post.body)
-    ctx.update({"placements": pls, "next": nxt if nxt.startswith("/") and not nxt.startswith("//") else "",
-                "panel_url": f"{reverse('site_templates:panel')}?p={request.GET.get('p')}&next={quote(nxt)}"})
-    return render(request, "site_templates/_panel.html", ctx)
+    return render(request, "site_templates/_panel.html", _panel_context(request, post, request.GET.get("next", "")))
 
 
 def requests_json(request):

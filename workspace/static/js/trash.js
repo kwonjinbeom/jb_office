@@ -47,6 +47,7 @@
     if (record.dataset.trashReady) return;
     record.dataset.trashReady = "1";
     if (record.hasAttribute("data-trash-trigger")) return;
+    if (record.hasAttribute("data-trash-norow")) return;  // 줄마다 휴지통 없이, 체크 후 위 '삭제'로만 (글 관리 발행예정글)
     record.classList.add("trash-record");
     var controls = document.createElement("span");
     controls.className = "trash-row-controls";

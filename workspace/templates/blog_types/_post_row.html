@@ -1,8 +1,9 @@
 {# 글 관리 표 한 줄 (posts.html). 발행예정글은 분류 줄 없이 바로, 나머지는 분류 묶음 안에서 #}
 {% load trash_tags %}
-<tr {% trash_attrs p %} {% if stage == 'post' %}data-cv-panel="{% url 'site_templates:panel' %}?p={{ p.ref }}&amp;next={{ request.get_full_path|urlencode }}" title="누르면 아래에 변환 칸 (원문 ↔ 변환본)"{% else %}data-href="{{ p.list_url }}"{% endif %}>
+<tr {% trash_attrs p %} {% if stage == 'post' %}data-trash-norow{% else %}data-href="{{ p.list_url }}"{% endif %}>
   <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
-  <td class="title-cell mid"><a href="{{ p.list_url }}" title="{{ p.title }}">{{ p.title }}</a></td>
+  {# 발행예정글 제목 (2026-10-22 사용자): 변환 화면(원문 ↔ 변환본 · 사실 점검 · 붙여넣기 · 고치기)을 연다 #}
+  <td class="title-cell mid"><a href="{% if stage == 'post' %}{% url 'site_templates:post' %}?p={{ p.ref }}&amp;back={{ request.get_full_path|urlencode }}{% else %}{{ p.list_url }}{% endif %}" title="{{ p.title }}">{{ p.title }}</a></td>
   {% if stage == 'temp' %}
   <td class="mid small wr-target" title="이 글을 올릴 사이트">{% if p.target %}{{ p.target }}{% else %}<span class="muted">-</span>{% endif %}</td>
   <td class="mid small muted"><span class="wr-excerpt">{{ p.excerpt|default:"-" }}</span></td>
@@ -21,6 +22,7 @@
   {% else %}
   <td class="mid small muted num">{% if stage == 'temp' %}{{ p.created_at|date:"m-d H:i" }}{% else %}{{ p.updated_at|date:"m-d H:i" }}{% endif %}</td>
   {% endif %}
+  {% if stage != 'post' %}{# 발행예정글은 줄 끝 버튼 없이, 체크하고 위 버튼으로 (2026-10-22 사용자) #}
   <td class="mid r">
     <form method="post" action="{% if p.writer == 'naver' %}{% url 'naver_writing:move' %}{% else %}{% url 'writing:move' %}{% endif %}" class="inline-form">
       {% csrf_token %}<input type="hidden" name="pk" value="{{ p.pk }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
@@ -28,4 +30,5 @@
       {% if next_to %}<button class="btn sm primary" name="to" value="{{ p.next_stage }}">{% if stage == 'temp' %}검토글로{% else %}발행예정으로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
     </form>
   </td>
+  {% endif %}
 </tr>

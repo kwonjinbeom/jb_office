@@ -127,7 +127,7 @@ def _list_page(request, p, view=False):
         "path": path,
         "posts": posts,
         "groups": classify.grouped(posts) if stage != "post" else [],  # 발행예정글은 분류 줄 없이
-        "cols": {"temp": 6, "review": 5, "post": 8}[stage],
+        "cols": {"temp": 6, "review": 5, "post": 7}[stage],
         "pub": p["pub"],
         # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 발행예정글 중 넣은 곳이 미변환인 것
         "ready_ids": (ready := ",".join(str(pl.pk) for post in posts if stage == "post" for pl in post.placements.all()
