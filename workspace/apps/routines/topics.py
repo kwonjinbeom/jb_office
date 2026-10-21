@@ -2,6 +2,7 @@
 
 - 고정 주제(FixedTopic) 한 줄: 주제 · 지침 · 최근 몇 주 발행 여부(점) · 실행. 점을 누르면 그 주 발행/미발행이 바뀐다.
 - '실행': 글쓰기 루틴의 추가 실행처럼 PC 터미널 claude 에게 이 주제 한 편을 맡긴다 (글쓰기 프롬프트 md 를 그대로 따른다).
+- 왼쪽 자유 글쓰기 (2026-10-21 사용자): 쓰고 싶은 걸 자유롭게 적고 '글쓰기' → 추가 실행의 코멘트와 같은 길 (views.extra mode=comment).
 - 일일루틴 화면의 글쓰기 줄을 누르면 고정 주제가 그 아래로 펼쳐지고, 거기서도 추가·실행·발행 표시를 한다.
 """
 from datetime import timedelta
@@ -77,6 +78,7 @@ def page(request):
         "page_title": "커스텀 글쓰기", "topics": topics, "weeks": ws, "today": today,
         "this_week": ws[-1], "done_this_week": sum(1 for t in topics if t.cells[-1][1]),
         "week_col": len(ws) * DOT_W + 32, "site_names": sites.names(),
+        "writing": Routine.objects.filter(key=WRITING_KEY).first(),  # 왼쪽 자유 글쓰기 = 글쓰기 루틴의 추가 실행(코멘트)
     })
 
 
