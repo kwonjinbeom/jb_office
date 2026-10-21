@@ -11,15 +11,22 @@
     if (html != null) e.innerHTML = html;
     return e;
   }
+  // 번호가 음수인 화(블리치 과거편 -108~-97화 등)는 작품 data 의 negvols [[처음, 끝, 권], ...] 로 권을 찾는다
   function volOf(work, ch) {
+    if (ch < 0) {
+      var hit = (work.negvols || []).filter(function (r) { return r[0] <= ch && ch <= r[1]; })[0];
+      return hit ? hit[2] : 0;
+    }
+    if (work.volEnd && ch > work.volEnd) return 0;  // 연재 중인 작품: 최신권 다음 화는 아직 단행본에 없다
     var v = work.vols, n = 0;
     for (var i = 0; i < v.length; i++) if (v[i] <= ch) n = i + 1;
     return n;
   }
   function range(a, b) { return a === b ? a + "화" : a + "~" + b + "화"; }
+  function volText(n) { return n ? n + "권" : "미수록"; }
   function vols(work, a, b) {
     var va = volOf(work, a), vb = volOf(work, b);
-    return va === vb ? va + "권" : va + "~" + vb + "권";
+    return va === vb ? volText(va) : volText(va) + "~" + volText(vb);
   }
 
   // 이야기를 앞으로 나아가게 하는 원작 회차. 원작 + 애니 장면(2) 회차는 앞 원작보다 뒤이고 다음 원작을 앞지르지 않을 때만
@@ -70,7 +77,7 @@
       });
       if (first) hit = { s: s, a: first, b: last };
     });
-    var vol = "단행본 " + volOf(work, ch) + "권";
+    var vol = "단행본 " + volText(volOf(work, ch));
     if (!hit) return { big: "애니로 안 나온 화", sub: vol };
     return { big: hit.s.name + " " + range(hit.a, hit.b), sub: vol };
   }
