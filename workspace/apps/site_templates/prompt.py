@@ -99,8 +99,9 @@ def _category_part(cat):
     return "## 카테고리 컨셉\n" + "\n".join(lines) if lines else ""
 
 
-def launcher(request, placements, token):
-    """PC 터미널 claude 에게 줄 안내문: 글마다 요청문대로 변환 → 본문 파일 → 서버 저장 주소로 curl."""
+def launcher(request, placements, token, redo=""):
+    """PC 터미널 claude 에게 줄 안내문: 글마다 요청문대로 변환 → 본문 파일 → 서버 저장 주소로 curl.
+    redo: 재변환 코멘트 (2026-10-22 사용자, 글 관리에서 한 건씩). 지난 변환본을 코멘트대로 고친다."""
     day = timezone.localdate()
     head = [
         f"{LAUNCH_HEAD} · {day.isoformat()} · {len(placements)}편",
@@ -112,12 +113,21 @@ def launcher(request, placements, token):
         "3. 아래 '보내기' 명령의 <제목> · <태그> 를 채워 실행한다. 응답이 `ok` 로 시작하면 다음 글.\n"
         "4. 실패하면 이유를 한 줄로 말하고 다음 글로 간다. 다 끝나면 보낸 편수와 고친 곳 수를 한 줄로 말한다.",
     ]
+    if redo:
+        head[0] = f"{LAUNCH_HEAD} (재변환) · {day.isoformat()} · {len(placements)}편"
+        head.insert(2, "## 재변환 코멘트 (사용자)\n" + redo.strip() + "\n\n"
+                    "이 코멘트를 먼저 따른다. 아래 '지난 변환본'이 있으면 처음부터 다시 쓰지 말고 그것을 코멘트대로 고친다. "
+                    "코멘트가 말하지 않은 부분은 지난 변환본 그대로 둔다. 사실 점검 기록에 무엇을 고쳤는지 한 줄 더한다.")
     parts = ["\n\n".join(head)]
     for n, pl in enumerate(placements, start=1):
         url = request.build_absolute_uri(reverse("site_templates:api_save", args=[pl.pk])) + f"?token={token}"
         send = (f'curl -fsS -X POST "{url}" --data-urlencode "title=<제목>" --data-urlencode "tags=<태그>" '
                 f'--data-urlencode "body@workspace/.routine/convert/{pl.pk}.md" '
                 f'--data-urlencode "check@workspace/.routine/convert/{pl.pk}-check.md"')
-        parts.append(f"---\n\n## 글 {n} · 번호 {pl.pk} · {pl.site_category.blog.name} › {pl.site_category}\n\n"
-                     f"보내기:\n```\n{send}\n```\n\n{build(pl)}")
+        part = (f"---\n\n## 글 {n} · 번호 {pl.pk} · {pl.site_category.blog.name} › {pl.site_category}\n\n"
+                f"보내기:\n```\n{send}\n```\n\n{build(pl)}")
+        if redo and pl.converted_body.strip():
+            part += (f"\n\n## 지난 변환본 (재변환 코멘트대로 고친다)\n### 제목\n{pl.converted_title or '-'}\n"
+                     f"### 태그\n{pl.converted_tags or '-'}\n### 본문\n{pl.converted_body}")
+        parts.append(part)
     return "\n\n".join(parts)

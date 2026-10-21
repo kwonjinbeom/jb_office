@@ -536,6 +536,30 @@
     load(td, row.getAttribute("data-cv-panel"));
   });
 
+  // 재변환: 체크한 글 하나 + 코멘트 → 지난 변환본을 코멘트대로 고친다 (글 관리 발행예정글 위 줄)
+  document.addEventListener("click", function (e) {
+    var rc = e.target.closest("[data-reconvert]");
+    if (!rc || rc.disabled) return;
+    var boxes = document.querySelectorAll('input[name="ids"]:checked');
+    if (boxes.length !== 1) { window.App.toast("재변환은 한 건씩: 글 하나만 체크하세요.", "warn"); return; }
+    var note = document.getElementById("rc-note");
+    if (!note || !note.value.trim()) { window.App.toast("무엇을 고칠지 코멘트를 적으세요.", "warn"); if (note) note.focus(); return; }
+    var data = new FormData();
+    data.set("csrfmiddlewaretoken", (window.APP || {}).csrfToken || "");
+    data.set("p", boxes[0].value);
+    data.set("note", note.value);
+    rc.disabled = true;
+    fetch(rc.getAttribute("data-url"), { method: "POST", body: data, credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        rc.disabled = false;
+        if (!res.ok) { window.App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); return; }
+        note.value = "";
+        window.App.rtLaunch(res.j.prompt, { kind: "convert", key: res.j.key, day: res.j.day, name: "재변환" }, true);
+      })
+      .catch(function () { rc.disabled = false; window.App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); });
+  });
+
   document.addEventListener("click", function (e) {
     var go = e.target.closest("[data-st-run]");
     if (!go || go.disabled) return;
