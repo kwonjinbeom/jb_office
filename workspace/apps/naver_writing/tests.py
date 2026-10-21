@@ -167,3 +167,7 @@ class NaverFormattingTests(TestCase):
         self.assertIn('<p style="font-family:나눔바른고딕;font-size:16px;line-height:1.8;margin:0">&nbsp;</p>', out)
         self.assertIn('font-family:나눔바른고딕;font-size:15px', out)
         self.assertNotIn("나눔고딕", out)
+        # 글 덩어리(## 소제목) 앞은 빈 줄 셋 (2026-10-22 사용자: 덩어리 사이가 답답하다)
+        out = paste_html("<p>가</p><h2>소제목</h2><p>나</p>", gaps=True)
+        self.assertEqual(out.split("<h2")[0].count("&nbsp;"), 3)
+        self.assertEqual(out.split("<h2")[1].count("&nbsp;"), 1)

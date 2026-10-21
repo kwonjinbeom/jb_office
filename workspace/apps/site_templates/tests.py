@@ -175,7 +175,7 @@ class PasteFormatTests(TestCase):
         pl.save()
         res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
         rich = res.context["paste_html"]
-        self.assertEqual(rich.count("&nbsp;</p>"), 3)  # 블록 네 개 사이에 빈 줄 셋
+        self.assertEqual(rich.count("&nbsp;</p>"), 5)  # 블록 네 개 사이에 빈 줄 하나씩, ## 소제목 앞만 셋
         self.assertEqual(res.context["converted_html"], rich)  # 미리보기도 붙여넣을 HTML 그대로
         self.assertIn('<span style="color:#999999;font-size:13px">(10.20 확인)</span>', rich)
         self.assertNotIn("2026년 10월 20일 확인", rich)
@@ -198,7 +198,7 @@ class PasteFormatTests(TestCase):
         pl.converted_body = "<p>LoL 공식 안내 기준, 한국 시간, 10월 15일 확인</p><h2>보는 법</h2><p>골드 차이</p>"
         pl.save()
         rich = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
-        self.assertEqual(rich.count("&nbsp;</p>"), 2)
+        self.assertEqual(rich.count("&nbsp;</p>"), 4)  # 소제목 앞 셋 + 뒤 하나
         self.assertEqual(rich.count("(10.15 확인)</span>"), 1)
         once = render_body(pl.converted_body)
         self.assertEqual(render_body(once), once)
@@ -230,7 +230,8 @@ class PasteFormatTests(TestCase):
         pl.save()
         res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
         html = res.context["paste_html"]
-        self.assertEqual(html.count('<p data-ke-size="size16">&nbsp;</p>'), 2)  # 소제목 바로 뒤에는 빈 줄 없이
+        self.assertEqual(html.count('<p data-ke-size="size16">&nbsp;</p>'), 4)  # 소제목 앞 셋 · 바로 뒤에는 없이 · 사진 뒤 하나
+        self.assertIn("첫 문단</p>\n" + '<p data-ke-size="size16">&nbsp;</p>' * 3 + "<h2>", html)
         self.assertIn('<h2>소제목</h2>\n<p style="text-align:center', html)
         self.assertIn('<p style="text-align:center;margin:18px 0"><img width="620" src="https://a.com/x.png"', html)
         self.assertContains(res, "st-converted st-flat")  # 미리보기도 같은 간격

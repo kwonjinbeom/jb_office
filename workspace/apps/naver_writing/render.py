@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 
 import markdown
 
-from apps.writing.render import fix_bold, soft_check_dates
+from apps.writing.render import SECTION_GAPS, fix_bold, soft_check_dates
 
 SLOT_STYLE = {
     "photo": "margin:18px 0;padding:14px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;"
@@ -304,7 +304,7 @@ class _PasteStyles(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if self.depth == 0 and tag in BLOCKS:
             if self.gaps and self.seen_block:
-                self.out.append(self._gap())
+                self.out.append(self._gap() * (SECTION_GAPS if tag == "h2" else 1))  # 글 덩어리 앞은 빈 줄 셋
             self.seen_block = True
         if tag not in VOID:
             self.depth += 1
