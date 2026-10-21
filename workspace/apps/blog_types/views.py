@@ -1,4 +1,4 @@
-"""글 매핑 관리 화면: 트리 두 칸(사이트 카테고리 · 글 분류) + 오른쪽에 두 목록을 함께 (위 2.5 · 아래 7.5).
+"""카테고리 관리 화면: 트리 두 칸(사이트 카테고리 · 글 분류) + 오른쪽에 두 목록을 함께 (위 2.5 · 아래 7.5).
 
 - 사이트 카테고리 (왼쪽): 사이트(운영 화면의 블로그) › 카테고리 › 하위 카테고리. 누르면 오른쪽 **위** 목록이 그 카테고리에 넣은 글(매핑)로
   바뀐다. 아무것도 안 고르면 모든 매핑. 매핑마다 발행 상태(미발행 → 발행 완료, 사용자가 직접 올리고 바꾼다)와 변환 상태.
@@ -305,7 +305,7 @@ def index(request, form=None, form_sel=""):
 
     here = _merge(request.get_full_path())
     ctx = {
-        "page_title": "글 매핑 관리",
+        "page_title": "카테고리 관리",
         "site_sel": site_sel, "sel": sel, "w": w, "kind": ckind,
         "site_q": f"site={site_sel}&" if site_sel else "",
         "class_q": urlencode({"sel": sel}) if sel else "",
@@ -452,7 +452,7 @@ def place_add(request):
     raw = request.POST.get("post", "")
     w, _, pk = raw.rpartition(":")  # 'tistory:3' · 'naver:5'. 숫자만 오면 사이트 플랫폼의 편집기 글 (예전 폼)
     w = w if w in FIELD else _site_writer(cat.blog)
-    post = classify.post_model(w).objects.filter(pk=pk if pk.isdigit() else 0, stage="post").first()
+    post = classify.post_model(w).objects.filter(pk=pk if pk.isdigit() else 0, stage__in=["review", "post"]).first()  # 검토글도 (2026-10-22)
     status = request.POST.get("status") or Placement.Status.UNSAVED
     back = _url(cat.sel)
     if post is None or status not in Placement.Status.values:

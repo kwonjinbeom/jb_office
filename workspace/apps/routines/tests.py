@@ -458,7 +458,7 @@ class RepoTests(Login):
 
     def test_create_and_delete_to_trash(self):
         self.client.post(reverse("routines:create"), {
-            "key": "wordpress", "name": "워드프레스 글쓰기", "url_name": "posts:index", "task": "원고", "output": "",
+            "key": "wordpress", "name": "워드프레스 글쓰기", "url_name": "posts:view", "task": "원고", "output": "",
             "daily": 1, "unit": "편", "prompt_doc": "일일루틴/프롬프트/wordpress.md", "data": ["sites"], "review_focus": ""})
         new = Routine.objects.get(key="wordpress")
         self.assertEqual((new.order, new.data), (5, "sites"))
@@ -596,7 +596,7 @@ class DraftAutoImportTests(Login):
                 f.write_text(DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
                 os.utime(f, (written.timestamp(), written.timestamp()))  # git 밖이면 파일 시각
             early = TistoryPost.objects.create(title="먼저 가져온 원고")  # 고치기 전에 가져온 것 = 가져온 시각
-            self.client.get(reverse("posts:index"))
+            self.client.get(reverse("posts:view"))
             importlib.import_module("apps.writing.migrations.0006_draft_written_at").forward(registry, None)
         self.assertEqual(TistoryPost.objects.get(title="새 원고").created_at, written)
         early.refresh_from_db()

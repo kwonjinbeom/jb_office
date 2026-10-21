@@ -1,8 +1,8 @@
 """사이트별 템플릿 화면.
 
-- 메인 (2026-10-17 사용자): 왼쪽은 글 매핑 관리처럼 사이트 › 카테고리 › 하위 카테고리 트리. 카테고리마다 컨셉이 있어서
+- 메인 (2026-10-17 사용자): 왼쪽은 카테고리 관리처럼 사이트 › 카테고리 › 하위 카테고리 트리. 카테고리마다 컨셉이 있어서
   고르면 오른쪽 위에서 그 컨셉을 보고 고친다 (사이트를 고르면 사이트 컨셉 · 템플릿 고치기로). 오른쪽 아래는 변환할 글:
-  발행예정글(발행 전) 중 미변환인 글. 글 매핑 관리에서 고른 곳(사이트·카테고리)에 넣은 글만 '변환' 버튼이 뜨고,
+  발행예정글(발행 전) 중 미변환인 글. 카테고리 관리에서 고른 곳(사이트·카테고리)에 넣은 글만 '변환' 버튼이 뜨고,
   '변환 가능 글 전체 변환'은 그 범위의 미변환을 한꺼번에. 변환은 PC 터미널의 claude 가 한다 (run → jbroutine:convert 링크 →
   apps/routines/local_run.py). claude 는 변환본을 api_save 주소로 보낸다 (설정의 보고 토큰).
   그 아래는 변환 요청 · 완료 · 확인한 것 (누르면 변환 화면).
@@ -13,7 +13,7 @@
 import hmac
 import re
 from collections import Counter
-from urllib.parse import parse_qsl
+from urllib.parse import parse_qsl, quote
 
 import markdown
 from django import forms
@@ -29,7 +29,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
-from apps.blog_types import classify
 from apps.blog_types.models import Placement, SiteCategory
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
@@ -93,15 +92,6 @@ def _pick(sel):
     return (kind, obj) if obj else (None, None)
 
 
-def _scope(kind, obj):
-    """고른 것 아래의 사이트 카테고리 pk (None = 모두)"""
-    if kind == "site":
-        return set(SiteCategory.objects.filter(blog=obj).values_list("pk", flat=True))
-    if kind == "sitecat":
-        return {obj.pk, *obj.children.values_list("pk", flat=True)}
-    return None
-
-
 def _tree(todo_cats):
     """왼쪽 트리: 사이트 › 카테고리 › 하위. 숫자는 그 아래 변환할 수 있는 글(미변환 매핑) 수."""
     counts = Counter(todo_cats)
@@ -118,48 +108,23 @@ def _tree(todo_cats):
     return sites
 
 
-def _todo_posts(scope):
-    """변환할 글: 발행예정글 · 발행 전 · 미변환 (넣은 곳이 없거나, 넣은 곳 중 미변환이 있는 글).
-    글마다 .ready = 고른 범위 안의 미변환 매핑 (변환 버튼). 버튼이 있는 글을 위로."""
-    none = Placement.Convert.NONE
-
-    def narrow(qs):
-        qs = qs.filter(stage="post").exclude(publish_status=qs.model.Publish.DONE)
-        return classify.with_classification(qs).prefetch_related(Prefetch("placements", queryset=_placements()))
-    out = []
-    for p in classify.all_posts(narrow):
-        pls = list(p.placements.all())
-        if pls and all(pl.convert_status != none for pl in pls):
-            continue
-        p.cls_label = classify.label_of(p)
-        p.todo = [pl for pl in pls if pl.convert_status == none]
-        p.ready = [pl for pl in p.todo if scope is None or pl.site_category_id in scope]
-        out.append(p)
-    out.sort(key=lambda p: p.updated_at, reverse=True)
-    out.sort(key=lambda p: not p.ready)
-    return out
-
-
 def index(request):
+    """사이트별 템플릿 (2026-10-22 사용자): 변환은 글 관리로 옮기고, 여기서는 글쓰기·변환 컨셉과 규칙에 집중한다.
+    왼쪽 트리에서 고른 것에 따라 오른쪽이 바뀐다 — 없음: 사이트마다 요약 / 사이트: 컨셉·템플릿·붙여넣기 포맷 고치기 +
+    카테고리 컨셉 목록 / 카테고리: 그 카테고리 컨셉 고치기 + 같이 적용되는 사이트 컨셉·템플릿."""
     _nav(request)
     sel = request.GET.get("site", "")
     kind, obj = _pick(sel)
     if obj is None:
         sel = ""
-    scope = _scope(kind, obj)
+    here = f"{reverse('site_templates:index')}?site={sel}" if sel else reverse("site_templates:index")
     concept_form = None
     if kind == "sitecat":
         concept_form = CategoryConceptForm(request.POST if request.method == "POST" else None, instance=obj, prefix="k")
         if request.method == "POST" and concept_form.is_valid():
             concept_form.save()
             messages.success(request, f"{obj.blog.name} › {obj} 컨셉을 저장했습니다.")
-            return redirect(f"{reverse('site_templates:index')}?site={sel}")
-    posts = _todo_posts(scope)
-    ready = [pl.pk for p in posts for pl in p.ready]
-    done = _placements().exclude(convert_status=Placement.Convert.NONE).order_by("-updated_at")
-    if scope is not None:
-        done = done.filter(site_category__in=scope)
-    todo_cats = [pl.site_category_id for p in posts for pl in p.todo]
+            return redirect(here)
     blog = obj if kind == "site" else (obj.blog if kind == "sitecat" else None)
     path = []
     if blog:
@@ -168,16 +133,36 @@ def index(request):
         if obj.parent_id:
             path.append((obj.parent.name, f"?site={obj.parent.sel}"))
         path.append((obj.name, f"?site={obj.sel}"))
-    return render(request, "site_templates/index.html", {
-        "page_title": "사이트별 템플릿", "sites": _tree(todo_cats), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
-        "path": path, "concept_form": concept_form, "parent_concept": obj.parent.concept if kind == "sitecat" and obj.parent_id else "",
-        "posts": posts, "ready_ids": ",".join(map(str, ready)), "ready_count": len(ready),
-        "done": (done := list(done[:100])), "has_token": bool(AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)),
-        # 변환 요청에서 멈춘 것 (2026-10-21: 서버가 다시 켜지는 순간 누르면 터미널이 안 열려 요청으로만 남았다) → 다시 변환
-        "stuck_ids": ",".join(str(pl.pk) for pl in done if pl.convert_status == Placement.Convert.REQUESTED),
-        "stuck_count": sum(1 for pl in done if pl.convert_status == Placement.Convert.REQUESTED),
-        "requested": Placement.objects.filter(convert_status=Placement.Convert.REQUESTED).count(),
-    })
+    ctx = {"page_title": "사이트별 템플릿", "sites": _tree([]), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
+           "path": path, "here": here, "concept_form": concept_form}
+    if blog:
+        tpl, fmt = prompt.template_for(blog), prompt.format_for(blog.platform)
+        ctx.update(tpl=tpl, fmt=fmt, cats=_cats_of(blog))
+        if kind == "site":
+            ctx.update(site_concept_form=ConceptForm(instance=blog, prefix="c"), tpl_form=TemplateForm(instance=tpl, prefix="t"),
+                       fmt_form=FormatForm(instance=fmt, prefix="f"))
+        else:
+            ctx.update(parent_concept=obj.parent.concept if obj.parent_id else "",
+                       kids=list(obj.children.all()) if not obj.parent_id else [])
+    else:
+        for b in ctx["sites"]:
+            b.tpl = prompt.template_for(b)
+            b.cats_all = _cats_of(b)
+            b.cats_done = sum(1 for c in b.cats_all if c.concept.strip())
+        ctx["requested"] = Placement.objects.filter(convert_status=Placement.Convert.REQUESTED).count()
+    return render(request, "site_templates/index.html", ctx)
+
+
+def _cats_of(blog):
+    """그 사이트의 카테고리를 트리 순서대로 (하위는 .depth 1)"""
+    out = []
+    for c in SiteCategory.objects.filter(blog=blog, parent=None).prefetch_related("children").order_by("order", "pk"):
+        c.depth = 0
+        out.append(c)
+        for k in c.children.all():
+            k.depth = 1
+            out.append(k)
+    return out
 
 
 @require_POST
@@ -190,9 +175,9 @@ def run(request):
     ids = [int(x) for x in request.POST.get("ids", "").split(",") if x.strip().isdigit()]
     pls = list(_placements().filter(pk__in=ids, convert_status__in=[Placement.Convert.NONE, Placement.Convert.REQUESTED])
                .order_by("site_category__blog__order", "pk"))
-    pls = [pl for pl in pls if pl.post is not None and pl.post.stage == "post"]
+    pls = [pl for pl in pls if pl.post is not None and pl.post.stage in ("review", "post")]  # 검토글도 (2026-10-22)
     if not pls:
-        return JsonResponse({"error": "변환할 글이 없습니다. 글 매핑 관리에서 카테고리에 먼저 넣으세요."}, status=400)
+        return JsonResponse({"error": "변환할 글이 없습니다. 카테고리 관리에서 카테고리에 먼저 넣으세요."}, status=400)
     for pl in pls:
         pl.convert_status = Placement.Convert.REQUESTED
         pl.save(update_fields=["convert_status", "updated_at"])
@@ -259,12 +244,10 @@ def site(request, pk):
             for f in forms_:
                 f.save()
             messages.success(request, "저장했습니다.")
-            return redirect("site_templates:site", pk=blog.pk)
-    cv = Counter(_placements(blog).values_list("convert_status", flat=True))
-    return render(request, "site_templates/site.html", {
-        "page_title": f"{blog.name} 템플릿", "blog": blog, "concept_form": concept_form, "tpl_form": tpl_form,
-        "fmt_form": fmt_form, "cv": {k: cv[k] for k in Placement.Convert.values},
-    })
+        else:
+            messages.warning(request, "저장하지 못했습니다. 칸을 확인하세요.")
+    # 사이트 화면은 사이트별 템플릿 메인(그 사이트를 고른 오른쪽)으로 합쳤다 (2026-10-22)
+    return redirect(f"{reverse('site_templates:index')}?site={blog.sel}")
 
 
 def _render_for(placement, text):
@@ -337,25 +320,53 @@ def convert(request, pk):
             placement.save()
             if request.headers.get("X-Requested-With") == "fetch":
                 return JsonResponse({"ok": True, "status": placement.convert_status})
+            nxt = request.POST.get("next", "")  # 글 관리 펼침 칸에서 저장하면 그 목록으로
+            if nxt.startswith("/") and not nxt.startswith("//"):
+                return redirect(nxt)
             return redirect("site_templates:convert", pk=placement.pk)
         if request.headers.get("X-Requested-With") == "fetch":
             return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+    return render(request, "site_templates/convert.html", {"page_title": "변환", **convert_context(placement, form)})
+
+
+def convert_context(placement, form=None):
+    """변환 화면 본문(_convert_body.html)에 넣을 것. 변환 화면과 글 관리 펼침 칸이 같이 쓴다."""
     post = placement.post
     from apps.writing.render import render_body
-    original_html = render_body(post.body)
     conv_html, rich, plain, clean = (_render_for(placement, placement.converted_body) if placement.converted_body
                                      else ("", "", "", ""))
-    return render(request, "site_templates/convert.html", {
-        "page_title": "변환", "pl": placement, "blog": placement.site_category.blog, "post": post, "form": form,
-        "original_html": original_html, "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
+    naver = placement.site_category.blog.platform == Blog.Platform.NAVER
+    return {
+        "pl": placement, "blog": placement.site_category.blog, "post": post,
+        "form": form or ConvertForm(instance=placement),
+        "original_html": render_body(post.body), "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
-        "is_naver": placement.site_category.blog.platform == Blog.Platform.NAVER,
-        "tags_copy": _tags_for(placement),
-        "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if placement.site_category.blog.platform == Blog.Platform.NAVER else [],
+        "is_naver": naver, "tags_copy": _tags_for(placement),
+        "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if naver else [],
         "tag_bookmarklet": paste.naver_tag_bookmarklet(),
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
-    })
+    }
+
+
+def panel(request):
+    """글 관리에서 글 줄을 누르면 그 아래에 펼치는 변환 칸 (2026-10-22 사용자: 사이트별 템플릿의 변환 화면을 글 관리로).
+    ?p=tistory:3 [&pl=<매핑 번호>] [&next=<저장 뒤 돌아갈 주소>]. 넣은 곳이 없으면 원문만, 변환 전이면 변환본은 비어 있다."""
+    from apps.blog_types.posts import _one
+    post = _one(request.GET.get("p"))
+    if post is None:
+        return HttpResponse("글을 찾지 못했습니다.", status=404)
+    pls = list(post.placements.select_related("site_category__blog", "site_category__parent"))
+    pick = request.GET.get("pl", "")
+    pl = next((x for x in pls if str(x.pk) == pick), pls[0] if pls else None)
+    nxt = request.GET.get("next", "")
+    ctx = convert_context(pl) if pl else {"post": post}
+    if pl is None:
+        from apps.writing.render import render_body
+        ctx["original_html"] = render_body(post.body)
+    ctx.update({"placements": pls, "next": nxt if nxt.startswith("/") and not nxt.startswith("//") else "",
+                "panel_url": f"{reverse('site_templates:panel')}?p={request.GET.get('p')}&next={quote(nxt)}"})
+    return render(request, "site_templates/_panel.html", ctx)
 
 
 def requests_json(request):

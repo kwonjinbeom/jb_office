@@ -1,7 +1,7 @@
 {% load trash_tags %}
 {% comment %}글 분류 트리 — 모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위. 티스토리·네이버 나눔 없음 (플랫폼은 사이트별 템플릿에서).
-숫자는 그 아래 발행 완료가 아닌 글 수. 글 관리와 글 매핑 관리가 같이 쓴다.
-컨텍스트: tree(classify.class_tree), sel, open, q(주소 앞에 붙일 조건, 예 "stage=post&"), tools, pane(글 매핑 관리: 누르면 그 칸만 바꾼다),
+숫자는 그 아래 발행 완료가 아닌 글 수. 글 관리와 카테고리 관리가 같이 쓴다.
+컨텍스트: tree(classify.class_tree), sel, open, q(주소 앞에 붙일 조건, 예 "stage=post&"), tools, pane(카테고리 관리: 누르면 그 칸만 바꾼다),
 base(다른 화면에서 쓸 때 누르면 갈 주소, 예 글 보기 → 글 관리). 머리의 접기 버튼으로 트리 전체를 숨긴다 (이 브라우저에 기억){% endcomment %}
 <nav class="bt-tree" aria-label="글 분류" data-bt-tree="class">
 <script>try{if(localStorage.getItem("bt.hide.class")==="1"){var l=document.currentScript.closest(".bt-layout");if(l)l.classList.add("tree-off");}}catch(e){}</script>

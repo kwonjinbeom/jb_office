@@ -179,7 +179,7 @@ def unclassified_q():
 
 def class_tree():
     """한 분류 트리: 대분류 › 카테고리 › 타입 › 하위 + 미분류, 그리고 그 아래 글 수 (두 편집기의 글을 합쳐, 발행 완료가 아닌 글).
-    글 관리와 글 매핑 관리 두 화면이 같은 트리를 쓴다."""
+    글 관리와 카테고리 관리 두 화면이 같은 트리를 쓴다."""
     from collections import Counter
 
     from .models import Section

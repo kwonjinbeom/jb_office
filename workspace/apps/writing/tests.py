@@ -371,9 +371,8 @@ class DraftImportTests(TestCase):
         self.assertEqual(Post.objects.filter(title="타겟 원고 제목").count(), 1)
         self.assertEqual(Post.objects.get(title="새 타겟 원고").target, "memorily")
         self.assertEqual(Post.objects.get(title="시험 원고 제목").target, "")  # 사이트 줄이 없는 원고
-        res = self.client.get(reverse("posts:index"))
-        self.assertContains(res, "<th style=\"width:96px\">사이트</th>", html=False)  # 임시글은 읽기만
-        self.assertContains(res, "memorily")
+        res = self.client.get(reverse("posts:view"), {"stage": "temp"})
+        self.assertContains(res, "memorily")  # 글 관리 왼쪽 목록에 사이트
         form = PostForm(instance=old)
         self.assertIn(("memorily", "memorily"), form.fields["target"].choices)  # 운영 목록에 없어도 지금 값은 남긴다
 

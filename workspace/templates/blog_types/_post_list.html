@@ -6,7 +6,6 @@
   <div class="bt-tree-head">
     <button type="button" class="bt-hide" data-bt-hide aria-expanded="true" title="글 목록 접기" aria-label="글 목록 접기·펼치기">{% include "includes/ic.html" with name="panel-left" %}</button>
     <span class="bt-tree-title">{{ pl_stage_label }} <span class="cnt">{{ pl_items|length }}</span></span>
-    <a class="pl-back" href="{{ pl_index_url }}" title="글 관리로 (같은 조건)">글 관리</a>
   </div>
   <form method="get" action="{% url 'posts:view' %}" class="pl-filter">
     <input type="hidden" name="stage" value="{{ pl_stage }}">{% if pl_sel %}<input type="hidden" name="sel" value="{{ pl_sel }}">{% endif %}{% if pl_today %}<input type="hidden" name="today" value="1">{% endif %}

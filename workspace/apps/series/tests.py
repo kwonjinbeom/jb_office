@@ -25,7 +25,7 @@ class SeriesTests(TestCase):
         self.assertEqual(Episode.objects.count(), 15)
         self.assertEqual(res.context["current"].number, 1)  # 고른 게 없으면 1회
         self.assertContains(res, "빈 서버에 화면 세 개")
-        self.assertContains(res, "글 관리 · 글 보기 · 글 매핑 관리")  # 화면 칸
+        self.assertContains(res, "글 관리 · 글 보기 · 글 매핑 관리")  # 화면 칸 (연재 기록은 그때 이름 그대로)
         ep = Episode.objects.get(number=11)  # 사이트별 템플릿 · 변환
         res = self.client.get(INDEX, {"ep": ep.pk})
         self.assertContains(res, "cp949")

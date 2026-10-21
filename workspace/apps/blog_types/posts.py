@@ -1,7 +1,7 @@
 """글 관리: 모든 글을 한 화면에서 (2026-10-16 사용자). 편집기(티스토리·네이버) 구분은 쓰지 않는다 —
 사이트·플랫폼에 맞추는 건 사이트별 템플릿의 변환에서 한다. 새 글은 한 표(writing.Post)에 만든다.
 
-왼쪽은 글 매핑 관리와 같은 글 분류 트리(모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위, 티스토리·네이버 나눔 없음), 오른쪽은 임시글 → 검토글 →
+왼쪽은 카테고리 관리와 같은 글 분류 트리(모든 글 › 대분류 · 미분류 › 카테고리 › 타입 › 하위, 티스토리·네이버 나눔 없음), 오른쪽은 임시글 → 검토글 →
 발행예정글 탭과 그 단계의 글. 트리에서 고르면 그 아래 글만 보인다. 글 보기·쓰기·상태 바꾸기·옮기기는 각 글쓰기 앱의 주소를 그대로 쓴다
 (글은 여전히 writing.Post / naver_writing.Post 두 표에 있다).
 
@@ -89,12 +89,16 @@ def _collect(p, prefetch=False):
 
 
 def index(request):
-    request.nav_key = "posts"
+    """예전 '글 관리' 주소 (2026-10-22 사용자: 메뉴에서 뺐다) → 지금의 글 관리(posts:view)로, 조건 그대로."""
+    q = request.GET.urlencode()
+    return redirect(f"{reverse('posts:view')}{'?' + q if q else ''}")
+
+
+def _import_new_drafts(request):
     from apps.writing.views import auto_import_drafts
     added = auto_import_drafts()  # 루틴이 새로 쓴 원고를 임시글으로
     if added:
         messages.success(request, f"새 원고 {added}편을 임시글으로 가져왔습니다.")
-    return _list_page(request, _params(request))
 
 
 def _list_page(request, p, view=False):
@@ -111,7 +115,7 @@ def _list_page(request, p, view=False):
     keep = f"stage={stage}&" + ("today=1&" if today else "")
     base = reverse("posts:view") if view else ""
     return render(request, "blog_types/posts.html", {
-        "page_title": "글 보기" if view else "글 관리",
+        "page_title": "글 관리",
         "view_mode": view, "tab_base": base,
         "tree": classify.class_tree(),
         "sel": sel, "kind": kind,
@@ -125,6 +129,10 @@ def _list_page(request, p, view=False):
         "groups": classify.grouped(posts) if stage != "post" else [],  # 발행예정글은 분류 줄 없이
         "cols": {"temp": 6, "review": 5, "post": 8}[stage],
         "pub": p["pub"],
+        # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 발행예정글 중 넣은 곳이 미변환인 것
+        "ready_ids": (ready := ",".join(str(pl.pk) for post in posts if stage == "post" for pl in post.placements.all()
+                                        if pl.convert_status == "none")),
+        "ready_count": len(ready.split(",")) if ready else 0,
         "pub_filters": [{"key": k, "label": label, "on": k == p["pub"], "url": "?" + _query(p, pub=k)} for k, label in PUBLISH_FILTERS],
         "site_names": sites.names(),
         "review_choices": classify.post_model("tistory").Review.choices,
@@ -152,7 +160,9 @@ def post_list_for(request, post):
     단계가 주소에 없으면 그 글의 단계. 위·아래 화살표, 옮기기·휴지통 뒤에 갈 글도 이 목록 순서를 따른다 (한 건씩 처리)."""
     p = _params(request, stage=post.stage)
     posts, counts = _collect(p)
-    placements = list(post.placements.select_related("site_category__blog", "site_category__parent")) if post.stage == "post" else []
+    # 검토글·발행예정글: 넣은 곳 · 변환 (2026-10-22 사용자: 검토글에서도 카테고리 고르고 변환해 보고 발행예정으로)
+    placements = (list(post.placements.select_related("site_category__blog", "site_category__parent"))
+                  if post.stage in ("review", "post") else [])
     list_q = _query(p)
     me = (classify.writer_of(post), post.pk)
     current = None
@@ -178,6 +188,7 @@ def post_list_for(request, post):
         "pl_next_url": f"{reverse('posts:view')}?{list_q}",  # 옮기기·휴지통 뒤: 목록의 다음 글 (없으면 이 단계 첫 글)
         "site_names": sites.names(),
         "post_placements": placements,
+        "post_site_groups": sorted(_site_groups(), key=lambda g: g[0] != post.target) if post.stage in ("review", "post") else [],
         "post_ref": f"{classify.writer_of(post)}:{post.pk}",
     }
     if current is not None:  # 목록에 없으면(조건에 안 맞는 글) 화살표는 원래대로 그 편집기의 같은 단계 순서
@@ -194,6 +205,7 @@ def view(request):
     """블로그·카페 › 글 보기: 한 건씩 보면서 처리한다. ?stage=…&p=tistory:3 (+ 분류·검색·오늘).
     고른 글이 없으면 그 단계 목록의 첫 글. 단계에 글이 없으면 빈 화면. 발행예정글은 고른 글이 없으면 글 관리와 같은 전체 목록."""
     request.nav_key = "posts_view"
+    _import_new_drafts(request)
     post = _one(request.GET.get("p"))
     if post is None and request.GET.get("stage") == "post":
         return _list_page(request, _params(request), view=True)  # 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
@@ -209,7 +221,7 @@ def view(request):
     p = _params(request)
     _, counts = _collect(p)
     return render(request, "blog_types/view_empty.html", {
-        "page_title": "글 보기",
+        "page_title": "글 관리",
         "pl_stage_label": dict(STAGES)[p["stage"]],
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
                      "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
