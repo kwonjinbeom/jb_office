@@ -4,6 +4,14 @@
    화면은 두 칸만 (2026-10-21 사용자: 기·권 칸까지 있으니 쓰기 어렵다): 애니 → 만화는 작품 + 화, 만화 → 애니는 화 하나. */
 (function () {
   var DATA = __DATA__;
+  // 글에 적힌 작품 이름을 넓게 받는다 (2026-10-22: 원피스 글이 [환산기: onpiece] 로 안 바뀌었다). 대소문자·빈칸 무시, 한글 이름·흔한 오타도
+  var ALIAS = {"onpiece": "onepiece", "one-piece": "onepiece", "원피스": "onepiece", "나루토": "naruto", "블리치": "bleach",
+               "헌터헌터": "hunterxhunter", "헌터x헌터": "hunterxhunter", "헌터×헌터": "hunterxhunter", "hxh": "hunterxhunter"};
+  function keyOf(raw) {
+    var k = String(raw).toLowerCase().replace(/\s+/g, "");
+    k = ALIAS[k] || k;
+    return DATA[k] ? k : "";
+  }
 
   function el(tag, attrs, html) {
     var e = document.createElement(tag);
@@ -127,7 +135,7 @@
     ser.onchange = function () { hint(); run(); };
     ep.oninput = num.oninput = run;
     hint(); show(null);
-    var article = box.closest(".entry-content");  // 글모양.css 가 이 글에만 걸리게
+    var article = box.closest("div.contents_style");  // 환산기 글에만 거는 표 칸 너비 (글모양.css)
     if (article) article.classList.add("ac-post");
     box.parentNode.replaceChild(root, box);
   }
@@ -135,8 +143,9 @@
   function init() {
     var ps = document.querySelectorAll("p, div");
     for (var i = 0; i < ps.length; i++) {
-      var m = /^\s*\[환산기:\s*([a-z0-9_-]+)\s*\]\s*$/.exec(ps[i].textContent);
-      if (m && DATA[m[1]] && !ps[i].querySelector("p, div")) build(ps[i], DATA[m[1]]);
+      var m = /^\s*\[\s*환산기\s*[:：]\s*([^\]]+?)\s*\]\s*$/.exec(ps[i].textContent);
+      var key = m && keyOf(m[1]);
+      if (key && !ps[i].querySelector("p, div")) build(ps[i], DATA[key]);
     }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

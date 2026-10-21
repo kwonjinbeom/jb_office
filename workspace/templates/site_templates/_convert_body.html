@@ -14,7 +14,7 @@
   </section>
   <section class="card st-col">
     <div class="card-head"><h3 class="card-title">변환본</h3><span class="hint">{% if pl.converted_at %}{{ pl.converted_at|date:"m-d H:i" }} 변환{% else %}아직 없음{% endif %}</span></div>
-    <div class="card-body wr-article st-preview st-converted{% if is_naver %} st-naver{% endif %}">
+    <div class="card-body wr-article st-preview st-converted{% if is_naver %} st-naver{% elif flat %} st-flat{% endif %}">
       {% if converted_html %}
       <h2 class="st-ptitle">{{ pl.converted_title|default:post.title }}</h2>
       {{ converted_html|safe }}

@@ -189,7 +189,7 @@ class PasteFormatTests(TestCase):
         res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
         self.assertContains(res, f'<textarea id="st-tags-{tistory.pk}" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
         self.assertEqual(res.context["tag_items"], [])
-        self.assertNotIn("&nbsp;</p>", res.context["paste_html"])
+        self.assertNotIn("<p>&nbsp;</p>", res.context["paste_html"])  # 티스토리는 네이버식 빈 줄이 아니라 티스토리식 (data-ke-size)
 
     def test_naver_fixes_apply_to_html_saved_conversion(self):
         """HTML 로 저장한 변환본(예: 롤드컵 입문)도 빈 줄 · 확인 날짜가 같게. 다시 그려도 두 번 감싸지 않는다."""
@@ -223,6 +223,21 @@ class PasteFormatTests(TestCase):
         res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
         self.assertIn('data-ke-style="style2"', res.context["paste_html"])
 
+    def test_tistory_paste_gaps_and_photo_width(self):
+        """티스토리 (2026-10-22 사용자): 스킨이 문단 간격을 0 으로 둬서 답답하다 → 블록 사이 빈 줄, 사진은 가운데 620"""
+        pl = self.place("memorily")
+        pl.converted_body = "첫 문단\n\n## 소제목\n\n![사진](https://a.com/x.png)\n\n끝"
+        pl.save()
+        res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
+        html = res.context["paste_html"]
+        self.assertEqual(html.count('<p data-ke-size="size16">&nbsp;</p>'), 2)  # 소제목 바로 뒤에는 빈 줄 없이
+        self.assertIn('<h2>소제목</h2>\n<p style="text-align:center', html)
+        self.assertIn('<p style="text-align:center;margin:18px 0"><img width="620" src="https://a.com/x.png"', html)
+        self.assertContains(res, "st-converted st-flat")  # 미리보기도 같은 간격
+        pl.converted_body = '<p>가</p><p><br></p><p>나</p>'  # 편집기 HTML 은 빈 줄이 이미 있다
+        pl.save()
+        self.assertNotIn("&nbsp;", self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"])
+
     def test_copy_buttons_follow_platform(self):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
         self.assertContains(res, 'data-copy-rich="#st-paste-')  # 네이버: 서식 그대로 (복사 칸 id 에 매핑 번호)
@@ -238,7 +253,8 @@ class PasteFormatTests(TestCase):
         self.assertEqual(res.context["paste_html"], html)
         res = self.client.get(reverse("site_templates:convert", args=[self.place("밤밤").pk]))
         self.assertContains(res, "본문 HTML (HTML 보기)")
-        self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")
+        self.assertEqual(res.context["clean_html"],  # 블로거도 티스토리처럼 (소제목 바로 뒤는 빈 줄 없이)
+                         '<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>')
         res = self.client.get(reverse("site_templates:convert", args=[self.place("워드프레스").pk]))
         self.assertContains(res, 'data-copy="#st-raw-')  # 워드프레스: 마크다운 그대로
         self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")  # 꾸밈 없는 HTML
@@ -270,5 +286,5 @@ class PasteFormatTests(TestCase):
         tistory.converted_body = "글\n\n![병원 대기실](https://images.unsplash.com/photo-1?w=1200&q=80)\n*사진: 홍길동 · Unsplash*"
         tistory.save()
         html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["clean_html"]
-        self.assertIn('<img src="https://images.unsplash.com/photo-1?w=1200&amp;q=80" alt="병원 대기실"', html)
+        self.assertIn('<img width="620" src="https://images.unsplash.com/photo-1?w=1200&amp;q=80" alt="병원 대기실"', html)
         self.assertIn("사진: 홍길동 · Unsplash</p>", html)

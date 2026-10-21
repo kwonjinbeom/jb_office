@@ -233,9 +233,13 @@ def _render_for(placement, text):
         html = render_body(text)
         rich = paste_html(html, gaps=needs_gaps(text, html))
         return rich, rich, plain_text(html), paste.clean_html(text)
-    from apps.writing.render import plain_text, render_body
-    html = paste.clean_html(text) if platform == Blog.Platform.WORDPRESS else render_body(text)
-    return html, html, plain_text(html), html
+    from apps.writing.render import plain_text, render_body, tistory_html
+    if platform == Blog.Platform.WORDPRESS:
+        html = paste.clean_html(text)
+        return html, html, plain_text(html), html
+    html = render_body(text)
+    out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
+    return out, out, plain_text(html), out
 
 
 def _tags_for(placement):
@@ -314,6 +318,7 @@ def convert_context(placement, form=None):
         "original_html": render_body(post.body), "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
         "is_naver": naver, "tags_copy": _tags_for(placement),
+        "flat": placement.site_category.blog.platform in (Blog.Platform.TISTORY, Blog.Platform.BLOGGER),  # 빈 줄로 간격
         "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if naver else [],
         "tag_bookmarklet": paste.naver_tag_bookmarklet(),
         "check_html": _check_html(placement.converted_check),
