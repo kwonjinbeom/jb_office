@@ -69,8 +69,11 @@ MENUS: list[Menu] = [
             Menu("posts_view", "글 보기", "한 건씩 보면서 처리: 임시글 → 검토글 → 발행예정글", "posts:view", "file"),
             Menu("blog_types", "글 매핑 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
             Menu("site_templates", "사이트별 템플릿", "사이트 컨셉·플랫폼 포맷에 맞게 글 변환", "site_templates:index", "layers"),
-            # memorily 연재 (2026-10-20 사용자): AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 화면
-            Menu("series", "memorily 연재", "AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 곳", "series:index", "book"),
+            # memorily 티스토리 (2026-10-21 사용자): 중메뉴 아래 소메뉴 둘 — 블로그 자동화(예전 'memorily 연재') · 애니 총정리
+            Menu("memorily_tistory", "memorily 티스토리", "memorily 티스토리에 쓰는 연재와 애니 정리 글", "series:index", "book", children=(
+                Menu("series", "블로그 자동화", "AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 곳", "series:index", "book"),
+                Menu("anime", "애니 총정리", "애니↔만화 환산기 글을 작품마다 쓰는 곳 (나루토부터)", "anime:index", "book"),
+            )),
             Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),
         ),
     ),
@@ -145,29 +148,29 @@ def all_menus() -> list[Menu]:
     return _apply(MENUS, _settings(), keep_hidden=True)
 
 
+def walk(menus=None):
+    """메뉴 트리를 위에서부터 차례로 (상위 · 중메뉴 · 소메뉴)."""
+    for menu in MENUS if menus is None else menus:
+        yield menu
+        yield from walk(menu.children)
+
+
 def menu_keys_for(app_name: str, url_name: str) -> list[str]:
     """이 화면(주소 이름)이 속한 메뉴 key 들. 권한 검사(middleware)에 쓴다.
     core 앱은 화면마다(홈·설정 등은 메뉴가 아니다), 나머지는 앱 단위로 본다. 글쓰기 두 앱은 '글 관리' 아래다."""
     app_name = {"writing": "posts", "naver_writing": "posts"}.get(app_name, app_name)
     full = f"{app_name}:{url_name}"
     keys = []
-    for menu in MENUS:
-        for m in (menu, *menu.children):
-            ns = m.url_name.split(":")[0]
-            if (app_name == "core" and m.url_name == full) or (app_name != "core" and ns == app_name):
-                keys.append(m.key)
+    for m in walk():
+        ns = m.url_name.split(":")[0]
+        if (app_name == "core" and m.url_name == full) or (app_name != "core" and ns == app_name):
+            keys.append(m.key)
     return keys
 
 
 def find_menu(key: str) -> Menu | None:
     """상위·하위 메뉴를 통틀어 key 로 찾는다."""
-    for menu in MENUS:
-        if menu.key == key:
-            return menu
-        for child in menu.children:
-            if child.key == key:
-                return child
-    return None
+    return next((m for m in walk() if m.key == key), None)
 
 
 def build_nav(active_key: str, user=None) -> list[dict]:
@@ -178,6 +181,9 @@ def build_nav(active_key: str, user=None) -> list[dict]:
             nav.append({"menu": menu, "active": menu.key == active_key, "open": False, "children": []})
             continue
         first = (Menu(menu.key, f"{menu.title} 리스트", menu.description, menu.url_name, menu.icon, menu.color, menu.query),) if menu.listing else ()
-        children = [{"menu": child, "active": child.key == active_key} for child in (*first, *menu.children)]
+        children = []
+        for child in (*first, *menu.children):  # 중메뉴 아래 소메뉴는 이름 한 줄 + 들여 쓴 링크로 (memorily 티스토리)
+            subs = [{"menu": g, "active": g.key == active_key} for g in child.children]
+            children.append({"menu": child, "active": child.key == active_key or any(s["active"] for s in subs), "children": subs})
         nav.append({"menu": menu, "active": False, "open": any(c["active"] for c in children), "children": children})
     return nav

@@ -8,7 +8,7 @@ from django.contrib.auth.models import Group
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 
-from .menus import MENUS, _settings, all_menus
+from .menus import _settings, all_menus, walk
 from .models import MenuSetting
 
 
@@ -23,7 +23,7 @@ class MenuPermissionAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         if not self.has_change_permission(request):
             return super().changelist_view(request, extra_context)
-        defaults = {m.key: m.title for menu in MENUS for m in (menu, *menu.children)}
+        defaults = {m.key: m.title for m in walk()}
         groups = list(Group.objects.order_by("name"))
         if request.method == "POST":
             if request.POST.get("action") == "reset":
@@ -46,7 +46,7 @@ class MenuPermissionAdmin(admin.ModelAdmin):
         saved = _settings()
         rows = []
         for menu in all_menus():
-            for m in (menu, *menu.children):
+            for m in walk([menu]):
                 s = saved.get(m.key)
                 rows.append({"menu": m, "child": m is not menu, "top_key": menu.key, "default": defaults.get(m.key, m.title),
                              "hidden": bool(s and s.hidden), "group_ids": getattr(s, "group_ids", set()) if s else set(),

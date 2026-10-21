@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{# 블로그·카페 › memorily 티스토리 › 애니 총정리: 왼쪽 작업 순서·작품 목록 · 오른쪽 고른 md (2026-10-21 사용자) #}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a> › memorily 티스토리</div>{% endblock %}
+
+{% block heading %}애니 총정리 <span class="cnt">{{ works }}작품</span>{% endblock %}
+
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+<div class="bt-layout">
+  <nav class="bt-tree pl-list" aria-label="작품 목록">
+    <div class="bt-tree-head"><span class="bt-tree-title">작업 순서 · 작품</span></div>
+    <div class="pl-items">
+      {% for d in docs %}
+      <a class="pl-item{% if d == current %} on{% endif %}" href="?d={{ d.key|urlencode }}"{% if d == current %} aria-current="page"{% endif %}>
+        <span class="pl-path">{% if d.guide %}모든 작품 공통{% else %}작품{% endif %}</span>
+        <span class="pl-title">{{ d.title }}</span>
+        {% if d.status %}<span class="pl-meta">{{ d.status }}</span>{% endif %}
+      </a>
+      {% empty %}
+      <div class="bt-empty-line">아직 문서가 없습니다.</div>
+      {% endfor %}
+    </div>
+  </nav>
+  <section class="an-pane">
+    {% if current %}<article class="card doc">{{ html|safe }}</article>{% else %}<div class="empty"><p>문서를 고르세요.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

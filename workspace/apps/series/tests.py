@@ -16,10 +16,11 @@ class SeriesTests(TestCase):
     def test_menu_and_seeded_episodes(self):
         res = self.client.get(INDEX)
         self.assertEqual(res.context["ACTIVE_MENU"], "series")
-        self.assertContains(res, f'href="{INDEX}"')  # 메뉴 (블로그·카페 중메뉴)
+        self.assertContains(res, f'href="{INDEX}"')  # 메뉴 (블로그·카페 › memorily 티스토리 › 블로그 자동화)
         from apps.core.menus import MENUS
         blog = next(m for m in MENUS if m.key == "blog")
-        self.assertIn("series", [c.key for c in blog.children])
+        tistory = next(c for c in blog.children if c.key == "memorily_tistory")
+        self.assertIn("series", [g.key for g in tistory.children])
         self.assertNotIn("series", [m.key for m in MENUS])
         self.assertEqual(Episode.objects.count(), 15)
         self.assertEqual(res.context["current"].number, 1)  # 고른 게 없으면 1회
