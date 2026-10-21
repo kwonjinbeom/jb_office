@@ -119,12 +119,19 @@ def _open_run(routine, day, step):
 def find_claude():
     """claude 실행 파일. PATH 에 없으면 데스크톱 앱에 든 것 중 최신 버전 (claude-code/<버전>/<해시>/claude.exe).
     2026-10-17: 이 PC 는 데스크톱 앱만 있어 PATH 의 'claude' 를 못 찾고 터미널이 바로 닫혔다.
-    스토어(MSIX) 앱은 %APPDATA% 가 가상화되어 실제 파일이 %LOCALAPPDATA%/Packages/Claude_*/LocalCache/Roaming 에 있다."""
+    스토어(MSIX) 앱은 %APPDATA% 가 가상화되어 실제 파일이 %LOCALAPPDATA%/Packages/Claude_*/LocalCache/Roaming 에 있다.
+    2026-10-21: 데스크톱 앱이 %LOCALAPPDATA%/Claude-Data/claude_*/claude-code 로 옮겨 다시 못 찾았다.
+    공식 CLI 설치 위치(~/.local/bin/claude.exe)는 PATH 에 없어도 먼저 본다."""
     found = shutil.which("claude")
     if found:
         return found
+    cli = Path(os.environ.get("USERPROFILE") or Path.home()) / ".local" / "bin" / "claude.exe"
+    if cli.is_file():
+        return str(cli)
     roaming, local = Path(os.environ.get("APPDATA", "")), Path(os.environ.get("LOCALAPPDATA", ""))
     bases = [roaming / "Claude" / "claude-code"]
+    if (local / "Claude-Data").is_dir():
+        bases += [p / "claude-code" for p in (local / "Claude-Data").glob("claude_*")]
     if (local / "Packages").is_dir():
         bases += [p / "LocalCache" / "Roaming" / "Claude" / "claude-code" for p in (local / "Packages").glob("Claude_*")]
 
