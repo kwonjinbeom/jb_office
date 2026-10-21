@@ -97,6 +97,37 @@ def _flatten_header(out: str) -> str:
     return re.sub(r"<th(\s[^>]*)?>(.*?)</th>", head_cell, out, flags=re.S)
 
 
+# 글 맨 위 핵심 카드 (2026-10-21 사용자: 요약을 사진보다 먼저, 회색 인용 상자 말고 더 예쁜 서식으로 모든 글 통일).
+#   [핵심]
+#   공개일 | 아직 삼성 공식 발표 없음
+#   지난 3년 | 공개 다음 날 사전판매, 13~15일 뒤 출시
+#   [/핵심]
+# '이름 | 내용' 한 줄이 카드의 한 줄. 표로 만들어서 티스토리·네이버 모두 바탕색·선이 그대로 붙는다 (naver_writing.render 도 쓴다).
+SUMMARY_TABLE_STYLE = "border-collapse:collapse;width:100%;margin:8px 0 28px;font-size:15px;border-top:2px solid #1f2937"
+SUMMARY_KEY_STYLE = ("width:28%;padding:12px 14px;border:0;border-bottom:1px solid #e5e7eb;background:#f8fafc;"
+                     "color:#111827;font-weight:700;vertical-align:top")
+SUMMARY_VALUE_STYLE = "padding:12px 14px;border:0;border-bottom:1px solid #e5e7eb;color:#374151;line-height:1.7"
+SUMMARY_STYLES = (SUMMARY_TABLE_STYLE, SUMMARY_KEY_STYLE, SUMMARY_VALUE_STYLE)
+SUMMARY_BLOCK = re.compile(r"^[ \t]*\[핵심\][ \t]*\n(.*?)\n[ \t]*\[/핵심\][ \t]*$", re.M | re.S)
+
+
+def summary_cards(text: str) -> str:
+    """[핵심] … [/핵심] 블록을 핵심 카드 표 HTML 로 바꾼다. 마크다운 변환 전에 부른다."""
+    def inline(s: str) -> str:
+        return BOLD.sub(r"<strong>\1</strong>", html.escape(s.strip(), quote=False))
+
+    def card(m: re.Match) -> str:
+        rows = []
+        for line in m.group(1).split("\n"):
+            key, sep, value = line.partition("|")
+            if not sep or not key.strip():
+                continue
+            rows.append(f'<tr><td style="{SUMMARY_KEY_STYLE}">{inline(key)}</td><td style="{SUMMARY_VALUE_STYLE}">{inline(value)}</td></tr>')
+        return f'\n<table style="{SUMMARY_TABLE_STYLE}"><tbody>{"".join(rows)}</tbody></table>\n' if rows else ""
+
+    return SUMMARY_BLOCK.sub(card, text)
+
+
 # 문단 하나에 이미지만 있는 것 + 바로 뒤 기울임(*문장*) 한 줄 = 이미지와 캡션
 IMAGE_BLOCK = re.compile(
     r"<p>\s*<img ([^>]*?)\s*/?>\s*(?:<br\s*/?>\s*<em>(.*?)</em>\s*)?</p>(?:\s*<p><em>(.*?)</em></p>)?", re.S
@@ -135,7 +166,7 @@ ALIGN_STYLE = re.compile(r"^\s*text-align:\s*(left|center|right|justify)\s*;?\s*
 def _known_styles() -> set[str]:
     """이 도구가 직접 다는 style 만 남긴다. 웹 문서에서 붙여 온 글꼴·색 같은 꾸밈은 버린다."""
     base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
-            "text-align:center;margin:18px 0"}
+            "text-align:center;margin:18px 0", *SUMMARY_STYLES}
     cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE) for a in ("left", "center", "right")}
     return {s.replace(" ", "") for s in base | cells | {CELL_STYLE, HEAD_STYLE}}
 
@@ -249,7 +280,7 @@ def render_body(text: str) -> str:
     if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
         return soft_check_dates(_decorate(clean_html(text)))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(summary_cards(text))), extensions=["tables", "sane_lists", "nl2br"]))
     return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 

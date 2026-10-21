@@ -183,6 +183,19 @@ class RenderTests(TestCase):
         self.assertNotIn("<img", out)
         self.assertIn(">캡션</p>", out)
 
+    def test_summary_card(self):
+        """[핵심] 블록 → 글 맨 위 핵심 카드 표 (2026-10-21 사용자). 티스토리·네이버 둘 다 style 이 남는다."""
+        from apps.naver_writing.render import paste_html, render_body as naver_body
+        from apps.writing.render import SUMMARY_KEY_STYLE, SUMMARY_TABLE_STYLE
+
+        text = "[핵심]\n공개일 | 아직 **미정**\n지난 3년 | 공개 다음 날 사전판매\n[/핵심]\n\n## 소제목"
+        out = render_body(text)
+        self.assertIn(f'<table style="{SUMMARY_TABLE_STYLE}">', out)
+        self.assertIn(f'<td style="{SUMMARY_KEY_STYLE}">공개일</td>', out)
+        self.assertIn("아직 <strong>미정</strong>", out)
+        self.assertNotIn("[핵심]", out)
+        self.assertIn("border-top:2px solid #1f2937", paste_html(naver_body(text)))
+
     def test_char_count_skips_slots_and_comments(self):
         out = render_body("가나다\n\n[사진] 아주 긴 사진 설명\n\n<!-- 메모 -->")
         self.assertEqual(plain_text(out, drop_slots=True), "가나다")
