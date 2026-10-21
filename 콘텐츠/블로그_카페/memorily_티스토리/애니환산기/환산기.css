@@ -1,0 +1,35 @@
+/* 환산기 화면 (2026-10-22 사용자: 더 깔끔하고 직관적으로). build.py 가 맨 앞 .ac 를 :is(.ac,#jb-x#jb-y) 로 바꿔
+   스킨의 버튼·입력칸 꾸밈(#아이디 선택자 포함)을 이긴다. 모든 선택자는 .ac 로 시작한다. */
+.ac{box-sizing:border-box;margin:28px 0!important;padding:20px 20px 18px!important;border:1px solid #e5e7eb!important;border-radius:16px!important;background:#fff!important;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.06);font-size:15px!important;line-height:1.6!important;text-align:left!important;color:#222!important}
+.ac *{box-sizing:border-box}
+.ac [hidden]{display:none!important}
+.ac button{margin:0;font-family:inherit!important;cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-appearance:none;appearance:none}
+.ac .ac-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+.ac .ac-title{font-size:16px!important;font-weight:700!important;color:#111!important;letter-spacing:-.2px}
+.ac .ac-seg{display:inline-flex;padding:3px;border-radius:999px;background:#f1f3f5}
+.ac .ac-seg button{height:auto;padding:6px 14px!important;border:0!important;border-radius:999px!important;background:transparent!important;font-size:13.5px!important;font-weight:600!important;line-height:1.4!important;color:#6b7280!important;transition:background .15s,color .15s}
+.ac .ac-seg button.on{background:#fff!important;color:#111!important;box-shadow:0 1px 3px rgba(15,23,42,.14)}
+.ac .ac-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.ac .ac-chip{height:auto;padding:6px 13px!important;border:1px solid #e5e7eb!important;border-radius:999px!important;background:#fff!important;font-size:13.5px!important;line-height:1.4!important;color:#4b5563!important}
+.ac .ac-chip.on{border-color:#2f6bd8!important;background:#eef4ff!important;color:#2f6bd8!important;font-weight:600!important}
+.ac .ac-label{margin:0 0 6px;font-size:13px!important;font-weight:600;color:#6b7280!important}
+.ac .ac-field{display:flex;align-items:stretch;height:56px;border:1.5px solid #d1d5db;border-radius:12px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.ac .ac-field:focus-within{border-color:#2f6bd8;box-shadow:0 0 0 3px rgba(47,107,216,.14)}
+.ac .ac-step{flex:none;width:52px;height:auto!important;padding:0!important;border:0!important;border-radius:0!important;background:#f8fafc!important;font-size:22px!important;font-weight:400!important;line-height:1!important;color:#6b7280!important}
+.ac .ac-step:active{background:#eef1f5!important}
+.ac .ac-num{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;cursor:text}
+.ac .ac-num input{width:5.2em;min-width:0;height:100%!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;box-shadow:none!important;background:transparent!important;font-family:inherit!important;font-size:24px!important;font-weight:700!important;line-height:normal!important;text-align:right!important;color:#111!important}
+.ac .ac-num input::placeholder{font-size:17px;font-weight:500;color:#b6bcc6}
+.ac .ac-unit{font-size:17px!important;font-weight:600;color:#9ca3af!important}
+.ac .ac-out{margin-top:14px;padding:16px 18px;border-radius:12px;background:#f8fafc;min-height:84px}
+.ac .ac-out.empty .ac-big{font-size:16px!important;font-weight:600!important;color:#9ca3af!important}
+.ac .ac-tag{display:inline-block;margin-bottom:6px;padding:2px 8px;border-radius:6px;font-size:12px!important;font-weight:700!important;line-height:1.6!important}
+.ac .ac-tag:empty{display:none}
+.ac .ac-ok{background:#e7f6ec;color:#15803d!important}
+.ac .ac-mix{background:#eef4ff;color:#2f6bd8!important}
+.ac .ac-orig{background:#fff4e5;color:#b45309!important}
+.ac .ac-none{background:#f1f3f5;color:#6b7280!important}
+.ac .ac-big{font-size:22px!important;font-weight:800!important;line-height:1.4!important;letter-spacing:-.3px;color:#111!important}
+.ac .ac-sub{margin-top:4px;font-size:14px!important;line-height:1.6!important;color:#6b7280!important}
+.ac .ac-sub:empty{display:none}
+@media (max-width:480px){.ac{padding:16px 14px 14px!important}.ac .ac-head{flex-direction:column;align-items:stretch}.ac .ac-seg{display:flex}.ac .ac-seg button{flex:1}.ac .ac-big{font-size:20px!important}}
