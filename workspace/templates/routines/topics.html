@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block heading %}커스텀 글쓰기 <span class="cnt">이번 주 발행 {{ done_this_week }}/{{ topics|length }}</span>{% endblock %}
+
+{% block content %}
+{# 주제가 정해진 글쓰기 (2026-10-21 사용자). 한 줄에 한 주제: 지침 · 최근 8주 발행(점, 누르면 바뀜) · 실행(PC 터미널 claude 가 이 주제 한 편). #}
+<section class="card">
+  <table class="grid tp-table">
+    <colgroup><col style="width:190px"><col><col style="width:{{ week_col }}px"><col style="width:64px"><col style="width:92px"><col style="width:58px"></colgroup>
+    <thead><tr>
+      <th>주제</th><th>지침</th>
+      <th><span class="tp-weekhead">{% for w in weeks %}<span{% if forloop.last %} class="now"{% endif %} title="{{ w|date:'n/j' }} 주">{% if forloop.last %}이번{% else %}{{ w|date:'n/j' }}{% endif %}</span>{% endfor %}</span></th>
+      <th class="c">주당</th><th>실행</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for t in topics %}
+      <tr>
+        <td class="tp-name"><strong>{{ t.name }}</strong>{% if t.site %}<span class="muted small"> · {{ t.site }}</span>{% endif %}</td>
+        <td class="tp-note">{% if t.note %}<span title="{{ t.note }}">{{ t.note|linebreaksbr|striptags }}</span>{% else %}<span class="muted">지침 없음 — 연필로 적기</span>{% endif %}</td>
+        <td>{% include "routines/_topic_dots.html" with next=request.get_full_path %}</td>
+        <td class="c small">{{ t.per_week }}편</td>
+        <td>{% if t.prompt %}{% include "routines/_launch.html" with key="writing" name=t.name kind="run" text=t.prompt day=today label="실행" %}{% endif %}</td>
+        <td class="r"><button type="button" class="btn ghost sm icon" data-tp-edit="{{ t.pk }}" title="주제·사이트·지침 고치기" aria-label="{{ t.name }} 고치기">{% include "includes/ic.html" with name="edit" %}</button></td>
+      </tr>
+      <tr class="tp-edit" id="tp-edit-{{ t.pk }}" hidden>
+        <td colspan="6">
+          <form method="post" action="{% url 'routines:topic_save' t.pk %}" class="tp-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <input class="input sm" name="name" value="{{ t.name }}" maxlength="60" aria-label="주제" required>
+            <select class="input sm" name="site" aria-label="사이트"><option value="">사이트: 주제에 맞게</option>{% for s in site_names %}<option value="{{ s }}"{% if s == t.site %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+            <select class="input sm" name="per_week" aria-label="주당 편수">{% for n in "1234567" %}<option value="{{ n }}"{% if n|add:0 == t.per_week %} selected{% endif %}>주 {{ n }}편</option>{% endfor %}</select>
+            <textarea class="input" name="note" rows="4" placeholder="이 주제를 쓸 때 지킬 것 — 다룰 범위(예: 이번 주 청약 일정 · 상장일), 볼 출처(예: 38커뮤니케이션 · DART), 구성 등" aria-label="지침">{{ t.note }}</textarea>
+            <div class="tp-form-foot">
+              <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+              <button class="btn ghost sm danger" type="submit" formaction="{% url 'routines:topic_delete' t.pk %}" formnovalidate onclick="return confirm('{{ t.name|escapejs }} 주제를 휴지통으로 옮길까요?')">{% include "includes/ic.html" with name="trash" %}삭제</button>
+            </div>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="grid-empty">고정 주제가 없습니다. 아래에서 추가하세요.</td></tr>
+      {% endfor %}
+      <tr class="tp-addrow"><td colspan="6">
+        <form method="post" action="{% url 'routines:topic_add' %}" class="tp-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input class="input sm" name="name" maxlength="60" placeholder="+ 고정 주제 (예: 청약 일정 · 수도권) 이름 입력 후 Enter" aria-label="새 고정 주제" autocomplete="off">
+        </form>
+      </td></tr>
+    </tbody>
+  </table>
+</section>
+<p class="muted small">점은 그 주에 발행했는지 (왼쪽이 오래된 주, 테두리가 이번 주). 발행하고 직접 눌러 표시합니다. '실행'은 PC 터미널에서 claude 가 그 주제로 이번 주 글 한 편을 써서 글 관리 임시글로 보냅니다.</p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("[data-tp-edit]");
+  if (!b) return;
+  var row = document.getElementById("tp-edit-" + b.dataset.tpEdit);
+  row.hidden = !row.hidden;
+  if (!row.hidden) row.querySelector("textarea").focus();
+});
+</script>
+{% endblock %}

@@ -44,6 +44,7 @@ MENUS: list[Menu] = [
     Menu(
         "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(PC 에서 실행 · 전체 실행 · 추가 실행) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
         children=(
+            Menu("routine_topics", "커스텀 글쓰기", "주제가 정해진 글(공모주 일정·청년 정책 등)을 주 단위로 쓰고 발행했는지 보는 곳", "routines:topics", "calendar"),
             Menu("routine_extra", "추가 실행", "하루 분량과 별도로 글·아이디어를 더 돌리고, 글쓰기 하루 분량을 고르는 곳", "routines:extra_page", "plus"),
             Menu("routine_prompts", "프롬프트 관리", "루틴마다 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),

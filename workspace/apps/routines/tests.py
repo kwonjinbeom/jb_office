@@ -554,3 +554,53 @@ def decoded(cmd):
     """terminal_command 가 -EncodedCommand 로 넘긴 PowerShell 스크립트."""
     import base64
     return base64.b64decode(cmd[cmd.index("-EncodedCommand") + 1]).decode("utf-16-le")
+
+
+class FixedTopicTests(Login):
+    """커스텀 글쓰기 (2026-10-21 사용자): 고정 주제를 주 단위로 쓰고 발행 여부를 점으로 본다. 일일루틴 글쓰기 줄 아래로 펼친다."""
+
+    def test_seed_page_and_weekly_dots(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from .models import FixedTopic, TopicWeek, week_start
+        names = list(FixedTopic.objects.values_list("name", flat=True))
+        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책"])
+        res = self.client.get(reverse("routines:topics"))
+        self.assertEqual(res.context["ACTIVE_MENU"], "routine_topics")
+        self.assertEqual(len(res.context["weeks"]), 8)
+        t = FixedTopic.objects.get(name="공모주 일정 · 국내")
+        today = timezone.localdate()
+        url = reverse("routines:topic_week", args=[t.pk])
+        self.client.post(url, {"week": today.isoformat(), "next": "/routines/topics/"})
+        self.assertTrue(TopicWeek.objects.get(topic=t, week=week_start(today)).published)
+        res = self.client.get(reverse("routines:topics"))
+        self.assertEqual(res.context["done_this_week"], 1)
+        self.client.post(url, {"week": (week_start(today) + timedelta(days=3)).isoformat()})  # 그 주 어느 날이든 같은 주
+        self.assertFalse(TopicWeek.objects.get(topic=t, week=week_start(today)).published)
+
+    def test_add_edit_and_prompt(self):
+        from .models import FixedTopic
+        self.client.post(reverse("routines:topic_add"), {"name": "  청약   일정 · 수도권 "})
+        t = FixedTopic.objects.get(name="청약 일정 · 수도권")
+        self.client.post(reverse("routines:topic_save", args=[t.pk]),
+                         {"name": "청약 일정 · 수도권", "site": "눈잎", "per_week": "2", "note": "이번 주 청약 단지와 당첨 발표일만"})
+        t.refresh_from_db()
+        self.assertEqual((t.site, t.per_week, t.note), ("눈잎", 2, "이번 주 청약 단지와 당첨 발표일만"))
+        res = self.client.get(reverse("routines:topics"))
+        prompt = next(x for x in res.context["topics"] if x.pk == t.pk).prompt
+        self.assertTrue(prompt.startswith("# 일일루틴 · 글쓰기 (추가 실행)"))  # 글쓰기 루틴의 추가 실행처럼 PC 터미널에서
+        for text in ["고정 주제 (커스텀 글쓰기): 청약 일정 · 수도권 — 2편", "사이트: 눈잎", "이번 주 청약 단지와 당첨 발표일만",
+                     "고정주제: 청약 일정 · 수도권"]:
+            self.assertIn(text, prompt)
+        self.client.post(reverse("routines:topic_delete", args=[t.pk]))
+        self.assertFalse(FixedTopic.objects.filter(pk=t.pk).exists())
+        self.assertTrue(FixedTopic.all_objects.filter(pk=t.pk).exists())  # 휴지통
+
+    def test_index_writing_row_unfolds_topics(self):
+        res = self.client.get(reverse("routines:index"))
+        self.assertContains(res, 'class="rt-has-sub" data-rt-toggle')
+        self.assertContains(res, "공모주 일정 · 해외")
+        self.assertContains(res, "data-rt-sub hidden", count=4)  # 주제 셋 + 추가 줄
+        self.assertEqual(len(res.context["fixed_topics"][0].cells), 4)  # 최근 4주

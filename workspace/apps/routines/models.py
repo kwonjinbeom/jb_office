@@ -175,3 +175,46 @@ class RoutinePick(models.Model):
 
     def __str__(self):
         return f"{self.routine} {self.day}"
+
+
+def week_start(day):
+    """그 날이 든 주의 월요일 (커스텀 글쓰기는 주 단위로 본다)"""
+    return day - timezone.timedelta(days=day.weekday())
+
+
+class FixedTopic(TrashableModel):
+    """커스텀 글쓰기의 고정 주제 (2026-10-21 사용자): 일일루틴과 따로, 주제가 정해진 글을 주 단위로 쓴다.
+    예) 공모주 일정 · 국내 / 해외, 청년·신혼 정책. 주마다 발행했는지(TopicWeek)를 작게 본다.
+    '실행'은 글쓰기 루틴의 추가 실행처럼 PC 터미널 claude 에게 이 주제 한 편을 맡긴다 (views.topic_prompt)."""
+
+    name = models.CharField("주제", max_length=60)
+    site = models.CharField("사이트", max_length=60, blank=True, help_text="올릴 사이트 (비우면 주제에 맞게 고른다)")
+    note = models.TextField("지침", blank=True, help_text="이 주제를 쓸 때 따로 지킬 것 (다룰 범위·출처·구성 등)")
+    per_week = models.PositiveSmallIntegerField("주당 편수", default=1)
+    order = models.PositiveSmallIntegerField("순서", default=0)
+    created_at = models.DateTimeField("만든 때", auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "pk"]
+        verbose_name = "고정 주제"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name
+
+
+class TopicWeek(models.Model):
+    """고정 주제의 한 주: 발행했는지 (사용자가 직접 표시한다). week 는 그 주 월요일."""
+
+    topic = models.ForeignKey(FixedTopic, verbose_name="주제", on_delete=models.CASCADE, related_name="weeks")
+    week = models.DateField("주 (월요일)")
+    published = models.BooleanField("발행", default=False)
+    updated_at = models.DateTimeField("고친 때", auto_now=True)
+
+    class Meta:
+        verbose_name = "고정 주제 주간"
+        verbose_name_plural = verbose_name
+        constraints = [models.UniqueConstraint(fields=["topic", "week"], name="routines_topicweek_unique")]
+
+    def __str__(self):
+        return f"{self.topic} {self.week}"

@@ -634,8 +634,11 @@ def index(request):
     runs = (RoutineRun.objects.select_related("routine")  # 실행 이력: 모든 루틴, 이 기간 + 끝나지 않은 것
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
                                                                  RoutineRun.Status.BLOCKED]))[:50])
+    from . import topics as topic_mod  # 글쓰기 줄 아래로 펼치는 고정 주제 (커스텀 글쓰기, 최근 4주)
+    fixed_topics, _ = topic_mod.rows(request, 4, today)
     return render(request, "routines/index.html", {
         "page_title": "일일루틴",
+        "fixed_topics": fixed_topics, "writing_key": topic_mod.WRITING_KEY,
         "bar": period.bar(mode, sel, today, state),
         "mode": mode,
         "day": sel,

@@ -1378,6 +1378,48 @@ a.br-addr:hover { color: var(--accent); }
 .rt-acts { display: flex; align-items: center; gap: 4px; }
 .rt-acts form { margin: 0; }
 .rt-table td { vertical-align: middle; }
+/* 일일루틴 표를 작게 (2026-10-21 사용자): 한 줄에 할 일 · 하루 양 · 결과 위치, 위아래 여백을 줄인다 */
+.br-table.rt-table td { padding-top: 5px; padding-bottom: 5px; line-height: 18px; }
+.rt-table th { padding-top: 6px; padding-bottom: 6px; }
+.rt-table .rt-name { font-size: 13px; font-weight: 700; }
+.rt-task { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.rt-task .br-sub { display: inline; }
+.rt-table .btn.sm { height: 26px; padding-top: 0; padding-bottom: 0; }
+.rt-table .num-in { height: 26px; }
+/* 글쓰기 줄 아래 고정 주제 (커스텀 글쓰기) */
+.rt-has-sub { cursor: pointer; }
+.rt-caret { display: inline-grid; place-items: center; width: 14px; color: var(--text-3); transition: transform .12s; flex: none; }
+.rt-caret .ic { width: 13px; height: 13px; }
+.rt-has-sub.open .rt-caret { transform: rotate(90deg); }
+.rt-subcnt { font-size: 11px; color: var(--text-3); flex: none; }
+.rt-sub td { background: var(--hover); }
+.rt-sub-name { padding-left: 14px; }
+.rt-sub .rt-name { font-weight: 600; }
+.rt-branch { color: var(--text-3); flex: none; margin-right: 2px; }
+.tp-add { display: flex; align-items: center; gap: 6px; margin: 0; }
+.tp-add .input { flex: 1; max-width: 460px; }
+.rt-sub-add .tp-add { padding-left: 14px; }
+/* 주별 발행 점: 한 칸 34px (topics.DOT_W) — 머리글 날짜와 같은 폭. 채운 점 = 발행, 테두리 진한 점 = 이번 주 */
+.tp-dots { display: inline-flex; vertical-align: middle; }
+.tp-dots form { margin: 0; width: 34px; display: grid; place-items: center; }
+.rt-table .tp-dots form { width: 20px; }
+.tp-dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--border); background: transparent; padding: 0; cursor: pointer; }
+.tp-dot:hover { border-color: var(--accent); }
+.tp-dot.on { background: var(--ok); border-color: var(--ok); }
+.tp-dot.now { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--text-3); }
+.tp-weekhead { display: inline-flex; }
+.tp-weekhead span { width: 34px; text-align: center; font-size: 11px; color: var(--text-3); font-weight: 600; }
+.tp-weekhead span.now { color: var(--text); }
+/* 커스텀 글쓰기 표: 한 줄에 한 주제 */
+.tp-table { table-layout: fixed; width: 100%; }
+.tp-table td { padding-top: 5px; padding-bottom: 5px; vertical-align: middle; font-size: 13px; }
+.tp-name, .tp-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-note { color: var(--text-2); }
+.tp-table .btn.sm { height: 26px; }
+.tp-edit td { background: var(--hover); }
+.tp-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px 100px; gap: 6px; }
+.tp-form textarea { grid-column: 1 / -1; width: 100%; }
+.tp-form-foot { grid-column: 1 / -1; display: flex; gap: 6px; }
 .rt-panel.rt-history { margin-top: 14px; height: auto; max-height: 640px; min-height: 240px; }
 .rt-bottom { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; margin-top: 14px; }
 .rt-panel { display: flex; flex-direction: column; min-width: 0; height: max(560px, calc(100vh - 140px)); overflow: hidden; }
