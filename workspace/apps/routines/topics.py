@@ -44,6 +44,23 @@ def topic_text(topic, today):
     return "\n".join(lines)
 
 
+def all_text(topics, today):
+    """전체 실행 (2026-10-21 사용자): 모든 고정 주제를 한 터미널에서 차례로."""
+    lines = [f"고정 주제 전체 실행 (커스텀 글쓰기): 아래 {len(topics)}개 주제를 순서대로 하나씩 끝까지 쓴다. "
+             "주제마다 원고를 따로 만들고(주당 편수만큼), 한 주제가 끝나면 진행 보고 후 다음 주제로 간다."]
+    for n, t in enumerate(topics, start=1):
+        lines += ["", f"#### {n}. {t.name}", topic_text(t, today)]
+    return "\n".join(lines)
+
+
+def all_prompt_for(request, topics, day):
+    from .views import launcher, report_url
+    writing = Routine.objects.filter(key=WRITING_KEY).first()
+    if writing is None or not topics:
+        return ""
+    return launcher(writing, day, report=report_url(request, writing, day), extra=all_text(topics, day), tree=True)
+
+
 def prompt_for(request, topic, day):
     """PC 터미널 claude 에게 줄 안내문. 글쓰기 루틴이 없으면 빈 값 (실행 버튼을 숨긴다)."""
     from .views import launcher, report_url
@@ -79,7 +96,8 @@ def page(request):
         "page_title": "커스텀 글쓰기", "topics": topics, "weeks": ws, "today": today,
         "this_week": ws[-1], "done_this_week": sum(1 for t in topics if t.cells[-1][1]),
         "week_col": len(ws) * DOT_W + 32, "site_names": sites.names(),
-        "writing": Routine.objects.filter(key=WRITING_KEY).first(),  # 왼쪽 자유 글쓰기 = 글쓰기 루틴의 추가 실행(코멘트)
+        "writing": Routine.objects.filter(key=WRITING_KEY).first(),
+        "all_prompt": all_prompt_for(request, topics, today),  # 왼쪽 자유 글쓰기 = 글쓰기 루틴의 추가 실행(코멘트)
     })
 
 
