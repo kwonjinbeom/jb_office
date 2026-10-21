@@ -28,7 +28,7 @@ PLATFORMS = {
             {"kind": "rich", "label": "본문 (서식 그대로)", "msg": "본문을 서식 그대로 복사했습니다. 네이버 블로그 본문에 붙여넣으세요.",
              "hint": "스마트에디터 ONE 본문에 Ctrl+V"},
         ],
-        "tags": "발행 화면의 태그 칸 (30개 이하)",
+        "tags": "발행 창의 태그 칸 (붙여넣기로는 한 태그로 붙는다 → 아래 '네이버 태그 넣기' 북마크나 태그 하나씩 복사 + Enter)",
         "after": "소제목 줄을 '소제목'으로 다시 지정 · 찾아 넣은 사진은 그대로 옮겨진다 · 남은 사진 자리에 직접 업로드(빈 1칸 표 지우기) · 코드는 소스코드 칸에 · "
                  "스티커·지도·링크 카드는 에디터에서 · 본문에 의도치 않은 #태그 없는지",
     },
@@ -81,3 +81,28 @@ def clean_html(text):
     if text.startswith("<"):
         return text
     return markdown.markdown(text, extensions=["tables", "sane_lists"])
+
+
+# 네이버 태그 넣기 북마클릿 (2026-10-21 사용자: 태그 칸은 붙여넣기로 안 되고 '글 치고 Enter' 를 하나씩 해야 한다).
+# 북마크바에 끌어다 두고, 네이버 발행 창의 태그 칸을 한 번 누른 뒤 누르면 복사해 둔 태그('#가 #나' 또는 쉼표)를
+# 하나씩 넣고 Enter 를 친다. 클립보드를 못 읽으면 붙여넣을 칸을 띄운다. 네이버 화면이 바뀌어 안 되면 태그 버튼을 하나씩 눌러 복사한다.
+NAVER_TAG_JS = """(async()=>{
+function act(d){var a=d.activeElement;while(a&&a.tagName==='IFRAME'){try{d=a.contentDocument;a=d.activeElement;}catch(e){break;}}return a;}
+var el=act(document);
+if(!el||el.tagName!=='INPUT'){alert('네이버 발행 창의 태그 칸을 한 번 누른 뒤 다시 눌러 주세요.');return;}
+var raw='';try{raw=await navigator.clipboard.readText();}catch(e){}
+if(!raw||raw.indexOf('#')<0&&raw.indexOf(',')<0){raw=prompt('태그를 붙여넣으세요 (#가 #나 또는 가, 나)',raw||'');}
+if(!raw)return;
+var tags=raw.split(/[#,\\n]+/).map(function(t){return t.replace(/\\s+/g,'');}).filter(Boolean).slice(0,30);
+var w=el.ownerDocument.defaultView,set=Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype,'value').set;
+function key(type){var ev=new w.KeyboardEvent(type,{key:'Enter',code:'Enter',bubbles:true,cancelable:true});
+Object.defineProperty(ev,'keyCode',{get:function(){return 13;}});Object.defineProperty(ev,'which',{get:function(){return 13;}});el.dispatchEvent(ev);}
+for(var i=0;i<tags.length;i++){el.focus();set.call(el,tags[i]);el.dispatchEvent(new w.Event('input',{bubbles:true}));
+key('keydown');key('keypress');key('keyup');await new Promise(function(r){setTimeout(r,150);});}
+})();"""
+
+
+def naver_tag_bookmarklet():
+    from urllib.parse import quote
+    js = " ".join(line.strip() for line in NAVER_TAG_JS.splitlines())
+    return "javascript:" + quote(js, safe="()[]{};:,.'=!&|<>?+-*/_~@$^")
