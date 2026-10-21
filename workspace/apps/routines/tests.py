@@ -604,3 +604,15 @@ class FixedTopicTests(Login):
         self.assertContains(res, "공모주 일정 · 해외")
         self.assertContains(res, "data-rt-sub hidden", count=4)  # 주제 셋 + 추가 줄
         self.assertEqual(len(res.context["fixed_topics"][0].cells), 4)  # 최근 4주
+
+    def test_free_writing_box_and_compact_picker(self):
+        writing = Routine.objects.get(key="writing")
+        res = self.client.get(reverse("routines:topics"))
+        self.assertContains(res, 'id="tp-free-text"')  # 왼쪽 자유 글쓰기
+        self.assertContains(res, f'data-url="{reverse("routines:extra", args=[writing.pk])}"')
+        data = self.client.post(reverse("routines:extra", args=[writing.pk]),
+                                {"mode": "comment", "comment": "신혼부부 전세대출 금리 비교 2편", "day": "2026-10-21"}).json()
+        self.assertIn("신혼부부 전세대출 금리 비교 2편", data["prompt"])
+        res = self.client.get(reverse("routines:extra_page"), {"r": "writing"})
+        self.assertContains(res, "data-pk-tog")  # 하위 타입은 접어 둔다
+        self.assertContains(res, '<div class="pk-types" hidden>', html=False)

@@ -1411,6 +1411,13 @@ a.br-addr:hover { color: var(--accent); }
 .tp-weekhead span { width: 34px; text-align: center; font-size: 11px; color: var(--text-3); font-weight: 600; }
 .tp-weekhead span.now { color: var(--text); }
 /* 커스텀 글쓰기 표: 한 줄에 한 주제 */
+/* 커스텀 글쓰기: 왼쪽 자유 글쓰기 · 오른쪽 고정 주제 표 */
+.tp-layout { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
+.tp-right { min-width: 0; }
+.tp-free-body { display: grid; gap: 10px; padding: 12px 14px 14px; }
+.tp-free-body textarea { width: 100%; min-height: 300px; resize: vertical; line-height: 1.7; font-size: 14px; }
+.tp-free-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+@media (max-width: 1100px) { .tp-layout { grid-template-columns: minmax(0, 1fr); } }
 .tp-table { table-layout: fixed; width: 100%; }
 .tp-table td { padding-top: 5px; padding-bottom: 5px; vertical-align: middle; font-size: 13px; }
 .tp-name, .tp-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1549,7 +1556,21 @@ a.br-addr:hover { color: var(--accent); }
 .ex-head .seg { flex: none; }
 .ex-total { color: var(--accent); font-size: 14px; }
 [data-ex-cats][hidden], [data-ex-comment][hidden] { display: none !important; }
-.pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px 20px; padding: 12px 14px 18px; }
+.pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 6px 18px; padding: 8px 12px 12px; align-items: start; }
+/* 분류 고르기를 작게 (2026-10-21 사용자): 카테고리 한 줄 · 하위는 ▸ 로 접기 · 줄 높이 26px */
+.pk-grid .pk-row { min-height: 26px; padding: 1px 6px; }
+.pk-grid .pk-row.lv0 { font-size: 13px; min-height: 24px; }
+.pk-grid .pk-row.lv1 { font-size: 12.5px; flex: 1; min-width: 0; }
+.pk-grid .pk-row.lv2 { margin-left: 22px; font-size: 12px; }
+.pk-grid .pk-row .pk-n { width: 44px; height: 22px; font-size: 13px; }
+.pk-grid .bt-code { width: 18px; height: 18px; font-size: 11px; }
+.pk-catline { display: flex; align-items: center; }
+.pk-tog, .pk-tog-gap { width: 18px; height: 22px; flex: none; }
+.pk-tog { display: grid; place-items: center; border: 0; background: transparent; color: var(--text-3); cursor: pointer; padding: 0; border-radius: 5px; }
+.pk-tog:hover { background: var(--hover); color: var(--text); }
+.pk-tog .ic { width: 12px; height: 12px; transition: transform .12s; }
+.pk-tog[aria-expanded="true"] .ic { transform: rotate(90deg); }
+.pk-kids { font-size: 11px; color: var(--accent); font-weight: 700; flex: none; }
 .pk-grid .pk-sec + .pk-sec { border-top: 0; margin-top: 0; padding-top: 0; }
 .ex-comment { padding: 16px; }
 .ex-comment textarea { width: 100%; min-height: 320px; resize: vertical; line-height: 1.7; font-size: 14.5px; }

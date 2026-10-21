@@ -33,10 +33,16 @@
     <div class="pk-sec">
       <div class="pk-row lv0"><span class="nm">{{ g.obj.name }}</span><span class="pk-sum" data-pk-sum></span></div>
       {% for c in g.cats %}
-      <label class="pk-row lv1"><span class="bt-code">{{ c.obj.code }}</span><span class="nm" title="{{ c.obj.question }}">{{ c.obj.name }}</span><input class="num-in pk-n" type="number" min="0" max="20" name="n_{{ c.obj.sel }}" placeholder="0" aria-label="{{ c.obj.name }} 편수"></label>
-      {% for t in c.types %}
-      <label class="pk-row lv2"><span class="nm">{{ t.name }}</span><input class="num-in pk-n" type="number" min="0" max="20" name="n_{{ t.sel }}" placeholder="0" aria-label="{{ t.name }} 편수"></label>
-      {% endfor %}
+      {# 카테고리 한 줄. 하위 타입은 ▸ 로 접어 둔다 (2026-10-21 사용자: 너무 넓게 펼쳐져 불편). 편수가 들어 있으면 펼친다 #}
+      <div class="pk-cat">
+        <div class="pk-catline">
+          {% if c.types %}<button type="button" class="pk-tog" data-pk-tog aria-expanded="false" aria-label="{{ c.obj.name }} 하위 펼치기">{% include "includes/ic.html" with name="chevron-right" %}</button>{% else %}<span class="pk-tog-gap"></span>{% endif %}
+          <label class="pk-row lv1"><span class="bt-code">{{ c.obj.code }}</span><span class="nm" title="{{ c.obj.question }}">{{ c.obj.name }}</span><span class="pk-kids" data-pk-kids></span><input class="num-in pk-n" type="number" min="0" max="20" name="n_{{ c.obj.sel }}" placeholder="0" aria-label="{{ c.obj.name }} 편수"></label>
+        </div>
+        {% if c.types %}<div class="pk-types" hidden>{% for t in c.types %}
+          <label class="pk-row lv2"><span class="nm" title="{{ t.name }}">{{ t.name }}</span><input class="num-in pk-n" type="number" min="0" max="20" name="n_{{ t.sel }}" placeholder="0" aria-label="{{ t.name }} 편수"></label>
+        {% endfor %}</div>{% endif %}
+      </div>
       {% endfor %}
     </div>
     {% endfor %}
@@ -112,11 +118,32 @@
       sec.querySelector("[data-pk-sum]").textContent = sum ? sum + "편" : "";
       total += sum;
     });
+    // 접힌 카테고리: 하위에 넣은 편수를 카테고리 줄에 작게 (+2)
+    document.querySelectorAll(".pk-cat").forEach(function (cat) {
+      var kids = 0;
+      cat.querySelectorAll(".pk-types .pk-n").forEach(function (i) { kids += Number(i.value) || 0; });
+      var out = cat.querySelector("[data-pk-kids]");
+      if (out) out.textContent = kids ? "하위 +" + kids : "";
+    });
     var out = document.querySelector("[data-pk-total]");
     if (out) out.textContent = total;
   }
+  function openCat(cat, open) {
+    var types = cat.querySelector(".pk-types"), tog = cat.querySelector("[data-pk-tog]");
+    if (!types) return;
+    types.hidden = !open;
+    tog.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  function openFilled() {  // 하위에 편수가 있으면 펼친다
+    document.querySelectorAll(".pk-cat").forEach(function (cat) {
+      var filled = Array.prototype.some.call(cat.querySelectorAll(".pk-types .pk-n"), function (i) { return Number(i.value) > 0; });
+      if (filled) openCat(cat, true);
+    });
+  }
   document.addEventListener("input", function (e) { if (e.target.classList.contains("pk-n")) sync(); });
   document.addEventListener("click", function (e) {
+    var tog = e.target.closest("[data-pk-tog]");
+    if (tog) { var cat = tog.closest(".pk-cat"); openCat(cat, cat.querySelector(".pk-types").hidden); return; }
     var m = e.target.closest("[data-ex-mode]");
     if (m) { setMode(m.dataset.exMode); return; }
     if (e.target.closest("[data-pk-clear]")) {
@@ -129,6 +156,7 @@
       document.querySelectorAll(".pk-n").forEach(function (i) { i.value = picks[i.name.slice(2)] || ""; });
       setMode("cats");
       sync();
+      openFilled();
       document.getElementById("pk-form").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -148,7 +176,7 @@
       .catch(function () { App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); })
       .then(function () { go.disabled = false; });
   });
-  if (document.querySelector(".pk-n")) sync();
+  if (document.querySelector(".pk-n")) { sync(); openFilled(); }
 })();
 </script>
 {% endblock %}

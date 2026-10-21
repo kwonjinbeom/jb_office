@@ -3,10 +3,24 @@
 {% block heading %}커스텀 글쓰기 <span class="cnt">이번 주 발행 {{ done_this_week }}/{{ topics|length }}</span>{% endblock %}
 
 {% block content %}
-{# 주제가 정해진 글쓰기 (2026-10-21 사용자). 한 줄에 한 주제: 지침 · 최근 8주 발행(점, 누르면 바뀜) · 실행(PC 터미널 claude 가 이 주제 한 편). #}
+<div class="tp-layout">
+{# 왼쪽: 자유 글쓰기 — 쓰고 싶은 것을 자유롭게 적고 글쓰기 (추가 실행의 코멘트와 같다, PC 터미널 claude) #}
+<section class="card tp-free">
+  <div class="card-head"><h3 class="card-title">자유 글쓰기</h3><span class="hint">PC 터미널에서 claude 가 씁니다</span></div>
+  <form id="tp-free-form" class="tp-free-body" onsubmit="return false">{% csrf_token %}<input type="hidden" name="day" value="{{ today|date:'Y-m-d' }}"><input type="hidden" name="mode" value="comment">
+    <textarea class="input" id="tp-free-text" name="comment" rows="14" maxlength="2000" aria-label="쓰고 싶은 글" placeholder="쓰고 싶은 글을 자유롭게 적으세요.&#10;&#10;예) 이번 주 공모주 중 청약 경쟁률 높았던 곳 정리 1편 (눈잎)&#10;예) 신혼부부 전세대출 금리 비교, 은행별 표로 2편"></textarea>
+    <div class="tp-free-foot">
+      <span class="muted small">편수·사이트·분류를 적으면 그대로, 없으면 1편 · 주제에 맞게</span>
+      {% if writing %}<button class="btn primary" type="button" data-tp-free data-url="{% url 'routines:extra' writing.pk %}" data-key="{{ writing.key }}" data-name="{{ writing.name }}" data-day="{{ today|date:'Y-m-d' }}">{% include "includes/ic.html" with name="server" %}글쓰기</button>{% endif %}
+    </div>
+  </form>
+</section>
+
+{# 오른쪽: 고정 주제 (2026-10-21 사용자). 한 줄에 한 주제: 지침 · 최근 8주 발행(점, 누르면 바뀜) · 실행(PC 터미널 claude 가 이 주제 한 편). #}
+<div class="tp-right">
 <section class="card">
   <table class="grid tp-table">
-    <colgroup><col style="width:190px"><col><col style="width:{{ week_col }}px"><col style="width:64px"><col style="width:92px"><col style="width:58px"></colgroup>
+    <colgroup><col style="width:170px"><col><col style="width:{{ week_col }}px"><col style="width:64px"><col style="width:92px"><col style="width:58px"></colgroup>
     <thead><tr>
       <th>주제</th><th>지침</th>
       <th><span class="tp-weekhead">{% for w in weeks %}<span{% if forloop.last %} class="now"{% endif %} title="{{ w|date:'n/j' }} 주">{% if forloop.last %}이번{% else %}{{ w|date:'n/j' }}{% endif %}</span>{% endfor %}</span></th>
@@ -48,10 +62,27 @@
   </table>
 </section>
 <p class="muted small">점은 그 주에 발행했는지 (왼쪽이 오래된 주, 테두리가 이번 주). 발행하고 직접 눌러 표시합니다. '실행'은 PC 터미널에서 claude 가 그 주제로 이번 주 글 한 편을 써서 글 관리 임시글로 보냅니다.</p>
+</div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+/* 자유 글쓰기: 추가 실행(코멘트)과 같은 안내문을 받아 복사하고 PC 터미널 claude 를 연다 */
+document.addEventListener("click", function (e) {
+  var go = e.target.closest("[data-tp-free]");
+  if (!go) return;
+  if (!document.getElementById("tp-free-text").value.trim()) { App.toast("쓰고 싶은 글을 먼저 적으세요.", "warn"); return; }
+  go.disabled = true;
+  fetch(go.dataset.url, { method: "POST", body: new FormData(document.getElementById("tp-free-form")), credentials: "same-origin" })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok) { App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); return; }
+      App.rtLaunch(res.j.prompt, { kind: "run", key: go.dataset.key, day: go.dataset.day, name: go.dataset.name }, false);
+    })
+    .catch(function () { App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); })
+    .then(function () { go.disabled = false; });
+});
 document.addEventListener("click", function (e) {
   var b = e.target.closest("[data-tp-edit]");
   if (!b) return;
