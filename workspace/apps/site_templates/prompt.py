@@ -34,6 +34,18 @@ PHOTOS = """## 사진 (변환할 때 찾아 넣기)
 - 직접 찍어야 하는 사진(내 경험·현장)이나 맞는 사진이 없으면 [사진: 설명] 자리를 그대로 둔다. 표·도식으로 만들 그림은 [그림: 파일명] 자리로 둔다.
 - 점검 기록에 `- 사진: 설명 · 사진 페이지 주소` 로 한 장씩 남긴다."""
 
+# 변환 때 직접 그림 만들기 (2026-10-21 사용자: 나루토 글의 대표·한눈에 그림처럼 변환할 때 그림으로 예쁘게 만들어 붙이는 방식을
+# 적극 쓴다. 과하지 않게, 포인트 컬러는 주제에 맞게). 글쓰기(원고) 때가 아니라 변환 때만. 그림은 공개 저장소 주소로 붙인다.
+FIGURE_DIR = "콘텐츠/블로그_카페/변환그림"
+FIGURE_URL = "https://raw.githubusercontent.com/kwonjinbeom/jb_office/main/"
+FIGURES = f"""## 직접 만든 그림 (변환할 때 · 과하지 않게)
+- 글마다 1~2장: ① 맨 위 대표 이미지 1200×630 (제목 + 한 줄 부제) ② 핵심 숫자·비교·일정이 그림으로 더 잘 보일 때만 '한눈에' 1장 (막대·타임라인·비교. 표를 그대로 옮긴 그림은 만들지 않는다).
+- 모양: 흰 바탕, Pretendard, 짙은 회색 글자, 여백 넉넉히. 포인트 컬러는 주제에 맞는 한 가지만 (예: 나루토 주황, 금융 남색, 여행 초록). 그라데이션·그림자·이모지·장식 없이, 그림 속 글자는 짧게.
+- 그림 속 숫자는 사실 점검을 마친 변환본 숫자와 같아야 한다.
+- 만드는 법: HTML 로 그려 playwright 로 PNG 캡처. file:// 는 막혀 있으니 `.playwright-mcp/` 에 `document.body.innerHTML = …` 스크립트를 쓰고 `page.setContent` → `page.addScriptTag({{path}})` → `page.screenshot({{clip}})`.
+- `{FIGURE_DIR}/<글 번호>/<이름>.png` 로 저장하고 그 폴더만 git add · commit · push (main). 붙이는 주소는 `{FIGURE_URL}<경로를 퍼센트 인코딩>` — curl 로 200 이 오는지 확인한 뒤 `![설명](주소)` 한 줄로 넣는다.
+- 점검 기록에 `- 그림: 파일 이름 · 무엇을 보여 주나` 로 남긴다."""
+
 
 def template_for(blog):
     tpl, _ = SiteTemplate.objects.get_or_create(blog=blog)
@@ -60,6 +72,7 @@ def build(placement):
     parts.append(FACT_CHECK)
     if blog.platform in PHOTO_PLATFORMS:
         parts.append(PHOTOS)
+        parts.append(FIGURES)
     if placement.convert_note:
         parts.append(f"## 이 글만\n{placement.convert_note}")
     parts.append(f"## 원문\n### 제목\n{post.title}\n### 본문\n{post.body}")
@@ -79,7 +92,7 @@ def launcher(request, placements, token):
     head = [
         f"{LAUNCH_HEAD} · {day.isoformat()} · {len(placements)}편",
         "아래 글을 각 사이트·카테고리에 맞게 변환하고 변환본을 서버로 보낸다. 사용자에게 묻지 않고 끝까지 한다. "
-        "git 커밋·push 는 하지 않는다 (변환본은 서버 DB 에만 들어간다).",
+        f"git 커밋·push 는 직접 만든 그림 폴더({FIGURE_DIR})만 한다 (변환본은 서버 DB 에만 들어간다).",
         "## 글마다 하는 일\n"
         "1. 그 글의 요청문대로 변환한다. 숫자·날짜·일정은 요청문의 '사실 점검'대로 출처에서 다시 확인하고 틀린 것만 고친다. 링크는 바꾸지 않는다.\n"
         "2. 본문만 `workspace/.routine/convert/<번호>.md`, 점검 기록은 `workspace/.routine/convert/<번호>-check.md` 파일로 쓴다 (UTF-8).\n"
