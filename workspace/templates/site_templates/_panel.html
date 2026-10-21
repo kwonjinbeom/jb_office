@@ -11,7 +11,10 @@
     <button type="button" class="btn sm" data-copy="#st-request-{{ pl.pk }}" data-copy-msg="요청문을 복사했습니다. Claude 에게 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}요청문</button>
     <a class="btn sm ghost" href="{% url 'site_templates:convert' pl.pk %}" style="margin-left:auto">변환 화면 따로 열기{% include "includes/ic.html" with name="external" %}</a>
     {% else %}
-    <span class="muted small">아직 카테고리에 넣지 않았습니다. 줄의 '카테고리'에서 고르면 변환할 수 있어요.</span>
+    <span class="muted small">아직 카테고리에 넣지 않았습니다. 넣으면 변환할 수 있어요.</span>
+    <form method="post" action="{% url 'blog_types:place_add' %}" class="wr-cat-pick">{% csrf_token %}<input type="hidden" name="post" value="{{ post_ref }}"><input type="hidden" name="next" value="{{ next|default:request.get_full_path }}">
+      <select class="input sm" name="site_category" data-autosubmit aria-label="넣을 사이트 카테고리"><option value="" disabled selected>카테고리 고르기</option>{% for site_name, rows in site_groups %}<optgroup label="{{ site_name }}{% if site_name == post.target %} (이 글의 사이트){% endif %}">{% for pk, label in rows %}<option value="{{ pk }}">{{ site_name }} › {{ label }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+    </form>
     {% endif %}
   </div>
   {% if pl %}

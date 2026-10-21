@@ -28,16 +28,17 @@
         <button class="btn sm" type="submit">검색</button>
         <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 보기 (다시 누르면 전체)">{% include "includes/ic.html" with name="calendar" %}오늘</a>
         {% if stage == 'post' %}<span class="seg" role="group" aria-label="발행 상태">{% for f in pub_filters %}<a href="{{ f.url }}"{% if f.on %} class="on" aria-current="true"{% endif %}>{{ f.label }}</a>{% endfor %}</span>{% endif %}
-        {% if stage == 'post' %}<button type="button" class="btn sm primary" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_count %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% endif %}>{% include "includes/ic.html" with name="server" %}변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>{% endif %}
+        {% if stage == 'post' %}<span class="bar-sep" aria-hidden="true"></span><button type="button" class="btn sm" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_count %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% endif %}>변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>{% endif %}
         {% if q or sel or today or pub %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
       </form>
       {% if posts %}
+      {# 체크한 글에 하는 일 (2026-10-22 사용자): 같은 모양 버튼, 성격별로 | 로 나눈다 — 단계 | 발행 | 삭제 #}
       <span class="wr-bulk">
-        <span class="muted small">체크한 것을</span>
-        {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% include "includes/ic.html" with name="chevron-left" %}{% if stage == 'review' %}임시글로{% else %}검토글로{% endif %}</button>{% endif %}
-        {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토글로{% else %}발행예정으로{% endif %}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
-        {% if stage == 'post' %}<button class="btn sm" form="ph-bulk" name="publish" value="todo" title="체크한 글과 넣은 곳을 미발행으로">미발행</button><button class="btn sm primary" form="ph-bulk" name="publish" value="done" title="체크한 글과 넣은 곳(사이트 카테고리)을 발행 완료로">{% include "includes/ic.html" with name="check" %}발행 완료</button>{% endif %}
-        <button type="button" class="btn sm ghost danger" data-trash-checked="ids" title="체크한 글을 휴지통으로 (7일 안에 되돌릴 수 있음)">{% include "includes/ic.html" with name="trash" %}삭제</button>
+        {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% if stage == 'review' %}임시글{% else %}검토글{% endif %}</button>{% endif %}
+        {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토글{% else %}발행예정글{% endif %}</button>{% endif %}
+        {% if stage == 'post' %}<span class="bar-sep" aria-hidden="true"></span><button class="btn sm" form="ph-bulk" name="publish" value="todo" title="체크한 글과 넣은 곳을 미발행으로">미발행</button><button class="btn sm" form="ph-bulk" name="publish" value="done" title="체크한 글과 넣은 곳(사이트 카테고리)을 발행 완료로">발행 완료</button>{% endif %}
+        <span class="bar-sep" aria-hidden="true"></span>
+        <button type="button" class="btn sm danger" data-trash-checked="ids" title="체크한 글을 휴지통으로 (7일 안에 되돌릴 수 있음)">삭제</button>
       </span>
       {% endif %}
     </div>
@@ -52,7 +53,7 @@
             {% if stage == 'temp' %}<th style="width:96px">사이트</th><th style="width:32%">내용</th>{% else %}<th style="width:{% if stage == 'post' %}120{% else %}160{% endif %}px">사이트</th>{% endif %}
             {% if stage == 'post' %}<th style="width:180px">카테고리</th><th style="width:132px">변환</th><th style="width:154px">발행</th><th style="width:100px">만든 날</th>{% endif %}
             {% if stage != 'post' %}<th style="width:92px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
-            <th style="width:{% if stage == 'review' %}226{% elif stage == 'post' %}112{% else %}120{% endif %}px"></th>
+            {% if stage != 'post' %}<th style="width:{% if stage == 'review' %}226{% else %}120{% endif %}px"></th>{% endif %}
           </tr>
         </thead>
         <tbody>

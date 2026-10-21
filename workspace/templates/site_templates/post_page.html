@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% comment %}글 관리 발행예정글 제목을 누르면 여는 화면 (2026-10-22 사용자): 사이트별 템플릿의 변환 화면 그대로. 컨텍스트: site_templates.views.post_page{% endcomment %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ back }}">글 관리</a></div>{% endblock %}
+
+{% block heading %}{{ post.title }}{% if pl %} <span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% endif %}{% endblock %}
+
+{% block actions %}
+<a class="btn" href="{{ back }}">{% include "includes/ic.html" with name="chevron-left" %}글 관리</a>
+<a class="btn" href="{{ post.get_absolute_url }}" title="원문 글 보기·수정">원문 열기</a>
+{% endblock %}
+
+{% block content %}
+<div>{% include "site_templates/_panel.html" %}</div>
+{% endblock %}

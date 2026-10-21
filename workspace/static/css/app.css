@@ -283,6 +283,9 @@ pre code { background: none; padding: 0; }
 .cv-panel-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cv-loading { padding: 16px; }
 .wr-cv-box { margin-top: 10px; }
+/* 글 관리 위 버튼 줄 (2026-10-22 사용자): 같은 모양, 성격이 다르면 세로줄로 나눈다 */
+.grid.wrap.wr-grid.wr-compact td.num { white-space: nowrap; }
+.bar-sep { display: inline-block; width: 1px; height: 18px; background: var(--border); margin: 0 4px; vertical-align: middle; flex: none; }
 .wr-cat-pick select { width: 100%; }
 
 /* 글 보기: 블로그에 올라간 모습. 본문 꾸밈(표·상자·캡션)은 붙여넣기용 인라인 style 이 맡고,

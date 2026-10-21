@@ -410,7 +410,7 @@ class PostHubTests(TestCase):
         self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")
         self.assertEqual(sorted(p.title for p in res.context["posts"]), ["발행할 글 둘", "발행할 글 하나"])
         self.assertContains(res, f'href="{view}?stage=temp"')  # 단계 탭은 글 보기에 머문다
-        self.assertContains(res, f'href="{view}?stage=post&amp;p=tistory:{p1.pk}"')
+        self.assertContains(res, f'href="{reverse("site_templates:post")}?p=tistory:{p1.pk}&amp;back=')  # 제목은 변환 화면으로 (2026-10-22)
         self.assertContains(res, f'<a class="btn" href="{reverse("blog_types:index")}" title="사이트 카테고리에 넣기')  # 카테고리 관리로 가기
         res = self.client.get(view, {"stage": "post", "p": f"tistory:{p1.pk}"})
         self.assertEqual(res.context["post"].title, "발행할 글 하나")
@@ -672,8 +672,17 @@ class SitePublishTests(TestCase):
         """글 관리 (2026-10-22 사용자): 발행예정글 줄을 누르면 아래에 변환 칸, 변환·전체 변환 버튼, 검토글도 넣고 변환"""
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
         res = self.client.get(reverse("posts:view"), {"stage": "post"})
-        self.assertContains(res, f'data-cv-panel="{reverse("site_templates:panel")}?p=tistory:{self.a.pk}')
+        self.assertContains(res, f'href="{reverse("site_templates:post")}?p=tistory:{self.a.pk}&amp;back=')  # 제목 → 변환 화면
+        self.assertNotContains(res, "data-cv-panel")  # 줄을 눌러 펼치지 않는다
+        self.assertContains(res, "data-trash-norow")  # 줄마다 휴지통 없이, 체크하고 위 '삭제'
+        self.assertNotContains(res, "체크한 것을")
         self.assertContains(res, f'data-st-run="{self.pl.pk}"')  # 줄의 변환 버튼
+        page = self.client.get(reverse("site_templates:post"), {"p": f"tistory:{self.a.pk}", "back": "/blog/posts/view/?stage=post"})
+        self.assertEqual(page.context["ACTIVE_MENU"], "posts_view")
+        self.assertContains(page, "아직 변환본이 없습니다")
+        self.assertContains(page, 'href="/blog/posts/view/?stage=post"')  # 글 관리로 돌아가기
+        nocat = self.client.get(reverse("site_templates:post"), {"p": f"naver:{self.b.pk}"})
+        self.assertContains(nocat, "카테고리 고르기")  # 넣은 곳이 없으면 여기서 바로 넣는다
         self.assertEqual((res.context["ready_ids"], res.context["ready_count"]), (str(self.pl.pk), 1))  # 전체 변환
         self.assertNotContains(res, f'data-href="{self.a.get_absolute_url()}')
         panel = self.client.get(reverse("site_templates:panel"), {"p": f"tistory:{self.a.pk}", "next": "/blog/posts/view/?stage=post"})
