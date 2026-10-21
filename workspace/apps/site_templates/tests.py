@@ -242,6 +242,7 @@ class PasteFormatTests(TestCase):
         self.assertIn("## 사진 (변환할 때 찾아 넣기)", request_text)
         self.assertIn("## 가공이미지 (변환할 때 · 필요한 만큼만)", request_text)  # 직접 만든 그림 (2026-10-21 사용자)
         self.assertIn("## 글 다듬기", request_text)
+        self.assertIn("[핵심]", request_text)  # 맨 위 핵심 카드 (2026-10-21 사용자)
         self.assertIn("Unsplash", PlatformFormat.objects.get(platform="tistory").guide)
         naver = self.place("black_lukey", "낙서장")
         self.assertIn("## 사진", self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"])
