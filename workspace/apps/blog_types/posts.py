@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import classify, sites, transfer
-from .views import _find, _open_branches, _path, _placements_qs, _site_groups
+from .views import _find, _path, _placements_qs, _site_groups
 
 STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글")]
 STAGE_KEYS = [k for k, _ in STAGES]
@@ -101,44 +101,30 @@ def _import_new_drafts(request):
         messages.success(request, f"새 원고 {added}편을 임시글으로 가져왔습니다.")
 
 
-def _list_page(request, p, view=False):
-    """글 관리 목록 (트리 + 단계 탭 + 표). view=True 면 글 보기의 발행예정글 (탭·제목만 글 보기)."""
-    stage, sel, kind, obj, q, today = p["stage"], p["sel"], p["kind"], p["obj"], p["q"], p["today"]
-    posts, counts = _collect(p, prefetch=stage == "post")
+def _list_page(request, p):
+    """글 관리 › 발행예정글 목록 (분류 트리 없이 표만). 임시글·검토글은 한 건씩 보는 글 화면 (view)."""
+    sel, kind, obj, q, today = p["sel"], p["kind"], p["obj"], p["q"], p["today"]
+    posts, counts = _collect(p, prefetch=True)
     list_q = _query(p)
-    groups = _site_groups() if stage == "post" else []  # 발행예정글: 카테고리 칸에서 바로 넣는다
+    groups = _site_groups()  # 카테고리 칸에서 바로 넣는다
     for post in posts:
         post.list_url = _view_url(post, list_q)  # 글 보기 (같은 조건의 목록과 함께)
         post.site_groups = sorted(groups, key=lambda g, t=post.target: g[0] != t)  # 그 글의 사이트를 맨 위에
-
-    path = [label for label, _ in _path(kind, obj)][1:] if kind else []  # 맨 앞 '모든 글'은 빼고
-    keep = f"stage={stage}&" + ("today=1&" if today else "")
-    base = reverse("posts:view") if view else ""
+    # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 글 중 넣은 곳이 미변환인 것
+    ready = [str(pl.pk) for post in posts for pl in post.placements.all() if pl.convert_status == "none"]
     return render(request, "blog_types/posts.html", {
         "page_title": "글 관리",
-        "view_mode": view, "tab_base": base,
-        "tree": classify.class_tree(),
-        "sel": sel, "kind": kind,
-        "open": _open_branches(kind, obj) if kind else set(),
-        "q": q, "stage": stage, "keep": keep, "today": today,
+        "sel": sel, "q": q, "stage": p["stage"], "today": today,
         "filter_q": _query(p, stage=""),
         "today_url": "?" + _query(p, today="" if today else "1"),
-        "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == stage} for k, label in STAGES],
-        "path": path,
+        "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"]} for k, label in STAGES],
+        "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
         "posts": posts,
-        "groups": classify.grouped(posts) if stage != "post" else [],  # 발행예정글은 분류 줄 없이
-        "cols": {"temp": 6, "review": 5, "post": 7}[stage],
         "pub": p["pub"],
-        # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 발행예정글 중 넣은 곳이 미변환인 것
-        "ready_ids": (ready := ",".join(str(pl.pk) for post in posts if stage == "post" for pl in post.placements.all()
-                                        if pl.convert_status == "none")),
-        "ready_count": len(ready.split(",")) if ready else 0,
+        "ready_ids": ",".join(ready), "ready_count": len(ready),
         "pub_filters": [{"key": k, "label": label, "on": k == p["pub"], "url": "?" + _query(p, pub=k)} for k, label in PUBLISH_FILTERS],
         "site_names": sites.names(),
-        "review_choices": classify.post_model("tistory").Review.choices,
         "publish_choices": classify.post_model("tistory").Publish.choices,
-        "next_to": {"temp": "review", "review": "post"}.get(stage),
-        "prev_to": {"review": "temp", "post": "review"}.get(stage),
     })
 
 
@@ -184,7 +170,6 @@ def post_list_for(request, post):
         "pl_keep": keep,
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
                      "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
-        "pl_index_url": f"{reverse('posts:index')}?{list_q}",
         "pl_next_url": f"{reverse('posts:view')}?{list_q}",  # 옮기기·휴지통 뒤: 목록의 다음 글 (없으면 이 단계 첫 글)
         "site_names": sites.names(),
         "post_placements": placements,
@@ -208,7 +193,7 @@ def view(request):
     _import_new_drafts(request)
     post = _one(request.GET.get("p"))
     if post is None and request.GET.get("stage") == "post":
-        return _list_page(request, _params(request), view=True)  # 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
+        return _list_page(request, _params(request))  # 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
     if post is None:
         posts, _ = _collect(_params(request))
         post = posts[0] if posts else None
@@ -225,7 +210,6 @@ def view(request):
         "pl_stage_label": dict(STAGES)[p["stage"]],
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
                      "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
-        "pl_index_url": f"{reverse('posts:index')}?{_query(p)}",
         "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='')}",
         "has_filter": bool(p["sel"] or p["q"] or p["today"]),
     })
@@ -245,7 +229,7 @@ def _picked(request):
 
 def _back(request):
     nxt = request.POST.get("next", "")
-    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("posts:index"))
+    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("posts:view"))
 
 
 @require_POST

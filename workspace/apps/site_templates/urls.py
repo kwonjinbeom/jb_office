@@ -13,5 +13,4 @@ urlpatterns = [
     path("api/convert/<int:pk>/", views.api_save, name="api_save"),
     path("<int:pk>/", views.site, name="site"),
     path("convert/<int:pk>/", views.convert, name="convert"),
-    path("convert/<int:pk>/status/", views.quick_status, name="status"),
 ]

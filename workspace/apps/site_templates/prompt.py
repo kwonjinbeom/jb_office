@@ -1,7 +1,7 @@
 """변환 요청문: 사이트 템플릿 + 카테고리 컨셉 + 플랫폼 포맷 + 원문을 한 덩어리로.
 
 - build: 글 하나의 요청문 (변환 화면의 '요청문' 복사, requests.json).
-- launcher: 사이트별 템플릿의 '변환'·'전체 변환'이 PC 터미널의 claude 에게 주는 안내문 (여러 편을 차례로 변환하고
+- launcher: 글 관리의 '변환'·'변환 가능 글 전체 변환'·'재변환'이 PC 터미널의 claude 에게 주는 안내문 (여러 편을 차례로 변환하고
   변환본을 서버의 저장 주소로 curl 로 보낸다. apps/routines/local_run.py 의 convert 실행).
 """
 from django.urls import reverse

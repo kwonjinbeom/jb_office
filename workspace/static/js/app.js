@@ -502,8 +502,7 @@
 })();
 
 /* 변환 (2026-10-22 사용자: 사이트별 템플릿의 변환을 글 관리로).
-   - 줄 펼치기: <tr data-cv-panel="주소"> 를 누르면 그 아래 줄에 변환 칸(원문 ↔ 변환본 · 사실 점검 · 붙여넣기 · 고치기)을 받아 넣는다. 다시 누르면 접는다.
-   - 칸 펼치기: <button data-cv-open="주소" data-cv-target="#상자"> 는 그 상자에 받아 넣는다 (글 보기 화면).
+   - 칸 펼치기: <button data-cv-open="주소" data-cv-target="#상자"> 는 그 상자에 변환 칸(원문 ↔ 변환본)을 받아 넣는다 (글 상세 화면).
    - 넣은 곳 고르기: 칸 안의 data-cv-tab 은 그 칸만 다시 받는다.
    - 변환: data-st-run="매핑 번호,…" (+ data-st-url, data-st-count) → 서버가 변환 요청으로 바꾸고 안내문을 주면 PC 터미널 claude 를 연다. */
 (function () {
@@ -523,17 +522,7 @@
       if (!target.hidden && target.childElementCount) { target.hidden = true; open.setAttribute("aria-expanded", "false"); return; }
       target.hidden = false; open.setAttribute("aria-expanded", "true");
       load(target, open.getAttribute("data-cv-open"));
-      return;
     }
-    var row = e.target.closest("tr[data-cv-panel]");
-    if (!row || e.target.closest("a, button, input, form, select, label, summary, .trash-row-controls")) return;
-    if (String(window.getSelection && window.getSelection())) return;
-    var next = row.nextElementSibling;
-    if (next && next.classList.contains("cv-panel-row")) { next.remove(); row.classList.remove("cv-open"); return; }
-    var tr = document.createElement("tr"), td = document.createElement("td");
-    tr.className = "cv-panel-row"; td.colSpan = row.children.length;
-    tr.appendChild(td); row.parentNode.insertBefore(tr, row.nextSibling); row.classList.add("cv-open");
-    load(td, row.getAttribute("data-cv-panel"));
   });
 
   // 재변환: 체크한 글 하나 + 코멘트 → 지난 변환본을 코멘트대로 고친다 (글 관리 발행예정글 위 줄)

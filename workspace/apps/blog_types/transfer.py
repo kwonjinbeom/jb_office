@@ -19,11 +19,6 @@ def _render(writer):
     return render
 
 
-def target_label(post):
-    """버튼 문구: 이 글을 보낼 상대 글쓰기 이름"""
-    return classify.WRITERS[OTHER[classify.writer_of(post)]]
-
-
 @transaction.atomic
 def send(post):
     dst = OTHER[classify.writer_of(post)]

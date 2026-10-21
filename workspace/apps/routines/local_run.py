@@ -5,7 +5,7 @@ PC 서버(run.bat)가 꺼져 있어도 된다 (2026-10-16 사용자: "누르면 
 claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
 링크: jbroutine:<run|update|all|convert>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
-convert: 사이트별 템플릿의 '변환'·'전체 변환' (2026-10-17 사용자). 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
+convert: 글 관리의 '변환'·'전체 변환'·'재변환'. 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
 루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
 """
 import base64
@@ -275,7 +275,7 @@ def start(link, text):
     kind, key, day = req["kind"], req["key"], req["day"]
     if kind == "convert":
         if not text.startswith(CONVERT_HEAD):
-            raise ValueError("클립보드에 사이트 변환 안내문이 없습니다. 사이트별 템플릿에서 '변환'을 다시 누르세요.")
+            raise ValueError("클립보드에 사이트 변환 안내문이 없습니다. 글 관리에서 '변환'을 다시 누르세요.")
     elif not text.startswith(PROMPT_HEAD):
         raise ValueError("클립보드에 일일루틴 안내문이 없습니다. 화면에서 '실행'을 다시 누르세요.")
     claude = find_claude() if WINDOWS else "claude"  # 못 찾으면 현황을 남기기 전에 멈춘다

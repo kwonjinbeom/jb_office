@@ -193,8 +193,3 @@ def api_git_status(request):
     return JsonResponse(data)
 
 
-@require_POST
-def api_sync(request):
-    result = gitstate.run_sync(reason="manual-api")
-    return JsonResponse(result, status=200 if result["ok"] else 500)
-

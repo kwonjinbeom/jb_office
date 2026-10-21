@@ -15,5 +15,4 @@ urlpatterns = [
     path("deploy/webhook/", views.deploy_webhook, name="deploy_webhook"),
     path("settings/", views.app_settings, name="settings"),
     path("api/git/status/", views.api_git_status, name="api_git_status"),
-    path("api/git/sync/", views.api_sync, name="api_sync"),
 ]

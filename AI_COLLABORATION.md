@@ -25,7 +25,7 @@
 처음에는 `db.sqlite3`를 Git에 넣고 PC의 Claude만 수정하는 규칙이었다. 같은 날 PythonAnywhere 배포로 바뀌었다.
 
 - 데이터 원본은 PythonAnywhere 서버의 `~/data/db.sqlite3` 하나다. Git에는 DB 파일이 없다.
-- 에이전트는 어느 쪽도 서버 DB를 직접 만지지 않는다. migration 소스만 만들고, 서버 적용은 사용자가 Bash 콘솔에서 한다.
+- 에이전트는 어느 쪽도 서버 DB를 직접 만지지 않는다. migration 소스만 만들고, 서버 적용은 main push 때 웹훅이 자동으로 한다 (AGENTS.md 맨 위).
 - Codex Cloud는 `/tmp` 임시 DB만 쓴다. 로컬 PC의 `workspace/db.sqlite3`도 개발용 임시 DB다.
 - 현재 규칙의 원문은 `AGENTS.md` 3절이다.
 

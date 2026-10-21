@@ -27,7 +27,6 @@
         <a class="bt-node lv0{% if sel == b.sel %} on{% endif %}" href="?site={{ b.sel }}">
           <span class="nm">{{ b.name }}</span>
           <span class="bt-plat">{{ b.get_platform_display }}</span>
-          {% if b.count %}<span class="ct">{{ b.count }}</span>{% endif %}
         </a>
       </div>
       <div class="bt-kids-tree">
@@ -36,14 +35,12 @@
           <a class="bt-node lv1{% if sel == c.sel %} on{% endif %}" href="?site={{ c.sel }}"{% if c.concept %} title="{{ c.concept|truncatechars:120 }}"{% endif %}>
             <span class="nm">{{ c.name }}</span>
             {% if not c.concept %}<span class="st-noconcept" title="컨셉 없음">·</span>{% endif %}
-            {% if c.count %}<span class="ct">{{ c.count }}</span>{% endif %}
           </a>
         </div>
         {% for s in c.children.all %}
         <div class="bt-row">
           <a class="bt-node lv2{% if sel == s.sel %} on{% endif %}" href="?site={{ s.sel }}"{% if s.concept %} title="{{ s.concept|truncatechars:120 }}"{% endif %}>
             <span class="nm">{{ s.name }}</span>
-            {% if s.count %}<span class="ct">{{ s.count }}</span>{% endif %}
           </a>
         </div>
         {% endfor %}
