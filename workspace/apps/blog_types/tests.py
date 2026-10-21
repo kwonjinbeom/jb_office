@@ -239,7 +239,7 @@ class PostManageTests(TestCase):
         self.NaverPost.objects.create(title="네이버 발행예정", stage="post", bt_category=self.season.category)
         res = self.client.get(INDEX, {"sel": self.season.category.sel})
         self.assertEqual(sorted(x.title for x in res.context["posts"]),
-                         ["네이버 발행예정", "발행한 글", "세일 정리"])  # 아래 목록은 발행예정글만, 두 편집기 함께
+                         ["네이버 발행예정", "세일 정리"])  # 아래 목록은 발행예정글만 (발행 완료는 뺀다), 두 편집기 함께
 
     def test_tree_counts_unpublished_posts(self):
         cat = self.season.category
@@ -612,3 +612,42 @@ class SitePublishTests(TestCase):
         self.assertContains(res, ">미발행</button>", html=False)
         self.assertContains(res, ">발행 완료</button>", html=False)
         self.assertNotContains(res, "임시저장")
+
+    def test_post_tab_flat_sorted_and_publish_filter(self):
+        """발행예정글 (2026-10-21 사용자): 분류 트리·분류 줄 없이, 미발행이 위 → 최신 순, 발행 전체/미발행/발행 완료 조건"""
+        from datetime import timedelta
+
+        from django.utils import timezone
+        old = self.T.objects.create(title="오래된 미발행", stage="post")
+        done = self.T.objects.create(title="발행한 글", stage="post", publish_status="done")
+        self.T.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=3))
+        self.N.objects.filter(pk=self.b.pk).update(created_at=timezone.now() - timedelta(days=1))
+        url = reverse("posts:index")
+        res = self.client.get(url, {"stage": "post", "sel": "u"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리", "패딩 고르기", "오래된 미발행", "발행한 글"])
+        self.assertEqual(res.context["sel"], "")  # 분류 조건은 쓰지 않는다
+        self.assertNotContains(res, 'data-bt-tree="class"')
+        self.assertNotContains(res, 'class="wr-group"')
+        self.assertContains(res, "bt-layout-1")
+        res = self.client.get(url, {"stage": "post", "pub": "done"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["발행한 글"])
+        res = self.client.get(url, {"stage": "post", "pub": "todo"})
+        self.assertNotIn(done.title, [p.title for p in res.context["posts"]])
+        self.assertContains(res, '<a href="?stage=post&amp;pub=done">발행 완료</a>', html=False)
+        res = self.client.get(url, {"stage": "temp"})
+        self.assertContains(res, 'data-bt-tree="class"')  # 다른 단계는 그대로
+
+    def test_mapping_list_hides_published_and_converted_newest_first(self):
+        """글 매핑 관리 아래 목록 (2026-10-21 사용자): 발행 완료·변환 완료 글은 빼고 최신 순"""
+        from datetime import timedelta
+
+        from django.utils import timezone
+        self.N.objects.filter(pk=self.b.pk).update(created_at=timezone.now() - timedelta(days=1))
+        conv = self.T.objects.create(title="변환 끝난 글", stage="post")
+        Placement.objects.create(site_category=self.java, tistory_post=conv, convert_status="checked")
+        self.T.objects.create(title="발행한 글", stage="post", publish_status="done")
+        half = self.T.objects.create(title="한 곳만 변환", stage="post")
+        Placement.objects.create(site_category=self.java, tistory_post=half, convert_status="done")
+        Placement.objects.create(site_category=SiteCategory.objects.get(name="낙서장"), tistory_post=half)
+        res = self.client.get(INDEX)
+        self.assertEqual([p.title for p in res.context["posts"]], ["한 곳만 변환", "자바 정리", "패딩 고르기"])
