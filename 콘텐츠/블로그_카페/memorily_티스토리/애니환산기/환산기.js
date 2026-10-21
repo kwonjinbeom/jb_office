@@ -22,8 +22,20 @@
     var v = va === vb ? va + "권" : va + "~" + vb + "권";
     return { ch: "만화 " + c, vol: v };
   }
+  // 이야기를 앞으로 나아가게 하는 회차 = 앞 회차들보다 뒤의 만화 화를 다룬 회차 (회상만 다시 나오는 화는 아니다)
+  // 원작 + 애니 장면(2) 회차는 앞 원작보다 뒤이고 다음 원작을 앞지르지 않을 때만 (회상·앞당긴 장면만 있는 화를 빼려고)
   function nearCanon(eps, i, step) {
-    for (var j = i + step; j >= 0 && j < eps.length; j += step) if (eps[j][2]) return j;
+    var top = [], max = 0, k, nextStart = Infinity;
+    for (k = eps.length - 1; k >= 0; k--) {
+      top[k] = nextStart;
+      if (eps[k][2] === 1) nextStart = eps[k][0];
+    }
+    for (k = 0; k < eps.length; k++) {
+      var e = eps[k];
+      top[k] = e[2] === 1 ? e[1] > max : e[2] === 2 && e[1] > max && e[1] <= top[k];
+      if (e[2] === 1) max = Math.max(max, e[1]);
+    }
+    for (var j = i + step; j >= 0 && j < eps.length; j += step) if (top[j]) return j;
     return -1;
   }
   // 시즌(기) 기준 → 전체 화수
@@ -43,7 +55,7 @@
   }
 
   function animeToManga(work, s, abs) {
-    var eps = s.eps;
+    var eps = s.eps, next = work.series[work.series.indexOf(s) + 1];
     if (!(abs >= 1 && abs <= eps.length)) return { big: "1~" + eps.length + "화 사이로 넣어 주세요" };
     var e = eps[abs - 1];
     if (e[2]) {
@@ -53,6 +65,7 @@
     var p = nearCanon(eps, abs - 1, -1), q = nearCanon(eps, abs - 1, 1), sub = [];
     if (p >= 0) sub.push("앞 원작 " + (p + 1) + "화 = 만화 " + eps[p][1] + "화");
     if (q >= 0) sub.push("다음 원작 " + (q + 1) + "화 = 만화 " + eps[q][0] + "화");
+    else if (next) sub.push("다음 원작 " + next.name + " 1화 = 만화 " + next.eps[0][0] + "화");
     return { big: "원작 없음", tag: "오리지널", sub: sub.join(" · ") };
   }
 
@@ -87,7 +100,7 @@
     // 애니 → 만화: 시리즈 · (기) · 화
     var p1 = el("div", { "class": "ac-row" });
     var ser = el("select", { "aria-label": "시리즈" });
-    work.series.forEach(function (s, i) { ser.appendChild(el("option", { value: i }, s.name + " (" + s.eps.length + "화)")); });
+    work.series.forEach(function (s, i) { ser.appendChild(el("option", { value: i }, s.name)); });
     var sea = el("select", { "aria-label": "기" });
     var ep = el("input", { type: "number", min: 1, inputmode: "numeric", placeholder: "화", "aria-label": "화" });
     p1.appendChild(ser); p1.appendChild(sea); p1.appendChild(ep);
