@@ -63,12 +63,11 @@ MENUS: list[Menu] = [
         "blog", "블로그·카페", "카테고리별 소재·템플릿·글과 게시 기록", "blog:list", "file", "#2f6bd8",
         listing=False,  # '블로그·카페 리스트' 중메뉴는 뺐다 (2026-10-16 사용자)
         children=(
-            Menu("blog_rules", "운영", "사이트별 컨셉·발행·임시저장 현황과 체크", "blog_rules:index", "check-list"),
-            Menu("blog_ops", "모니터링", "이번 주 발행 현황, 발행 계획, RSS", "blog_ops:index", "calendar"),
-            Menu("posts", "글 관리", "글 분류별로 여러 글을 한 번에: 다음 단계로 옮기기·삭제", "posts:index", "edit"),
-            Menu("posts_view", "글 보기", "한 건씩 보면서 처리: 임시글 → 검토글 → 발행예정글", "posts:view", "file"),
-            Menu("blog_types", "글 매핑 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
-            Menu("site_templates", "사이트별 템플릿", "사이트 컨셉·플랫폼 포맷에 맞게 글 변환", "site_templates:index", "layers"),
+            # 2026-10-22 사용자: 운영 · 모니터링 · (예전) 글 관리는 메뉴에서 뺀다 (주소는 남는다 — 운영은 사이트별 템플릿에서 연결).
+            # 글 보기 → '글 관리', 카테고리 관리 → '카테고리 관리'. 변환은 글 관리(검토글·발행예정글)에서 한다.
+            Menu("posts_view", "글 관리", "임시글 → 검토글 → 발행예정글. 카테고리 넣기 · 변환 · 발행까지", "posts:view", "file"),
+            Menu("blog_types", "카테고리 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
+            Menu("site_templates", "사이트별 템플릿", "사이트·카테고리마다 글쓰기·변환 컨셉과 규칙", "site_templates:index", "layers"),
             # memorily 티스토리 (2026-10-21 사용자): 중메뉴 아래 소메뉴 둘 — 블로그 자동화(예전 'memorily 연재') · 애니 총정리
             Menu("memorily_tistory", "memorily 티스토리", "memorily 티스토리에 쓰는 연재와 애니 정리 글", "series:index", "book", children=(
                 Menu("series", "블로그 자동화", "AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 곳", "series:index", "book"),

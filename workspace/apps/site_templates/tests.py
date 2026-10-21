@@ -20,54 +20,32 @@ class SiteTemplateTests(TestCase):
         self.pl = Placement.objects.create(site_category=self.java, tistory_post=self.post)
 
     def test_seed_and_index(self):
+        """사이트별 템플릿 (2026-10-22 사용자): 변환은 글 관리로, 여기는 글쓰기·변환 컨셉과 규칙"""
         self.assertEqual(PlatformFormat.objects.count(), 4)
         self.assertIn("개발자", SiteTemplate.objects.get(blog=self.memorily).tone)
         res = self.client.get(reverse("site_templates:index"))
         self.assertContains(res, "memorily")
         self.assertContains(res, "사이트별 템플릿")  # 메뉴
-        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리"])  # 발행예정글 · 발행 전 · 미변환
-        self.assertEqual(res.context["ready_ids"], str(self.pl.pk))  # 넣은 글은 변환 버튼
         self.assertContains(res, f'href="?site={self.java.sel}"')  # 왼쪽 사이트 카테고리 트리
+        self.assertNotIn("posts", res.context)  # 변환할 글 표는 없다
+        self.assertNotContains(res, "변환 가능 글 전체 변환")
+        self.assertContains(res, "카테고리 컨셉 0/")  # 사이트마다 요약
+        res = self.client.get(reverse("site_templates:index"), {"site": self.memorily.sel})
+        self.assertContains(res, 'name="t-tone"')  # 사이트를 고르면 컨셉·템플릿 고치기
+        self.assertContains(res, 'name="f-guide"')
+        self.assertContains(res, "Java")  # 카테고리 컨셉 목록
+        self.assertContains(res, reverse("blog_rules:blog_edit", args=[self.memorily.pk]))  # 사이트 정보는 운영 화면
 
-    def test_category_concept_and_convert_button_scope(self):
-        from apps.writing.models import Post as T
-        unmapped = T.objects.create(title="아직 안 넣은 글", stage="post")
-        T.objects.create(title="발행한 글", stage="post", publish_status="done")
-        other = SiteCategory.objects.get(blog__name="black_lukey", name="낙서장")
-        res = self.client.get(reverse("site_templates:index"), {"site": other.sel})
-        posts = {p.title: p for p in res.context["posts"]}
-        self.assertEqual(set(posts), {"자바 정리", "아직 안 넣은 글"})
-        self.assertEqual(posts["자바 정리"].ready, [])  # 다른 카테고리에 넣은 글은 버튼 없음
-        self.assertEqual(res.context["ready_count"], 0)
-        self.assertContains(res, "다른 카테고리")
-        self.assertContains(res, "매핑 먼저")
+    def test_category_concept(self):
         url = reverse("site_templates:index")
-        res = self.client.post(f"{url}?site={self.java.sel}", {"k-concept": "자바 기초를 예제 하나로"})
+        self.client.post(f"{url}?site={self.java.sel}", {"k-concept": "자바 기초를 예제 하나로"})
         self.java.refresh_from_db()
         self.assertEqual(self.java.concept, "자바 기초를 예제 하나로")
         res = self.client.get(url, {"site": self.java.sel})
-        self.assertEqual(res.context["ready_count"], 1)
         self.assertContains(res, "자바 기초를 예제 하나로")
+        self.assertContains(res, "같이 적용되는 것")
+        self.assertContains(res, "개발자")  # 사이트 말투가 같이 보인다
         self.assertIn("## 카테고리 컨셉\n- Java: 자바 기초를 예제 하나로", prompt.build(self.pl))  # 요청문에 카테고리 컨셉
-        self.pl.convert_status = "done"
-        self.pl.save()
-        res = self.client.get(url)
-        self.assertEqual([p.title for p in res.context["posts"]], ["아직 안 넣은 글"])  # 변환한 글은 아래 '변환한 글'로
-        self.assertEqual([pl.pk for pl in res.context["done"]], [self.pl.pk])
-        self.assertTrue(unmapped)
-
-    def test_requested_can_be_run_again(self):
-        """변환 요청에서 멈춘 글 (서버가 다시 켜지는 순간 눌러 터미널이 안 열림): 다시 변환 버튼 · 다시 안내문"""
-        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
-        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok-1")
-        self.pl.convert_status = "requested"
-        self.pl.save()
-        res = self.client.get(reverse("site_templates:index"))
-        self.assertEqual((res.context["stuck_ids"], res.context["stuck_count"]), (str(self.pl.pk), 1))
-        self.assertContains(res, "요청 중인 글 다시 변환 (1)")
-        self.assertContains(res, f'data-st-run="{self.pl.pk}" title="PC 터미널 claude 로 다시 변환"')
-        data = self.client.post(reverse("site_templates:run"), {"ids": str(self.pl.pk)}).json()
-        self.assertTrue(data["prompt"].startswith("# 사이트 변환"))
 
     def test_run_needs_token_then_launches_and_api_saves(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
@@ -118,15 +96,15 @@ class SiteTemplateTests(TestCase):
 
     def test_site_page_saves_template_and_format(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])
-        self.client.post(url, {"part": "template", "c-content": "새 컨셉", "t-tone": "새 말투", "t-structure": "", "t-rules": ""})
+        back = f'{reverse("site_templates:index")}?site={self.memorily.sel}'
+        res = self.client.post(url, {"part": "template", "c-content": "새 컨셉", "t-tone": "새 말투", "t-structure": "", "t-rules": ""})
+        self.assertRedirects(res, back, fetch_redirect_response=False)  # 사이트별 템플릿에서 그 사이트를 고른 채로
         self.assertEqual(SiteTemplate.objects.get(blog=self.memorily).tone, "새 말투")
         self.memorily.refresh_from_db()
         self.assertEqual(self.memorily.content, "새 컨셉")  # 컨셉도 여기서 (운영 화면과 같은 값)
         self.client.post(url, {"part": "format", "f-guide": "새 포맷"})
         self.assertEqual(PlatformFormat.objects.get(platform="tistory").guide, "새 포맷")
-        res = self.client.get(url)
-        self.assertNotContains(res, "자바 정리")  # 상세는 컨셉·템플릿만, 글 변환은 메인에서
-        self.assertContains(res, f'href="{reverse("site_templates:index")}?site={self.memorily.sel}"')  # 뒤로 (그 사이트를 고른 채)
+        self.assertRedirects(self.client.get(url), back, fetch_redirect_response=False)
 
     def test_convert_flow(self):
         url = reverse("site_templates:convert", args=[self.pl.pk])
@@ -183,7 +161,7 @@ class PasteFormatTests(TestCase):
         self.assertEqual(res.context["converted_html"], rich)  # 미리보기도 붙여넣을 HTML 그대로
         self.assertIn('<span style="color:#999999;font-size:13px">(10.20 확인)</span>', rich)
         self.assertNotIn("2026년 10월 20일 확인", rich)
-        self.assertContains(res, '<textarea id="st-tags" hidden>#태그1 #태그2 #태그3</textarea>', html=False)
+        self.assertContains(res, f'<textarea id="st-tags-{pl.pk}" hidden>#태그1 #태그2 #태그3</textarea>', html=False)
         self.assertEqual(res.context["tag_items"], ["태그1", "태그2", "태그3"])  # 하나씩 복사 (태그 칸은 Enter 로 하나씩)
         self.assertContains(res, 'data-copy-text="태그2"')
         self.assertTrue(res.context["tag_bookmarklet"].startswith("javascript:"))
@@ -191,7 +169,7 @@ class PasteFormatTests(TestCase):
         self.assertNotIn("#", res.context["tag_bookmarklet"])  # 주소에 # 이 있으면 뒤가 잘린다
         tistory = self.place("memorily")
         res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
-        self.assertContains(res, '<textarea id="st-tags" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
+        self.assertContains(res, f'<textarea id="st-tags-{tistory.pk}" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
         self.assertEqual(res.context["tag_items"], [])
         self.assertNotIn("&nbsp;</p>", res.context["paste_html"])
 
@@ -229,7 +207,7 @@ class PasteFormatTests(TestCase):
 
     def test_copy_buttons_follow_platform(self):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
-        self.assertContains(res, 'data-copy-rich="#st-paste"')  # 네이버: 서식 그대로
+        self.assertContains(res, 'data-copy-rich="#st-paste-')  # 네이버: 서식 그대로 (복사 칸 id 에 매핑 번호)
         self.assertIn("style=", res.context["paste_html"])  # 네이버는 인라인 style 을 단 서식 HTML
         tistory = self.place("memorily")
         tistory.converted_body = "| 항목 | 값 |\n|---|---|\n| 가 | **10%**를 |"
@@ -244,7 +222,7 @@ class PasteFormatTests(TestCase):
         self.assertContains(res, "본문 HTML (HTML 보기)")
         self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")
         res = self.client.get(reverse("site_templates:convert", args=[self.place("워드프레스").pk]))
-        self.assertContains(res, 'data-copy="#st-raw"')  # 워드프레스: 마크다운 그대로
+        self.assertContains(res, 'data-copy="#st-raw-')  # 워드프레스: 마크다운 그대로
         self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")  # 꾸밈 없는 HTML
         self.assertContains(res, "태그1, 태그2")
         self.assertIn("## 돌려줄 것", res.context["request_text"])

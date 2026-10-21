@@ -6,7 +6,7 @@
 {% block heading %}{{ page_title }}{% for label in path %} <span class="cnt">{{ label }}</span>{% endfor %}{% endblock %}
 
 {% block actions %}
-{% if view_mode and stage == 'post' %}<a class="btn" href="{% url 'blog_types:index' %}{% if sel or today %}?{% if sel %}sel={{ sel }}{% endif %}{% if sel and today %}&amp;{% endif %}{% if today %}today=1{% endif %}{% endif %}" title="사이트 카테고리에 넣기 (같은 분류)">글 매핑 관리{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
+{% if view_mode and stage == 'post' %}<a class="btn" href="{% url 'blog_types:index' %}{% if sel or today %}?{% if sel %}sel={{ sel }}{% endif %}{% if sel and today %}&amp;{% endif %}{% if today %}today=1{% endif %}{% endif %}" title="사이트 카테고리에 넣기 (같은 분류)">카테고리 관리{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
 {% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
 <a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}새 글</a>
 {% endblock %}
@@ -28,6 +28,7 @@
         <button class="btn sm" type="submit">검색</button>
         <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 보기 (다시 누르면 전체)">{% include "includes/ic.html" with name="calendar" %}오늘</a>
         {% if stage == 'post' %}<span class="seg" role="group" aria-label="발행 상태">{% for f in pub_filters %}<a href="{{ f.url }}"{% if f.on %} class="on" aria-current="true"{% endif %}>{{ f.label }}</a>{% endfor %}</span>{% endif %}
+        {% if stage == 'post' %}<button type="button" class="btn sm primary" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_count %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% endif %}>{% include "includes/ic.html" with name="server" %}변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>{% endif %}
         {% if q or sel or today or pub %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
       </form>
       {% if posts %}
@@ -49,7 +50,7 @@
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
             <th>제목</th>
             {% if stage == 'temp' %}<th style="width:96px">사이트</th><th style="width:32%">내용</th>{% else %}<th style="width:{% if stage == 'post' %}120{% else %}160{% endif %}px">사이트</th>{% endif %}
-            {% if stage == 'post' %}<th style="width:180px">카테고리</th><th style="width:84px">변환</th><th style="width:154px">발행</th><th style="width:100px">만든 날</th>{% endif %}
+            {% if stage == 'post' %}<th style="width:180px">카테고리</th><th style="width:132px">변환</th><th style="width:154px">발행</th><th style="width:100px">만든 날</th>{% endif %}
             {% if stage != 'post' %}<th style="width:92px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
             <th style="width:{% if stage == 'review' %}226{% elif stage == 'post' %}112{% else %}120{% endif %}px"></th>
           </tr>

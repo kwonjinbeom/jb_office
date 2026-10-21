@@ -21,7 +21,7 @@ class MenuPermissionPageTests(TestCase):
     def test_blog_has_no_listing_child(self):
         blog = next(n for n in build_nav("") if n["menu"].key == "blog")
         self.assertNotIn("블로그·카페 리스트", [c["menu"].title for c in blog["children"]])
-        self.assertEqual(blog["children"][0]["menu"].key, "blog_rules")
+        self.assertEqual(blog["children"][0]["menu"].key, "posts_view")  # 운영·모니터링은 메뉴에서 뺐다 (2026-10-22)
 
     def test_admin_index_has_only_auth_and_menu(self):
         res = self.client.get(reverse("admin:index"))
@@ -40,7 +40,7 @@ class MenuPermissionPageTests(TestCase):
     def test_save_rename_reorder_hide_then_reset(self):
         default = self.keys()
         order = ["blog", "routines", *[k for k in default if k not in ("blog", "routines")]]
-        children = {"blog": ["blog_ops", "blog_rules", "posts", "blog_types", "site_templates", "blog_discussions"]}
+        children = {"blog": ["site_templates", "blog_types", "posts_view", "blog_discussions"]}
         posted = []
         for key in order:
             posted.append(key)
@@ -51,7 +51,7 @@ class MenuPermissionPageTests(TestCase):
         self.assertEqual([m.key for m in menus][:2], ["blog", "routines"])
         self.assertEqual(menus[1].title, "루틴")
         self.assertNotIn("memos", [m.key for m in menus])  # 숨김
-        self.assertEqual([c.key for c in menus[0].children][:2], ["blog_ops", "blog_rules"])
+        self.assertEqual([c.key for c in menus[0].children][:2], ["site_templates", "blog_types"])
         self.assertEqual(MenuSetting.objects.get(key="blog").title, "")  # 기본 이름이면 비워 둔다
         self.assertContains(self.client.get(reverse("core:home")), "루틴")
         self.assertContains(self.client.get(URL), 'name="show_memos"')  # 숨긴 것도 권한 화면엔 보인다

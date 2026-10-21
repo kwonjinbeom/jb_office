@@ -367,7 +367,7 @@ class ClassifyExistingPostsTests(TestCase):
 
 @override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")  # 저장소 원고를 글 관리로 가져오지 않게
 class PostHubTests(TestCase):
-    """글 관리(티스토리·네이버 합친 화면)와 글 매핑 관리의 미분류·글 쪽 넣기"""
+    """글 관리(티스토리·네이버 합친 화면)와 카테고리 관리의 미분류·글 쪽 넣기"""
 
     def setUp(self):
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
@@ -385,9 +385,8 @@ class PostHubTests(TestCase):
         self.T.objects.create(title="다른 분류 글", stage="temp")
         self.T.objects.create(title="검토 중인 글", stage="review")
         view = reverse("posts:view")
-        res = self.client.get(reverse("posts:index"), {"stage": "temp", "sel": self.season.sel})
-        self.assertContains(res, f'href="{view}?stage=temp&amp;sel={self.season.sel}&amp;p=tistory:{t1.pk}"')
-        self.assertContains(res, "data-trash-checked")  # 체크한 것을 한꺼번에 삭제
+        res = self.client.get(reverse("posts:index"), {"stage": "temp", "sel": self.season.sel})  # 예전 글 관리 주소 (2026-10-22)
+        self.assertRedirects(res, f"{view}?stage=temp&sel={self.season.sel}", fetch_redirect_response=False)
 
         res = self.client.get(view, {"stage": "temp", "sel": self.season.sel, "p": f"tistory:{t1.pk}"})
         self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")
@@ -412,15 +411,18 @@ class PostHubTests(TestCase):
         self.assertEqual(sorted(p.title for p in res.context["posts"]), ["발행할 글 둘", "발행할 글 하나"])
         self.assertContains(res, f'href="{view}?stage=temp"')  # 단계 탭은 글 보기에 머문다
         self.assertContains(res, f'href="{view}?stage=post&amp;p=tistory:{p1.pk}"')
-        self.assertContains(res, f'<a class="btn" href="{reverse("blog_types:index")}" title="사이트 카테고리에 넣기')  # 글 매핑 관리로 가기
-        res = self.client.get(reverse("blog_types:index"))
-        self.assertContains(res, f'class="btn sm bt-pane-go" href="{reverse("site_templates:index")}"')  # 변환하러 가기
+        self.assertContains(res, f'<a class="btn" href="{reverse("blog_types:index")}" title="사이트 카테고리에 넣기')  # 카테고리 관리로 가기
         res = self.client.get(view, {"stage": "post", "p": f"tistory:{p1.pk}"})
         self.assertEqual(res.context["post"].title, "발행할 글 하나")
 
     def test_menu_has_view_screen(self):
-        res = self.client.get(reverse("posts:index"))
+        """블로그·카페 메뉴 (2026-10-22 사용자): 운영·모니터링·예전 글 관리는 빼고, 글 보기 → 글 관리 · 글 매핑 관리 → 카테고리 관리"""
+        res = self.client.get(reverse("posts:view"))
         self.assertContains(res, f'href="{reverse("posts:view")}"')
+        nav = [c.title for m in res.context["MENUS"] if m.key == "blog" for c in m.children]
+        self.assertEqual(nav[:3], ["글 관리", "카테고리 관리", "사이트별 템플릿"])
+        self.assertNotIn("운영", nav)
+        self.assertNotIn("모니터링", nav)
 
     def test_today_filter(self):
         from datetime import timedelta
@@ -430,16 +432,16 @@ class PostHubTests(TestCase):
         self.T.objects.create(title="오늘 글", stage="temp")
         old = self.N.objects.create(title="어제 글", stage="temp")
         self.N.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=1))
-        res = self.client.get(reverse("posts:index"), {"stage": "temp", "today": "1"})
-        self.assertEqual([p.title for p in res.context["posts"]], ["오늘 글"])
-        self.assertEqual(res.context["tabs"][0]["count"], 1)
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "today": "1"})
+        self.assertEqual([p.title for p in res.context["pl_items"]], ["오늘 글"])
+        self.assertEqual(res.context["pl_tabs"][0]["count"], 1)
         self.assertContains(res, 'aria-pressed="true"')
         res = self.client.get(old.get_absolute_url(), {"stage": "temp", "today": "1"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["오늘 글"])
         self.assertIsNone(res.context["pl_current"])  # 조건에 안 맞는 글을 열어도 화면은 열린다
 
     def test_side_menu_has_collapse_button(self):
-        res = self.client.get(reverse("posts:index"))
+        res = self.client.get(reverse("posts:view"))
         self.assertContains(res, "data-nav-mini")
         self.assertContains(res, 'localStorage.getItem("nav.mini")')
 
@@ -447,15 +449,14 @@ class PostHubTests(TestCase):
         self.T.objects.create(title="티 임시", stage="temp", bt_category=self.season.category)
         self.N.objects.create(title="네 임시", stage="temp")
         self.T.objects.create(title="티 검토", stage="review")
-        url = reverse("posts:index")
+        url = reverse("posts:view")
         res = self.client.get(url)
-        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["네 임시", "티 임시"])
-        self.assertEqual([t["count"] for t in res.context["tabs"]], [2, 1, 0])
+        self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 임시", "티 임시"])
+        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0])
         res = self.client.get(url, {"sel": "u", "stage": "review"})
-        self.assertEqual([p.title for p in res.context["posts"]], ["티 검토"])  # 미분류
+        self.assertEqual([p.title for p in res.context["pl_items"]], ["티 검토"])  # 미분류
         res = self.client.get(url, {"sel": self.season.category.sel})
-        self.assertEqual([p.title for p in res.context["posts"]], ["티 임시"])
-        self.assertContains(res, "미분류")  # 트리에 대분류와 같은 줄로
+        self.assertEqual([p.title for p in res.context["pl_items"]], ["티 임시"])
 
     def test_bulk_move_and_send_mixed(self):
         t = self.T.objects.create(title="티", stage="temp")
@@ -485,12 +486,11 @@ class PostHubTests(TestCase):
         p = self.T.objects.create(title="글", stage="temp")
         res = self.client.get(p.get_absolute_url())
         self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")  # 글 하나를 보는 화면은 '글 보기' 메뉴
-        self.assertContains(res, f'{reverse("posts:view")}?stage=review"')  # 단계 탭은 글 보기 안에서
-        self.assertContains(res, f'{reverse("posts:index")}?stage=temp"')  # 목록 머리의 '글 관리'
+        self.assertContains(res, f'{reverse("posts:view")}?stage=review"')  # 단계 탭은 글 관리 안에서
 
 
 class MappingPanesTests(TestCase):
-    """글 매핑 관리 오른쪽: 위 매핑 · 아래 글을 함께, 트리를 누르면 그 칸만"""
+    """카테고리 관리 오른쪽: 위 매핑 · 아래 글을 함께, 트리를 누르면 그 칸만"""
 
     def setUp(self):
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
@@ -527,8 +527,9 @@ class MappingPanesTests(TestCase):
         self.assertIsNone(res.context["bottom_form"])
 
 
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")  # 저장소 원고를 글 관리로 가져오지 않게
 class SitePublishTests(TestCase):
-    """글 관리·글 보기의 사이트 고르기, 발행 완료 (한 건 · 일괄), 글 매핑 관리 아래 목록의 조건 (2026-10-17 사용자)"""
+    """글 관리·글 보기의 사이트 고르기, 발행 완료 (한 건 · 일괄), 카테고리 관리 아래 목록의 조건 (2026-10-17 사용자)"""
 
     def setUp(self):
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
@@ -543,12 +544,13 @@ class SitePublishTests(TestCase):
 
     def test_review_and_post_columns(self):
         r = self.T.objects.create(title="검토 중 글", stage="review", target="눈잎")
-        res = self.client.get(reverse("posts:index"), {"stage": "review"})
+        res = self.client.get(reverse("posts:view"), {"stage": "review", "p": f"tistory:{r.pk}"})
         self.assertContains(res, 'action="/blog/posts/site/"')
         self.assertContains(res, f'value="tistory:{r.pk}"')
         self.assertContains(res, '<option value="눈잎" selected>눈잎</option>', html=False)
         self.assertNotContains(res, "검토 완료")  # 검토 칸 대신 사이트
-        res = self.client.get(reverse("posts:index"), {"stage": "post"})
+        self.assertContains(res, "카테고리 고르기")  # 검토글에서도 카테고리에 넣는다 (2026-10-22)
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
         for th in ["사이트", "카테고리", "변환", "발행"]:
             self.assertContains(res, f">{th}</th>", html=False)
         self.assertNotContains(res, ">타겟</th>", html=False)
@@ -556,7 +558,7 @@ class SitePublishTests(TestCase):
         self.assertContains(res, 'name="publish" value="done"')  # 체크한 것을 발행 완료
 
     def test_pick_site(self):
-        nxt = reverse("posts:index") + "?stage=review"
+        nxt = reverse("posts:view") + "?stage=review"
         res = self.client.post(reverse("posts:site"), {"ids": f"naver:{self.b.pk}", "site": "눈잎", "next": nxt})
         self.assertRedirects(res, nxt, fetch_redirect_response=False)
         self.b.refresh_from_db()
@@ -622,7 +624,7 @@ class SitePublishTests(TestCase):
         done = self.T.objects.create(title="발행한 글", stage="post", publish_status="done")
         self.T.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=3))
         self.N.objects.filter(pk=self.b.pk).update(created_at=timezone.now() - timedelta(days=1))
-        url = reverse("posts:index")
+        url = reverse("posts:view")
         res = self.client.get(url, {"stage": "post", "sel": "u"})
         self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리", "패딩 고르기", "오래된 미발행", "발행한 글"])
         self.assertEqual(res.context["sel"], "")  # 분류 조건은 쓰지 않는다
@@ -634,11 +636,12 @@ class SitePublishTests(TestCase):
         res = self.client.get(url, {"stage": "post", "pub": "todo"})
         self.assertNotIn(done.title, [p.title for p in res.context["posts"]])
         self.assertContains(res, '<a href="?stage=post&amp;pub=done">발행 완료</a>', html=False)
+        self.T.objects.create(title="임시", stage="temp")
         res = self.client.get(url, {"stage": "temp"})
-        self.assertContains(res, 'data-bt-tree="class"')  # 다른 단계는 그대로
+        self.assertContains(res, 'data-bt-tree="list"')  # 다른 단계는 한 건씩 (왼쪽은 글 목록)
 
     def test_mapping_list_hides_published_and_converted_newest_first(self):
-        """글 매핑 관리 아래 목록 (2026-10-21 사용자): 발행 완료·변환 완료 글은 빼고 최신 순"""
+        """카테고리 관리 아래 목록 (2026-10-21 사용자): 발행 완료·변환 완료 글은 빼고 최신 순"""
         from datetime import timedelta
 
         from django.utils import timezone
@@ -664,3 +667,35 @@ class SitePublishTests(TestCase):
         res = self.client.post(reverse("blog_types:place_add"), {"post": f"naver:{self.b.pk}", "site_category": lukey.pk, "next": back})
         self.assertRedirects(res, back, fetch_redirect_response=False)
         self.assertTrue(Placement.objects.filter(naver_post=self.b, site_category=lukey).exists())
+
+    def test_convert_panel_and_review_convert(self):
+        """글 관리 (2026-10-22 사용자): 발행예정글 줄을 누르면 아래에 변환 칸, 변환·전체 변환 버튼, 검토글도 넣고 변환"""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertContains(res, f'data-cv-panel="{reverse("site_templates:panel")}?p=tistory:{self.a.pk}')
+        self.assertContains(res, f'data-st-run="{self.pl.pk}"')  # 줄의 변환 버튼
+        self.assertEqual((res.context["ready_ids"], res.context["ready_count"]), (str(self.pl.pk), 1))  # 전체 변환
+        self.assertNotContains(res, f'data-href="{self.a.get_absolute_url()}')
+        panel = self.client.get(reverse("site_templates:panel"), {"p": f"tistory:{self.a.pk}", "next": "/blog/posts/view/?stage=post"})
+        self.assertContains(panel, "원문")
+        self.assertContains(panel, "아직 변환본이 없습니다")  # 변환 전이면 변환본은 비어 있다
+        self.assertContains(panel, f'id="st-request-{self.pl.pk}"')
+        self.assertContains(panel, '<input type="hidden" name="next" value="/blog/posts/view/?stage=post">', html=False)
+        empty = self.client.get(reverse("site_templates:panel"), {"p": f"naver:{self.b.pk}"})
+        self.assertContains(empty, "아직 카테고리에 넣지 않았습니다")
+        # 검토글: 카테고리에 넣고 변환할 수 있다
+        r = self.T.objects.create(title="검토 중 글", stage="review", target="memorily")
+        back = reverse("posts:view") + f"?stage=review&p=tistory:{r.pk}"
+        self.client.post(reverse("blog_types:place_add"), {"post": f"tistory:{r.pk}", "site_category": self.java.pk, "next": back})
+        rpl = Placement.objects.get(tistory_post=r)
+        res = self.client.get(back)
+        self.assertContains(res, f'data-st-run="{rpl.pk}"')
+        self.assertContains(res, "원문 ↔ 변환본 보기")
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        data = self.client.post(reverse("site_templates:run"), {"ids": str(rpl.pk)}).json()
+        self.assertTrue(data["prompt"].startswith("# 사이트 변환"))
+        # 변환 칸에서 저장하면 그 목록으로 돌아간다
+        res = self.client.post(reverse("site_templates:convert", args=[rpl.pk]), {
+            "action": "save", "converted_title": "t", "converted_body": "b", "convert_note": "", "converted_tags": "",
+            "converted_check": "", "next": back})
+        self.assertRedirects(res, back, fetch_redirect_response=False)

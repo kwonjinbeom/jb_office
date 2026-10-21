@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load trash_tags %}
 
-{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'posts:view' %}?stage={{ pl_stage }}">글 보기</a></div>{% endblock %}
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'posts:view' %}?stage={{ pl_stage }}">글 관리</a></div>{% endblock %}
 
-{% block heading %}글 보기{% endblock %}
+{% block heading %}글 관리{% endblock %}
 
 {% block actions %}
 <span class="inline-form" style="gap:2px">
@@ -49,8 +49,13 @@
     {% if stage == 'review' or stage == 'post' %}
     <div class="wr-info-row"><span class="k">사이트</span>{% include "blog_types/_site_pick.html" with ref=post_ref current=post.target label=post.title %}</div>
     {% endif %}
+    {% if stage == 'review' or stage == 'post' %}
+    {# 카테고리 · 변환 (2026-10-22 사용자): 카테고리에 넣고 변환, 변환본은 아래에 펼쳐 본다 (검토글에서 보고 발행예정으로) #}
+    <div class="wr-info-row"><span class="k">카테고리</span><span class="wr-info-text wr-cv-info">{% for pl in post_placements %}<span class="wr-cv-line"><span class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category }}</span><span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% if pl.convert_status == 'none' or pl.convert_status == 'requested' %}<button type="button" class="btn sm primary" data-st-run="{{ pl.pk }}" data-st-url="{% url 'site_templates:run' %}">{% include "includes/ic.html" with name="server" %}{% if pl.convert_status == 'requested' %}다시 변환{% else %}변환{% endif %}</button>{% endif %}</span>{% empty %}<form method="post" action="{% url 'blog_types:place_add' %}" class="wr-cat-pick">{% csrf_token %}<input type="hidden" name="post" value="{{ post_ref }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <select class="input sm" name="site_category" data-autosubmit aria-label="넣을 사이트 카테고리"><option value="" disabled selected>카테고리 고르기</option>{% for site_name, rows in post_site_groups %}<optgroup label="{{ site_name }}{% if site_name == post.target %} (이 글의 사이트){% endif %}">{% for pk, label in rows %}<option value="{{ pk }}">{{ site_name }} › {{ label }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+    </form>{% endfor %}{% if post_placements %}<button type="button" class="btn sm" data-cv-open="{% url 'site_templates:panel' %}?p={{ post_ref }}&amp;next={{ request.get_full_path|urlencode }}" data-cv-target="#wr-cv-box" aria-expanded="false">원문 ↔ 변환본 보기</button>{% endif %}</span></div>
+    {% endif %}
     {% if stage == 'post' %}
-    <div class="wr-info-row"><span class="k">넣은 곳</span><span class="wr-info-text">{% for pl in post_placements %}<span class="bt-chip">{{ pl.site_category.blog.name }} › {{ pl.site_category }} <a class="badge cv-{{ pl.convert_status }}" href="{% if pl.convert_status == 'none' %}{% url 'site_templates:index' %}?site={{ pl.site_category.sel }}{% else %}{% url 'site_templates:convert' pl.pk %}{% endif %}" title="사이트별 템플릿에서 변환">{{ pl.get_convert_status_display }}</a></span>{% empty %}<a class="small" href="{% url 'blog_types:index' %}?{% if post.target %}psite={{ post.target|urlencode }}&amp;{% endif %}{% if post.bt_category_id %}sel=c{{ post.bt_category_id }}{% else %}sel=u{% endif %}">글 매핑 관리에서 카테고리에 넣기</a>{% endfor %}</span></div>
     <div class="wr-info-row"><span class="k">작성</span>{% include "writing/_status.html" with field="write_status" current=post.write_status choices=write_choices %}</div>
     <div class="wr-info-row"><span class="k">발행</span>{% include "writing/_status.html" with field="publish_status" current=post.publish_status choices=publish_choices %}
       {% if post.published_url %}<a class="btn ghost sm" href="{{ post.published_url }}" target="_blank" rel="noopener">{% include "includes/ic.html" with name="external" %}발행한 글 열기</a>{% elif post.is_published %}<a class="small" href="{% url 'writing:edit' post.pk %}">발행 주소 적기</a>{% endif %}
@@ -64,6 +69,7 @@
     {% endif %}
   </div>
   {% endif %}
+  {% if stage == 'review' or stage == 'post' %}<div id="wr-cv-box" class="wr-cv-box" hidden></div>{% endif %}
 
   <article class="wr-paper" id="wr-paper">
     <header class="wr-post-head">
