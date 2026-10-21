@@ -6,20 +6,19 @@
 {% block heading %}{{ page_title }}{% for label in path %} <span class="cnt">{{ label }}</span>{% endfor %}{% endblock %}
 
 {% block actions %}
-{% if view_mode and stage == 'post' %}<a class="btn" href="{% url 'blog_types:index' %}{% if sel or today %}?{% if sel %}sel={{ sel }}{% endif %}{% if sel and today %}&amp;{% endif %}{% if today %}today=1{% endif %}{% endif %}" title="사이트 카테고리에 넣기 (같은 분류)">카테고리 관리{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}
-{% if stage == 'temp' %}<a class="btn" href="{% url 'writing:import' %}" title="저장소의 원고 폴더(Claude 가 쓴 원고.md)에서 골라 가져오기">{% include "includes/ic.html" with name="download" %}원고 가져오기</a>{% endif %}
+<a class="btn" href="{% url 'blog_types:index' %}{% if sel or today %}?{% if sel %}sel={{ sel }}{% endif %}{% if sel and today %}&amp;{% endif %}{% if today %}today=1{% endif %}{% endif %}" title="사이트 카테고리에 넣기 (같은 분류)">카테고리 관리{% include "includes/ic.html" with name="chevron-right" %}</a>
 <a class="btn primary" href="{% url 'writing:create' %}?stage={{ stage }}">{% include "includes/ic.html" with name="plus" %}새 글</a>
 {% endblock %}
 
 {% block body_class %}fill{% endblock %}
 
 {% block content %}
-<div class="bt-layout{% if stage == 'post' %} bt-layout-1{% endif %}">
-  {% if stage != 'post' %}{% include "blog_types/_class_tree.html" with q=keep tools=False %}{% endif %}{# 발행예정글은 분류 트리 없이 (2026-10-21 사용자) #}
+{# 글 관리 › 발행예정글 목록 (posts._list_page). 임시글·검토글은 한 건씩 보는 글 화면 — 이 목록은 발행예정글만, 분류 트리 없이 (2026-10-21 사용자) #}
+<div class="bt-layout bt-layout-1">
 
   <section class="ph-main">
     <nav class="wr-tabs" aria-label="글 단계">
-      {% for t in tabs %}<a href="{{ tab_base }}?stage={{ t.key }}{% if filter_q %}&amp;{{ filter_q }}{% endif %}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
+      {% for t in tabs %}<a href="{% url 'posts:view' %}?stage={{ t.key }}{% if filter_q %}&amp;{{ filter_q }}{% endif %}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
     </nav>
     <div class="filter-bar">
       <form method="get" class="inline-form">
@@ -27,18 +26,17 @@
         <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용 검색  ( / )"></div>
         <button class="btn sm" type="submit">검색</button>
         <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 보기 (다시 누르면 전체)">{% include "includes/ic.html" with name="calendar" %}오늘</a>
-        {% if stage == 'post' %}<span class="seg" role="group" aria-label="발행 상태">{% for f in pub_filters %}<a href="{{ f.url }}"{% if f.on %} class="on" aria-current="true"{% endif %}>{{ f.label }}</a>{% endfor %}</span>{% endif %}
-        {% if stage == 'post' %}<span class="bar-sep" aria-hidden="true"></span><button type="button" class="btn sm" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_count %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% endif %}>변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>
+        <span class="seg" role="group" aria-label="발행 상태">{% for f in pub_filters %}<a href="{{ f.url }}"{% if f.on %} class="on" aria-current="true"{% endif %}>{{ f.label }}</a>{% endfor %}</span>
+        <span class="bar-sep" aria-hidden="true"></span><button type="button" class="btn sm" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_count %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% endif %}>변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>
         {# 재변환 (2026-10-22 사용자): 체크한 글 하나에 코멘트를 달아 다시 변환 — 지난 변환본을 코멘트대로 고친다 #}
-        <span class="rc-box"><input class="input sm" id="rc-note" type="text" maxlength="2000" placeholder="재변환 코멘트 (체크한 글 하나)" aria-label="재변환 코멘트"><button type="button" class="btn sm" data-reconvert data-url="{% url 'site_templates:reconvert' %}" title="체크한 글 하나를 이 코멘트대로 다시 변환 (PC 터미널 claude)">재변환</button></span>{% endif %}
+        <span class="rc-box"><input class="input sm" id="rc-note" type="text" maxlength="2000" placeholder="재변환 코멘트 (체크한 글 하나)" aria-label="재변환 코멘트"><button type="button" class="btn sm" data-reconvert data-url="{% url 'site_templates:reconvert' %}" title="체크한 글 하나를 이 코멘트대로 다시 변환 (PC 터미널 claude)">재변환</button></span>
         {% if q or sel or today or pub %}<a class="btn ghost sm" href="?stage={{ stage }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
       </form>
       {% if posts %}
       {# 체크한 글에 하는 일 (2026-10-22 사용자): 같은 모양 버튼, 성격별로 | 로 나눈다 — 단계 | 발행 | 삭제 #}
       <span class="wr-bulk">
-        {% if prev_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ prev_to }}">{% if stage == 'review' %}임시글{% else %}검토글{% endif %}</button>{% endif %}
-        {% if next_to %}<button class="btn sm" form="ph-bulk" name="to" value="{{ next_to }}">{% if stage == 'temp' %}검토글{% else %}발행예정글{% endif %}</button>{% endif %}
-        {% if stage == 'post' %}<span class="bar-sep" aria-hidden="true"></span><button class="btn sm" form="ph-bulk" name="publish" value="todo" title="체크한 글과 넣은 곳을 미발행으로">미발행</button><button class="btn sm" form="ph-bulk" name="publish" value="done" title="체크한 글과 넣은 곳(사이트 카테고리)을 발행 완료로">발행 완료</button>{% endif %}
+        <button class="btn sm" form="ph-bulk" name="to" value="review">검토글</button>
+        <span class="bar-sep" aria-hidden="true"></span><button class="btn sm" form="ph-bulk" name="publish" value="todo" title="체크한 글과 넣은 곳을 미발행으로">미발행</button><button class="btn sm" form="ph-bulk" name="publish" value="done" title="체크한 글과 넣은 곳(사이트 카테고리)을 발행 완료로">발행 완료</button>
         <span class="bar-sep" aria-hidden="true"></span>
         <button type="button" class="btn sm danger" data-trash-checked="ids" title="체크한 글을 휴지통으로 (7일 안에 되돌릴 수 있음)">삭제</button>
       </span>
@@ -47,29 +45,16 @@
     <form id="ph-bulk" method="post" action="{% url 'posts:bulk' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 
     <div class="grid-wrap">
-      <table class="grid wrap clickable wr-grid{% if stage == 'post' %} wr-compact{% endif %}" style="min-width:{% if stage == 'post' %}960{% else %}800{% endif %}px">
+      <table class="grid wrap clickable wr-grid wr-compact" style="min-width:960px">
         <thead>
           <tr>
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
             <th>제목</th>
-            {% if stage == 'temp' %}<th style="width:96px">사이트</th><th style="width:32%">내용</th>{% else %}<th style="width:{% if stage == 'post' %}120{% else %}160{% endif %}px">사이트</th>{% endif %}
-            {% if stage == 'post' %}<th style="width:180px">카테고리</th><th style="width:132px">변환</th><th style="width:154px">발행</th><th style="width:112px">만든 날</th>{% endif %}
-            {% if stage != 'post' %}<th style="width:92px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
-            {% if stage != 'post' %}<th style="width:{% if stage == 'review' %}226{% else %}120{% endif %}px"></th>{% endif %}
+            <th style="width:120px">사이트</th><th style="width:180px">카테고리</th><th style="width:132px">변환</th><th style="width:154px">발행</th><th style="width:112px">만든 날</th>
           </tr>
         </thead>
         <tbody>
-          {% if stage == 'post' %}{% for p in posts %}{% include "blog_types/_post_row.html" %}{% empty %}<tr><td colspan="{{ cols }}" class="grid-empty">{% if q or today or pub %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
-          {% else %}
-          {% for g in groups %}
-          <tr class="wr-group"><td colspan="{{ cols }}">{{ g.label }} <span class="cnt">{{ g.posts|length }}</span></td></tr>
-          {% for p in g.posts %}
-          {% include "blog_types/_post_row.html" %}
-          {% endfor %}
-          {% empty %}
-          <tr><td colspan="{{ cols }}" class="grid-empty">{% if q or today %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>
-          {% endfor %}
-          {% endif %}
+          {% for p in posts %}{% include "blog_types/_post_row.html" %}{% empty %}<tr><td colspan="7" class="grid-empty">{% if q or today or pub %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

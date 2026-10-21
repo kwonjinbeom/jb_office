@@ -153,8 +153,6 @@ def load_deploy_state() -> dict | None:
 
 
 def record_deploy(result: dict, reason: str) -> None:
-    import datetime as _dt
-
     invalidate_remote_cache()
     data = {
         "ok": result.get("ok", False),

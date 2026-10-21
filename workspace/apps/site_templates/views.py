@@ -1,18 +1,14 @@
-"""사이트별 템플릿 화면.
+"""사이트별 템플릿 · 변환.
 
-- 메인 (2026-10-17 사용자): 왼쪽은 카테고리 관리처럼 사이트 › 카테고리 › 하위 카테고리 트리. 카테고리마다 컨셉이 있어서
-  고르면 오른쪽 위에서 그 컨셉을 보고 고친다 (사이트를 고르면 사이트 컨셉 · 템플릿 고치기로). 오른쪽 아래는 변환할 글:
-  발행예정글(발행 전) 중 미변환인 글. 카테고리 관리에서 고른 곳(사이트·카테고리)에 넣은 글만 '변환' 버튼이 뜨고,
-  '변환 가능 글 전체 변환'은 그 범위의 미변환을 한꺼번에. 변환은 PC 터미널의 claude 가 한다 (run → jbroutine:convert 링크 →
-  apps/routines/local_run.py). claude 는 변환본을 api_save 주소로 보낸다 (설정의 보고 토큰).
-  그 아래는 변환 요청 · 완료 · 확인한 것 (누르면 변환 화면).
-- 사이트: 컨셉·말투·구성·지킬 것과 플랫폼 붙여넣기 포맷 고치기에만 집중한다.
-- 변환: 원문 ↔ 변환본. 변환 요청 → (Claude 가 변환본을 채움) → 변환 완료 → 확인 완료. 변환본은 그 사이트 에디터에 맞게 복사한다.
+- 사이트별 템플릿 (index, 2026-10-22 사용자): 왼쪽 사이트 › 카테고리 › 하위 트리, 오른쪽은 글쓰기·변환 컨셉과 규칙을 보여 주기만 한다.
+  고치기는 화면에서 하지 않고 사용자가 Claude 에게 따로 부탁한다.
+- 변환은 글 관리(검토글·발행예정글)에서 한다: run · reconvert → jbroutine:convert 링크 → PC 터미널 claude
+  (apps/routines/local_run.py). claude 는 변환본을 api_save 주소로 보낸다 (설정의 보고 토큰).
+- 변환 화면 (convert · post_page · panel): 원문 ↔ 변환본 · 사실 점검 · 붙여넣기 HTML. 변환본은 그 사이트 에디터에 맞게 복사한다.
 - requests.json: 변환 요청인 글의 요청문 (Claude 가 읽는다)
 """
 import hmac
 import re
-from collections import Counter
 from urllib.parse import parse_qsl, quote
 
 import markdown
@@ -62,20 +58,10 @@ def _pick(sel):
     return (kind, obj) if obj else (None, None)
 
 
-def _tree(todo_cats):
-    """왼쪽 트리: 사이트 › 카테고리 › 하위. 숫자는 그 아래 변환할 수 있는 글(미변환 매핑) 수."""
-    counts = Counter(todo_cats)
+def _tree():
+    """왼쪽 트리: 사이트 › 카테고리 › 하위"""
     top = SiteCategory.objects.filter(parent=None).prefetch_related("children")
-    sites = list(Blog.objects.prefetch_related(Prefetch("site_categories", queryset=top, to_attr="top_cats")))
-    for b in sites:
-        b.count = 0
-        for c in b.top_cats:
-            kids = list(c.children.all())
-            for k in kids:
-                k.count = counts[k.pk]
-            c.count = counts[c.pk] + sum(k.count for k in kids)
-            b.count += c.count
-    return sites
+    return list(Blog.objects.prefetch_related(Prefetch("site_categories", queryset=top, to_attr="top_cats")))
 
 
 def index(request):
@@ -95,7 +81,7 @@ def index(request):
         if obj.parent_id:
             path.append((obj.parent.name, f"?site={obj.parent.sel}"))
         path.append((obj.name, f"?site={obj.sel}"))
-    ctx = {"page_title": "사이트별 템플릿", "sites": _tree([]), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
+    ctx = {"page_title": "사이트별 템플릿", "sites": _tree(), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
            "path": path}
     if blog:
         tpl, fmt = prompt.template_for(blog), prompt.format_for(blog.platform)
@@ -378,13 +364,3 @@ def requests_json(request):
         })
     return JsonResponse({"count": len(items), "items": items}, json_dumps_params={"ensure_ascii": False})
 
-
-@require_POST
-def quick_status(request, pk):
-    placement = get_object_or_404(Placement, pk=pk)
-    value = request.POST.get("value")
-    if value in Placement.Convert.values:
-        placement.convert_status = value
-        placement.save(update_fields=["convert_status", "updated_at"])
-    nxt = request.POST.get("next", "")
-    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("site_templates:index"))

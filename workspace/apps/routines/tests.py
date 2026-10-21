@@ -282,7 +282,7 @@ class RepoTests(Login):
         labels = [r["label"] for r in refs]
         for label in ["일일루틴/프롬프트/writing.md", "AGENTS.md", "일일루틴/프롬프트/writing_checklist.md", "일일루틴/프롬프트/writing_sources.md",
                       "일일루틴/분류변경/README.md",
-                      "오늘 쓸 분류", "사이트·체크 (운영 화면)"]:
+                      "오늘 쓸 분류", "사이트·체크 · 템플릿 · 카테고리 컨셉"]:
             self.assertIn(label, labels)
         self.assertNotIn("workspace/TISTORY_WRITER.md", labels)  # 보조는 짧은 체크리스트만 읽는다 (2026-10-19)
         self.assertEqual(labels.count("일일루틴/프롬프트/writing_checklist.md"), 1)  # 짧게 다시 적은 경로는 같은 파일

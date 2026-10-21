@@ -231,7 +231,7 @@ def _standard(day):
     from apps.daily_ideas.standard import request_text
     standard = SearchStandard.objects.order_by("-version").first()
     if standard is None:
-        return "(검색 표준이 아직 없습니다. 일일 아이디어 › 검색 표준에서 먼저 저장하세요.)"
+        return "(검색 표준이 아직 없습니다. 일일루틴 › 프롬프트 관리의 검색 표준에서 먼저 저장하세요.)"
     return request_text(standard, day.isoformat())
 
 
@@ -329,7 +329,7 @@ def _categories_text():
     return "\n".join(lines) or "- (분류 없음)"
 
 
-DATA_TITLES = {"sites": "사이트·체크 (운영 화면)", "existing": "이미 있는 글 (겹치지 않게)", "standard": "검색 표준 (최신판)",
+DATA_TITLES = {"sites": "사이트·체크 · 템플릿 · 카테고리 컨셉", "existing": "이미 있는 글 (겹치지 않게)", "standard": "검색 표준 (최신판)",
                "evaluations": "루틴별 평가·점검 관점", "picks": "오늘 쓸 분류", "categories": "글 분류 전체 (대 > 중 > 소)"}
 
 
