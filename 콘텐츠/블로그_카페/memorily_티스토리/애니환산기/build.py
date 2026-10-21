@@ -1,7 +1,7 @@
 """data/*.json (작품마다 하나) + 환산기.js → 스킨에_붙일것.html.
 
 작품 파일 형식: {"name": "나루토", "last": 700, "vols": [권마다 첫 화], "series": [
-  {"name": "무인편", "eps": [[만화 첫 화, 끝 화, 종류(1 원작 · 2 일부 원작 · 0 오리지널)], ...], "seasons": [기마다 첫 회차] 또는 null}]}
+  {"name": "나루토", "eps": [[만화 첫 화, 끝 화, 종류(1 원작 · 2 일부 원작 · 0 오리지널)], ...], "seasons": [기마다 첫 회차] 또는 null}]}
 파일 이름(naruto)이 글 본문의 [환산기: naruto] 와 맞아야 한다.
 """
 import json
@@ -13,14 +13,13 @@ CSS = """
 .ac-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
 .ac button{border:1px solid #ddd;background:#fff;border-radius:8px;padding:8px 0;font:inherit;color:#777;cursor:pointer}
 .ac button.on{border-color:#333;color:#222;font-weight:700}
-.ac-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.ac-row.ac-3{grid-template-columns:1.4fr 1fr 1fr}
-.ac-row[hidden],.ac select[hidden]{display:none}
+.ac-row{display:grid;grid-template-columns:1.4fr 1fr;gap:6px}
+.ac-row.ac-1{grid-template-columns:1fr}
+.ac-row[hidden]{display:none}
 .ac select,.ac input{width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:8px;padding:8px 10px;font:inherit;background:#fff;color:#222;margin:0}
 .ac-out{margin-top:12px;padding-top:12px;border-top:1px solid #eee;min-height:58px}
 .ac-big{font-size:19px;font-weight:700;color:#222}
-.ac-sub{font-size:14px;color:#888}
-.ac-tag{display:inline-block;margin-left:8px;padding:0 8px;border:1px solid #ccc;border-radius:99px;font-size:12px;font-weight:400;color:#666;vertical-align:3px}
+.ac-sub{font-size:14px;color:#777}
 """.strip()
 
 
