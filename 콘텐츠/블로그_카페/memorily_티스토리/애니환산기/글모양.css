@@ -1,0 +1,22 @@
+/* 환산기가 들어간 글(.ac-post)만 JB Office 글 보기와 같은 모양으로. 스킨 기본(가는 Noto Sans · 문단 간격 0 · 입력칸 회색 작은 글씨)을 덮는다.
+   붙여넣은 표의 인라인 style 과 티스토리 본문 CSS(문단 margin 0 · 소제목 굵기)가 !important 급이라 그 칸은 !important 로 덮는다. */
+.entry-content.ac-post .contents_style{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:16px;line-height:1.85;color:#222;letter-spacing:0}
+.entry-content.ac-post .contents_style p{margin:0 0 18px!important;font-family:inherit;font-size:16px;line-height:1.85;color:#333;letter-spacing:0}
+.entry-content.ac-post .contents_style p b,.entry-content.ac-post .contents_style p strong{font-weight:700;color:#111}
+.entry-content.ac-post .contents_style h2{margin:48px 0 16px!important;font-family:inherit;font-size:22px!important;font-weight:700!important;line-height:1.4;color:#111!important;letter-spacing:-0.2px}
+.entry-content.ac-post .contents_style h3{margin:36px 0 12px!important;font-family:inherit;font-size:18px!important;font-weight:700!important;line-height:1.4;color:#111}
+.entry-content.ac-post .contents_style blockquote{margin:0 0 24px;padding:14px 18px;border-left:4px solid #d1d5db;background:#f9fafb}
+.entry-content.ac-post .contents_style blockquote p{margin:0;color:#374151}
+.entry-content.ac-post .contents_style figure{margin:8px 0 28px}
+.entry-content.ac-post .contents_style .table-wrap{margin:0 0 28px}
+.entry-content.ac-post .contents_style table{width:100%;margin:0 0 28px;border-collapse:collapse;font-family:inherit;font-size:15px;line-height:1.6;color:#333}
+.entry-content.ac-post .contents_style .table-wrap table{margin:0}
+.entry-content.ac-post .contents_style td,.entry-content.ac-post .contents_style th{padding:10px 12px!important;border:1px solid #e5e7eb!important;background:#fff!important;font-size:15px!important;text-align:left!important;vertical-align:middle;word-break:keep-all}
+.entry-content.ac-post .contents_style tr:first-child td,.entry-content.ac-post .contents_style th{background:#f6f7f9!important;font-weight:700;color:#111}
+.entry-content.ac-post .contents_style td:nth-child(2):nth-last-child(2),.entry-content.ac-post .contents_style td:nth-child(3):last-child{width:28%}
+.entry-content.ac-post .contents_style .ac{font-family:inherit}
+.entry-content.ac-post .ac input,.entry-content.ac-post .ac select,.entry-content.ac-post .ac button{height:42px;padding:0 12px;font-family:inherit;font-size:15px;line-height:normal;color:#222;border-radius:8px}
+.entry-content.ac-post .ac button{color:#888}
+.entry-content.ac-post .ac button.on{color:#111}
+.entry-content.ac-post .ac-big{font-size:20px}
+.entry-content.ac-post .ac-sub{font-size:14px;color:#6b7280}

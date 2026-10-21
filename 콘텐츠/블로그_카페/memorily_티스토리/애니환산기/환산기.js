@@ -120,6 +120,8 @@
     ser.onchange = function () { hint(); run(); };
     ep.oninput = num.oninput = run;
     hint(); show(null);
+    var article = box.closest(".entry-content");  // 글모양.css 가 이 글에만 걸리게
+    if (article) article.classList.add("ac-post");
     box.parentNode.replaceChild(root, box);
   }
 
