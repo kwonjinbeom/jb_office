@@ -41,7 +41,7 @@ workspace/
     blog_types/           글 관리(posts: 임시글 → 검토글 → 발행예정글) · 카테고리 관리(글 분류 · 사이트 카테고리에 넣기)
     site_templates/       사이트별 템플릿(컨셉·규칙 보기) · 변환(요청문 · 변환 화면 · 붙여넣기 포맷)
     blog_rules/           사이트(Blog)와 사이트 체크 — 데이터는 여러 앱이 쓴다. 화면은 메뉴에서 뺐다
-    blog_ops/             발행 기록 · RSS — 화면은 메뉴에서 뺐다
+    blog_ops/             모니터링: 사이트 × 요일 발행 수(한 주씩) · RSS 발행 확인(PC 가 읽어 보냄) · 발행 완료 자동 처리
     series/ · anime/      memorily 티스토리 (블로그 자동화 연재 · 애니 총정리)
     content/              블로그·카페 / 영상 콘텐츠 소재 목록
     daily_ideas/          일일 아이디어 (날짜별 JSON) · 검색 표준

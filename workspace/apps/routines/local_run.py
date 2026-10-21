@@ -4,12 +4,15 @@ PC 서버(run.bat)가 꺼져 있어도 된다 (2026-10-16 사용자: "누르면 
 화면은 안내문을 클립보드에 복사한 뒤 링크를 연다. 링크는 run.bat / routine_link.bat 이 Windows 에 한 번 등록한다.
 claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
-링크: jbroutine:<run|update|all|convert>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
+링크: jbroutine:<run|update|all|convert|feeds>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
 convert: 글 관리의 '변환'·'전체 변환'·'재변환'. 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
 루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
+feeds: 모니터링의 '발행 확인' (2026-10-22 사용자). claude 없이 PC 가 사이트마다 RSS 를 읽어 서버로 보낸다 (check_feeds).
+서버(PythonAnywhere 무료)는 티스토리·네이버에 못 나가서다. '전체 실행' 안내문에도 같은 것이 숨어 있어(FEEDS_MARK) 매일 같이 한다.
 """
 import base64
 import json
+import urllib.request
 import os
 import re
 import shutil
@@ -26,10 +29,12 @@ from .models import Routine, RoutineRun
 
 WINDOWS = os.name == "nt"
 SCHEME = "jbroutine"
-KINDS = ("run", "update", "all", "convert")
+KINDS = ("run", "update", "all", "convert", "feeds")
 KEY = re.compile(r"[a-z0-9_-]{1,30}")
 PROMPT_HEAD = "# 일일루틴"  # launcher · all_prompt · restore_prompt 가 모두 이렇게 시작한다
 CONVERT_HEAD = "# 사이트 변환"  # apps/site_templates/prompt.LAUNCH_HEAD
+FEEDS_HEAD = "# 발행 확인"  # apps/blog_ops/views.CHECK_HEAD
+FEEDS_MARK = re.compile(r"^<!-- 발행 확인 (\{.*\}) -->$", re.M)  # 전체 실행 안내문에 숨긴 발행 확인 (routines.views.index)
 
 # 로컬 실행 claude 에 미리 허용하는 것: 루틴이 늘 하는 일 (저장소 안 읽기·쓰기, 웹 검색, 브라우저, git 올리기, 진행 보고).
 # 묻는 건 권한이 없어 막힐 때만 (2026-10-16 사용자). 방법·선택을 묻는 질문 도구와 크롬 확장(사이트마다 허락을 묻는다)은 막는다.
@@ -268,11 +273,35 @@ def open_chain(steps, title, claude="claude"):
     return ""
 
 
+def check_feeds(payload):
+    """PC 에서 사이트마다 RSS 를 읽어 서버(payload['api'])로 보낸다. 서버가 남긴 결과를 한 줄씩 돌려준다."""
+    from apps.blog_ops import feeds
+    results = []
+    for f in payload.get("feeds") or []:
+        ok, message, items = feeds.read(f.get("url", ""), where="PC")
+        results.append({"blog": f.get("blog"), "ok": ok, "message": message,
+                        "items": [[t, u, w.isoformat()] for t, u, w in items]})
+    body = json.dumps({"token": payload.get("token", ""), "results": results}, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(payload["api"], data=body, headers={"Content-Type": "application/json; charset=utf-8"})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        out = json.loads(res.read().decode("utf-8"))
+    return "\n".join(f"- {r['blog']}: {r['message']}" for r in out.get("results", [])) or "- (운영 중인 사이트 없음)"
+
+
+def _feeds_in(text):
+    m = FEEDS_MARK.search(text)
+    return json.loads(m.group(1)) if m else None
+
+
 def start(link, text):
     """링크와 안내문으로 실행을 시작한다: 안내문 저장 → 로컬 현황 기록 → claude 터미널. 알릴 한 줄을 돌려준다."""
     req = parse_link(link)
     text = text.replace("\r\n", "\n")
     kind, key, day = req["kind"], req["key"], req["day"]
+    if kind == "feeds":
+        if not text.startswith(FEEDS_HEAD):
+            raise ValueError("클립보드에 발행 확인 안내가 없습니다. 모니터링에서 '발행 확인'을 다시 누르세요.")
+        return "발행 확인을 마쳤습니다. 모니터링 화면이 곧 새로고침됩니다.\n" + check_feeds(json.loads(text[len(FEEDS_HEAD):].strip()))
     if kind == "convert":
         if not text.startswith(CONVERT_HEAD):
             raise ValueError("클립보드에 사이트 변환 안내문이 없습니다. 글 관리에서 '변환'을 다시 누르세요.")
@@ -296,8 +325,15 @@ def start(link, text):
             (folder / name).write_text(body + DONE_TAIL.format(name=name), encoding="utf-8")
             steps.append((name, f"일일루틴 {i}/{len(parts)} {routine.name}"))
         manual = open_chain(steps, "일일루틴 전체 실행 (차례 창)", claude)
-        return (f"저장소 폴더에서 차례로 실행하세요: {manual}" if manual else
+        said = (f"저장소 폴더에서 차례로 실행하세요: {manual}" if manual else
                 f"PC 에서 전체 실행을 시작했습니다 ({len(parts)}개 루틴, 루틴마다 새 터미널로 차례로).")
+        payload = _feeds_in(text)
+        if payload:  # 루틴 창이 열린 뒤 발행 확인도 (실패해도 전체 실행은 그대로)
+            try:
+                said += "\n발행 확인:\n" + check_feeds(payload)
+            except Exception as e:  # noqa: BLE001 — 네트워크·서버 오류는 알리기만
+                said += f"\n발행 확인을 하지 못했습니다: {e}"
+        return said
     else:
         routine = _routine_for(key, req["name"])
         label = "갱신" if kind == "update" else "루틴"

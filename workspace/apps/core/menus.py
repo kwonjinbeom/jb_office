@@ -63,7 +63,7 @@ MENUS: list[Menu] = [
         "blog", "블로그·카페", "카테고리별 소재·템플릿·글과 게시 기록", "blog:list", "file", "#2f6bd8",
         listing=False,  # '블로그·카페 리스트' 중메뉴는 뺐다 (2026-10-16 사용자)
         children=(
-            # 2026-10-22 사용자: 운영 · 모니터링 · (예전) 글 관리는 메뉴에서 뺀다 (주소는 남는다 — 운영은 사이트별 템플릿에서 연결).
+            # 2026-10-22 사용자: 운영 · (예전) 글 관리는 메뉴에서 뺀다 (주소는 남는다). 모니터링은 새로 — 일자별 발행 수 · 발행 완료 자동 처리.
             # 글 보기 → '글 관리', 카테고리 관리 → '카테고리 관리'. 변환은 글 관리(검토글·발행예정글)에서 한다.
             Menu("posts_view", "글 관리", "임시글 → 검토글 → 발행예정글. 카테고리 넣기 · 변환 · 발행까지", "posts:view", "file"),
             Menu("blog_types", "카테고리 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
@@ -73,6 +73,7 @@ MENUS: list[Menu] = [
                 Menu("series", "블로그 자동화", "AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 곳", "series:index", "book"),
                 Menu("anime", "애니 총정리", "애니↔만화 환산기 글을 작품마다 쓰는 곳 (나루토부터)", "anime:index", "book"),
             )),
+            Menu("blog_ops", "모니터링", "사이트마다 일자별로 몇 편 발행했는지 (한 주씩), 발행 완료 자동 처리", "blog_ops:index", "check-list"),
             Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),
         ),
     ),

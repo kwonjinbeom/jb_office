@@ -1,173 +1,181 @@
-"""블로그·카페 › 모니터링: 이번 주 발행 현황(블로그 × 요일), 숫자 네 개, 발행 계획(할 일)."""
-import re
-from datetime import date, timedelta
+"""블로그·카페 › 모니터링 (2026-10-22 사용자: 전처럼 말고 쓸모 있는 것만).
 
-from django import forms
-from django.contrib import messages
-from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect, render
+- 사이트 × 요일 한 주: 그날 발행한 글 수 / 하루 편수. 위 달력 띠는 일일루틴처럼 ← → 로 한 주씩, 날짜를 고르면 그 주.
+  칸을 누르면 아래에 그날(그 사이트) 발행한 글.
+- 센 글: RSS 로 읽은 글 + 글 관리에서 발행 완료한 글(넣은 곳 · 사이트만 정한 글) + 예전 발행 계획. 같은 제목은 한 번만.
+- 발행 확인: 서버는 티스토리·네이버에 못 나가서(feeds 머리말) PC 가 RSS 를 읽어 api_feeds 로 보낸다
+  ('발행 확인' 버튼 → jbroutine:feeds, 일일루틴 '전체 실행' 때도 같이). 읽은 글과 제목이 같은 미발행 글은 발행 완료로 바뀐다.
+"""
+import hmac
+import json
+from datetime import date, datetime, timedelta
+
+from django.contrib.auth.decorators import login_not_required
+from django.db.models import Max
+from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
+from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
 from . import feeds
 from .models import FeedEntry, FeedState, Plan
 
 DAY_NAMES = "월화수목금토일"
+CHECK_HEAD = "# 발행 확인"  # apps/routines/local_run.FEEDS_HEAD
 
 
-class PlanForm(forms.ModelForm):
-    class Meta:
-        model = Plan
-        fields = ["planned_on", "blog", "title", "status", "url", "published_on", "memo"]
-        widgets = {
-            "planned_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "published_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.label_suffix = ""
-        for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "input")
-
-
-def _nav(request):
-    request.nav_key = "blog_ops"
-
-
-def _week_start(request):
+def _day(request):
     try:
-        d = date.fromisoformat(request.GET.get("week", ""))
+        return date.fromisoformat(request.GET.get("date", ""))
     except ValueError:
-        d = timezone.localdate()
-    return d - timedelta(days=d.weekday())
+        return timezone.localdate()
 
 
-def _key(url, title):
-    return url or re.sub(r"\s+", "", title or "")
+def published(blogs, start, end):
+    """(블로그 pk, 날짜) → {제목 key: (제목, 주소)}. RSS 글을 먼저 세고, 글 관리의 발행 완료 · 예전 계획은
+    같은 사이트에 같은 제목의 RSS 글이 없을 때만 (날짜가 하루 어긋나도 두 번 세지 않게)."""
+    from apps.blog_types.models import Placement
+    from apps.naver_writing.models import Post as NaverPost
+    from apps.writing.models import Post
+
+    ids = {b.pk: b for b in blogs}
+    out, seen = {}, set()
+    lo = timezone.make_aware(datetime.combine(start - timedelta(days=1), datetime.min.time()))
+    hi = timezone.make_aware(datetime.combine(end + timedelta(days=2), datetime.min.time()))
+    for e in FeedEntry.objects.filter(blog__in=blogs, published_at__range=(lo, hi)):
+        key = feeds._norm(e.title)
+        seen.add((e.blog_id, key))
+        day = timezone.localtime(e.published_at).date()
+        if start <= day <= end:
+            out.setdefault((e.blog_id, day), {})[key] = (e.title, e.url)
+
+    def add(blog_id, day, title, url=""):
+        key = feeds._norm(title)
+        if day and start <= day <= end and (blog_id, key) not in seen:
+            seen.add((blog_id, key))
+            out.setdefault((blog_id, day), {})[key] = (title, url)
+
+    for pl in (Placement.objects.filter(site_category__blog__in=blogs, status=Placement.Status.PUBLISHED)
+               .select_related("site_category", "tistory_post", "naver_post")):
+        post = pl.post
+        if post is not None:
+            add(pl.site_category.blog_id, post.published_on, pl.converted_title or post.title)
+    names = {b.name: b.pk for b in blogs}
+    for model in (Post, NaverPost):
+        for post in model.objects.filter(publish_status=model.Publish.DONE, published_on__range=(start, end),
+                                         target__in=names, placements__isnull=True):
+            add(names[post.target], post.published_on, post.title)
+    for p in Plan.objects.filter(blog__in=blogs, status=Plan.Status.PUBLISHED, published_on__range=(start, end)):
+        add(p.blog_id, p.published_on, p.title, p.url)
+    return {k: v for k, v in out.items() if k[0] in ids}
 
 
 def published_keys(blogs, start, end):
-    """(블로그 pk, 날짜) → 발행 글 key 집합. 계획의 '발행' 기록과 RSS 기록을 합치고 같은 글은 한 번만 센다."""
-    out = {}
-    for p in Plan.objects.filter(blog__in=blogs, status=Plan.Status.PUBLISHED, published_on__range=(start, end)):
-        out.setdefault((p.blog_id, p.published_on), set()).add(_key(p.url, p.title))
-    for e in FeedEntry.objects.filter(blog__in=blogs):
-        day = timezone.localtime(e.published_at).date()
-        if start <= day <= end:
-            keys = out.setdefault((e.blog_id, day), set())
-            if _key("", e.title) not in keys:  # 계획에 주소 없이 제목만 있던 글과 겹치지 않게
-                keys.add(_key(e.url, e.title))
-    return out
+    """(블로그 pk, 날짜) → 발행 글 key 집합 (운영 화면 apps.blog_rules 가 쓴다)."""
+    return {k: set(v) for k, v in published(blogs, start, end).items()}
 
 
 def index(request):
-    _nav(request)
+    request.nav_key = "blog_ops"
     today = timezone.localdate()
-    start = _week_start(request)
+    sel = _day(request)
+    start = sel - timedelta(days=sel.weekday())
     days = [start + timedelta(days=i) for i in range(7)]
     blogs = list(Blog.objects.filter(status=Blog.Status.ACTIVE))
-    done = published_keys(blogs, start, days[-1])
+    done = published(blogs, start, days[-1])
+    try:
+        site = int(request.GET.get("site", ""))
+    except ValueError:
+        site = None
     rows = []
     for b in blogs:
-        cells = [{"day": d, "count": len(done.get((b.pk, d), ())), "target": b.daily,
-                  "future": d > today, "today": d == today} for d in days]
+        cells = [{"day": d, "count": len(done.get((b.pk, d), ())), "target": b.daily, "future": d > today,
+                  "today": d == today, "on": d == sel and site == b.pk} for d in days]
         rows.append({"blog": b, "cells": cells, "sum": sum(c["count"] for c in cells), "target": b.daily * 7})
-    today_target = sum(b.daily for b in blogs)
-    today_done = sum(len(done.get((b.pk, today), ())) for b in blogs) if start <= today <= days[-1] else None
-    open_plans = Plan.objects.exclude(status=Plan.Status.PUBLISHED)
-    plans = Plan.objects.select_related("blog").filter(
-        Q(planned_on__range=(start, days[-1])) | Q(planned_on__lt=start, status__in=[
-            Plan.Status.DRAFT, Plan.Status.EDIT, Plan.Status.SCHEDULED]))
+    totals = [sum(r["cells"][i]["count"] for r in rows) for i in range(7)]
+    strip = [{"day": d, "name": DAY_NAMES[i], "count": totals[i], "on": d == sel, "today": d == today,
+              "future": d > today, "weekend": i >= 5} for i, d in enumerate(days)]
+    picked = sorted(((b, title, url) for b in blogs if site in (None, b.pk)
+                     for title, url in done.get((b.pk, sel), {}).values()), key=lambda x: (x[0].order, x[1]))
     states = {s.blog_id: s for s in FeedState.objects.filter(blog__in=blogs)}
+    for r in rows:
+        r["state"] = states.get(r["blog"].pk)
+    week_no = start.isocalendar()[1]
     return render(request, "blog_ops/index.html", {
         "page_title": "모니터링",
-        "days": [(d, DAY_NAMES[i], d == today) for i, d in enumerate(days)],
-        "rows": rows,
-        "week_label": f"{start:%m.%d} – {days[-1]:%m.%d}",
-        "prev_week": (start - timedelta(days=7)).isoformat(),
-        "next_week": (start + timedelta(days=7)).isoformat(),
+        "sel": sel, "site": site, "start": start, "end": days[-1], "week_no": week_no,
         "is_this_week": start <= today <= days[-1],
-        "tiles": [
-            ("오늘 발행", f"{today_done}/{today_target}" if today_done is not None else "—"),
-            ("이번 주 발행", f"{sum(r['sum'] for r in rows)}/{sum(r['target'] for r in rows)}"),
-            ("예약", open_plans.filter(status=Plan.Status.SCHEDULED).count()),
-            ("손질 대기", open_plans.filter(status__in=[Plan.Status.DRAFT, Plan.Status.EDIT]).count()),
-        ],
-        "plans": plans,
-        "statuses": Plan.Status.choices,
-        "all_blogs": Blog.objects.exclude(status=Blog.Status.HOLD),
-        "today": today,
-        "feeds": [(b, states.get(b.pk)) for b in blogs],
-        "week_qs": "" if start <= today <= days[-1] else f"?week={start.isoformat()}",
+        "prev": (sel - timedelta(days=7)).isoformat(), "next": (sel + timedelta(days=7)).isoformat(),
+        "days": [(d, DAY_NAMES[i], d == today) for i, d in enumerate(days)],
+        "strip": strip, "rows": rows,
+        "week_sum": sum(totals), "week_target": sum(r["target"] for r in rows),
+        "picked": picked, "picked_site": next((b for b in blogs if b.pk == site), None),
+        "checked_at": FeedState.objects.aggregate(m=Max("checked_at"))["m"],
     })
 
 
-def _back(request):
-    nxt = request.POST.get("next", "")
-    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("blog_ops:index"))
+def _token():
+    return AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+
+
+def check_text(request):
+    """PC 가 읽을 것: 보낼 주소(토큰 포함) + 운영 중인 사이트의 RSS 주소. 보고 토큰이 없으면 ""."""
+    token = _token()
+    if not token:
+        return ""
+    sites = [{"blog": b.pk, "name": b.name, "url": feeds.feed_url(b)}
+             for b in Blog.objects.filter(status=Blog.Status.ACTIVE)]
+    payload = {"api": request.build_absolute_uri(reverse("blog_ops:api_feeds")), "token": token, "feeds": sites}
+    return f"{CHECK_HEAD}\n{json.dumps(payload, ensure_ascii=False)}\n"
 
 
 @require_POST
-def plan_add(request):
-    title = " ".join(request.POST.get("title", "").split())[:200]
-    blog = Blog.objects.filter(pk=request.POST.get("blog") or 0).first()
+def check(request):
+    """'발행 확인' 버튼: PC 에 넘길 안내(JSON). 화면이 클립보드에 넣고 jbroutine:feeds 링크를 연다."""
+    text = check_text(request)
+    if not text:
+        return JsonResponse({"error": "보고 토큰이 없습니다. 설정에서 보고 토큰을 만드세요."}, status=400)
+    now = timezone.localtime()
+    return JsonResponse({"prompt": text, "key": f"fd-{now:%H%M%S}", "day": now.date().isoformat()})
+
+
+def status(request):
+    """마지막 확인 시각 (화면이 PC 확인이 끝났는지 볼 때)."""
+    m = FeedState.objects.aggregate(m=Max("checked_at"))["m"]
+    return JsonResponse({"checked_at": m.isoformat() if m else ""})
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def api_feeds(request):
+    """PC 가 읽은 RSS: {"token", "results": [{"blog", "ok", "message", "items": [[제목, 주소, ISO 시각]]}]}."""
     try:
-        planned = date.fromisoformat(request.POST.get("planned_on", ""))
-    except ValueError:
-        planned = timezone.localdate()
-    if not title or blog is None:
-        messages.warning(request, "블로그와 제목을 입력하세요.")
-    else:
-        Plan.objects.create(blog=blog, title=title, planned_on=planned)
-    return _back(request)
-
-
-@require_POST
-def plan_status(request, pk):
-    plan = get_object_or_404(Plan, pk=pk)
-    value = request.POST.get("status", "")
-    if value in Plan.Status.values:
-        plan.status = value
-        if value == Plan.Status.PUBLISHED and not plan.published_on:
-            plan.published_on = timezone.localdate()
-        plan.save()
-    return _back(request)
-
-
-def plan_edit(request, pk):
-    _nav(request)
-    plan = get_object_or_404(Plan, pk=pk)
-    form = PlanForm(request.POST or None, instance=plan)
-    if request.method == "POST" and form.is_valid():
-        saved = form.save(commit=False)
-        if saved.status == Plan.Status.PUBLISHED and not saved.published_on:
-            saved.published_on = timezone.localdate()
-        saved.save()
-        messages.success(request, "저장했습니다.")
-        return redirect("blog_ops:index")
-    return render(request, "blog_ops/form.html", {"page_title": "발행 계획 수정", "form": form, "plan": plan})
-
-
-def plan_delete(request, pk):
-    _nav(request)
-    plan = get_object_or_404(Plan, pk=pk)
-    if request.method == "POST":
-        plan.delete()  # 휴지통으로
-        messages.success(request, "휴지통으로 옮겼습니다.")
-        return redirect("blog_ops:index")
-    return render(request, "blog_ops/confirm_delete.html", {"page_title": "삭제", "plan": plan})
-
-
-@require_POST
-def sync(request):
-    results = [feeds.sync(b) for b in Blog.objects.filter(status=Blog.Status.ACTIVE)]
-    ok = sum(1 for s in results if s.ok)
-    if ok:
-        messages.success(request, f"RSS {ok}곳을 읽었습니다.")
-    if ok < len(results):
-        messages.warning(request, f"RSS {len(results) - ok}곳은 읽지 못했습니다. 아래 RSS 칸을 보세요.")
-    return _back(request)
+        data = json.loads(request.body.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return HttpResponseBadRequest("json")
+    token = _token()
+    if not token or not hmac.compare_digest(str(data.get("token", "")), token):
+        return HttpResponseForbidden("token")
+    blogs = {b.pk: b for b in Blog.objects.all()}
+    out = []
+    for r in data.get("results") or []:
+        blog = blogs.get(r.get("blog"))
+        if blog is None:
+            continue
+        items = []
+        for row in r.get("items") or []:
+            try:
+                title, url, when = str(row[0]).strip(), str(row[1]).strip(), datetime.fromisoformat(row[2])
+            except (TypeError, ValueError, IndexError):
+                continue
+            if title and url.startswith("http"):
+                items.append((title, url, when if when.tzinfo else timezone.make_aware(when)))
+        state = feeds.record(blog, bool(r.get("ok")), str(r.get("message", "")), items, where="PC")
+        out.append({"blog": blog.name, "ok": state.ok, "message": state.message})
+    return JsonResponse({"results": out}, json_dumps_params={"ensure_ascii": False})

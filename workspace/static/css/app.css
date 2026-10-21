@@ -1363,40 +1363,33 @@ a.br-addr:hover { color: var(--accent); }
 .br-edit .ic { width: 14px; height: 14px; }
 @media (max-width: 760px) { .br-tools a { opacity: 1; } }
 
-/* 블로그·카페 > 운영: 숫자 네 칸 + 블로그×요일 표 + 발행 계획 + RSS. 모두 같은 격자 */
+/* 블로그·카페 > 모니터링: 사이트×요일 표(누르면 아래에 그날 글) + 그날 발행한 글 */
 .op-page { display: grid; gap: 14px; }
-.op-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.op-tile { height: 74px; padding: 12px 16px; display: flex; flex-direction: column; justify-content: space-between; }
-.op-tile span { font-size: 12px; color: var(--text-3); }
-.op-tile strong { font-size: 24px; line-height: 1; font-variant-numeric: tabular-nums; }
-.op-week, .op-plans, .op-feeds { table-layout: fixed; width: 100%; }
+.op-week, .op-list { table-layout: fixed; width: 100%; }
 .op-week th.is-today { color: var(--accent); }
-.op-week td { height: 40px; }
-.op-blog { display: flex; align-items: center; gap: 8px; height: 40px; white-space: nowrap; overflow: hidden; }
-.op-cell { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+.op-week td { height: 52px; }
+.op-blog { display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
+.op-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.op-feed { margin-top: 2px; font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-feed.is-bad { color: var(--warn); }
+.op-cell { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); padding: 0 !important; }
+.op-cell a { display: flex; align-items: center; justify-content: center; height: 52px; color: inherit; }
+.op-cell a:hover { background: var(--hover); text-decoration: none; }
 .op-cell small, .op-sum small { color: var(--text-3); font-weight: 400; }
 .op-cell.is-met { color: var(--ok); }
 .op-cell.is-future { color: var(--text-3); font-weight: 400; }
 .op-cell.is-today { background: var(--panel-2); }
+.op-cell.is-on a { box-shadow: inset 0 0 0 2px var(--accent); }
 .op-sum { font-weight: 700; font-variant-numeric: tabular-nums; }
-.op-plans td { height: 38px; }
-.op-title, .op-blogname, .op-url, .op-msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-list td { height: 38px; }
+.op-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .op-title a { color: var(--text); }
 .op-title a:hover { color: var(--accent); }
-.op-plans tr.is-late td:first-child { color: var(--danger); }
-.op-seg { flex-wrap: nowrap; }
-.op-tools { overflow: visible; white-space: nowrap; }
-.op-tools a { color: var(--text-3); display: inline-flex; padding: 3px; border-radius: 4px; }
-.op-tools a:hover { color: var(--accent); background: var(--hover); }
-.op-tools .ic { width: 13px; height: 13px; }
-.op-add { display: grid; grid-template-columns: 150px 160px minmax(0, 1fr); gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
-.op-msg.is-bad { color: var(--danger); }
+.op-total { color: var(--text); font-variant-numeric: tabular-nums; }
+.op-checked { white-space: nowrap; }
 @media (max-width: 900px) {
-  .op-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .op-week, .op-plans, .op-feeds { min-width: 760px; }
+  .op-week { min-width: 760px; }
   .op-page > .card { overflow-x: auto; }
-  .op-add { grid-template-columns: 1fr 1fr; }
-  .op-add input[name=title] { grid-column: span 2; }
 }
 
 /* 달력 띠 칸의 완료/미완료 (운영·일일루틴) */

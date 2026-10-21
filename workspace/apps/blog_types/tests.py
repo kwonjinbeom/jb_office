@@ -442,13 +442,14 @@ class PostHubTests(TestCase):
         self.assertEqual(self.client.get(view, {"stage": "post", "view": "list"}).context["mode_urls"], None)  # 발행예정글은 늘 표
 
     def test_menu_has_view_screen(self):
-        """블로그·카페 메뉴 (2026-10-22 사용자): 운영·모니터링·예전 글 관리는 빼고, 글 보기 → 글 관리 · 글 매핑 관리 → 카테고리 관리"""
+        """블로그·카페 메뉴 (2026-10-22 사용자): 운영·예전 글 관리는 빼고, 글 보기 → 글 관리 · 글 매핑 관리 → 카테고리 관리.
+        모니터링은 새로 (일자별 발행 수 · 발행 완료 자동 처리)"""
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, f'href="{reverse("posts:view")}"')
         nav = [c.title for m in res.context["MENUS"] if m.key == "blog" for c in m.children]
         self.assertEqual(nav[:3], ["글 관리", "카테고리 관리", "사이트별 템플릿"])
         self.assertNotIn("운영", nav)
-        self.assertNotIn("모니터링", nav)
+        self.assertEqual(nav[-2:], ["모니터링", "논의 현황"])
 
     def test_today_filter(self):
         from datetime import timedelta
