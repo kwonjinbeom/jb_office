@@ -203,8 +203,10 @@ def api_save(request, pk):
     body = data.get("body", "").replace("\r\n", "\n").strip()
     if not body:
         return HttpResponseBadRequest("body 가 비었습니다")
-    placement.converted_title = data.get("title", "").strip()[:200]
-    placement.converted_tags = data.get("tags", "").strip()[:500]
+    if "title" in data:  # 안 보낸 칸은 그대로 둔다 (본문만 다시 보낼 때)
+        placement.converted_title = data["title"].strip()[:200]
+    if "tags" in data:
+        placement.converted_tags = data["tags"].strip()[:500]
     if "check" in data:  # 사실 점검 기록 (고친 것 · 미정 · 확인한 출처)
         placement.converted_check = data["check"].replace("\r\n", "\n").strip()
     placement.converted_body = body

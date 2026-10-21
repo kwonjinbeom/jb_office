@@ -164,7 +164,7 @@ class PasteFormatTests(TestCase):
                                         convert_status="done")
 
     def test_guides_come_from_research(self):
-        self.assertTrue(PlatformFormat.objects.get(platform="naver").guide.startswith("붙이는 곳: 본문에 '서식 그대로'"))
+        self.assertTrue(PlatformFormat.objects.get(platform="naver").guide.startswith("서식 그대로 붙인다"))  # 0007 에서 줄였다
         self.assertIn("HTML 보기", PlatformFormat.objects.get(platform="blogger").guide)
 
     def test_naver_paste_gaps_tags_and_check_date(self):
@@ -246,22 +246,26 @@ class PasteFormatTests(TestCase):
         self.assertIn("## 돌려줄 것", res.context["request_text"])
         self.assertIn("블록 에디터", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
 
-    def test_convert_finds_free_photos(self):
-        # 티스토리·네이버 요청문: 무료 사진을 찾아 넣으라는 안내 + 포맷 규칙도 같은 말. 워드프레스는 빼기
+    def test_convert_keeps_original_and_fills_photos(self):
+        # 변환은 원문이 기준 + 사진·그림 자리는 채우거나 지운다 (2026-10-21 사용자). 워드프레스는 사진 찾기 없이 자리만 지운다
         tistory = self.place("memorily")
         request_text = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["request_text"]
-        self.assertIn("## 사진 (변환할 때 찾아 넣기)", request_text)
-        self.assertIn("## 가공이미지 (변환할 때 · 필요한 만큼만)", request_text)  # 직접 만든 그림 (2026-10-21 사용자)
-        self.assertIn("## 글 다듬기", request_text)
-        self.assertIn("가벼운 멘트", request_text)  # 정보성 글만 맨 위 짧은 요약 (2026-10-21 사용자)
-        self.assertIn("Unsplash", PlatformFormat.objects.get(platform="tistory").guide)
+        self.assertIn("## 변환 원칙 (원문이 기준)", request_text)
+        self.assertIn("## 사진·그림 (변환이 끝까지 채운다)", request_text)
+        self.assertIn("맞는 사진이 없으면 그 줄을 지운다", request_text)
+        self.assertNotIn("못 찾았으면 [사진: 설명]", request_text)
+        self.assertNotIn("## 글 다듬기", request_text)  # 원문을 다시 짜게 만들던 규칙
         naver = self.place("black_lukey", "낙서장")
-        self.assertIn("## 사진", self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"])
-        self.assertIn("사진으로 옮겨진다", PlatformFormat.objects.get(platform="naver").guide)
+        naver_text = self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"]
+        self.assertIn("## 사진·그림", naver_text)
+        self.assertNotIn("사진 → 한두 줄 설명을 반복", naver_text)  # 원문을 다시 짜게 만들던 구성 (0007 에서 뺐다)
+        self.assertNotIn("### 구성", naver_text)  # 빈 칸은 늘어놓지 않는다
+        self.assertIn("쇼핑커넥트", naver_text)
+        self.assertEqual(PlatformFormat.objects.get(platform="naver").guide.count("\n"), 3)
         wordpress = self.place("워드프레스")
         wp_text = self.client.get(reverse("site_templates:convert", args=[wordpress.pk])).context["request_text"]
-        self.assertNotIn("## 사진", wp_text)
-        self.assertNotIn("## 가공이미지", wp_text)
+        self.assertNotIn("## 사진·그림", wp_text)
+        self.assertIn("[사진]·📷·[그림] 자리 줄은 변환본에 남기지 않는다", wp_text)
         # 찾아 넣은 사진 + 출처 캡션 → 붙여넣기 HTML 에 실제 이미지와 캡션
         tistory.converted_body = "글\n\n![병원 대기실](https://images.unsplash.com/photo-1?w=1200&q=80)\n*사진: 홍길동 · Unsplash*"
         tistory.save()
