@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 
 import markdown
 
-from apps.writing.render import SUMMARY_STYLES, fix_bold, soft_check_dates, summary_cards
+from apps.writing.render import fix_bold, soft_check_dates
 
 SLOT_STYLE = {
     "photo": "margin:18px 0;padding:14px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;"
@@ -111,7 +111,7 @@ ALIGN_STYLE = re.compile(r"^\s*text-align:\s*(left|center|right|justify)\s*;?\s*
 def _known_styles() -> set[str]:
     """이 도구가 직접 다는 style 만 남긴다. 웹 문서에서 붙여 온 글꼴·색 같은 꾸밈은 버린다."""
     base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
-            "text-align:center;margin:18px 0", *SUMMARY_STYLES}  # 핵심 카드 (writing.render.summary_cards)
+            "text-align:center;margin:18px 0"}
     cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE) for a in ("left", "center", "right")}
     return {s.replace(" ", "") for s in base | cells | {CELL_STYLE, HEAD_STYLE}}
 
@@ -277,7 +277,7 @@ def render_body(text: str) -> str:
     if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
         return soft_check_dates(_decorate(clean_html(text)))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(fix_bold(_mark_lines(summary_cards(text))), extensions=["tables", "sane_lists", "nl2br"]))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 
