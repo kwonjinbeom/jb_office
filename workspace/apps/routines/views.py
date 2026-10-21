@@ -635,9 +635,10 @@ def index(request):
                                                                  RoutineRun.Status.BLOCKED]))[:50])
     from . import topics as topic_mod  # 글쓰기 줄 아래로 펼치는 고정 주제 (커스텀 글쓰기, 최근 4주)
     fixed_topics, _ = topic_mod.rows(request, 4, today)
+    topics_all_prompt = topic_mod.all_prompt_for(request, fixed_topics, run_day)
     return render(request, "routines/index.html", {
         "page_title": "일일루틴",
-        "fixed_topics": fixed_topics, "writing_key": topic_mod.WRITING_KEY,
+        "fixed_topics": fixed_topics, "writing_key": topic_mod.WRITING_KEY, "topics_all_prompt": topics_all_prompt,
         "bar": period.bar(mode, sel, today, state),
         "mode": mode,
         "day": sel,

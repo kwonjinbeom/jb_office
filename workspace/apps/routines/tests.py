@@ -602,7 +602,7 @@ class FixedTopicTests(Login):
         res = self.client.get(reverse("routines:index"))
         self.assertContains(res, 'class="rt-has-sub" data-rt-toggle')
         self.assertContains(res, "공모주 일정 · 해외")
-        self.assertContains(res, "data-rt-sub hidden", count=7)  # 주제 여섯 + 추가 줄
+        self.assertContains(res, "data-rt-sub hidden", count=5)  # 주제 넷 + 추가 줄
         self.assertEqual(len(res.context["fixed_topics"][0].cells), 4)  # 최근 4주
 
     def test_free_writing_box_and_compact_picker(self):
@@ -618,19 +618,32 @@ class FixedTopicTests(Login):
         self.assertContains(res, '<div class="pk-types" hidden>', html=False)
 
     def test_topic_feedback_migration(self):
-        """주제별 피드백 (2026-10-21 사용자): 정책·청약 공고는 서울/경기로 나눠 따로, 공모주는 앞으로 한 달·분기"""
+        """주제별 피드백 (2026-10-21 사용자): 정책·청약 공고는 따로, 서울·경기는 한 글 안에서 나눈다, 공모주는 앞으로 한 달·분기"""
         from .models import FixedTopic
         names = list(FixedTopic.objects.values_list("name", flat=True))
-        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 · 서울", "청년·신혼 정책 · 경기",
-                                 "청약·임대주택 공고 · 서울", "청약·임대주택 공고 · 경기"])
+        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)"])
+        self.assertEqual(FixedTopic.all_objects.filter(deleted_at__isnull=False).count(), 2)  # 경기 주제 둘은 휴지통
         kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
         self.assertIn("앞으로 한 달", kr.note)
         self.assertIn("최대한 많이", kr.note)
-        seoul = FixedTopic.objects.get(name="청약·임대주택 공고 · 서울")
-        self.assertIn("서울만 다룬다 (경기 쪽은 따로 쓴다)", seoul.note)
-        self.assertIn("SH 서울주택도시공사", seoul.note)
-        gg = FixedTopic.objects.get(name="청년·신혼 정책 · 경기")
-        self.assertIn("주택 청약·임대 공고는 다루지 않는다", gg.note)
+        housing = FixedTopic.objects.get(name="청약·임대주택 공고 (서울·경기)")
+        self.assertIn("한 글 안에서 '서울' · '경기' 소제목으로 나눠 쓴다", housing.note)
+        self.assertIn("SH 서울주택도시공사 · GH 경기주택도시공사", housing.note)
+        policy = FixedTopic.objects.get(name="청년·신혼 정책 (서울·경기)")
+        self.assertIn("주택 청약·임대 공고는 다루지 않는다", policy.note)
+        self.assertNotIn("기존 지침", policy.note)
         prompt = self.client.get(reverse("routines:topics")).context["topics"][0].prompt
         self.assertIn("공모주는 앞으로 한 달·분기", prompt)
         self.assertIn("최대한 많이", prompt)
+
+    def test_run_all_topics(self):
+        """전체 실행 (2026-10-21 사용자): 고정 주제 모두를 한 터미널에서 차례로"""
+        res = self.client.get(reverse("routines:topics"))
+        text = res.context["all_prompt"]
+        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가 실행)"))
+        self.assertIn("고정 주제 전체 실행 (커스텀 글쓰기): 아래 4개 주제를 순서대로", text)
+        for n, name in enumerate(["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)"], 1):
+            self.assertIn(f"#### {n}. {name}", text)
+        self.assertContains(res, "전체 실행")
+        res = self.client.get(reverse("routines:index"))
+        self.assertContains(res, "고정 주제 전체 실행")

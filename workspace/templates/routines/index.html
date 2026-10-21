@@ -39,7 +39,7 @@
       </tr>
       {% endfor %}
       <tr class="rt-sub rt-sub-add" data-rt-sub hidden>
-        <td colspan="5"><form method="post" action="{% url 'routines:topic_add' %}" class="tp-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><span class="rt-branch" aria-hidden="true">└</span><input class="input sm" name="name" maxlength="60" placeholder="+ 고정 주제 추가 (이름 입력 후 Enter, 지침은 커스텀 글쓰기에서)" aria-label="새 고정 주제" autocomplete="off"></form></td>
+        <td colspan="5"><form method="post" action="{% url 'routines:topic_add' %}" class="tp-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><span class="rt-branch" aria-hidden="true">└</span><input class="input sm" name="name" maxlength="60" placeholder="+ 고정 주제 추가 (이름 입력 후 Enter, 지침은 커스텀 글쓰기에서)" aria-label="새 고정 주제" autocomplete="off"></form>{% if topics_all_prompt %}<div class="tp-all">{% include "routines/_launch.html" with key="writing" name="커스텀 글쓰기 전체" kind="run" text=topics_all_prompt day=run_day label="고정 주제 전체 실행" %}</div>{% endif %}</td>
       </tr>
       {% endif %}
       {% endfor %}
