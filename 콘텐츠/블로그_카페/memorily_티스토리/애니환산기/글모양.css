@@ -1,22 +1,45 @@
-/* 환산기가 들어간 글(.ac-post)만 JB Office 글 보기와 같은 모양으로. 스킨 기본(가는 Noto Sans · 문단 간격 0 · 입력칸 회색 작은 글씨)을 덮는다.
-   붙여넣은 표의 인라인 style 과 티스토리 본문 CSS(문단 margin 0 · 소제목 굵기)가 !important 급이라 그 칸은 !important 로 덮는다. */
-.entry-content.ac-post .contents_style{font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:16px;line-height:1.85;color:#222;letter-spacing:0}
-.entry-content.ac-post .contents_style p{margin:0 0 18px!important;font-family:inherit;font-size:16px;line-height:1.85;color:#333;letter-spacing:0}
-.entry-content.ac-post .contents_style p b,.entry-content.ac-post .contents_style p strong{font-weight:700;color:#111}
-.entry-content.ac-post .contents_style h2{margin:48px 0 16px!important;font-family:inherit;font-size:22px!important;font-weight:700!important;line-height:1.4;color:#111!important;letter-spacing:-0.2px}
-.entry-content.ac-post .contents_style h3{margin:36px 0 12px!important;font-family:inherit;font-size:18px!important;font-weight:700!important;line-height:1.4;color:#111}
-.entry-content.ac-post .contents_style blockquote{margin:0 0 24px;padding:14px 18px;border-left:4px solid #d1d5db;background:#f9fafb}
-.entry-content.ac-post .contents_style blockquote p{margin:0;color:#374151}
-.entry-content.ac-post .contents_style figure{margin:8px 0 28px}
-.entry-content.ac-post .contents_style .table-wrap{margin:0 0 28px}
-.entry-content.ac-post .contents_style table{width:100%;margin:0 0 28px;border-collapse:collapse;font-family:inherit;font-size:15px;line-height:1.6;color:#333}
-.entry-content.ac-post .contents_style .table-wrap table{margin:0}
-.entry-content.ac-post .contents_style td,.entry-content.ac-post .contents_style th{padding:10px 12px!important;border:1px solid #e5e7eb!important;background:#fff!important;font-size:15px!important;text-align:left!important;vertical-align:middle;word-break:keep-all}
-.entry-content.ac-post .contents_style tr:first-child td,.entry-content.ac-post .contents_style th{background:#f6f7f9!important;font-weight:700;color:#111}
-.entry-content.ac-post .contents_style td:nth-child(2):nth-last-child(2),.entry-content.ac-post .contents_style td:nth-child(3):last-child{width:28%}
-.entry-content.ac-post .contents_style .ac{font-family:inherit}
-.entry-content.ac-post .ac input,.entry-content.ac-post .ac select,.entry-content.ac-post .ac button{height:42px;padding:0 12px;font-family:inherit;font-size:15px;line-height:normal;color:#222;border-radius:8px}
-.entry-content.ac-post .ac button{color:#888}
-.entry-content.ac-post .ac button.on{color:#111}
-.entry-content.ac-post .ac-big{font-size:20px}
-.entry-content.ac-post .ac-sub{font-size:14px;color:#6b7280}
+/* 티스토리 글 본문을 JB Office 글 관리 변환 화면(미리보기)과 같은 모양으로 (2026-10-22 사용자: 글꼴·굵기·크기가 사뭇 다르다).
+   모든 글에 건다 (글모양.js 가 본문 칸 .contents_style 에 jb-post 를 단다). 값은 workspace/static/css/app.css 의
+   .wr-article · .st-flat 과 같게 맞춘다 — 한쪽을 바꾸면 다른 쪽도 바꾼다.
+   스킨(가는 Noto Sans · 문단 간격 0 · 소제목 굵기)과 티스토리 본문 CSS 가 !important 급이라 글자 모양은 !important 로 덮는다.
+   간격: 붙여넣은 글은 블록 사이에 빈 줄(빈 문단)이 있어 문단 여백 0. 빈 줄이 없는 예전 글은 jb-airy 로 빈 줄만큼 띄운다. */
+div.contents_style.jb-post{font-family:"Pretendard Variable",Pretendard,"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo",system-ui,sans-serif!important;font-size:16px!important;line-height:1.9!important;font-weight:400!important;color:#222!important;letter-spacing:-.1px!important;word-break:keep-all;overflow-wrap:anywhere}
+div.contents_style.jb-post :is(p,li,td,th,h2,h3,h4,blockquote,span,strong,b,em,i,a,u,s){font-family:inherit!important;letter-spacing:inherit!important}
+div.contents_style.jb-post p{margin:0!important;line-height:1.9!important;font-weight:400!important;color:#222}
+/* 사진 문단 · 캡션 문단의 인라인 여백 (티스토리는 문단 여백을 !important 로 0 으로 만든다) */
+div.contents_style.jb-post p[style*="margin:18px 0"]{margin:18px 0!important}
+div.contents_style.jb-post p[style*="margin-top:-8px"]{margin-top:-8px!important}
+div.contents_style.jb-post p:not([style]),div.contents_style.jb-post li{font-size:16px!important;color:#222!important}
+div.contents_style.jb-post :is(strong,b){font-weight:700!important;color:#111!important}
+div.contents_style.jb-post a{color:#2f6bd8!important;text-decoration:underline!important;text-underline-offset:3px}
+div.contents_style.jb-post h2{margin:14px 0 10px!important;font-size:22px!important;line-height:1.45!important;font-weight:700!important;color:#111!important;letter-spacing:-.4px!important}
+div.contents_style.jb-post h3{margin:10px 0 8px!important;font-size:18.5px!important;line-height:1.5!important;font-weight:700!important;color:#111!important}
+div.contents_style.jb-post h4{margin:8px 0 6px!important;font-size:16.5px!important;line-height:1.5!important;font-weight:700!important;color:#222!important}
+div.contents_style.jb-post :is(ul,ol){margin:0!important;padding-left:1.5em!important}
+div.contents_style.jb-post ul{list-style:disc!important}
+div.contents_style.jb-post ol{list-style:decimal!important}
+div.contents_style.jb-post li{margin:.35em 0!important;line-height:1.9!important}
+div.contents_style.jb-post li p{margin:0!important}
+div.contents_style.jb-post blockquote{margin:18px 0!important;padding:12px 16px!important;border:0!important;border-left:4px solid #d1d5db!important;background:#f9fafb!important;color:#374151!important;font-size:16px!important;line-height:1.9!important;font-style:normal!important;text-align:left!important}
+div.contents_style.jb-post blockquote::before,div.contents_style.jb-post blockquote::after{content:none!important}
+div.contents_style.jb-post blockquote p,div.contents_style.jb-post blockquote p:not([style]){margin:0!important;font-size:inherit!important;color:inherit!important;text-align:left!important}
+div.contents_style.jb-post table{width:100%!important;margin:0!important;border-collapse:collapse!important;font-size:15px!important}
+div.contents_style.jb-post :is(td,th){padding:8px!important;border:1px solid #d1d5db!important;background:#fff!important;font-size:15px!important;line-height:1.9!important;color:#222!important;vertical-align:middle;word-break:keep-all}
+div.contents_style.jb-post tr:first-child :is(td,th){background:#f3f4f6!important}
+div.contents_style.jb-post :is(td,th) p{margin:0!important;font-size:inherit!important}
+div.contents_style.jb-post hr{height:0!important;margin:28px 0!important;border:0!important;border-top:1px solid #e5e7eb!important;background:none!important}
+div.contents_style.jb-post figure{margin:18px 0!important}
+/* 빈 줄 없이 붙인 예전 글: 문단·블록 아래를 빈 줄 하나(16px × 1.9)만큼 */
+div.contents_style.jb-airy :is(p,ul,ol,table,figure){margin-bottom:30px!important}
+div.contents_style.jb-airy :is(li,td,th,blockquote) p{margin-bottom:0!important}
+div.contents_style.jb-airy h2{margin-top:44px!important}
+div.contents_style.jb-airy h3{margin-top:36px!important}
+/* 환산기가 들어간 글 (환산기.js 가 ac-post 를 단다) */
+div.contents_style.ac-post td:nth-child(2):nth-last-child(2),div.contents_style.ac-post td:nth-child(3):last-child{width:28%}
+div.contents_style.jb-post .ac{font-family:inherit!important;font-size:15px!important;line-height:1.6!important}
+div.contents_style.jb-post .ac p{margin:0!important}
+div.contents_style.jb-post .ac :is(input,select,button){height:42px;padding:0 12px;font-family:inherit!important;font-size:15px!important;line-height:normal!important;color:#222;border-radius:8px}
+div.contents_style.jb-post .ac button{color:#888}
+div.contents_style.jb-post .ac button.on{color:#111}
+div.contents_style.jb-post .ac-big{font-size:20px!important}
+div.contents_style.jb-post .ac-sub{font-size:14px!important;color:#6b7280!important}

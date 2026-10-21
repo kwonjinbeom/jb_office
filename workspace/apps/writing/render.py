@@ -299,3 +299,52 @@ def plain_text(body_html: str, drop_slots: bool = False) -> str:
     body_html = re.sub(r"</(p|h\d|li|tr|blockquote)>", "\n", body_html)
     text = html.unescape(re.sub(r"<[^>]+>", "", body_html))
     return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+
+# 티스토리·블로거에 붙일 HTML (2026-10-22 사용자: 글 안 문단 위아래 간격이 답답하다 · 사진은 가운데 620).
+# 스킨은 문단 margin 을 0 으로 두는 경우가 많아 문단이 붙는다 → 티스토리 편집기가 빈 줄에 쓰는 빈 문단을 맨 바깥 블록 사이에 끼운다.
+# 사진은 가운데 줄에 폭 620 (작은 화면은 max-width 100% 로 줄어든다). 이미 빈 줄이 든 편집기 HTML 에는 끼우지 않는다.
+TISTORY_GAP = '<p data-ke-size="size16">&nbsp;</p>'
+_TOP_BLOCK = re.compile(r"<(p|h[2-4]|ul|ol|table|blockquote|hr|pre|figure)\b", re.I)
+_EMPTY_P = re.compile(r"<p[^>]*>(?:\s|&nbsp;|\xa0|<br\s*/?>)*</p>")
+IMG_WIDTH = 620
+
+
+class _TopBlocks(HTMLParser):
+    """맨 바깥 블록이 시작하는 (줄, 칸, 태그)를 찾는다."""
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.depth, self.starts = 0, []
+
+    def handle_starttag(self, tag, attrs):
+        if self.depth == 0 and _TOP_BLOCK.match(f"<{tag}"):
+            self.starts.append((*self.getpos(), tag))
+        if tag not in ("br", "img", "hr"):
+            self.depth += 1
+
+    def handle_endtag(self, tag):
+        if tag not in ("br", "img", "hr"):
+            self.depth = max(0, self.depth - 1)
+
+
+def tistory_html(body_html: str) -> str:
+    """티스토리·블로거에 붙일 HTML (2026-10-22 사용자: 문단 사이가 답답하다 · 사진은 가운데 620).
+    티스토리 본문은 문단 여백이 0 이라 맨 바깥 블록 사이에 빈 줄 하나를 끼운다. 소제목 바로 뒤에는 끼우지 않아
+    소제목이 아래 글에 붙는다. 이미 빈 줄이 있는 글(사용자가 편집기에서 띄운 글)은 그대로 둔다."""
+    out = re.sub(r"<img (?![^>]*\bwidth=)", f'<img width="{IMG_WIDTH}" ', body_html)
+    if _EMPTY_P.search(out):
+        return out
+    parser = _TopBlocks()
+    parser.feed(out)
+    parser.close()
+    lines = out.split("\n")
+    offsets = [0]
+    for line in lines[:-1]:
+        offsets.append(offsets[-1] + len(line) + 1)
+    starts = parser.starts
+    cuts = [offsets[ln - 1] + col for (ln, col, _), (_, _, before) in zip(starts[1:], starts)  # 첫 블록 앞에는 넣지 않는다
+            if not re.fullmatch(r"h[2-4]", before)]
+    for at in reversed(cuts):
+        out = out[:at] + TISTORY_GAP + out[at:]
+    return out

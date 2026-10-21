@@ -1187,6 +1187,13 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 .st-tag.done { opacity: .45; text-decoration: line-through; }
 /* 변환 화면 네이버 미리보기: 붙여넣을 HTML 그대로, 스마트에디터처럼 margin 없이 (문단 사이는 빈 줄) */
 .st-naver p, .st-naver h2, .st-naver h3, .st-naver h4, .st-naver li { margin: 0 !important; }
+/* 티스토리·블로거 미리보기: 스킨처럼 문단 margin 없이, 사이는 붙여넣을 HTML 의 빈 줄 (2026-10-22) */
+/* 티스토리·블로거 변환본: 붙여넣을 HTML 그대로 (블록 사이 빈 줄, 문단 여백 0). 티스토리 스킨에 넣는 글모양.css 와 같은 값
+   (콘텐츠/블로그_카페/memorily_티스토리/애니환산기/글모양.css — 한쪽을 바꾸면 다른 쪽도 바꾼다) */
+.st-flat p, .st-flat ul, .st-flat ol, .st-flat table { margin: 0; }
+.st-flat h2:not(.st-ptitle) { margin: 14px 0 10px; }
+.st-flat h3 { margin: 10px 0 8px; }
+.st-flat h4 { margin: 8px 0 6px; }
 /* 네이버 미리보기의 인용(맨 위 결론): 네이버가 붙여넣은 인용을 바꾸는 '따옴표' 인용구 모양 그대로 (2026-10-21 사용자: 네이버는 이 서식) */
 .st-naver blockquote { position: relative; border: 0 !important; background: none !important; margin: 18px 0 !important; padding: 36px 32px !important;
   text-align: center !important; color: #555 !important; font-style: italic; font-family: "Nanum Myeongjo", "Noto Serif KR", serif; }
