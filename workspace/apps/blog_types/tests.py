@@ -676,6 +676,8 @@ class SitePublishTests(TestCase):
         self.assertNotContains(res, "data-cv-panel")  # 줄을 눌러 펼치지 않는다
         self.assertContains(res, "data-trash-norow")  # 줄마다 휴지통 없이, 체크하고 위 '삭제'
         self.assertNotContains(res, "체크한 것을")
+        self.assertContains(res, 'id="rc-note"')  # 재변환 코멘트 칸
+        self.assertContains(res, 'data-reconvert data-url="/blog/site-templates/reconvert/"')
         self.assertContains(res, f'data-st-run="{self.pl.pk}"')  # 줄의 변환 버튼
         page = self.client.get(reverse("site_templates:post"), {"p": f"tistory:{self.a.pk}", "back": "/blog/posts/view/?stage=post"})
         self.assertEqual(page.context["ACTIVE_MENU"], "posts_view")

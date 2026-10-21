@@ -31,21 +31,46 @@ class SiteTemplateTests(TestCase):
         self.assertNotContains(res, "변환 가능 글 전체 변환")
         self.assertContains(res, "카테고리 컨셉 0/")  # 사이트마다 요약
         res = self.client.get(reverse("site_templates:index"), {"site": self.memorily.sel})
-        self.assertContains(res, 'name="t-tone"')  # 사이트를 고르면 컨셉·템플릿 고치기
-        self.assertContains(res, 'name="f-guide"')
+        self.assertContains(res, "말투·멘트")  # 사이트를 고르면 컨셉·템플릿 (보기만)
+        self.assertContains(res, "붙여넣기 포맷")
         self.assertContains(res, "Java")  # 카테고리 컨셉 목록
-        self.assertContains(res, reverse("blog_rules:blog_edit", args=[self.memorily.pk]))  # 사이트 정보는 운영 화면
+        self.assertNotContains(res, 'name="t-tone"')  # 고치는 칸 없음
 
     def test_category_concept(self):
+        """카테고리를 고르면 그 컨셉과 같이 적용되는 것 — 보기만 (2026-10-22 사용자: 고치기는 Claude 에게 따로)"""
+        self.java.concept = "자바 기초를 예제 하나로"
+        self.java.save()
         url = reverse("site_templates:index")
-        self.client.post(f"{url}?site={self.java.sel}", {"k-concept": "자바 기초를 예제 하나로"})
-        self.java.refresh_from_db()
-        self.assertEqual(self.java.concept, "자바 기초를 예제 하나로")
         res = self.client.get(url, {"site": self.java.sel})
         self.assertContains(res, "자바 기초를 예제 하나로")
         self.assertContains(res, "같이 적용되는 것")
         self.assertContains(res, "개발자")  # 사이트 말투가 같이 보인다
+        self.assertNotContains(res, "<textarea")  # 고치는 칸 없음
         self.assertIn("## 카테고리 컨셉\n- Java: 자바 기초를 예제 하나로", prompt.build(self.pl))  # 요청문에 카테고리 컨셉
+        res = self.client.get(url, {"site": self.memorily.sel})
+        self.assertNotContains(res, "<textarea")
+        self.assertContains(res, "개발자")
+
+    def test_reconvert_with_comment(self):
+        """재변환 (2026-10-22 사용자): 글 관리에서 체크한 글 하나 + 코멘트. 변환 완료여도 다시, 지난 변환본을 코멘트대로"""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.pl.convert_status, self.pl.converted_title, self.pl.converted_body = "done", "지난 제목", "지난 본문 첫 문단"
+        self.pl.save()
+        url = reverse("site_templates:reconvert")
+        self.assertEqual(self.client.post(url, {"p": f"tistory:{self.post.pk}", "note": ""}).status_code, 400)
+        data = self.client.post(url, {"p": f"tistory:{self.post.pk}", "note": "첫 문단을 더 짧게"}).json()
+        text = data["prompt"]
+        self.assertTrue(text.startswith("# 사이트 변환 (재변환)"))
+        self.assertIn("## 재변환 코멘트 (사용자)\n첫 문단을 더 짧게", text)
+        self.assertIn("## 지난 변환본 (재변환 코멘트대로 고친다)", text)
+        self.assertIn("지난 본문 첫 문단", text)
+        self.assertTrue(data["key"].startswith("rc-"))
+        self.pl.refresh_from_db()
+        self.assertEqual((self.pl.convert_status, self.pl.convert_note), ("requested", ""))  # 코멘트는 이번에만
+        from apps.writing.models import Post as T
+        lone = T.objects.create(title="안 넣은 글", stage="post")
+        self.assertEqual(self.client.post(url, {"p": f"tistory:{lone.pk}", "note": "x"}).status_code, 400)
 
     def test_run_needs_token_then_launches_and_api_saves(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
@@ -94,17 +119,10 @@ class SiteTemplateTests(TestCase):
         self.assertContains(res, '<a href="https://example.com/a?x=1&amp;y=2" target="_blank" rel="noopener">')
         self.assertContains(res, "&lt;아직 발표 없음&gt;")
 
-    def test_site_page_saves_template_and_format(self):
+    def test_old_site_page_redirects(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])
-        back = f'{reverse("site_templates:index")}?site={self.memorily.sel}'
-        res = self.client.post(url, {"part": "template", "c-content": "새 컨셉", "t-tone": "새 말투", "t-structure": "", "t-rules": ""})
-        self.assertRedirects(res, back, fetch_redirect_response=False)  # 사이트별 템플릿에서 그 사이트를 고른 채로
-        self.assertEqual(SiteTemplate.objects.get(blog=self.memorily).tone, "새 말투")
-        self.memorily.refresh_from_db()
-        self.assertEqual(self.memorily.content, "새 컨셉")  # 컨셉도 여기서 (운영 화면과 같은 값)
-        self.client.post(url, {"part": "format", "f-guide": "새 포맷"})
-        self.assertEqual(PlatformFormat.objects.get(platform="tistory").guide, "새 포맷")
-        self.assertRedirects(self.client.get(url), back, fetch_redirect_response=False)
+        self.assertRedirects(self.client.get(url), f'{reverse("site_templates:index")}?site={self.memorily.sel}',
+                             fetch_redirect_response=False)
 
     def test_convert_flow(self):
         url = reverse("site_templates:convert", args=[self.pl.pk])

@@ -33,7 +33,6 @@ from apps.blog_types.models import Placement, SiteCategory
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
 from . import paste, prompt
-from .models import PlatformFormat, SiteTemplate
 
 
 class _Styled(forms.ModelForm):
@@ -44,28 +43,6 @@ class _Styled(forms.ModelForm):
             field.widget.attrs.setdefault("class", "input")
 
 
-class ConceptForm(_Styled):
-    """사이트의 컨셉 한 줄 (운영 화면과 같은 값)"""
-    class Meta:
-        model = Blog
-        fields = ["content"]
-        labels = {"content": "컨셉"}
-
-
-class TemplateForm(_Styled):
-    class Meta:
-        model = SiteTemplate
-        fields = ["tone", "structure", "rules"]
-        widgets = {name: forms.Textarea(attrs={"rows": 5}) for name in fields}
-
-
-class FormatForm(_Styled):
-    class Meta:
-        model = PlatformFormat
-        fields = ["guide"]
-        widgets = {"guide": forms.Textarea(attrs={"rows": 8})}
-
-
 def _nav(request):
     request.nav_key = "site_templates"
 
@@ -73,13 +50,6 @@ def _nav(request):
 def _placements(blog=None):
     qs = Placement.objects.select_related("site_category__blog", "site_category__parent", "tistory_post", "naver_post")
     return qs.filter(site_category__blog=blog) if blog else qs
-
-
-class CategoryConceptForm(_Styled):
-    class Meta:
-        model = SiteCategory
-        fields = ["concept"]
-        widgets = {"concept": forms.Textarea(attrs={"rows": 4})}
 
 
 def _pick(sel):
@@ -109,22 +79,14 @@ def _tree(todo_cats):
 
 
 def index(request):
-    """사이트별 템플릿 (2026-10-22 사용자): 변환은 글 관리로 옮기고, 여기서는 글쓰기·변환 컨셉과 규칙에 집중한다.
-    왼쪽 트리에서 고른 것에 따라 오른쪽이 바뀐다 — 없음: 사이트마다 요약 / 사이트: 컨셉·템플릿·붙여넣기 포맷 고치기 +
-    카테고리 컨셉 목록 / 카테고리: 그 카테고리 컨셉 고치기 + 같이 적용되는 사이트 컨셉·템플릿."""
+    """사이트별 템플릿 (2026-10-22 사용자): 변환은 글 관리로 옮기고, 여기서는 글쓰기·변환 컨셉과 규칙을 보여 주기만 한다
+    (고치기는 화면에서 하지 않고 사용자가 Claude 에게 따로 부탁한다). 왼쪽 트리에서 고른 것에 따라 —
+    없음: 사이트마다 요약 / 사이트: 컨셉·템플릿·붙여넣기 포맷 + 카테고리 컨셉 목록 / 카테고리: 그 컨셉 + 같이 적용되는 것."""
     _nav(request)
     sel = request.GET.get("site", "")
     kind, obj = _pick(sel)
     if obj is None:
         sel = ""
-    here = f"{reverse('site_templates:index')}?site={sel}" if sel else reverse("site_templates:index")
-    concept_form = None
-    if kind == "sitecat":
-        concept_form = CategoryConceptForm(request.POST if request.method == "POST" else None, instance=obj, prefix="k")
-        if request.method == "POST" and concept_form.is_valid():
-            concept_form.save()
-            messages.success(request, f"{obj.blog.name} › {obj} 컨셉을 저장했습니다.")
-            return redirect(here)
     blog = obj if kind == "site" else (obj.blog if kind == "sitecat" else None)
     path = []
     if blog:
@@ -134,14 +96,11 @@ def index(request):
             path.append((obj.parent.name, f"?site={obj.parent.sel}"))
         path.append((obj.name, f"?site={obj.sel}"))
     ctx = {"page_title": "사이트별 템플릿", "sites": _tree([]), "sel": sel, "kind": kind, "obj": obj, "blog": blog,
-           "path": path, "here": here, "concept_form": concept_form}
+           "path": path}
     if blog:
         tpl, fmt = prompt.template_for(blog), prompt.format_for(blog.platform)
         ctx.update(tpl=tpl, fmt=fmt, cats=_cats_of(blog))
-        if kind == "site":
-            ctx.update(site_concept_form=ConceptForm(instance=blog, prefix="c"), tpl_form=TemplateForm(instance=tpl, prefix="t"),
-                       fmt_form=FormatForm(instance=fmt, prefix="f"))
-        else:
+        if kind == "sitecat":
             ctx.update(parent_concept=obj.parent.concept if obj.parent_id else "",
                        kids=list(obj.children.all()) if not obj.parent_id else [])
     else:
@@ -206,6 +165,31 @@ def _form_fields(request):
     return out
 
 
+@require_POST
+def reconvert(request):
+    """재변환 (2026-10-22 사용자): 글 관리에서 체크한 글 하나 + 코멘트. 변환 완료·확인 완료여도 다시 변환 요청으로 바꾸고,
+    지난 변환본을 코멘트대로 고치는 안내문을 돌려준다 (JSON, 화면이 PC 터미널 claude 를 연다). ?p=tistory:3 · note."""
+    from apps.blog_types.posts import _one
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token:
+        return JsonResponse({"error": "설정 화면에서 보고 토큰을 먼저 만드세요. claude 가 변환본을 서버로 보낼 때 씁니다."}, status=400)
+    note = request.POST.get("note", "").strip()[:2000]
+    if not note:
+        return JsonResponse({"error": "무엇을 고칠지 코멘트를 적으세요."}, status=400)
+    post = _one(request.POST.get("p"))
+    if post is None:
+        return JsonResponse({"error": "글을 찾지 못했습니다."}, status=400)
+    pls = list(_placements().filter(**{"naver_post" if post._meta.app_label == "naver_writing" else "tistory_post": post}))
+    if not pls:
+        return JsonResponse({"error": "카테고리에 먼저 넣어야 변환할 수 있어요."}, status=400)
+    for pl in pls:
+        pl.convert_status = Placement.Convert.REQUESTED
+        pl.save(update_fields=["convert_status", "updated_at"])
+    now = timezone.localtime()
+    return JsonResponse({"prompt": prompt.launcher(request, pls, token, redo=note), "key": f"rc-{now:%H%M%S}",
+                         "day": now.date().isoformat(), "count": len(pls)})
+
+
 @csrf_exempt
 @login_not_required
 @require_POST
@@ -231,22 +215,8 @@ def api_save(request, pk):
 
 
 def site(request, pk):
-    _nav(request)
+    """예전 사이트 화면 주소 → 사이트별 템플릿에서 그 사이트를 고른 화면 (2026-10-22: 화면에서는 보기만)."""
     blog = get_object_or_404(Blog, pk=pk)
-    tpl, fmt = prompt.template_for(blog), prompt.format_for(blog.platform)
-    part = request.POST.get("part")
-    concept_form = ConceptForm(request.POST if part == "template" else None, instance=blog, prefix="c")
-    tpl_form = TemplateForm(request.POST if part == "template" else None, instance=tpl, prefix="t")
-    fmt_form = FormatForm(request.POST if part == "format" else None, instance=fmt, prefix="f")
-    if request.method == "POST":
-        forms_ = [concept_form, tpl_form] if part == "template" else [fmt_form]
-        if all(f.is_valid() for f in forms_):
-            for f in forms_:
-                f.save()
-            messages.success(request, "저장했습니다.")
-        else:
-            messages.warning(request, "저장하지 못했습니다. 칸을 확인하세요.")
-    # 사이트 화면은 사이트별 템플릿 메인(그 사이트를 고른 오른쪽)으로 합쳤다 (2026-10-22)
     return redirect(f"{reverse('site_templates:index')}?site={blog.sel}")
 
 

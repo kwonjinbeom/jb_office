@@ -63,10 +63,9 @@
       <div class="bt-path">{% for label, url in path %}{% if not forloop.first %}<span class="sep">›</span>{% endif %}<a href="{{ url }}"{% if forloop.last %} class="cur"{% endif %}>{{ label }}</a>{% endfor %}</div>
       <span class="br-plat">{{ blog.get_platform_display }}</span>
       {% if blog.address %}<a class="muted small" href="{{ blog.address }}" target="_blank" rel="noopener">{{ blog.address|cut:"https://"|cut:"http://" }}</a>{% endif %}
-      <a class="btn sm ghost" style="margin-left:auto" href="{% url 'blog_rules:blog_edit' blog.pk %}" title="주소·계정·상태·체크">사이트 정보 고치기</a>
       {% else %}
       <span class="badge gray">컨셉</span><strong class="bt-pane-title">모든 사이트</strong>
-      <span class="muted small">글쓰기(일일루틴)와 변환(글 관리)이 따르는 사이트·카테고리 컨셉과 규칙. 왼쪽에서 고르면 고칠 수 있어요.</span>
+      <span class="muted small">글쓰기(일일루틴)와 변환(글 관리)이 따르는 사이트·카테고리 컨셉과 규칙. 왼쪽에서 고르면 자세히 보여요.</span>
       {% endif %}
     </div>
 
@@ -86,54 +85,47 @@
     </div>
 
     {% elif kind == 'site' %}
-    {# 사이트: 컨셉·템플릿 (글쓰기·변환 공통) · 플랫폼 붙여넣기 포맷 · 카테고리 컨셉 목록 #}
+    {# 사이트 (2026-10-22 사용자: 고치기는 화면에서 하지 않고 Claude 에게 따로 부탁한다): 컨셉·템플릿·붙여넣기 포맷 · 카테고리 컨셉 — 읽기만 #}
     <div class="st-cols">
       <section class="card">
         <div class="card-head"><h3 class="card-title">컨셉 · 템플릿</h3><span class="hint">글쓰기 안내문과 변환 요청문에 그대로 들어가요</span></div>
-        <form method="post" action="{% url 'site_templates:site' blog.pk %}">{% csrf_token %}<input type="hidden" name="part" value="template">
-          <div class="card-body form-grid">
-            {% for field in site_concept_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
-            {% for field in tpl_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}
-          </div>
-          <div class="form-foot"><span style="margin-left:auto"></span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
-        </form>
+        <dl class="card-body st-dl">
+          <dt>컨셉</dt><dd>{{ blog.content|default:"-"|linebreaksbr }}</dd>
+          <dt>말투·멘트</dt><dd>{{ tpl.tone|default:"-"|linebreaksbr }}</dd>
+          <dt>구성</dt><dd>{{ tpl.structure|default:"-"|linebreaksbr }}</dd>
+          <dt>꼭 지킬 것</dt><dd>{{ tpl.rules|default:"-"|linebreaksbr }}</dd>
+        </dl>
       </section>
       <div class="st-col">
         <section class="card">
-          <div class="card-head"><h3 class="card-title">카테고리 컨셉</h3><span class="hint">누르면 그 카테고리 컨셉을 고쳐요</span></div>
+          <div class="card-head"><h3 class="card-title">카테고리 컨셉</h3><span class="hint">누르면 그 카테고리</span></div>
           <div class="st-catlist">
             {% for c in cats %}
-            <a class="st-cat{% if c.depth %} sub{% endif %}" href="?site={{ c.sel }}"><span class="nm">{{ c.name }}</span><span class="cc{% if not c.concept %} muted{% endif %}">{{ c.concept|default:"컨셉 없음 — 적기"|truncatechars:90 }}</span></a>
+            <a class="st-cat{% if c.depth %} sub{% endif %}" href="?site={{ c.sel }}"><span class="nm">{{ c.name }}</span><span class="cc{% if not c.concept %} muted{% endif %}">{{ c.concept|default:"컨셉 없음"|truncatechars:90 }}</span></a>
             {% empty %}
-            <div class="muted small st-catlist-empty">카테고리가 없습니다. <a href="{% url 'blog_types:index' %}?site={{ blog.sel }}">카테고리 관리</a>에서 추가하세요.</div>
+            <div class="muted small st-catlist-empty">카테고리가 없습니다.</div>
             {% endfor %}
           </div>
         </section>
         <section class="card">
-          <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }} 붙여넣기 포맷</h3><span class="hint">같은 플랫폼 사이트가 함께 써요 · 변환 요청문에 들어가요</span></div>
-          <form method="post" action="{% url 'site_templates:site' blog.pk %}">{% csrf_token %}<input type="hidden" name="part" value="format">
-            <div class="card-body form-grid">{% for field in fmt_form %}{% include "includes/field.html" with field=field cls="span-2" %}{% endfor %}</div>
-            <div class="form-foot"><span style="margin-left:auto"></span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
-          </form>
+          <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }} 붙여넣기 포맷</h3><span class="hint">같은 플랫폼 사이트가 함께 써요</span></div>
+          <div class="card-body st-dl-fmt">{{ fmt.guide|default:"-"|linebreaksbr }}</div>
         </section>
       </div>
     </div>
 
     {% else %}
-    {# 카테고리: 그 카테고리 컨셉 고치기 + 같이 적용되는 사이트 컨셉·템플릿 (읽기) #}
+    {# 카테고리: 그 카테고리 컨셉 + 같이 적용되는 사이트 컨셉·템플릿·포맷 — 읽기만 #}
     <div class="st-cols">
       <section class="card">
         <div class="card-head"><h3 class="card-title">{{ obj.name }} 컨셉</h3><span class="hint">글쓰기·변환 때 사이트 컨셉 다음으로 들어가요</span></div>
-        <form method="post" class="card-body st-concept-form">{% csrf_token %}
-          {{ concept_form.concept }}
-          <div class="st-concept-foot"><span class="muted small">이 카테고리 글의 방향 · 말투 · 구성 · 꼭 넣을 것 / 빼는 것</span><button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
-        </form>
+        <div class="card-body st-concept-read">{% if obj.concept %}{{ obj.concept|linebreaksbr }}{% else %}<span class="muted">컨셉 없음</span>{% endif %}</div>
         {% if kids %}
-        <div class="card-body st-kids"><span class="k">하위 카테고리</span>{% for k in kids %}<a class="st-cat sub" href="?site={{ k.sel }}"><span class="nm">{{ k.name }}</span><span class="cc{% if not k.concept %} muted{% endif %}">{{ k.concept|default:"컨셉 없음 — 적기"|truncatechars:80 }}</span></a>{% endfor %}</div>
+        <div class="card-body st-kids"><span class="k">하위 카테고리</span>{% for k in kids %}<a class="st-cat sub" href="?site={{ k.sel }}"><span class="nm">{{ k.name }}</span><span class="cc{% if not k.concept %} muted{% endif %}">{{ k.concept|default:"컨셉 없음"|truncatechars:80 }}</span></a>{% endfor %}</div>
         {% endif %}
       </section>
       <section class="card st-applies">
-        <div class="card-head"><h3 class="card-title">같이 적용되는 것</h3><a class="hint" href="?site={{ blog.sel }}">{{ blog.name }} 고치기</a></div>
+        <div class="card-head"><h3 class="card-title">같이 적용되는 것</h3><a class="hint" href="?site={{ blog.sel }}">{{ blog.name }}</a></div>
         <dl class="card-body st-dl">
           <dt>사이트 컨셉</dt><dd>{{ blog.content|default:"-"|linebreaksbr }}</dd>
           {% if parent_concept %}<dt>{{ obj.parent.name }} 컨셉</dt><dd>{{ parent_concept|linebreaksbr }}</dd>{% endif %}
