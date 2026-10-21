@@ -2,3 +2,4 @@
 <nav class="wr-tabs" aria-label="글 단계">
   {% for t in pl_tabs %}<a href="{{ t.url }}" {% if t.on %}class="on" aria-current="page"{% endif %}>{{ t.label }}<span class="wr-count">{{ t.count }}</span></a>{% if not forloop.last %}<span class="wr-arrow" aria-hidden="true"><svg class="ic"><use href="#i-chevron-right"/></svg></span>{% endif %}{% endfor %}
 </nav>
+{% include "blog_types/_view_mode.html" %}

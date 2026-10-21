@@ -1,0 +1,5 @@
+{# 임시글·검토글 보기 바꾸기 (2026-10-22 사용자): 한 건씩(기본) · 목록(체크해서 한꺼번에 옮기기·삭제). 컨텍스트: mode_urls (posts._mode_urls) #}
+{% if mode_urls %}<span class="seg" role="group" aria-label="보기">
+  <a href="{{ mode_urls.one }}"{% if mode_urls.on == 'one' %} class="on" aria-current="true"{% endif %} title="글을 한 건씩 보면서 처리">한 건씩</a>
+  <a href="{{ mode_urls.list }}"{% if mode_urls.on == 'list' %} class="on" aria-current="true"{% endif %} title="목록으로 보고 체크해서 한꺼번에 옮기기·삭제">목록</a>
+</span>{% endif %}
