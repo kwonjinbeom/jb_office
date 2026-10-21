@@ -9,6 +9,22 @@ from django.shortcuts import render
 from . import works as W
 
 
+# 숏폼 콘티 표에 보이는 효과음 이름 (static/studio/js/sfx.js 의 FX)
+SFX_LABEL = {"pop": "뿅", "steps": "발소리", "door": "문 열림", "click": "딸깍", "blink": "깜빡", "plug": "플러그",
+             "sad": "슬픈 나팔", "freeze": "얼어붙음", "ice": "툭", "beep": "삑", "micro": "전자레인지", "ding": "띵",
+             "flood": "쏟아짐", "swish": "휙", "shout": "버럭", "shout2": "버럭", "rimshot": "바둠츠",
+             "hum_on": "냉장고 웅웅", "hum_off": "웅웅 끝"}
+
+
+def _sfx(cut):
+    out = []
+    for _, name in cut.get("sfx", []):
+        label = SFX_LABEL.get(name, name)
+        if label not in out:
+            out.append(label)
+    return out
+
+
 def _work(request):
     key = request.GET.get("w")
     work = W.get(key) if key else W.WORKS[0]
@@ -24,7 +40,7 @@ def _page(request, nav_key, template, title, **extra):
     for i, c in enumerate(work["cuts"]):  # 한 줄 자막·시작 초 (목록·콘티 표용)
         rows.append({"i": i, "no": i + 1, "cap": c["cap"].replace("\n", " "),
                      "say": (c.get("hook") or c["cap"]).replace("\n", " "),
-                     "start": round(at, 1), "end": round(at + c["dur"], 1), "cut": c, "tail": work["tail"][i]})
+                     "start": round(at, 1), "end": round(at + c["dur"], 1), "cut": c, "tail": work["tail"][i], "sfx": _sfx(c)})
         at += c["dur"]
     ctx = {"page_title": title, "work": work, "works": W.WORKS, "seconds": W.total_seconds(work), "rows": rows,
            "work_js": {k: work[k] for k in ("key", "series", "title", "cuts")}}

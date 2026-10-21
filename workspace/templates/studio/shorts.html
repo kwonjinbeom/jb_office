@@ -1,2 +1,63 @@
 {% extends "base.html" %}
-{% block content %}<p>준비 중</p>{% endblock %}
+{# 창작콘텐츠 › 숏폼 영상: 9:16 재생 · 효과음 · 배경음 · 내 목소리 녹음 · MP4 저장 (2026-10-22 사용자) #}
+
+{% block breadcrumb %}{% include "studio/_head.html" %}{% endblock %}
+{% block heading %}숏폼 영상 <span class="cnt">{{ seconds }}초</span>{% endblock %}
+
+{% block actions %}
+<div class="seg" role="group" aria-label="마감" data-cc-finish>
+  <button type="button" data-v="paint" class="on">그림판</button>
+  <button type="button" data-v="pencil">연필 손그림</button>
+  <button type="button" data-v="clean">깔끔 일러스트</button>
+</div>
+<button class="btn" type="button" data-cc-rec>{% include "includes/ic.html" with name="mic" %}<span>내 목소리 녹음</span></button>
+<button class="btn primary" type="button" data-cc-export>{% include "includes/ic.html" with name="download" %}<span>MP4 만들기</span></button>
+{% endblock %}
+
+{% block content %}
+<div class="cc-shorts" data-cc-shorts>
+  <section class="cc-player">
+    <div class="cc-phone" data-cc-screen></div>
+    <div class="cc-controls">
+      <button class="btn icon" type="button" data-cc-play aria-label="재생">{% include "includes/ic.html" with name="play" %}</button>
+      <input class="cc-range" type="range" min="0" max="{{ seconds }}" step="0.05" value="0" data-cc-seek aria-label="재생 위치">
+      <span class="cc-time" data-cc-time>0.0 / {{ seconds }}</span>
+    </div>
+    <div class="cc-toggles">
+      <label><input type="checkbox" data-cc-fx checked> 효과음</label>
+      <label><input type="checkbox" data-cc-bgm> 배경음</label>
+      <label><input type="checkbox" data-cc-voice disabled> 내 목소리</label>
+    </div>
+    <div class="cc-prompter" data-cc-prompter></div>
+    <div class="cc-out" data-cc-out hidden></div>
+  </section>
+  <section class="card cc-conti">
+    <div class="card-head"><h2 class="card-title">콘티</h2><span class="hint">줄을 누르면 그 장면부터</span></div>
+    <div class="card-body flush">
+      <table class="grid wrap cc-conti-table">
+        <colgroup><col style="width:44px"><col style="width:86px"><col><col style="width:30%"><col style="width:22%"></colgroup>
+        <thead><tr><th class="c">#</th><th>시간</th><th>자막 · 화면</th><th>녹음 대사</th><th>소리</th></tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr data-cc-row="{{ r.i }}" data-start="{{ r.start }}">
+            <td class="c mid">{{ r.no }}</td>
+            <td class="mid cc-num">{{ r.start }}–{{ r.end }}초</td>
+            <td><b>{{ r.say }}</b><span class="sub cc-wrap">{{ r.cut.screen }}</span></td>
+            <td>{{ r.cut.narr }}</td>
+            <td class="cc-sfx">{{ r.sfx|join:" · " }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% load static %}
+{% include "studio/_scripts.html" %}
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.min.js"></script>
+<script src="{% static 'studio/js/sfx.js' %}?v={{ ASSET_VER }}"></script>
+<script src="{% static 'studio/js/shorts.js' %}?v={{ ASSET_VER }}"></script>
+{% endblock %}
