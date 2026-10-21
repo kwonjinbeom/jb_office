@@ -160,3 +160,10 @@ class NaverFormattingTests(TestCase):
         self.assertIn('font-family:나눔명조', out)
         self.assertIn('font-family:나눔고딕', out)
         self.assertIn('text-align:center', out)
+        # 사이트 변환본은 원문 화면과 가까운 나눔바른고딕 16px (2026-10-21 사용자). 빈 줄도 같은 글꼴, 표 칸은 15px
+        from .render import CONVERT_FONT
+        out = paste_html("<p>가</p><table><tr><td>칸</td></tr></table>", gaps=True, font=CONVERT_FONT)
+        self.assertIn('<p style="font-family:나눔바른고딕;font-size:16px;line-height:1.8;margin:0">가</p>', out)
+        self.assertIn('<p style="font-family:나눔바른고딕;font-size:16px;line-height:1.8;margin:0">&nbsp;</p>', out)
+        self.assertIn('font-family:나눔바른고딕;font-size:15px', out)
+        self.assertNotIn("나눔고딕", out)

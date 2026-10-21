@@ -1013,6 +1013,10 @@ a.badge:hover { text-decoration: none; filter: brightness(.97); }
 @font-face { font-family:"Nanum Gothic"; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumGothic/NanumGothic.woff") format("woff"); font-display:swap; }
 @font-face { font-family:"Nanum Myeongjo"; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumMyeongjo/NanumMyeongjo.woff") format("woff"); font-display:swap; }
 @font-face { font-family:"Nanum Barun Gothic"; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumBarunGothic/NanumBarunGothicWeb.woff") format("woff"); font-display:swap; }
+@font-face { font-family:"Nanum Barun Gothic"; font-weight:700; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumBarunGothic/NanumBarunGothicWebBold.woff") format("woff"); font-display:swap; }
+/* 변환본 붙여넣기 HTML 은 네이버가 알아듣는 한글 이름(font-family:나눔바른고딕)을 싣는다. 미리보기도 그 이름으로 같은 글꼴을 쓴다 */
+@font-face { font-family:"나눔바른고딕"; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumBarunGothic/NanumBarunGothicWeb.woff") format("woff"); font-display:swap; }
+@font-face { font-family:"나눔바른고딕"; font-weight:700; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumBarunGothic/NanumBarunGothicWebBold.woff") format("woff"); font-display:swap; }
 @font-face { font-family:"Nanum Square"; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquare/NanumSquareR.woff") format("woff"); font-display:swap; }
 @font-face { font-family:"MaruBuri"; src:url("https://hangeul.pstatic.net/hangeul_static/webfont/MaruBuri/MaruBuri-Regular.woff2") format("woff2"); font-display:swap; }
 .nv-toolbar { background:#fff; flex:none; z-index:5; border-bottom:1px solid #c6c6c6; color:#555; }
