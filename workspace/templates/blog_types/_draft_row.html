@@ -1,0 +1,9 @@
+{# 글 관리 › 임시글·검토글 목록 한 줄 (posts.html, 목록 보기). 제목을 누르면 한 건씩 보기로 #}
+{% load trash_tags %}
+<tr {% trash_attrs p %} data-trash-norow>
+  <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
+  <td class="title-cell mid"><a href="{{ p.list_url }}" title="{{ p.title }}">{{ p.title }}</a></td>
+  <td class="mid small muted"><div class="bt-cut" title="{{ p.path_label }}">{{ p.path_label }}</div></td>
+  <td class="mid">{% if stage == 'review' %}{% include "blog_types/_site_pick.html" with ref=p.ref current=p.target label=p.title %}{% elif p.target %}<span class="small">{{ p.target }}</span>{% else %}<span class="muted">-</span>{% endif %}</td>
+  <td class="mid small muted num">{% if stage == 'temp' %}{{ p.created_at|date:"m-d H:i" }}{% else %}{{ p.updated_at|date:"m-d H:i" }}{% endif %}</td>
+</tr>

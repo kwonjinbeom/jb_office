@@ -415,6 +415,32 @@ class PostHubTests(TestCase):
         res = self.client.get(view, {"stage": "post", "p": f"tistory:{p1.pk}"})
         self.assertEqual(res.context["post"].title, "발행할 글 하나")
 
+    def test_temp_review_list_mode_bulk(self):
+        """임시글·검토글 (2026-10-22 사용자): 기본은 한 건씩, '목록'으로 바꾸면 체크해서 한꺼번에 옮기기·삭제"""
+        a = self.T.objects.create(title="임시 하나", stage="temp")
+        b = self.N.objects.create(title="임시 둘", stage="temp")
+        view = reverse("posts:view")
+        res = self.client.get(view, {"stage": "temp"})  # 기본: 한 건씩 (글 화면) + 보기 바꾸기
+        self.assertIn("post", res.context)
+        self.assertContains(res, f'href="{view}?stage=temp&amp;view=list"')
+        res = self.client.get(view, {"stage": "temp", "view": "list"})
+        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["임시 둘", "임시 하나"])
+        self.assertContains(res, f'value="tistory:{a.pk}" form="ph-bulk"')
+        self.assertContains(res, f'href="{view}?stage=temp&amp;p=tistory:{a.pk}"')  # 제목은 한 건씩 보기로
+        self.assertContains(res, f'href="{view}?stage=review&amp;view=list"')  # 다른 단계 탭도 목록으로
+        self.assertContains(res, 'name="to" value="review"')
+        self.assertContains(res, 'data-trash-checked="ids"')
+        self.assertNotContains(res, "변환 가능 글 전체 변환")  # 발행예정글 전용 칸은 없다
+        back = f"{view}?stage=temp&view=list"
+        res = self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{a.pk}", f"naver:{b.pk}"], "to": "review", "next": back})
+        self.assertRedirects(res, back, fetch_redirect_response=False)
+        a.refresh_from_db(); b.refresh_from_db()
+        self.assertEqual((a.stage, b.stage), ("review", "review"))
+        res = self.client.get(view, {"stage": "review", "view": "list"})
+        self.assertContains(res, 'name="to" value="temp"')
+        self.assertContains(res, 'name="to" value="post"')
+        self.assertEqual(self.client.get(view, {"stage": "post", "view": "list"}).context["mode_urls"], None)  # 발행예정글은 늘 표
+
     def test_menu_has_view_screen(self):
         """블로그·카페 메뉴 (2026-10-22 사용자): 운영·모니터링·예전 글 관리는 빼고, 글 보기 → 글 관리 · 글 매핑 관리 → 카테고리 관리"""
         res = self.client.get(reverse("posts:view"))

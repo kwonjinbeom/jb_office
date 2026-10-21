@@ -5,7 +5,10 @@
 발행예정글 탭과 그 단계의 글. 트리에서 고르면 그 아래 글만 보인다. 글 보기·쓰기·상태 바꾸기·옮기기는 각 글쓰기 앱의 주소를 그대로 쓴다
 (글은 여전히 writing.Post / naver_writing.Post 두 표에 있다).
 
-주소: ?stage=temp|review|post &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만)
+주소: ?stage=temp|review|post &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만) &view=list(임시글·검토글을 목록으로)
+
+보기 (2026-10-22 사용자): 임시글·검토글은 기본이 한 건씩 보기(글 화면 + 왼쪽 글 목록), '목록'으로 바꾸면 체크해서 한꺼번에
+옮기기·삭제하는 표. 발행예정글은 늘 표.
 
 글을 누르면 글 보기(각 글쓰기 앱의 detail)로 간다. 글 보기 왼쪽에는 분류 트리 대신 같은 조건(단계·분류·검색·오늘)의
 글 목록을 보여 준다 (post_list_for). 조건은 주소에 그대로 실어 보낸다 (2026-10-17 사용자).
@@ -54,13 +57,15 @@ def _params(request, stage=None):
     if kind not in CLASS_KINDS or obj is None:
         sel, kind, obj = "", None, None
     pub = get.get("pub", "") if stage == "post" and get.get("pub") in ("todo", "done") else ""
-    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "pub": pub,
+    view = "list" if stage != "post" and get.get("view") == "list" else ""  # 임시글·검토글 목록 보기
+    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "pub": pub, "view": view,
             "q": get.get("q", "").strip(), "today": get.get("today") == "1"}
 
 
 def _query(p, **override):
     """조건을 주소 뒤에 붙일 문자열로 (빈 값은 뺀다)."""
-    vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "", "pub": p.get("pub", "")}
+    vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "", "pub": p.get("pub", ""),
+            "view": p.get("view", "")}
     vals.update(override)
     return urlencode({k: v for k, v in vals.items() if v})
 
@@ -101,23 +106,35 @@ def _import_new_drafts(request):
         messages.success(request, f"새 원고 {added}편을 임시글으로 가져왔습니다.")
 
 
+def _mode_urls(p):
+    """임시글·검토글의 보기 바꾸기: 한 건씩 · 목록 (조건은 그대로)."""
+    if p["stage"] == "post":
+        return None
+    return {"one": f"{reverse('posts:view')}?{_query(p, view='')}", "list": f"{reverse('posts:view')}?{_query(p, view='list')}",
+            "on": p["view"] or "one"}
+
+
 def _list_page(request, p):
-    """글 관리 › 발행예정글 목록 (분류 트리 없이 표만). 임시글·검토글은 한 건씩 보는 글 화면 (view)."""
-    sel, kind, obj, q, today = p["sel"], p["kind"], p["obj"], p["q"], p["today"]
-    posts, counts = _collect(p, prefetch=True)
-    list_q = _query(p)
-    groups = _site_groups()  # 카테고리 칸에서 바로 넣는다
+    """글 관리 목록 (분류 트리 없이 표만): 발행예정글, 또는 목록 보기로 바꾼 임시글·검토글."""
+    sel, kind, obj, q, today, stage = p["sel"], p["kind"], p["obj"], p["q"], p["today"], p["stage"]
+    posts, counts = _collect(p, prefetch=stage == "post")
+    list_q = _query(p, view="")  # 제목을 누르면 한 건씩 보기로 (같은 조건의 목록과 함께)
+    groups = _site_groups() if stage == "post" else []  # 카테고리 칸에서 바로 넣는다
     for post in posts:
-        post.list_url = _view_url(post, list_q)  # 글 보기 (같은 조건의 목록과 함께)
+        post.list_url = _view_url(post, list_q)
+        post.path_label = classify.label_of(post)
         post.site_groups = sorted(groups, key=lambda g, t=post.target: g[0] != t)  # 그 글의 사이트를 맨 위에
     # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 글 중 넣은 곳이 미변환인 것
     ready = [str(pl.pk) for post in posts for pl in post.placements.all() if pl.convert_status == "none"]
     return render(request, "blog_types/posts.html", {
         "page_title": "글 관리",
         "sel": sel, "q": q, "stage": p["stage"], "today": today,
-        "filter_q": _query(p, stage=""),
         "today_url": "?" + _query(p, today="" if today else "1"),
-        "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"]} for k, label in STAGES],
+        "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == stage,
+                  "url": f"{reverse('posts:view')}?{_query(p, stage=k, pub='', view=p['view'] if k != 'post' else '')}"}
+                 for k, label in STAGES],
+        "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p),
+        "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', pub='')}",
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
         "posts": posts,
         "pub": p["pub"],
@@ -145,6 +162,7 @@ def post_list_for(request, post):
     """글 보기 왼쪽의 글 목록: 단계 탭(임시글·검토글·발행예정글)의 글 + 글 관리에서 넘어온 조건(분류·검색·오늘).
     단계가 주소에 없으면 그 글의 단계. 위·아래 화살표, 옮기기·휴지통 뒤에 갈 글도 이 목록 순서를 따른다 (한 건씩 처리)."""
     p = _params(request, stage=post.stage)
+    p["view"] = ""  # 한 건씩 보기
     posts, counts = _collect(p)
     # 검토글·발행예정글: 넣은 곳 · 변환 (2026-10-22 사용자: 검토글에서도 카테고리 고르고 변환해 보고 발행예정으로)
     placements = (list(post.placements.select_related("site_category__blog", "site_category__parent"))
@@ -175,6 +193,7 @@ def post_list_for(request, post):
         "post_placements": placements,
         "post_site_groups": sorted(_site_groups(), key=lambda g: g[0] != post.target) if post.stage in ("review", "post") else [],
         "post_ref": f"{classify.writer_of(post)}:{post.pk}",
+        "mode_urls": _mode_urls(p),
     }
     if current is not None:  # 목록에 없으면(조건에 안 맞는 글) 화살표는 원래대로 그 편집기의 같은 단계 순서
         i = posts.index(current)
@@ -192,8 +211,8 @@ def view(request):
     request.nav_key = "posts_view"
     _import_new_drafts(request)
     post = _one(request.GET.get("p"))
-    if post is None and request.GET.get("stage") == "post":
-        return _list_page(request, _params(request))  # 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
+    if post is None and (request.GET.get("stage") == "post" or _params(request)["view"] == "list"):
+        return _list_page(request, _params(request))  # 목록 보기 · 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
     if post is None:
         posts, _ = _collect(_params(request))
         post = posts[0] if posts else None
