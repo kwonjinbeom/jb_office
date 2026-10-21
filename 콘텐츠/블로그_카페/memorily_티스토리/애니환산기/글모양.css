@@ -36,10 +36,3 @@ div.contents_style.jb-airy h2{margin-top:44px!important}
 div.contents_style.jb-airy h3{margin-top:36px!important}
 /* 환산기가 들어간 글 (환산기.js 가 ac-post 를 단다) */
 div.contents_style.ac-post td:nth-child(2):nth-last-child(2),div.contents_style.ac-post td:nth-child(3):last-child{width:28%}
-div.contents_style.jb-post .ac{font-family:inherit!important;font-size:15px!important;line-height:1.6!important}
-div.contents_style.jb-post .ac p{margin:0!important}
-div.contents_style.jb-post .ac :is(input,select,button){height:42px;padding:0 12px;font-family:inherit!important;font-size:15px!important;line-height:normal!important;color:#222;border-radius:8px}
-div.contents_style.jb-post .ac button{color:#888}
-div.contents_style.jb-post .ac button.on{color:#111}
-div.contents_style.jb-post .ac-big{font-size:20px!important}
-div.contents_style.jb-post .ac-sub{font-size:14px!important;color:#6b7280!important}
