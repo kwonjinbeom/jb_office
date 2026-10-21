@@ -43,13 +43,13 @@
     <form id="ph-bulk" method="post" action="{% url 'posts:bulk' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 
     <div class="grid-wrap">
-      <table class="grid wrap clickable wr-grid" style="min-width:{% if stage == 'post' %}960{% else %}800{% endif %}px">
+      <table class="grid wrap clickable wr-grid{% if stage == 'post' %} wr-compact{% endif %}" style="min-width:{% if stage == 'post' %}960{% else %}800{% endif %}px">
         <thead>
           <tr>
             <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
             <th>제목</th>
             {% if stage == 'temp' %}<th style="width:96px">사이트</th><th style="width:32%">내용</th>{% else %}<th style="width:{% if stage == 'post' %}120{% else %}160{% endif %}px">사이트</th>{% endif %}
-            {% if stage == 'post' %}<th style="width:150px">넣은 곳</th><th style="width:84px">변환</th><th style="width:154px">발행</th><th style="width:100px">만든 날</th>{% endif %}
+            {% if stage == 'post' %}<th style="width:180px">카테고리</th><th style="width:84px">변환</th><th style="width:154px">발행</th><th style="width:100px">만든 날</th>{% endif %}
             {% if stage != 'post' %}<th style="width:92px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
             <th style="width:{% if stage == 'review' %}226{% elif stage == 'post' %}112{% else %}120{% endif %}px"></th>
           </tr>

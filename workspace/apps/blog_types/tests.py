@@ -549,7 +549,7 @@ class SitePublishTests(TestCase):
         self.assertContains(res, '<option value="눈잎" selected>눈잎</option>', html=False)
         self.assertNotContains(res, "검토 완료")  # 검토 칸 대신 사이트
         res = self.client.get(reverse("posts:index"), {"stage": "post"})
-        for th in ["사이트", "넣은 곳", "변환", "발행"]:
+        for th in ["사이트", "카테고리", "변환", "발행"]:
             self.assertContains(res, f">{th}</th>", html=False)
         self.assertNotContains(res, ">타겟</th>", html=False)
         self.assertContains(res, "memorily › Java")
@@ -651,3 +651,16 @@ class SitePublishTests(TestCase):
         Placement.objects.create(site_category=SiteCategory.objects.get(name="낙서장"), tistory_post=half)
         res = self.client.get(INDEX)
         self.assertEqual([p.title for p in res.context["posts"]], ["한 곳만 변환", "자바 정리", "패딩 고르기"])
+
+    def test_post_grid_category_picker_places_post(self):
+        """글 관리·글 보기 발행예정글 (2026-10-21 사용자): 카테고리 칸에서 바로 사이트 카테고리에 넣는다"""
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertContains(res, "wr-compact")
+        row = next(p for p in res.context["posts"] if p.pk == self.b.pk)
+        self.assertEqual(row.site_groups[0][0], "black_lukey")  # 그 글의 사이트가 위
+        self.assertContains(res, f'<input type="hidden" name="post" value="naver:{self.b.pk}">', html=False)
+        lukey = SiteCategory.objects.get(name="낙서장")
+        back = reverse("posts:view") + "?stage=post"
+        res = self.client.post(reverse("blog_types:place_add"), {"post": f"naver:{self.b.pk}", "site_category": lukey.pk, "next": back})
+        self.assertRedirects(res, back, fetch_redirect_response=False)
+        self.assertTrue(Placement.objects.filter(naver_post=self.b, site_category=lukey).exists())

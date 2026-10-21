@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from . import classify, sites, transfer
-from .views import _find, _open_branches, _path, _placements_qs
+from .views import _find, _open_branches, _path, _placements_qs, _site_groups
 
 STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글")]
 STAGE_KEYS = [k for k, _ in STAGES]
@@ -102,8 +102,10 @@ def _list_page(request, p, view=False):
     stage, sel, kind, obj, q, today = p["stage"], p["sel"], p["kind"], p["obj"], p["q"], p["today"]
     posts, counts = _collect(p, prefetch=stage == "post")
     list_q = _query(p)
+    groups = _site_groups() if stage == "post" else []  # 발행예정글: 카테고리 칸에서 바로 넣는다
     for post in posts:
         post.list_url = _view_url(post, list_q)  # 글 보기 (같은 조건의 목록과 함께)
+        post.site_groups = sorted(groups, key=lambda g, t=post.target: g[0] != t)  # 그 글의 사이트를 맨 위에
 
     path = [label for label, _ in _path(kind, obj)][1:] if kind else []  # 맨 앞 '모든 글'은 빼고
     keep = f"stage={stage}&" + ("today=1&" if today else "")
