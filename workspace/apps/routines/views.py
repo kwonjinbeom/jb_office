@@ -55,12 +55,11 @@ def naver_drafts_dir():
 
 
 def _screen_choices():
-    from apps.core.menus import MENUS
+    from apps.core.menus import walk
     out = []
-    for menu in MENUS:
-        for m in (menu, *menu.children):
-            if m.url_name and not m.query and m.key not in ("routines", "routine_prompts") and (m.url_name, m.title) not in out:
-                out.append((m.url_name, m.title))
+    for m in walk():
+        if m.url_name and not m.query and m.key not in ("routines", "routine_prompts") and (m.url_name, m.title) not in out:
+            out.append((m.url_name, m.title))
     return out
 
 
