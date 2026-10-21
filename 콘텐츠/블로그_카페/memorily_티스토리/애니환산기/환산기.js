@@ -1,9 +1,9 @@
 /* memorily 애니 ↔ 만화 환산기. build.py 가 data/*.json 을 아래 __DATA__ 자리에 넣어 스킨에_붙일것.html 을 만든다.
    글 본문에 [환산기: naruto] 한 줄이 있으면 그 문단을 환산기로 바꾼다. 없으면 아무것도 하지 않는다.
-   회차 한 칸 = [만화 첫 화, 만화 끝 화, 종류]  종류 1 원작 · 2 일부 원작 · 0 오리지널(만화 0) */
+   회차 한 칸 = [만화 첫 화, 만화 끝 화, 종류]  종류 1 원작 · 2 원작 + 애니 장면 · 0 오리지널(만화 0) */
 (function () {
   var DATA = __DATA__;
-  var KIND = { 1: "원작", 2: "일부 원작", 0: "오리지널" };
+  var KIND = { 1: "원작", 2: "원작 + 애니 장면", 0: "오리지널" };
 
   function el(tag, attrs, html) {
     var e = document.createElement(tag);
@@ -58,16 +58,16 @@
 
   function mangaToAnime(work, ch) {
     if (!(ch >= 1 && ch <= work.last)) return { big: "1~" + work.last + "화 사이로 넣어 주세요" };
+    // 그 화를 처음 다룬 회차부터 이어진 회차까지만 (한참 뒤 회상·오리지널 끝에 다시 나오는 장면은 뺀다)
     var hit = [];
-    [1, 2].forEach(function (kind) {  // 원작 회차를 먼저, 없을 때만 일부 원작 회차 (오리지널 끝에 한 장면만 다시 나오는 화 때문)
-      if (hit.length) return;
-      work.series.forEach(function (s) {
-        var first = 0, last = 0;
-        s.eps.forEach(function (e, i) {
-          if (e[2] === kind && e[0] <= ch && ch <= e[1]) { if (!first) first = i + 1; last = i + 1; }
-        });
-        if (first) hit.push({ s: s, a: first, b: last });
+    work.series.forEach(function (s) {
+      var first = 0, last = 0;
+      s.eps.forEach(function (e, i) {
+        if (!e[2] || e[0] > ch || ch > e[1]) return;
+        if (!first) first = last = i + 1;
+        else if (i + 1 - last <= 2) last = i + 1;
       });
+      if (first) hit.push({ s: s, a: first, b: last });
     });
     var vol = volOf(work, ch) + "권";
     if (!hit.length) return { big: "애니에 없는 화", sub: "만화 " + ch + "화 · " + vol };
