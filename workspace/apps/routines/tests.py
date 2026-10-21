@@ -209,7 +209,7 @@ class TempRepoTests(Login):
         self.assertIn("$Host.UI.RawUI.WindowTitle = '일일루틴 글쓰기'", script)
 
     def test_find_claude_falls_back_to_desktop_app(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict("os.environ", {"USERPROFILE": tmp + "/home"}):
             for ver in ["2.1.9", "2.1.295", "2.1.271"]:
                 d = Path(tmp) / "Claude" / "claude-code" / ver / "abc"
                 d.mkdir(parents=True)
@@ -221,6 +221,17 @@ class TempRepoTests(Login):
             (store / "claude.exe").write_text("")
             with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none", "LOCALAPPDATA": tmp}):
                 self.assertIn("2.1.300", find_claude())  # 스토어 앱은 실제 파일이 Packages 아래에 있다
+            data = Path(tmp) / "Claude-Data" / "claude_pzs8" / "claude-code" / "2.1.304" / "aed6"
+            data.mkdir(parents=True)
+            (data / "claude.exe").write_text("")
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none", "LOCALAPPDATA": tmp}):
+                self.assertIn("2.1.304", find_claude())  # 2026-10-21 데스크톱 앱의 새 위치 (Claude-Data)
+            cli = Path(tmp) / "home" / ".local" / "bin"
+            cli.mkdir(parents=True)
+            (cli / "claude.exe").write_text("")
+            with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp, "LOCALAPPDATA": tmp}):
+                self.assertEqual(find_claude(), str(cli / "claude.exe"))  # 공식 CLI 설치 위치가 먼저
+            (cli / "claude.exe").unlink()
             with patch("apps.routines.local_run.shutil.which", return_value=None), patch.dict("os.environ", {"APPDATA": tmp + "/none", "LOCALAPPDATA": tmp + "/none"}):
                 with self.assertRaises(RuntimeError):
                     find_claude()
