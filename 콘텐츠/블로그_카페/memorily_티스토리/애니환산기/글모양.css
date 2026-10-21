@@ -12,10 +12,8 @@ div.contents_style.jb-post p[style*="margin-top:-8px"]{margin-top:-8px!important
 div.contents_style.jb-post p:not([style]),div.contents_style.jb-post li{font-size:16px!important;color:#222!important}
 div.contents_style.jb-post :is(strong,b){font-weight:700!important;color:#111!important}
 div.contents_style.jb-post a{color:#2f6bd8!important;text-decoration:underline!important;text-underline-offset:3px}
-div.contents_style.jb-post h2{margin:56px 0 10px!important;font-size:22px!important;line-height:1.45!important;font-weight:700!important;color:#111!important;letter-spacing:-.4px!important}
-div.contents_style.jb-post h3{margin:24px 0 8px!important;font-size:18.5px!important;line-height:1.5!important;font-weight:700!important;color:#111!important}
-/* 소제목(자주 묻는 것 · 화수 환산기 · 장별 대응 …) 위는 빈 줄 + 56px — 엔터 서너 번 (2026-10-22 사용자: 덩어리 사이가 답답하다) */
-div.contents_style.jb-post > :is(h2,h3):first-child{margin-top:0!important}
+div.contents_style.jb-post h2{margin:14px 0 10px!important;font-size:22px!important;line-height:1.45!important;font-weight:700!important;color:#111!important;letter-spacing:-.4px!important}
+div.contents_style.jb-post h3{margin:10px 0 8px!important;font-size:18.5px!important;line-height:1.5!important;font-weight:700!important;color:#111!important}
 div.contents_style.jb-post h4{margin:8px 0 6px!important;font-size:16.5px!important;line-height:1.5!important;font-weight:700!important;color:#222!important}
 div.contents_style.jb-post :is(ul,ol){margin:0!important;padding-left:1.5em!important}
 div.contents_style.jb-post ul{list-style:disc!important}
@@ -34,7 +32,7 @@ div.contents_style.jb-post figure{margin:18px 0!important}
 /* 빈 줄 없이 붙인 예전 글: 문단·블록 아래를 빈 줄 하나(16px × 1.9)만큼 */
 div.contents_style.jb-airy :is(p,ul,ol,table,figure){margin-bottom:30px!important}
 div.contents_style.jb-airy :is(li,td,th,blockquote) p{margin-bottom:0!important}
-div.contents_style.jb-airy h2{margin-top:86px!important}
-div.contents_style.jb-airy h3{margin-top:54px!important}
+div.contents_style.jb-airy h2{margin-top:44px!important}
+div.contents_style.jb-airy h3{margin-top:36px!important}
 /* 환산기가 들어간 글 (환산기.js 가 ac-post 를 단다) */
 div.contents_style.ac-post td:nth-child(2):nth-last-child(2),div.contents_style.ac-post td:nth-child(3):last-child{width:28%}

@@ -309,6 +309,9 @@ TISTORY_GAP = '<p data-ke-size="size16">&nbsp;</p>'
 _TOP_BLOCK = re.compile(r"<(p|h[2-4]|ul|ol|table|blockquote|hr|pre|figure)\b", re.I)
 _EMPTY_P = re.compile(r"<p[^>]*>(?:\s|&nbsp;|\xa0|<br\s*/?>)*</p>")
 IMG_WIDTH = 620
+# 글 덩어리(## 소제목) 앞은 빈 줄 셋 — 엔터 두 번 더 (2026-10-22 사용자: 자주 묻는 것 · 화수 환산기 · 장별 대응 사이가 답답하다.
+# 스킨이 아니라 글에 넣는다: 스킨은 모든 글에 걸린다). 네이버 붙여넣기도 같은 수 (naver_writing.render).
+SECTION_GAPS = 3
 
 
 class _TopBlocks(HTMLParser):
@@ -330,8 +333,8 @@ class _TopBlocks(HTMLParser):
 
 def tistory_html(body_html: str) -> str:
     """티스토리·블로거에 붙일 HTML (2026-10-22 사용자: 문단 사이가 답답하다 · 사진은 가운데 620).
-    티스토리 본문은 문단 여백이 0 이라 맨 바깥 블록 사이에 빈 줄 하나를 끼운다. 소제목 바로 뒤에는 끼우지 않아
-    소제목이 아래 글에 붙는다. 이미 빈 줄이 있는 글(사용자가 편집기에서 띄운 글)은 그대로 둔다."""
+    티스토리 본문은 문단 여백이 0 이라 맨 바깥 블록 사이에 빈 줄 하나, ## 소제목 앞에는 SECTION_GAPS 줄을 끼운다.
+    소제목 바로 뒤에는 끼우지 않아 소제목이 아래 글에 붙는다. 이미 빈 줄이 있는 글(사용자가 편집기에서 띄운 글)은 그대로 둔다."""
     out = re.sub(r"<img (?![^>]*\bwidth=)", f'<img width="{IMG_WIDTH}" ', body_html)
     if _EMPTY_P.search(out):
         return out
@@ -343,8 +346,8 @@ def tistory_html(body_html: str) -> str:
     for line in lines[:-1]:
         offsets.append(offsets[-1] + len(line) + 1)
     starts = parser.starts
-    cuts = [offsets[ln - 1] + col for (ln, col, _), (_, _, before) in zip(starts[1:], starts)  # 첫 블록 앞에는 넣지 않는다
-            if not re.fullmatch(r"h[2-4]", before)]
-    for at in reversed(cuts):
-        out = out[:at] + TISTORY_GAP + out[at:]
+    cuts = [(offsets[ln - 1] + col, SECTION_GAPS if tag == "h2" else 1)  # 첫 블록 앞에는 넣지 않는다
+            for (ln, col, tag), (_, _, before) in zip(starts[1:], starts) if not re.fullmatch(r"h[2-4]", before)]
+    for at, n in reversed(cuts):
+        out = out[:at] + TISTORY_GAP * n + out[at:]
     return out

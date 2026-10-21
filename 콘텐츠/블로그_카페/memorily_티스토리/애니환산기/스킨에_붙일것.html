@@ -15,10 +15,8 @@
 :is(div.contents_style.jb-post,#jb-x#jb-y) p:not([style]),:is(div.contents_style.jb-post,#jb-x#jb-y) li{font-size:16px!important;color:#222!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) :is(strong,b){font-weight:700!important;color:#111!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) a{color:#2f6bd8!important;text-decoration:underline!important;text-underline-offset:3px}
-:is(div.contents_style.jb-post,#jb-x#jb-y) h2{margin:56px 0 10px!important;font-size:22px!important;line-height:1.45!important;font-weight:700!important;color:#111!important;letter-spacing:-.4px!important}
-:is(div.contents_style.jb-post,#jb-x#jb-y) h3{margin:24px 0 8px!important;font-size:18.5px!important;line-height:1.5!important;font-weight:700!important;color:#111!important}
-/* 소제목(자주 묻는 것 · 화수 환산기 · 장별 대응 …) 위는 빈 줄 + 56px — 엔터 서너 번 (2026-10-22 사용자: 덩어리 사이가 답답하다) */
-:is(div.contents_style.jb-post,#jb-x#jb-y) > :is(h2,h3):first-child{margin-top:0!important}
+:is(div.contents_style.jb-post,#jb-x#jb-y) h2{margin:14px 0 10px!important;font-size:22px!important;line-height:1.45!important;font-weight:700!important;color:#111!important;letter-spacing:-.4px!important}
+:is(div.contents_style.jb-post,#jb-x#jb-y) h3{margin:10px 0 8px!important;font-size:18.5px!important;line-height:1.5!important;font-weight:700!important;color:#111!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) h4{margin:8px 0 6px!important;font-size:16.5px!important;line-height:1.5!important;font-weight:700!important;color:#222!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) :is(ul,ol){margin:0!important;padding-left:1.5em!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) ul{list-style:disc!important}
@@ -37,8 +35,8 @@
 /* 빈 줄 없이 붙인 예전 글: 문단·블록 아래를 빈 줄 하나(16px × 1.9)만큼 */
 :is(div.contents_style.jb-airy,#jb-x#jb-y) :is(p,ul,ol,table,figure){margin-bottom:30px!important}
 :is(div.contents_style.jb-airy,#jb-x#jb-y) :is(li,td,th,blockquote) p{margin-bottom:0!important}
-:is(div.contents_style.jb-airy,#jb-x#jb-y) h2{margin-top:86px!important}
-:is(div.contents_style.jb-airy,#jb-x#jb-y) h3{margin-top:54px!important}
+:is(div.contents_style.jb-airy,#jb-x#jb-y) h2{margin-top:44px!important}
+:is(div.contents_style.jb-airy,#jb-x#jb-y) h3{margin-top:36px!important}
 /* 환산기가 들어간 글 (환산기.js 가 ac-post 를 단다) */
 :is(div.contents_style.ac-post,#jb-x#jb-y) td:nth-child(2):nth-last-child(2),:is(div.contents_style.ac-post,#jb-x#jb-y) td:nth-child(3):last-child{width:28%}
 /* 환산기 화면 (2026-10-22 사용자: 더 깔끔하고 직관적으로). build.py 가 맨 앞 .ac 를 :is(.ac,#jb-x#jb-y) 로 바꿔
