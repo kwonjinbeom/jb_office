@@ -17,7 +17,7 @@ from apps.naver_writing.models import Post as NaverPost
 from apps.writing.models import Post as TistoryPost
 
 from .models import Evaluation, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
-from .local_run import find_claude, parse_link, start
+from .local_run import find_claude, parse_link, pull_latest, start
 from .views import capture_version, launcher, references
 
 INDEX = reverse("routines:index")
@@ -43,6 +43,9 @@ class TempRepoTests(Login):
         paths = override_settings(REPO_ROOT=self.root, BASE_DIR=self.root / "workspace", DAILY_IDEAS_DIR=self.root / "ideas")
         paths.enable()
         self.addCleanup(paths.disable)
+        pull = patch("apps.routines.local_run.pull_latest", return_value=(False, ""))  # 링크 테스트가 진짜 git pull 을 하지 않게
+        pull.start()
+        self.addCleanup(pull.stop)
 
     def row(self, key, **params):
         return next(r for r in self.client.get(INDEX, params).context["routines"] if r.key == key)
@@ -155,6 +158,45 @@ class TempRepoTests(Login):
         self.assertTrue((folder / "convert").is_dir())
         self.assertIn("'workspace/.routine/cv-101530-2026-10-17.md 파일을 읽고 그대로 진행해.'", decoded(popen.call_args[0][0]))
         self.assertFalse(RoutineRun.objects.exists())
+
+    @patch("apps.routines.management.commands.routine_open.subprocess.call", return_value=0)
+    def test_link_pulls_latest_code_first(self, call):
+        """링크를 열면 먼저 git pull --ff-only. 바뀌었으면 새 코드로 다시 부르고, 실패하면 'PC 코드가 최신이 아닙니다'."""
+        link = "jbroutine:convert?key=cv-203437&day=2026-10-21&name=x"
+        with patch("apps.routines.local_run.pull_latest", return_value=(True, "")), \
+                patch("apps.routines.local_run.start") as start_, self.assertRaises(SystemExit) as done:
+            call_command("routine_open", link, "--pause", stdout=StringIO())
+        self.assertEqual(done.exception.code, 0)
+        self.assertEqual(call.call_args[0][0][-4:], ["routine_open", link, "--no-pull", "--pause"])
+        start_.assert_not_called()  # 옛 코드로는 시작하지 않는다
+        err = StringIO()
+        with patch("apps.routines.local_run.pull_latest", return_value=(False, "fatal: Not possible to fast-forward")), \
+                patch("apps.routines.local_run.start", return_value="시작") as start_, patch("apps.routines.local_run.read_clipboard"):
+            call_command("routine_open", link, stdout=StringIO(), stderr=err)
+        self.assertIn("PC 코드가 최신이 아닙니다 (git pull 실패: fatal: Not possible to fast-forward)", err.getvalue())
+        start_.assert_called_once()  # 알리고 지금 코드로 계속
+        with patch("apps.routines.local_run.pull_latest") as pull, patch("apps.routines.local_run.start", return_value="시작"), \
+                patch("apps.routines.local_run.read_clipboard"):
+            call_command("routine_open", link, "--no-pull", stdout=StringIO())
+        pull.assert_not_called()
+
+    def test_pull_latest_reports_change_or_error(self):
+        from subprocess import CompletedProcess
+
+        def git(heads, pull_code=0, pull_err=""):
+            out = iter(heads)
+            return lambda args, **kw: (CompletedProcess(args, pull_code, "", pull_err) if args[1] == "pull"
+                                       else CompletedProcess(args, 0, next(out) + "\n", ""))
+        with patch("apps.routines.local_run.subprocess.run", side_effect=git(["a1", "b2"])) as run:
+            self.assertEqual(pull_latest(), (True, ""))
+        self.assertIn(["git", "pull", "--ff-only", "-q"], [c.args[0] for c in run.call_args_list])
+        self.assertEqual(run.call_args.kwargs["env"]["GIT_TERMINAL_PROMPT"], "0")
+        with patch("apps.routines.local_run.subprocess.run", side_effect=git(["a1", "a1"])):
+            self.assertEqual(pull_latest(), (False, ""))
+        with patch("apps.routines.local_run.subprocess.run", side_effect=git(["a1"], 128, "error: 로컬 변경\nfatal: 중단\n")):
+            self.assertEqual(pull_latest(), (False, "error: 로컬 변경 / fatal: 중단"))
+        with patch("apps.routines.local_run.subprocess.run", side_effect=FileNotFoundError("git 없음")):
+            self.assertEqual(pull_latest(), (False, "git 없음"))
 
     def test_terminal_command_keeps_spaced_paths_and_quotes(self):
         """C:\\Program Files 처럼 띄어쓰기·괄호 든 claude 경로와 ' 가 든 인자도 PowerShell 문자열로 그대로 넘긴다."""

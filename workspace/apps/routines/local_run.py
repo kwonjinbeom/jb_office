@@ -175,6 +175,26 @@ def _manual(name):
             "--settings workspace/.routine/settings.json --mcp-config workspace/.routine/mcp.json")
 
 
+def pull_latest():
+    """링크를 열 때마다 PC 저장소를 main 최신으로 (git pull --ff-only). (바뀌었나, 실패 이유) 를 돌려준다.
+    2026-10-21: PC 폴더가 main 보다 100 커밋 늦어 '사이트 변환' 링크(convert)를 몰라 "실행 링크가 올바르지 않습니다" 로 막혔다."""
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}  # 로그인을 물으며 멈추지 않게
+
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=str(settings.REPO_ROOT), env=env, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace", timeout=60)
+
+    try:
+        before = git("rev-parse", "HEAD").stdout.strip()
+        res = git("pull", "--ff-only", "-q")
+        if res.returncode:
+            why = " / ".join(line.strip() for line in (res.stderr or res.stdout).splitlines() if line.strip())
+            return False, (why or f"git 종료 코드 {res.returncode}")[:300]
+        return git("rev-parse", "HEAD").stdout.strip() != before, ""
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, str(e)[:300]
+
+
 def _popen(command):
     subprocess.Popen(command, cwd=str(settings.REPO_ROOT), creationflags=getattr(subprocess, "CREATE_NEW_CONSOLE", 0))
 
