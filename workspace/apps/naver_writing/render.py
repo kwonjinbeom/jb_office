@@ -281,7 +281,10 @@ def render_body(text: str) -> str:
     return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 
-GAP = '<p style="font-family:나눔고딕;font-size:15px;line-height:1.8;margin:0">&nbsp;</p>'  # 네이버 빈 줄 한 칸 (본문 한 줄 높이)
+# 붙여넣을 본문 글꼴. EDITOR_FONT 는 스마트에디터 기본 (네이버 글쓰기 화면이 그대로 흉내 낸다).
+# CONVERT_FONT 는 사이트 변환본: 원문 화면(Pretendard 16px)과 가장 가까운 네이버 글꼴 (2026-10-21 사용자: 네이버도 원문 글씨체로).
+EDITOR_FONT = {"font-family": "나눔고딕", "font-size": "15px"}
+CONVERT_FONT = {"font-family": "나눔바른고딕", "font-size": "16px"}
 BLOCKS = {"p", "h2", "h3", "h4", "ul", "ol", "table", "blockquote", "hr", "pre", "div"}
 VOID = {"br", "img", "hr"}
 
@@ -290,24 +293,27 @@ class _PasteStyles(HTMLParser):
     """Clipboard HTML needs explicit typography: Naver cannot see our stylesheet.
     gaps: 맨 바깥 블록(문단·소제목·표·목록·인용) 사이에 빈 문단을 끼운다. 스마트에디터는 margin 을 버려서
     서버 화면(문단 아래 여백)과 달리 문단이 붙는다 (2026-10-20 사용자, 포스팅자동화/13 문서 '문단 사이 여백')."""
-    def __init__(self, gaps=False):
+    def __init__(self, gaps=False, font=None):
         super().__init__(convert_charrefs=True)
         self.out = []
         self.gaps = gaps
+        self.font = font or EDITOR_FONT
         self.depth = 0
         self.seen_block = False
 
     def handle_starttag(self, tag, attrs):
         if self.depth == 0 and tag in BLOCKS:
             if self.gaps and self.seen_block:
-                self.out.append(GAP)
+                self.out.append(self._gap())
             self.seen_block = True
         if tag not in VOID:
             self.depth += 1
         attrs = dict(attrs)
         styles = {}
         if tag in {"p", "h2", "h3", "h4", "li", "td", "th"}:
-            styles = {"font-family": "나눔고딕", "font-size": "15px", "line-height": "1.8", "margin": "0"}
+            styles = {**self.font, "line-height": "1.8", "margin": "0"}
+        if tag in {"td", "th"}:
+            styles["font-size"] = "15px"  # 표는 원문 화면처럼 본문보다 한 단계 작게
         if tag in {"h2", "h3", "h4"}:
             styles.update({"font-size": {"h2": "24px", "h3": "19px", "h4": "16px"}[tag], "font-weight": "bold", "margin": "24px 0 16px"})
         for item in attrs.get("style", "").split(";"):
@@ -322,6 +328,11 @@ class _PasteStyles(HTMLParser):
             attrs["style"] = ";".join(f"{key}:{value}" for key, value in styles.items())
         self.out.append("<" + tag + "".join(f' {key}="{html.escape(value or "", quote=True)}"' for key, value in attrs.items()) + ">")
 
+    def _gap(self):
+        """네이버 빈 줄 한 칸 (본문 한 줄 높이)"""
+        style = ";".join(f"{k}:{v}" for k, v in {**self.font, "line-height": "1.8", "margin": "0"}.items())
+        return f'<p style="{style}">&nbsp;</p>'
+
     def handle_endtag(self, tag):
         if tag not in VOID:
             self.depth = max(0, self.depth - 1)
@@ -331,10 +342,11 @@ class _PasteStyles(HTMLParser):
         self.out.append(html.escape(data, quote=False))
 
 
-def paste_html(body_html: str, gaps: bool = False) -> str:
+def paste_html(body_html: str, gaps: bool = False, font: dict | None = None) -> str:
     """네이버에 서식 그대로 붙일 HTML. gaps 는 마크다운으로 쓴 글(빈 줄로 문단을 나눈 글)일 때:
-    문단 사이에 빈 줄을 넣어 서버 화면과 같은 간격으로. 네이버 편집기에서 쓴 글은 빈 줄이 이미 문단으로 들어 있다."""
-    parser = _PasteStyles(gaps=gaps)
+    문단 사이에 빈 줄을 넣어 서버 화면과 같은 간격으로. 네이버 편집기에서 쓴 글은 빈 줄이 이미 문단으로 들어 있다.
+    font: 본문 글꼴·크기 (기본은 스마트에디터 기본, 변환본은 CONVERT_FONT)."""
+    parser = _PasteStyles(gaps=gaps, font=font)
     parser.feed(clean_html(body_html))
     parser.close()
     return "".join(parser.out)
