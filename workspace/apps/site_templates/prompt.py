@@ -44,7 +44,7 @@ FIGURES = f"""## 가공이미지 (변환할 때 · 필요한 만큼만)
 - 표를 그대로 옮긴 그림, 서로 내용이 겹치는 그림은 만들지 않는다. 맨 위 첫 그림은 목록 썸네일이 되니 그 글을 한눈에 알게 하는 것으로 (1200×630 이 무난).
 - 모양: 흰 바탕, Pretendard, 짙은 회색 글자, 여백 넉넉히. 포인트 컬러는 주제에 맞는 한 가지 (예: 나루토 주황, 엔화 남색, 일본 여행 빨강). 그라데이션·그림자·이모지·장식 없이, 그림 속 글자는 짧게.
 - 그림 속 숫자는 사실 점검을 마친 변환본 숫자와 같아야 한다.
-- 만드는 법: HTML 로 그려 playwright 로 PNG 캡처. file:// 는 막혀 있으니 `.playwright-mcp/` 에 `document.body.innerHTML = …` 스크립트를 쓰고 `page.setContent` → `page.addScriptTag({{path}})` → `page.screenshot({{clip}})`.
+- 만드는 법: 그림 하나를 HTML 파일 하나로 그리고 (Pretendard 는 `https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css`), 크롬을 화면 없이 실행해 캡처한다: `chrome.exe --headless=new --hide-scrollbars --window-size=1260,1400 --virtual-time-budget=6000 --screenshot=<png> file:///<html>` → PIL 로 왼쪽 1200px·내용 높이만 자른다 (playwright 캡처는 멈출 때가 있다).
 - `{FIGURE_DIR}/<글 번호>/<이름>.png` 로 저장하고 그 폴더만 git add · commit · push (main). 붙이는 주소는 `{FIGURE_URL}<경로를 퍼센트 인코딩>` — curl 로 200 이 오는지 확인한 뒤 `![설명](주소)` 한 줄로 넣는다.
 - 가공이미지로 충분하면 무료 사진(위 '사진')은 넣지 않는다. 내용과 상관없는 분위기 사진은 글을 흐린다.
 - 점검 기록에 `- 그림: 파일 이름 · 무엇을 보여 주나` 로 남긴다."""
