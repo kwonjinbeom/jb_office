@@ -247,10 +247,24 @@ def _decorate(out: str) -> str:
 def render_body(text: str) -> str:
     """본문 → 블로그에 붙여넣을 HTML. 편집기 HTML 이면 걸러 내고, 마크다운이면 변환한다."""
     if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
-        return soft_check_dates(_decorate(clean_html(text)))
+        return quote_as_body(soft_check_dates(_decorate(clean_html(text))))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
     out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
-    return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+    return quote_as_body(soft_check_dates(clean_html(out)))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
+
+
+# 인용 상자(맨 위 결론 등)를 본문과 같은 글꼴로 (2026-10-21 사용자: 티스토리에서만 글꼴이 달랐다).
+# 티스토리는 그냥 <blockquote> 를 기본 인용(style1: 가운데 정렬 · 명조)으로 바꾸고 스킨이 그 글꼴을 입힌다.
+# → 세로줄 인용(style2)으로 표시하고, 글꼴·크기·줄간격은 본문을 따르게(inherit), 왼쪽 정렬을 인라인으로 박는다.
+QUOTE_FONT = "font-family:inherit;font-size:inherit;line-height:inherit;font-style:normal;text-align:left"
+_QUOTE_BLOCK = re.compile(r'<blockquote style="' + re.escape(QUOTE_STYLE) + r'">(.*?)</blockquote>', re.S)
+
+
+def quote_as_body(body_html: str) -> str:
+    def one(m: re.Match) -> str:
+        inner = re.sub(r"<p>", f'<p style="{QUOTE_FONT}">', m.group(1))
+        return f'<blockquote data-ke-style="style2" style="{QUOTE_STYLE};{QUOTE_FONT}">{inner}</blockquote>'
+    return _QUOTE_BLOCK.sub(one, body_html)
 
 
 # 출처 줄 끝의 확인 날짜: "2026년 10월 20일 확인" · "(2026-10-20 확인)" · "10.20 확인" (2026-10-20 사용자: 부자연스럽다)

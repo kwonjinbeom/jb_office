@@ -141,7 +141,7 @@ class RenderTests(TestCase):
         out = render_body("| a | b |\n|---|:-:|\n| 1 | 2 |\n\n> 인용\n\n---")
         self.assertIn('<table style="border-collapse:collapse', out)
         self.assertIn("text-align:center", out)  # 가운데 정렬 칸
-        self.assertIn('<blockquote style="', out)
+        self.assertIn('<blockquote data-ke-style="style2" style="', out)
         self.assertIn('<hr style="', out)
 
     def test_bold_before_korean_particle(self):
@@ -218,7 +218,7 @@ class RenderTests(TestCase):
         out = render_body("<p>가</p><table><tbody><tr><td>칸</td></tr></tbody></table><blockquote><p>인용</p></blockquote><hr>")
         self.assertIn('<table style="border-collapse:collapse', out)
         self.assertIn('<td style="border:1px solid', out)
-        self.assertIn('<blockquote style="', out)
+        self.assertIn('<blockquote data-ke-style="style2" style="', out)
         self.assertIn('<hr style="', out)
 
     def test_table_header_survives_tistory_paste(self):
@@ -233,6 +233,16 @@ class RenderTests(TestCase):
         out = render_body('본문 <a href="javascript:alert(1)">링크</a> <img src=x onerror="alert(1)">')
         self.assertNotIn("javascript", out)
         self.assertNotIn("onerror", out)
+
+
+    def test_quote_box_uses_body_font_on_tistory(self):
+        """인용 상자 (맨 위 결론): 티스토리 기본 인용(가운데 · 명조) 대신 세로줄 인용 + 본문 글꼴·왼쪽 정렬 (2026-10-21 사용자)"""
+        out = render_body("> 11월 1일 구매분부터 세금까지 다 내고\n\n본문")
+        self.assertIn('<blockquote data-ke-style="style2" style="', out)
+        self.assertIn("font-family:inherit", out)
+        self.assertIn('<p style="font-family:inherit;font-size:inherit;line-height:inherit;font-style:normal;text-align:left">11월', out)
+        self.assertEqual(render_body(out), out)  # 다시 그려도 같다 (편집기에 저장한 HTML)
+        self.assertIn("<p>본문</p>", out)  # 인용 밖 문단은 그대로
 
 
 class EditorTests(TestCase):
