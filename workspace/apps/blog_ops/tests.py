@@ -68,40 +68,69 @@ class BlogOpsTests(TestCase):
         state = feeds.sync(no_addr)
         self.assertIn("주소가 없어", state.message)
 
-    def test_week_counts_plan_and_feed_once(self):
-        Plan.objects.create(blog=self.nunip, planned_on=self.today, title="오늘 글", status="published",
-                            published_on=self.today, url="https://ex.tistory.com/9")
-        FeedEntry.objects.create(blog=self.nunip, title="오늘 글", url="https://ex.tistory.com/9",
-                                 published_at=timezone.now())
-        Plan.objects.create(blog=self.nunip, planned_on=self.today, title="주소 없이 발행", status="published",
-                            published_on=self.today)
-        FeedEntry.objects.create(blog=self.nunip, title="주소 없이 발행", url="https://ex.tistory.com/10",
-                                 published_at=timezone.now())
+    def _pc(self, results):
+        import json
+        return self.client.post(reverse("blog_ops:api_feeds"), json.dumps({"token": self.token, "results": results}),
+                                content_type="application/json")
+
+    def test_week_grid_counts_feed_and_marked_posts_once(self):
+        """모니터링 (2026-10-22 사용자): 사이트 × 요일 한 주. RSS 글과 글 관리에서 발행 완료한 글은 제목이 같으면 한 번만"""
+        from apps.writing.models import Post
+        FeedEntry.objects.create(blog=self.nunip, title="오늘 글", url="https://ex.tistory.com/9", published_at=timezone.now())
+        Post.objects.create(title="오늘 글", stage="post", target="눈잎", publish_status="done", published_on=self.today)
+        Post.objects.create(title="RSS 에 없는 글", stage="post", target="눈잎", publish_status="done", published_on=self.today)
+        Plan.objects.create(blog=self.nunip, planned_on=self.today, title="예전 계획 글", status="published", published_on=self.today)
         res = self.client.get(INDEX)
         self.assertEqual(res.status_code, 200)
         row = next(r for r in res.context["rows"] if r["blog"] == self.nunip)
-        self.assertEqual(row["sum"], 2)  # 계획 기록과 RSS 기록이 같은 글이면 한 번만
-        self.assertEqual(dict(res.context["tiles"])["오늘 발행"], "2/3")
-        self.assertContains(res, "운영")
+        self.assertEqual(row["sum"], 3)
+        self.assertEqual(sorted(t for _, t, _ in res.context["picked"]), ["RSS 에 없는 글", "예전 계획 글", "오늘 글"])
+        self.assertContains(res, f'?date={self.today.isoformat()}&amp;site={self.nunip.pk}')  # 칸을 누르면 그날 그 사이트 글
+        # 날짜를 고르면 그 주, ← → 는 한 주씩
+        res = self.client.get(INDEX, {"date": "2026-10-15"})
+        self.assertEqual(res.context["start"].isoformat(), "2026-10-12")
+        self.assertEqual((res.context["prev"], res.context["next"]), ("2026-10-08", "2026-10-22"))
+        self.assertEqual(len(res.context["strip"]), 7)
 
-    def test_plan_add_status_edit_delete(self):
-        self.client.post(reverse("blog_ops:plan_add"), {"planned_on": self.today.isoformat(), "blog": self.nunip.pk,
-                                                         "title": "  새   계획 "})
-        plan = Plan.objects.get(title="새 계획")
-        self.client.post(reverse("blog_ops:plan_status", args=[plan.pk]), {"status": "published"})
-        plan.refresh_from_db()
-        self.assertEqual((plan.status, plan.published_on), ("published", self.today))
-        self.client.post(reverse("blog_ops:plan_edit", args=[plan.pk]), {
-            "planned_on": self.today.isoformat(), "blog": self.nunip.pk, "title": "새 계획", "status": "published",
-            "url": "https://ex.tistory.com/77", "published_on": self.today.isoformat(), "memo": "",
-        })
-        plan.refresh_from_db()
-        self.assertEqual(plan.url, "https://ex.tistory.com/77")
-        self.client.post(reverse("blog_ops:plan_delete", args=[plan.pk]))
-        self.assertFalse(Plan.objects.filter(pk=plan.pk).exists())
+    def test_pc_report_marks_placement_published(self):
+        """PC 가 읽은 RSS 를 보내면 저장하고, 제목(변환 제목)이 같은 그 사이트의 미발행 넣은 곳은 발행 완료로"""
+        from apps.blog_types.models import Placement, SiteCategory
+        from apps.writing.models import Post
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        self.token = "tok-123"
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, self.token)
+        cat = SiteCategory.objects.create(blog=self.nunip, name="정보")
+        post = Post.objects.create(title="원고 제목", stage="post", target="눈잎")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post, converted_title="독감  무료접종 일정")
+        other = Post.objects.create(title="사이트만 정한 글", stage="post", target="눈잎")
+        now = timezone.now()
+        old = (now - timedelta(days=30)).isoformat()
+        res = self._pc([{"blog": self.nunip.pk, "ok": True, "message": "", "items": [
+            ["독감 무료접종 일정", "https://ex.tistory.com/1", now.isoformat()],
+            ["사이트만 정한 글", "https://ex.tistory.com/2", old],  # 글을 만들기 전에 올라온 같은 제목 옛 글
+        ]}])
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("발행 완료 1건", res.json()["results"][0]["message"])
+        pl.refresh_from_db(); post.refresh_from_db(); other.refresh_from_db()
+        self.assertEqual((pl.status, post.publish_status, post.published_on), ("published", "done", timezone.localdate()))
+        self.assertEqual(other.publish_status, "todo")
+        self.assertEqual(FeedEntry.objects.filter(blog=self.nunip).count(), 2)
+        self.assertTrue(FeedState.objects.get(blog=self.nunip).ok)
+        res = self._pc([{"blog": self.nunip.pk, "ok": False, "message": "PC에서 접속하지 못했어요", "items": []}])
+        self.assertEqual(FeedState.objects.get(blog=self.nunip).message, "PC에서 접속하지 못했어요")
+        self.token = "wrong"
+        self.assertEqual(self._pc([]).status_code, 403)
 
-    def test_late_unpublished_plans_stay_visible(self):
-        old = Plan.objects.create(blog=self.nunip, planned_on=self.today - timedelta(days=14), title="밀린 글")
-        res = self.client.get(INDEX)
-        self.assertIn(old, list(res.context["plans"]))
-        self.assertTrue(FeedState.objects.count() == 0)
+    def test_check_hands_feeds_to_pc(self):
+        """'발행 확인': PC 에 넘길 안내 (보낼 주소 + 토큰 + RSS 주소). 토큰이 없으면 막는다"""
+        import json
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        self.assertEqual(self.client.post(reverse("blog_ops:check")).status_code, 400)
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        res = self.client.post(reverse("blog_ops:check")).json()
+        head, _, body = res["prompt"].partition("\n")
+        self.assertEqual(head, "# 발행 확인")
+        payload = json.loads(body)
+        self.assertTrue(payload["api"].endswith(reverse("blog_ops:api_feeds")))
+        self.assertIn("https://ex.tistory.com/rss", [f["url"] for f in payload["feeds"]])
+        self.assertTrue(res["key"].startswith("fd-"))

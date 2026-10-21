@@ -648,11 +648,22 @@ def index(request):
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
         "extra_keys": EXTRA_KEYS,
-        "all_prompt": all_prompt(routines, run_day, lambda r: report_url(request, r, run_day)) if routines else "",
+        "all_prompt": _with_feeds(request, all_prompt(routines, run_day, lambda r: report_url(request, r, run_day))) if routines else "",
         "all_keys": ",".join(r.key for r in _in_all_order(routines)),
         "on_server": settings.IS_SERVER,
         "keep": request.get_full_path().partition("?")[2],
     })
+
+
+def _with_feeds(request, text):
+    """전체 실행 안내문 첫 줄 뒤에 발행 확인(모니터링)을 숨겨 둔다. PC 가 루틴 창을 연 뒤 RSS 를 읽어 서버로 보낸다
+    (local_run.FEEDS_MARK, 2026-10-22 사용자: 발행 완료 자동 처리). 루틴 안내문(루틴마다 나눈 것)에는 들어가지 않는다."""
+    from apps.blog_ops.views import check_text
+    feeds = check_text(request)
+    if not text or not feeds:
+        return text
+    head, _, rest = text.partition("\n")
+    return f"{head}\n<!-- 발행 확인 {feeds.split(chr(10), 1)[1].strip()} -->\n{rest}"
 
 
 def _back(request, anchor=""):

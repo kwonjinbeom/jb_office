@@ -240,7 +240,7 @@
     copyText(prompt).then(
       function () {
         window.location.href = link;
-        toast("PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
+        toast(f.msg || "PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
         if (reload) setTimeout(function () { location.reload(); }, 4000);
       },
       function () { toast("안내문을 복사하지 못했습니다. 다시 눌러 보세요.", "warn"); }
@@ -565,5 +565,35 @@
         window.App.rtLaunch(res.j.prompt, { kind: "convert", key: res.j.key, day: res.j.day, name: "사이트 변환" }, true);
       })
       .catch(function () { window.App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); go.disabled = false; });
+  });
+})();
+
+/* 모니터링 '발행 확인' (2026-10-22 사용자): 서버는 티스토리·네이버에 못 나가서 PC 가 RSS 를 읽는다.
+   안내(JSON)를 받아 jbroutine:feeds 로 PC 를 깨우고, 서버의 마지막 확인 시각이 바뀌면 새로고침한다 (최대 2분). */
+(function () {
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-feeds-check]");
+    if (!btn || btn.disabled) return;
+    btn.disabled = true;
+    var body = new FormData();
+    body.append("csrfmiddlewaretoken", window.APP.csrfToken);
+    var statusUrl = btn.getAttribute("data-status"), before = null;
+    fetch(statusUrl, { credentials: "same-origin" }).then(function (r) { return r.json(); })
+      .then(function (j) { before = j.checked_at; })
+      .then(function () { return fetch(btn.getAttribute("data-url"), { method: "POST", body: body, credentials: "same-origin" }); })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { btn.disabled = false; window.App.toast(res.j.error || "발행 확인을 시작하지 못했습니다.", "warn"); return; }
+        window.App.rtLaunch(res.j.prompt, { kind: "feeds", key: res.j.key, day: res.j.day, name: "발행 확인",
+          msg: "PC 에서 사이트마다 RSS 를 읽습니다. 끝나면 이 화면이 새로고침됩니다." }, false);
+        var tries = 0, timer = setInterval(function () {
+          tries += 1;
+          fetch(statusUrl, { credentials: "same-origin" }).then(function (r) { return r.json(); }).then(function (j) {
+            if (j.checked_at && j.checked_at !== before) { clearInterval(timer); location.reload(); }
+          });
+          if (tries >= 40) { clearInterval(timer); btn.disabled = false; window.App.toast("아직 결과가 없습니다. PC 창의 안내를 확인하세요.", "warn"); }
+        }, 3000);
+      })
+      .catch(function () { btn.disabled = false; window.App.toast("발행 확인을 시작하지 못했습니다. 다시 눌러 보세요.", "warn"); });
   });
 })();

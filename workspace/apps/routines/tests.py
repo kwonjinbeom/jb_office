@@ -159,6 +159,41 @@ class TempRepoTests(Login):
         self.assertIn("'workspace/.routine/cv-101530-2026-10-17.md 파일을 읽고 그대로 진행해.'", decoded(popen.call_args[0][0]))
         self.assertFalse(RoutineRun.objects.exists())
 
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_feeds_link_reads_rss_on_pc_and_reports(self, popen):
+        """모니터링 '발행 확인' (2026-10-22): jbroutine:feeds. claude 없이 PC 가 RSS 를 읽어 서버 주소로 보낸다."""
+        payload = {"api": "https://srv.example/blog/ops/api/feeds/", "token": "t",
+                   "feeds": [{"blog": 1, "name": "눈잎", "url": "https://ex.tistory.com/rss"}]}
+        sent = {}
+
+        class Res:
+            def __init__(self, body):
+                self.body = body
+
+            def read(self):
+                return self.body
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def urlopen(req, timeout=0):
+            sent["url"], sent["body"] = req.full_url, json.loads(req.data.decode("utf-8"))
+            return Res(json.dumps({"results": [{"blog": "눈잎", "message": "PC 확인 · 새 글 1편"}]}).encode("utf-8"))
+
+        when = timezone.now()
+        with patch("apps.blog_ops.feeds.read", return_value=(True, "", [("글", "https://ex.tistory.com/1", when)])), \
+                patch("apps.routines.local_run.urllib.request.urlopen", urlopen):
+            msg = start("jbroutine:feeds?key=fd-101010", "# 발행 확인\r\n" + json.dumps(payload))
+        self.assertIn("- 눈잎: PC 확인 · 새 글 1편", msg)
+        self.assertEqual((sent["url"], sent["body"]["token"]), (payload["api"], "t"))
+        self.assertEqual(sent["body"]["results"][0]["items"][0][:2], ["글", "https://ex.tistory.com/1"])
+        popen.assert_not_called()  # claude 터미널은 열지 않는다
+        with self.assertRaises(ValueError):
+            start("jbroutine:feeds?key=fd-1", "# 일일루틴 · 글쓰기")
+
     @patch("apps.routines.management.commands.routine_open.subprocess.call", return_value=0)
     def test_link_pulls_latest_code_first(self, call):
         """링크를 열면 먼저 git pull --ff-only. 바뀌었으면 새 코드로 다시 부르고, 실패하면 'PC 코드가 최신이 아닙니다'."""
@@ -335,6 +370,18 @@ class RepoTests(Login):
         self.assertTrue(v1.starred)
         res = self.client.get(reverse("routines:version_restore", args=[v1.pk]))
         self.assertContains(res, "v1 내용")
+
+    def test_all_prompt_hides_feeds_check_for_pc(self):
+        """전체 실행 안내문 첫 줄 뒤에 발행 확인이 숨어 있다 (PC 가 루틴 창을 연 뒤 RSS 를 읽는다). 루틴별 안내문에는 없다."""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from .local_run import _feeds_in, split_all
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        text = self.client.get(INDEX, {"date": "2026-10-16"}).context["all_prompt"]
+        self.assertTrue(text.startswith("# 일일루틴"))
+        payload = _feeds_in(text)
+        self.assertEqual(payload["token"], "tok")
+        self.assertTrue(payload["api"].endswith(reverse("blog_ops:api_feeds")))
+        self.assertTrue(all("발행 확인 {" not in body for _, body in split_all(text)))
 
     @patch("apps.routines.local_run.find_claude", return_value="claude")
     @patch("apps.routines.local_run.subprocess.Popen")
