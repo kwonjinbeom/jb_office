@@ -134,3 +134,19 @@ class BlogOpsTests(TestCase):
         self.assertTrue(payload["api"].endswith(reverse("blog_ops:api_feeds")))
         self.assertIn("https://ex.tistory.com/rss", [f["url"] for f in payload["feeds"]])
         self.assertTrue(res["key"].startswith("fd-"))
+
+
+class SiteLinksTests(TestCase):
+    """사이트 주소 (2026-10-22 사용자): 모니터링에 바로가기, 홈에 주소 정리 · 줄마다 복사 · 전체 복사."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_monitoring_link_and_home_addresses(self):
+        res = self.client.get(reverse("blog_ops:index"))
+        self.assertContains(res, 'class="op-link" href="https://bambam2222.blogspot.com/"')
+        home = self.client.get("/")
+        self.assertContains(home, "사이트 주소")
+        self.assertIn("밤밤 https://bambam2222.blogspot.com/", home.context["sites_text"])
+        self.assertEqual(len(home.context["sites_text"].splitlines()), len(home.context["sites"]))
+        self.assertContains(home, 'data-copy-text="https://nunip.tistory.com/"')
