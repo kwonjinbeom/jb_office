@@ -11,6 +11,8 @@ class Event(TrashableModel):
     title = models.CharField("일정", max_length=120)
     note = models.TextField("메모", blank=True)
     done = models.BooleanField("완료", default=False)
+    # 알림 (2026-10-22 사용자): 시각이 되면 우측 상단에 뜨고, 눌러야 들어간다. 누른 때를 적어 다시 뜨지 않게 (시각을 바꾸면 비운다)
+    alarm_ack = models.DateTimeField("알림 확인", null=True, blank=True)
     created_at = models.DateTimeField("만든 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 

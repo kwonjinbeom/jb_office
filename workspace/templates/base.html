@@ -136,12 +136,14 @@
     trashMoveUrl: "{% url 'core:trash_move' %}",
     trashRestoreUrl: "{% url 'core:trash_restore' %}",
     gitStatusUrl: "{% url 'core:api_git_status' %}",
+    alarmsUrl: "{% if user.is_authenticated %}{% url 'schedule:alarms' %}{% endif %}",
     csrfToken: "{{ csrf_token }}"
   };
 </script>
 <script src="{% static 'js/app.js' %}?v={{ ASSET_VER }}"></script>
 {% include "includes/trash_ui.html" %}
 <script src="{% static 'js/trash.js' %}?v={{ ASSET_VER }}"></script>
+<script src="{% static 'js/alarm.js' %}?v={{ ASSET_VER }}"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

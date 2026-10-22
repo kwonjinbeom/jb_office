@@ -27,6 +27,25 @@ class ScheduleTests(TestCase):
         self.assertContains(res, 'value="2026-10-22"')  # 새 일정 폼의 날짜 = 고른 날
         self.assertContains(res, "블리치 천년혈전 50화")  # 처음 넣어 둔 일정 (10/28) 이 달력에
 
+    def test_alarm_due_ack_and_reset(self):
+        """시각이 된 일정만 알림, 누르면(ack) 다시 안 뜨고, 시각을 바꾸면 다시 뜬다 (2026-10-22 사용자)"""
+        from datetime import timedelta
+        from django.utils import timezone
+
+        now = timezone.localtime()
+        past = Event.objects.create(date=now.date(), time=(now - timedelta(minutes=1)).time(), title="지난 일정")
+        Event.objects.create(date=now.date(), time=(now + timedelta(hours=1)).time() if now.hour < 23 else None, title="나중 일정")
+        Event.objects.create(date=now.date(), title="종일 일정")
+        ids = [a["id"] for a in self.client.get(reverse("schedule:alarms")).json()["alarms"]]
+        self.assertEqual(ids, [past.pk])
+        self.client.post(reverse("schedule:ack", args=[past.pk]))
+        self.assertEqual(self.client.get(reverse("schedule:alarms")).json()["alarms"], [])
+        self.client.post(reverse("schedule:save"), {"pk": past.pk, "date": past.date.isoformat(),
+                                                    "time": (now - timedelta(minutes=2)).strftime("%H:%M"), "title": "지난 일정"})
+        past.refresh_from_db()
+        self.assertIsNone(past.alarm_ack)  # 시각을 바꾸면 다시 알린다
+        self.assertContains(self.client.get(INDEX), "js/alarm.js")  # 모든 화면에 알림 스크립트
+
     def test_save_edit_done_delete(self):
         res = self.client.post(reverse("schedule:save"), {"date": "2026-11-02", "title": "원피스 1197화", "note": ""})
         self.assertRedirects(res, INDEX + "?m=2026-11&d=2026-11-02", fetch_redirect_response=False)
