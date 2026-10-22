@@ -35,6 +35,13 @@ KEEP = """## 변환 원칙 (원문이 기준)
 # 네이버도 서식 그대로 붙이면 사진 주소가 사진으로 옮겨진다 (2026-10-20 발행 글 memorily/224447962821 로 확인).
 # 가공이미지 = 인터넷 사진이 아니라 직접 만든 그림 (2026-10-21 사용자: 필요한 곳에만). 그림은 공개 저장소 주소로 붙인다.
 PHOTO_PLATFORMS = {"tistory", "blogger", "naver"}
+
+# 블로거 라벨 (2026-10-22 사용자: 태그를 그대로 붙였더니 라벨이 태그급으로 많아졌다 → 5개쯤). 블로거는 라벨이 카테고리 겸 태그다.
+BLOGGER_LABELS = 5
+BLOGGER_TAGS = f"""## 블로거 라벨 (돌려줄 '태그 한 줄')
+- 블로거는 라벨이 카테고리 겸 태그다. 라벨은 {BLOGGER_LABELS}개 안팎, 많아도 {BLOGGER_LABELS}개.
+- 첫째는 넣을 카테고리 이름 그대로 (라벨 메뉴로 쓴다). 나머지는 이 글의 핵심 검색어 4개.
+- 띄어쓰기 없이 짧게 (`상품추천`, `코스피`). 날짜·연도만 있는 라벨, 글마다 바뀌는 긴 문구는 쓰지 않는다."""
 FIGURE_DIR = "콘텐츠/블로그_카페/변환그림"
 FIGURE_URL = "https://raw.githubusercontent.com/kwonjinbeom/jb_office/main/"
 PHOTOS = f"""## 사진·그림 (변환이 끝까지 채운다 · 원문에 자리가 없어도 판단한다)
@@ -78,6 +85,8 @@ def build(placement):
     ]
     if blog.platform in PHOTO_PLATFORMS:
         parts.append(PHOTOS)
+    if blog.platform == "blogger":
+        parts.append(BLOGGER_TAGS)
     if placement.convert_note:
         parts.append(f"## 이 글만\n{placement.convert_note}")
     parts.append(f"## 원문\n### 제목\n{post.title}\n### 본문\n{post.body}")
