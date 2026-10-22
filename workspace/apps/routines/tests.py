@@ -96,16 +96,36 @@ class TempRepoTests(Login):
         self.assertNotIn("### 글 분류 전체", run)
         self.assertIn("  - 소분류: ", run)
         self.assertIn("### 글 분류 전체", launcher(Routine.objects.get(key="prompt_update"), day))
-        # 이미 있는 글은 최근 40줄만
+        # 글쓰기의 이미 있는 글 = 원고 장부(중분류별) + 원고 말고 최근 글 15줄
         for i in range(60):
             NaverPost.objects.create(title=f"쌓인 글 {i:02d}")
         existing = launcher(naver, day).split("### 이미 있는 글")[1].split("###")[0]
-        self.assertEqual(existing.count("\n- "), 40)
+        self.assertEqual(existing.count("\n- "), 15)
         self.assertIn("쌓인 글 59", existing)
-        self.assertNotIn("쌓인 글 10", existing)
+        self.assertNotIn("쌓인 글 40", existing)
         ideas = launcher(Routine.objects.get(key="daily_ideas"), day)
         self.assertIn("2026-10-14 · 지난 후보", ideas)
         self.assertIn("검색 표준", ideas)
+
+    def test_writing_ledger_groups_drafts_by_category(self):
+        """주제 기획이 반복을 막도록 원고를 중분류별로: 글 틀(소분류) 횟수 + 새 것부터 5편 (2026-10-22 사용자)."""
+        folder = self.root / "콘텐츠" / "블로그_카페" / "포스팅자동화" / "원고"
+        rows = [(n, "광고 수익 (조회수) > 여행·계절 > 예측 해설", f"스키장 개장 {n}") for n in range(1, 8)]
+        rows += [(8, "광고 수익 > 여행·계절 > 축제·개장 달력", "빛축제 달력"),
+                 (9, "IT/AI > 개발·코딩", "EADDRINUSE 포트 사용 중 해결, 윈도우에서 포트 비우는 법과 다시 안 생기게 하기")]
+        for n, cls, title in rows:
+            (folder / f"T{n}_원고").mkdir(parents=True)
+            (folder / f"T{n}_원고" / "원고.md").write_text(
+                f"사이트: 눈잎\n분류: {cls}\n" + DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
+        NaverPost.objects.create(title="빛축제 달력")  # 원고에서 가져온 글은 한 번만
+        existing = launcher(Routine.objects.get(key="writing"), date(2026, 10, 22)).split("### 이미 있는 글")[1].split("###")[0]
+        trip = next(line for line in existing.splitlines() if line.startswith("- 광고 수익 > 여행·계절"))
+        self.assertIn("[예측 해설 7, 축제·개장 달력 1]", trip)  # '(조회수)' 있든 없든 한 중분류
+        self.assertIn("T8 빛축제 달력 / T7 스키장 개장 7", trip)  # 새 것부터
+        self.assertEqual(trip.count(" / "), 4)  # 5편까지
+        self.assertIn("- IT/AI > 개발·코딩: T9 EADDRINUSE", existing)
+        self.assertIn("…", existing)  # 긴 제목은 줄인다
+        self.assertNotIn("- 빛축제 달력", existing)
 
     @patch("apps.routines.local_run.WINDOWS", True)
     @patch("apps.routines.local_run.find_claude", return_value="claude")
