@@ -849,7 +849,7 @@ class TempPostsTests(TestCase):
         res = self.client.get(reverse("posts:view"), {"stage": "temp", "view": "list"})
         self.assertEqual([p.title for p in res.context["posts"]], ["눈잎 새 글", "눈잎 글", "밤밤 글", "사이트 없는 글"])
         one = self.client.get(reverse("posts:view"), {"stage": "temp", "p": f"tistory:{Post.objects.first().pk}"})
-        self.assertContains(one, '<div class="pl-group">눈잎</div>', count=1)
+        self.assertContains(one, '<div class="pl-group"><span>눈잎</span><span class="cnt">2</span></div>', count=1)
 
 
 class SiteCleanupTests(TestCase):

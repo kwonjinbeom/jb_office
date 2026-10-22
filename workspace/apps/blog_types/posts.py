@@ -19,6 +19,7 @@
 단계별 칸 (2026-10-17 사용자): 임시글은 사이트(읽기)·내용, 검토글은 사이트 고르기, 발행예정글은 사이트 고르기 ·
 넣은 곳(사이트 › 카테고리) · 변환 · 발행(미발행/발행 완료, 한 건씩 또는 체크한 것 한꺼번에). 작성 상태는 글 보기에서.
 """
+from collections import Counter
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -192,6 +193,12 @@ def post_list_for(request, post):
         item.path_label = classify.label_of(item)
         if (item.writer, item.pk) == me:
             current = item
+    if p["stage"] == "temp":  # 임시글: 사이트 묶음마다 첫 글에 머리 (이름 · 글 수) — 2026-10-22 사용자: 잘 안 보인다
+        by_site, seen = Counter(item.target for item in posts), set()
+        for item in posts:
+            if item.target not in seen:
+                seen.add(item.target)
+                item.group_head = (item.target or "사이트 없음", by_site[item.target])
     keep = _query(p, stage="")
     ctx = {
         "pl_items": posts,
