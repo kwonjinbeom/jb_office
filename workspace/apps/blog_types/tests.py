@@ -917,3 +917,20 @@ class NunipSiteCategoryTests(TestCase):
         import_module("apps.blog_types.migrations.0019_nunip_site_categories").forward(django_apps, None)
         self.assertEqual(self.site_names(), self.NAMES + ["쓰는 메뉴"])
         self.assertTrue(SiteCategory.all_objects.filter(pk=empty.pk, deleted_at__isnull=False).exists())
+
+
+class TrimAiNewsTests(TestCase):
+    """writing 0018 (2026-10-22 사용자): AI 소식 6편 중 가장 최근 T108 만 남기고 5편은 휴지통."""
+
+    def test_only_latest_ai_news_stays(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.writing.models import Post
+        mig = import_module("apps.writing.migrations.0018_trim_ai_news")
+        old = [Post.objects.create(title=t, custom=True) for t in mig.TITLES]
+        keep = Post.objects.create(title="시리 AI 한국어가 iOS 27.2 RC에 들어왔고, 윈도우는 Copilot 진입점을 줄입니다 (AI 소식 10-22)", custom=True)
+        mig.forward(django_apps, None)
+        self.assertEqual(list(Post.objects.values_list("pk", flat=True)), [keep.pk])
+        self.assertEqual(Post.all_objects.filter(pk__in=[p.pk for p in old], deleted_at__isnull=False).count(), 5)
