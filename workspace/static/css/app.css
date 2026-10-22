@@ -1445,13 +1445,16 @@ a.br-addr:hover { color: var(--accent); }
 .tp-note-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; line-height: 1.45; }
 .tp-table .btn.sm { height: 26px; }
 .tp-edit td { background: var(--hover); }
-.tp-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 6px; }
+.tp-form { display: grid; grid-template-columns: minmax(0, 1fr) 210px 150px; gap: 6px; }
+.tp-cat td { font-size: 13px; }
+.tp-sub .tp-name .rt-branch { margin: 0 4px 0 6px; }
+.rt-sub-topic { padding-left: 44px; }
 /* 커스텀 글쓰기 (2026-10-23): 사이트 묶음 머리 줄 · 줄 앞 체크 · 편수 칸 */
 .tp-head { display: flex; align-items: center; gap: 10px; }
 .tp-head .card-title { flex: 1; }
 .tp-site td { background: var(--hover); font-size: 13px; }
 .tp-n { width: 56px; text-align: center; }
-.tp-addrow .tp-add select { flex: none; width: 170px; }
+.tp-addrow .tp-add select { flex: none; width: 210px; }
 .rt-sub-site td { padding-top: 7px; padding-bottom: 3px; }
 .rt-sub-item { padding-left: 30px; }
 .tp-form textarea { grid-column: 1 / -1; width: 100%; }

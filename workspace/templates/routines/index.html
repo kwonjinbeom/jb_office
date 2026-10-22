@@ -31,6 +31,22 @@
       {% for g in topic_groups %}
       <tr class="rt-sub rt-sub-site" data-rt-sub hidden><td colspan="5"><div class="br-site rt-sub-name"><span class="rt-branch" aria-hidden="true">└</span><strong>{{ g.name|default:"사이트 미정" }}</strong></div></td></tr>
       {% for c in g.cats %}
+      {% if c.topics %}
+      <tr class="rt-sub" data-rt-sub hidden>
+        <td><div class="br-site rt-sub-name rt-sub-item"><strong class="rt-name">{{ c.name }}</strong></div></td>
+        <td><div class="rt-task muted" title="{{ c.direction }}">{{ c.direction|default:"-" }}</div></td>
+        <td></td><td></td><td></td>
+      </tr>
+      {% for t in c.topics %}
+      <tr class="rt-sub" data-rt-sub hidden>
+        <td><div class="br-site rt-sub-name rt-sub-topic"><span class="rt-branch" aria-hidden="true">└</span><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 지침 고치기">{{ t.name }}</a></div></td>
+        <td><div class="rt-task">{% if t.note %}<span title="{{ t.note }}">{{ t.note|striptags }}</span>{% else %}<span class="muted">지침 없음 — 커스텀 글쓰기에서 적기</span>{% endif %}</div></td>
+        <td></td>
+        <td><div class="rt-acts"><button class="btn sm" type="button" data-tp-one="f{{ t.pk }}" title="이 주제로 1편 (PC 터미널 claude, 글감 없으면 안 씀)">{% include "includes/ic.html" with name="server" %}실행</button></div></td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      {% else %}
       <tr class="rt-sub" data-rt-sub hidden>
         <td><div class="br-site rt-sub-name rt-sub-item"><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 편수 정해 실행">{{ c.name }}</a></div></td>
         <td><div class="rt-task" title="{{ c.direction }}{% if c.question %} — {{ c.question }}{% endif %}">{{ c.direction|default:"-" }}{% if c.question %} <span class="br-sub">· {{ c.question }}</span>{% endif %}</div></td>
@@ -38,10 +54,11 @@
         <td><div class="rt-acts"><button class="btn sm" type="button" data-tp-one="c{{ c.pk }}" title="이 소재로 1편 (PC 터미널 claude, 글감 없으면 안 씀)">{% include "includes/ic.html" with name="server" %}실행</button></div></td>
         <td></td>
       </tr>
+      {% endif %}
       {% endfor %}
       {% for t in g.topics %}
       <tr class="rt-sub" data-rt-sub hidden>
-        <td><div class="br-site rt-sub-name rt-sub-item"><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 지침 고치기">{{ t.name }}</a> <span class="badge outline">고정</span></div></td>
+        <td><div class="br-site rt-sub-name rt-sub-item"><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 지침 고치기">{{ t.name }}</a></div></td>
         <td><div class="rt-task">{% if t.note %}<span title="{{ t.note }}">{{ t.note|striptags }}</span>{% else %}<span class="muted">지침 없음 — 커스텀 글쓰기에서 적기</span>{% endif %}</div></td>
         <td></td>
         <td><div class="rt-acts"><button class="btn sm" type="button" data-tp-one="f{{ t.pk }}" title="이 주제로 1편 (PC 터미널 claude, 글감 없으면 안 씀)">{% include "includes/ic.html" with name="server" %}실행</button></div></td>

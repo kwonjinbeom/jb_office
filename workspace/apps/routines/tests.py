@@ -542,7 +542,7 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 7, "black_lukey": 6, "밤밤": 4})  # AI 소식은 커스텀 (0018)
+        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 6, "밤밤": 5})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
@@ -671,9 +671,14 @@ class FixedTopicTests(Login):
         self.assertEqual(res.context["ACTIVE_MENU"], "routine_topics")
         groups = res.context["groups"]
         self.assertEqual([g["name"] for g in groups[:3]], ["눈잎", "black_lukey", "밤밤"])  # 글 분류의 사이트 순서
-        self.assertEqual([len(g["cats"]) for g in groups[:3]], [7, 6, 4])  # 일일루틴 글쓰기가 보는 소재 그대로
-        self.assertEqual(sorted(t.pk for g in groups for t in g["topics"]), sorted(FixedTopic.objects.values_list("pk", flat=True)))
-        nunip = groups[0]["cats"][0]
+        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 6, 5])  # 일일루틴 글쓰기가 보는 소재 그대로
+        ipo = next(c for c in groups[0]["cats"] if c.name == "공모주")
+        self.assertEqual([t.name for t in ipo.topics], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 고정 주제는 소재 아래
+        self.assertNotContains(res, f'value="c{ipo.pk}"')  # 고정 주제가 있는 소재는 머리 줄만 (고르지 않는다)
+        self.assertEqual(groups[0]["count"], 6)  # 청년·신혼 1 + 주택 1 + 공모주 2 + 일본 + 그 외
+        shown = [t.pk for g in groups for t in g["topics"]] + [t.pk for g in groups for c in g["cats"] for t in c.topics]
+        self.assertEqual(sorted(shown), sorted(FixedTopic.objects.values_list("pk", flat=True)))
+        nunip = next(c for c in groups[0]["cats"] if not c.topics)
         for html in ["data-tp-run", f'value="c{nunip.pk}"', 'value="1" data-tp-n', "자유 글쓰기"]:
             self.assertContains(res, html)
         self.assertNotContains(res, "이번 주 발행")  # 주 단위 점·주당은 뺐다
@@ -717,9 +722,35 @@ class FixedTopicTests(Login):
         self.assertContains(res, "지역 놀거리")
         self.assertContains(res, f'data-tp-one="c{Category.objects.get(name="코스피").pk}"')  # 줄마다 실행 (1편)
         groups = res.context["topic_groups"]
-        rows = len(groups) + sum(len(g["cats"]) + len(g["topics"]) for g in groups) + 1  # 사이트 머리 + 줄 + 추가 줄
+        rows = len(groups) + sum(1 + len(c.topics) for g in groups for c in g["cats"]) + sum(len(g["topics"]) for g in groups) + 1  # 사이트 머리 + 소재(+그 아래 주제) + 줄 + 추가 줄
         self.assertContains(res, "data-rt-sub hidden", count=rows)
         self.assertNotContains(res, "tp-dot")
+
+    def test_topics_under_materials_migration(self):
+        """2026-10-23 사용자 (0020): 고정 주제는 소재 아래 · 지침은 소재 방향이 먼저 · 일본 한 소재 · 해외여행은 밤밤"""
+        from apps.blog_types.models import Category
+
+        from .models import FixedTopic
+        links = {t.name: (t.category.section.name, t.category.name) for t in FixedTopic.objects.exclude(category=None)}
+        self.assertEqual(links, {"공모주 일정 · 국내": ("눈잎", "공모주"), "공모주 일정 · 해외": ("눈잎", "공모주"),
+                                 "청년·신혼 정책 (서울·경기)": ("눈잎", "청년·신혼 정책"),
+                                 "청약·임대주택 공고 (서울·경기)": ("눈잎", "주택 공고")})
+        kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
+        self.assertTrue(kr.note.startswith("방향 (우선): 새 종목 · 일정 변경 · 수요예측 결과"))
+        self.assertIn("🔥 화제 종목", kr.note)  # 기존 지침은 뒤에 그대로
+        housing = FixedTopic.objects.get(name="청약·임대주택 공고 (서울·경기)")
+        self.assertTrue(housing.note.startswith("방향 (우선): 새 공고의 자격 · 소득 기준 · 접수일을 표로"))
+        self.assertIn("신청 자격·소득 기준(", housing.note)
+        japan = Category.objects.get(section__name="눈잎", name="일본")
+        self.assertIn("엔화·환율", japan.direction)
+        self.assertFalse(Category.objects.filter(name__in=["엔화·환율", "일본 여행"]).exists())
+        self.assertTrue(Category.all_objects.filter(name="엔화·환율", deleted_at__isnull=False).exists())  # 휴지통 (7일 복원)
+        overseas = Category.objects.get(name="해외 여행")
+        self.assertEqual((overseas.section.name, overseas.code), ("밤밤", "D"))
+        self.assertIn("가볼 만한 곳", overseas.direction)
+        prompt = self.run_prompt(**{f"f{kr.pk}": "1"}).json()["prompt"]
+        self.assertIn("- 분류: 눈잎 > 공모주", prompt)
+        self.assertNotIn("### 글 분류 전체", prompt)  # 소재가 정해진 고정 주제는 트리 없이
 
     def test_free_writing_box(self):
         writing = Routine.objects.get(key="writing")

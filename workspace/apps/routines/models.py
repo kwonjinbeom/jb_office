@@ -183,12 +183,13 @@ def week_start(day):
 
 
 class FixedTopic(TrashableModel):
-    """커스텀 글쓰기의 고정 주제 (2026-10-21 사용자): 일일루틴과 따로, 주제가 정해진 글을 주 단위로 쓴다.
-    예) 공모주 일정 · 국내 / 해외, 청년·신혼 정책. 주마다 발행했는지(TopicWeek)를 작게 본다.
-    '실행'은 글쓰기 루틴의 추가 실행처럼 PC 터미널 claude 에게 이 주제 한 편을 맡긴다 (views.topic_prompt)."""
+    """커스텀 글쓰기의 고정 주제 (2026-10-21 사용자): 주제·지침이 정해진 글. 예) 공모주 일정 · 국내 / 해외, 청년·신혼 정책.
+    글 분류의 소재 아래에 있다 (2026-10-23 사용자: 공모주 일정 국내·해외는 눈잎 > 공모주 아래). 실행은 topics.run."""
 
     name = models.CharField("주제", max_length=60)
     site = models.CharField("사이트", max_length=60, blank=True, help_text="올릴 사이트 (비우면 주제에 맞게 고른다)")
+    category = models.ForeignKey("blog_types.Category", verbose_name="소재", null=True, blank=True, on_delete=models.SET_NULL,
+                                 related_name="fixed_topics", help_text="글 분류의 소재. 커스텀 글쓰기에서 그 소재 아래에 보이고 원고 분류가 된다")
     note = models.TextField("지침", blank=True, help_text="이 주제를 쓸 때 따로 지킬 것 (다룰 범위·출처·구성 등)")
     per_week = models.PositiveSmallIntegerField("주당 편수", default=1)
     order = models.PositiveSmallIntegerField("순서", default=0)

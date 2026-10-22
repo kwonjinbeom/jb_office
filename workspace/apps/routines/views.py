@@ -617,7 +617,7 @@ def index(request):
     topic_groups = topic_mod.groups()
     return render(request, "routines/index.html", {
         "page_title": "일일루틴",
-        "topic_groups": topic_groups, "topic_count": sum(len(g["cats"]) + len(g["topics"]) for g in topic_groups),
+        "topic_groups": topic_groups, "topic_count": sum(g["count"] for g in topic_groups),
         "writing_key": topic_mod.WRITING_KEY,
         "bar": period.bar(mode, sel, today, state),
         "mode": mode,
