@@ -38,8 +38,8 @@
     if (shown) S.text(shown, 540, seg.i === 0 ? 400 : 390, { size: seg.i === 0 ? 84 : 76, lh: 1.3 });
     // 그림: 천천히 다가가고, 컷이 바뀔 때 살짝 튄다
     const enter = clamp(lt / .18, 0, 1);
-    const zoom = 1 + .028 * (lt / seg.dur) + (1 - enter) * .035;
-    S.group({ x: 0, y: 640, s: zoom, ox: 540, oy: 540 }, () => D.works[work.key].cuts[seg.i](S, cut.say));
+    const zoom = 1.15 * (1 + .028 * (lt / seg.dur) + (1 - enter) * .035);
+    S.group({ x: 0, y: 590, s: zoom, ox: 540, oy: 560 }, () => D.works[work.key].cuts[seg.i](S, cut.say));
     return { S, seg, lt };
   };
 })(window.Doodle);
