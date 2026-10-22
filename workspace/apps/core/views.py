@@ -49,6 +49,11 @@ def home(request):
     today_tasks = [t for t in open_tasks if t.due == today]
     undated = [t for t in open_tasks if not t.due][:8]
 
+    # 사이트 주소 (2026-10-22 사용자): 운영 화면 순서, 주소 있는 것만. '전체 복사'는 '이름 주소' 줄을 한 번에
+    from apps.blog_rules.models import Blog
+    sites = list(Blog.objects.exclude(address="").order_by("order", "pk"))
+    sites_text = "\n".join(f"{b.name} {b.address}" for b in sites)
+
     status = gitstate.get_status()
     state = gitstate.load_state()
     context = {
@@ -61,6 +66,7 @@ def home(request):
         "open_count": len(open_tasks),
         "recent_logs": IdeaLog.objects.select_related("idea", "stage")[:8],
         "recent_links": Evidence.objects.select_related("idea")[:6],
+        "sites": sites, "sites_text": sites_text,
         "git": status,
         "last_sync": state.get("last"),
         "autosync_running": autosync.is_running(),

@@ -1370,6 +1370,9 @@ a.br-addr:hover { color: var(--accent); }
 .op-week td { height: 52px; }
 .op-blog { display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
 .op-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.op-link { display: inline-flex; color: var(--text-3); flex: none; }
+.op-link:hover { color: var(--accent); }
+.op-link .ic { width: 14px; height: 14px; }
 .op-feed { margin-top: 2px; font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .op-concept { margin-top: 2px; font-size: 11px; line-height: 1.4; color: var(--text-2); white-space: normal; word-break: keep-all; }
 .op-feed.is-bad { color: var(--warn); }
@@ -1799,3 +1802,8 @@ a.br-addr:hover { color: var(--accent); }
   .wr-fit .wr-c-site { width: 92px; } .wr-fit .wr-c-cat { width: 132px; } .wr-fit .wr-c-cv { width: 92px; }
   .wr-fit .wr-c-pub { width: 140px; } .wr-fit .wr-c-date { width: 126px; }
 }
+/* 홈 › 사이트 주소 (2026-10-22 사용자) */
+.hm-sites { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 6px 24px; }
+.hm-site { display: grid; grid-template-columns: 72px 92px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 32px; }
+.hm-site-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-site-url { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); font-size: 13px; }

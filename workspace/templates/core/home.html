@@ -49,6 +49,26 @@
   </div>
   {% endif %}
 
+  <!-- 사이트 주소 (2026-10-22 사용자): 줄마다 복사 · 전체 복사는 모든 주소를 한 번에 -->
+  {% if sites %}
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">{% include "includes/ic.html" with name="link" %}사이트 주소 <span class="cnt">{{ sites|length }}</span></h2>
+      <div class="page-actions"><button type="button" class="btn ghost sm" data-copy-text="{{ sites_text }}" data-copy-msg="사이트 주소 {{ sites|length }}개를 복사했습니다.">{% include "includes/ic.html" with name="copy" %}전체 복사</button></div>
+    </div>
+    <div class="card-body hm-sites">
+      {% for b in sites %}
+      <div class="hm-site">
+        <span class="br-plat">{{ b.get_platform_display }}</span>
+        <span class="hm-site-name">{{ b.name }}</span>
+        <a class="hm-site-url" href="{{ b.address }}" target="_blank" rel="noopener" title="새 창으로 열기">{{ b.address }}</a>
+        <button type="button" class="btn ghost sm icon" data-copy-text="{{ b.address }}" data-copy-msg="{{ b.name }} 주소를 복사했습니다." title="주소 복사" aria-label="{{ b.name }} 주소 복사">{% include "includes/ic.html" with name="copy" %}</button>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <!-- 진행 중인 아이디어 -->
   <section class="card">
     <div class="card-head">
