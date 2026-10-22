@@ -1,0 +1,22 @@
+{# 커스텀 글쓰기의 고정 주제 한 줄 + 고치기 줄. 컨텍스트: t, site(사이트 묶음 번호), sub(소재 아래면 True), categories, site_names #}
+<tr{% if sub %} class="tp-sub"{% endif %}>
+  <td class="c"><input type="checkbox" class="checkbox" data-tp-pick data-site="{{ site }}" value="f{{ t.pk }}" aria-label="{{ t.name }} 고르기"></td>
+  <td class="tp-name">{% if sub %}<span class="rt-branch" aria-hidden="true">└</span>{% endif %}<strong>{{ t.name }}</strong></td>
+  <td class="tp-note" data-tp-edit="{{ t.pk }}" title="눌러서 지침 전체 보기·고치기">{% if t.note %}<span class="tp-note-text">{{ t.note }}</span>{% else %}<span class="muted">지침 없음 — 눌러서 적기</span>{% endif %}</td>
+  <td class="c"><input class="input sm tp-n" type="number" min="1" max="10" value="1" data-tp-n aria-label="{{ t.name }} 편수"></td>
+  <td class="r"><button type="button" class="btn ghost sm icon" data-tp-edit="{{ t.pk }}" title="주제·소재·지침 고치기" aria-label="{{ t.name }} 고치기">{% include "includes/ic.html" with name="edit" %}</button></td>
+</tr>
+<tr class="tp-edit" id="tp-edit-{{ t.pk }}" hidden>
+  <td colspan="5">
+    <form method="post" action="{% url 'routines:topic_save' t.pk %}" class="tp-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <input class="input sm" name="name" value="{{ t.name }}" maxlength="60" aria-label="주제" required>
+      <select class="input sm" name="category" aria-label="소재"><option value="">소재 없음 (사이트만)</option>{% for pk, label in categories %}<option value="{{ pk }}"{% if pk == t.category_id %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+      <select class="input sm" name="site" aria-label="사이트 (소재가 없을 때)"><option value="">사이트: 주제에 맞게</option>{% for s in site_names %}<option value="{{ s }}"{% if s == t.site %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+      <textarea class="input" name="note" rows="4" placeholder="이 주제를 쓸 때 지킬 것 — 다룰 범위(예: 이번 주 청약 일정 · 상장일), 볼 출처(예: 38커뮤니케이션 · DART), 구성 등" aria-label="지침">{{ t.note }}</textarea>
+      <div class="tp-form-foot">
+        <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
+        <button class="btn ghost sm danger" type="submit" formaction="{% url 'routines:topic_delete' t.pk %}" formnovalidate onclick="return confirm('{{ t.name|escapejs }} 주제를 휴지통으로 옮길까요?')">{% include "includes/ic.html" with name="trash" %}삭제</button>
+      </div>
+    </form>
+  </td>
+</tr>

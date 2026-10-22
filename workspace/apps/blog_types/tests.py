@@ -784,7 +784,7 @@ class SimpleClassesTests(TestCase):
         from apps.core.models import TrashEntry
         self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤"])
         self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
-                         ["코스피", "나스닥", "상품 추천", "그 외"])
+                         ["코스피", "나스닥", "상품 추천", "해외 여행", "그 외"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020)
         self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.all()))  # 사이트마다 '그 외' 하나
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
         self.assertTrue(Category.objects.get(name="코스피").direction)  # 방향 = 글쓰기 컨셉
@@ -866,7 +866,7 @@ class SiteCleanupTests(TestCase):
         self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
         res = self.client.get(reverse("routines:topics"))
         self.assertContains(res, f'<td class="tp-note" data-tp-edit="{topic.pk}"')  # 지침 칸을 누르면 전체가 보이는 고치기 칸이 열린다
-        self.assertContains(res, "주 1편</option>")
+        self.assertNotContains(res, "주 1편</option>")  # 주당 편수는 뺐다 — 실행할 때 줄마다 편수 (2026-10-23 사용자)
 
     def test_posts_get_new_site_and_error_post_goes_to_trash(self):
         from importlib import import_module
@@ -901,7 +901,7 @@ class NunipSiteCategoryTests(TestCase):
         self.assertEqual(self.site_names(), self.NAMES)
         self.assertEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").note, "티스토리 주제: 경제")
         self.assertEqual(list(Category.objects.filter(section__name="눈잎").values_list("name", flat=True)),
-                         ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "엔화·환율", "그 외"])
+                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020)
 
     def test_extra_categories_trashed_unless_they_hold_posts(self):
         from importlib import import_module

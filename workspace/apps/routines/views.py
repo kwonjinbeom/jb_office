@@ -5,15 +5,15 @@
 로컬·클라우드 구분은 없다 (2026-10-17 사용자). 진행 보고는 서버의 보고 주소(report_api)로 보내 '실행 이력'에 쌓인다
 (토큰이 없으면 PC 의 manage.py routine_report).
 모든 실행은 PC 에서 손으로 한다 (2026-10-17 사용자: 클라우드 예약은 지웠다). 리스트의 '실행'(루틴 하나),
-'전체 실행'(ALL_ORDER 순서로 루틴마다 새 터미널에서 차례로), 중메뉴 '추가 실행'(EXTRA_KEYS 를 하루 분량과 별도로 더).
-추가 실행: 글쓰기는 분류 고르기(기본) · 코멘트, 일일 아이디어는 개수 + 방향. 글쓰기 하루 분량(그날 쓸 분류)도 이 화면에서 고친다.
+'전체 실행'(ALL_ORDER 순서로 루틴마다 새 터미널에서 차례로). 하루 분량과 따로 더 쓰는 건 중메뉴 '커스텀 글쓰기'
+(topics.py — 사이트별 소재·고정 주제를 골라 편수만큼, 또는 자유 글쓰기 코멘트). 예전 중메뉴 '추가 실행'은 2026-10-23 뺐다.
 보고 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
 
 로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
 PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
 글쓰기(키 writing): 글 분류 = 사이트 > 고정 소재 (2026-10-22 사용자). 그날 쓸 분류·편수는 RoutinePick (없으면 기본:
-모든 소재 한 편씩 — 소재가 있는 것만 쓰고 없으면 쓰지 않는다, 주제 기획이 가린다). 리스트에서 글쓰기 줄을 누르면 왼쪽 아래가 분류 고르기 칸이 된다.
+모든 소재 한 편씩 — 소재가 있는 것만 쓰고 없으면 쓰지 않는다, 주제 기획이 가린다). 리스트에서 글쓰기 줄을 누르면 커스텀 글쓰기 목록이 펼쳐진다.
 전체 실행: 모든 루틴의 로컬 안내문을 이어 붙여 보내고, PC 가 루틴마다 나눠 새 터미널에서 차례로 돌린다 (local_run.open_chain).
 
 프롬프트 최신화: 리스트의 한 줄(루틴 키 prompt_update). 오늘의 자료 'evaluations'(루틴별 평가·점검 관점)를 보고
@@ -395,7 +395,6 @@ REPORT = """
 REPORT_PC = 'workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}'
 REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --data-urlencode "step=<한 줄>"'
 EXTRA_TITLE = "이번에 할 것 (추가 실행)"
-EXTRA_KEYS = ("writing", "daily_ideas")  # 추가 실행 화면에 나오는 루틴
 ALL_ORDER = ("prompt_update", "writing", "daily_ideas")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
 
 
@@ -558,59 +557,6 @@ def all_prompt(routines, day, report_for=lambda r: True):
     return "\n".join(parts)
 
 
-# ---- 분류 고르기 (글쓰기)
-
-def _picker(routine, day):
-    """추가 실행의 분류 칸 (빈 편수로 시작)과 그날 아침 분량 (저장한 분류 또는 기본 무작위)."""
-    picks, custom = day_picks(routine, day)
-    tree = [{"obj": s, "cats": [{"obj": c, "types": list(c.types.all())} for c in s.categories.all()]} for s in _sections()]
-    morning = [{"path": path, "n": n} for sel, n in picks.items() for node, path in [_node_path(sel)] if node is not None]
-    from apps.blog_types.models import ClassChange
-    return {"tree": tree, "picks": picks, "morning": morning, "total": sum(picks.values()), "custom": custom,
-            "changes": list(ClassChange.objects.all()[:3])}
-
-
-def extra_page(request):
-    """추가 실행: 일일 아이디어·글쓰기를 하루 분량과 별도로 더 돌린다. 누르면 extra 에서 안내문을 받아 PC 터미널을 연다."""
-    _nav(request, "routine_extra")
-    targets = [r for r in Routine.objects.all() if r.key in EXTRA_KEYS]
-    routine = next((r for r in targets if r.key == request.GET.get("r")), None) or next(
-        (r for r in targets if r.key == EXTRA_KEYS[0]), None)
-    try:
-        day = date.fromisoformat(request.GET.get("date", ""))
-    except ValueError:
-        day = timezone.localdate()
-    return render(request, "routines/extra.html", {
-        "page_title": "추가 실행", "targets": targets, "routine": routine, "day": day, "today": timezone.localdate(),
-        "picker": _picker(routine, day) if routine and "picks" in routine.data_keys else None,
-        "on_server": settings.IS_SERVER,
-    })
-
-
-def _picked(data):
-    """폼의 n_<sel> 편수 → {sel: 편수} (0·빈칸·잘못된 칸은 뺀다, 한 칸 최대 20)."""
-    value = {}
-    for name, raw in data.items():
-        sel = name[2:]
-        if name.startswith("n_") and re.fullmatch(r"[ct]\d+", sel) and raw.strip().isdigit() and int(raw) > 0:
-            value[sel] = min(int(raw), 20)
-    return value
-
-
-@require_POST
-def picks(request, pk):
-    """글쓰기의 그날 분류·편수: 저장 / 기본값(모든 소재, 소재 있는 것만)."""
-    routine = get_object_or_404(Routine, pk=pk)
-    day = _day(request)
-    action = request.POST.get("action", "save")
-    if action == "default":
-        RoutinePick.objects.filter(routine=routine, day=day).delete()
-    else:
-        value = _picked(request.POST)
-        RoutinePick.objects.update_or_create(routine=routine, day=day, defaults={"picks": value})
-    return redirect(f"{reverse('routines:extra_page')}?{urlencode({'r': routine.key, 'date': day.isoformat()})}#ex-morning")
-
-
 # ---- 일일루틴 리스트
 
 def index(request):
@@ -667,12 +613,12 @@ def index(request):
     runs = (RoutineRun.objects.select_related("routine")  # 실행 이력: 모든 루틴, 이 기간 + 끝나지 않은 것
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
                                                                  RoutineRun.Status.BLOCKED]))[:50])
-    from . import topics as topic_mod  # 글쓰기 줄 아래로 펼치는 고정 주제 (커스텀 글쓰기, 최근 4주)
-    fixed_topics, _ = topic_mod.rows(request, 4, today)
-    topics_all_prompt = topic_mod.all_prompt_for(request, fixed_topics, run_day)
+    from . import topics as topic_mod  # 글쓰기 줄 아래로 펼치는 커스텀 글쓰기 (사이트별 소재·고정 주제)
+    topic_groups = topic_mod.groups()
     return render(request, "routines/index.html", {
         "page_title": "일일루틴",
-        "fixed_topics": fixed_topics, "writing_key": topic_mod.WRITING_KEY, "topics_all_prompt": topics_all_prompt,
+        "topic_groups": topic_groups, "topic_count": sum(g["count"] for g in topic_groups),
+        "writing_key": topic_mod.WRITING_KEY,
         "bar": period.bar(mode, sel, today, state),
         "mode": mode,
         "day": sel,
@@ -681,7 +627,6 @@ def index(request):
         "done_total": sum(1 for r in routines if r.state == "done"),
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
-        "extra_keys": EXTRA_KEYS,
         "all_prompt": _with_feeds(request, all_prompt(routines, run_day, lambda r: report_url(request, r, run_day))) if routines else "",
         "all_keys": ",".join(r.key for r in _in_all_order(routines)),
         "on_server": settings.IS_SERVER,
@@ -841,8 +786,8 @@ def report_api(request, key):
 
 @require_POST
 def extra(request, pk):
-    """추가 실행 안내문 (JSON). 글쓰기: 분류 고르기(n_<sel> 편수) 또는 코멘트. 그 밖(일일 아이디어): 개수 + 방향.
-    화면이 받아 '실행'처럼 PC 터미널을 연다."""
+    """하루 분량과 따로 더 하는 안내문 (JSON). mode=comment: 커스텀 글쓰기의 자유 글쓰기 코멘트. mode=count: 개수 + 방향.
+    화면이 받아 '실행'처럼 PC 터미널을 연다. (고른 소재·고정 주제는 topics.run)"""
     routine = get_object_or_404(Routine, pk=pk)
     day = _day(request)
     mode = request.POST.get("mode")
@@ -862,10 +807,7 @@ def extra(request, pk):
                 "- 편수·주제·분류는 코멘트를 따른다. 분류가 적혀 있지 않으면 '글 분류 전체'에서 주제에 맞는 중분류를 고른다.\n"
                 "- 편수가 없으면 1편.")
     else:
-        value = _picked(request.POST)
-        if not value:
-            return JsonResponse({"error": "더 쓸 분류의 편수를 넣으세요."}, status=400)
-        body = _picks_lines(value, "추가로 고른 분류")
+        return JsonResponse({"error": "mode 는 comment 또는 count 입니다."}, status=400)
     return JsonResponse({"prompt": launcher(routine, day, report=report_url(request, routine, day), extra=body,
                                             tree=mode == "comment")})
 

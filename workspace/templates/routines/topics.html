@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block heading %}커스텀 글쓰기 <span class="cnt">이번 주 발행 {{ done_this_week }}/{{ topics|length }}</span>{% endblock %}
+{% block heading %}커스텀 글쓰기{% endblock %}
 
 {% block content %}
 <div class="tp-layout">
-{# 왼쪽: 자유 글쓰기 — 쓰고 싶은 것을 자유롭게 적고 글쓰기 (추가 실행의 코멘트와 같다, PC 터미널 claude) #}
+{# 왼쪽: 자유 글쓰기 — 쓰고 싶은 것을 자유롭게 적고 글쓰기 (views.extra mode=comment, PC 터미널 claude) #}
 <section class="card tp-free">
   <div class="card-head"><h3 class="card-title">자유 글쓰기</h3><span class="hint">PC 터미널에서 claude 가 씁니다</span></div>
   <form id="tp-free-form" class="tp-free-body" onsubmit="return false">{% csrf_token %}<input type="hidden" name="day" value="{{ today|date:'Y-m-d' }}"><input type="hidden" name="mode" value="comment">
@@ -16,59 +16,66 @@
   </form>
 </section>
 
-{# 오른쪽: 고정 주제 (2026-10-21 사용자). 한 줄에 한 주제: 지침 · 최근 8주 발행(점, 누르면 바뀜) · 실행(PC 터미널 claude 가 이 주제 한 편). #}
+{# 오른쪽: 사이트별 소재(글 분류) + 고정 주제 (2026-10-23 사용자). 줄 앞 체크 + 편수 → 위 '실행'이 한 터미널에서 한꺼번에 (서브 원고). #}
 <div class="tp-right">
 <section class="card">
+  <div class="card-head tp-head">
+    <h3 class="card-title">사이트별 소재 · 고정 주제</h3>
+    <span class="muted small" data-tp-count></span>
+    {% if writing %}<button class="btn primary sm" type="button" data-tp-run title="체크한 줄을 PC 터미널 claude 가 한꺼번에 씁니다 (줄마다 보조 작가)">{% include "includes/ic.html" with name="server" %}실행</button>{% endif %}
+  </div>
   <table class="grid tp-table">
-    <colgroup><col style="width:220px"><col><col style="width:{{ week_col }}px"><col style="width:64px"><col style="width:92px"><col style="width:58px"></colgroup>
-    <thead><tr>
-      <th>주제</th><th>지침</th>
-      <th><span class="tp-weekhead">{% for w in weeks %}<span{% if forloop.last %} class="now"{% endif %} title="{{ w|date:'n/j' }} 주">{% if forloop.last %}이번{% else %}{{ w|date:'n/j' }}{% endif %}</span>{% endfor %}</span></th>
-      <th class="c">주당</th><th colspan="2"><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="writing" name="커스텀 글쓰기 전체" kind="run" text=all_prompt day=today label="전체 실행" primary=True %}{% endif %}</div></th>
-    </tr></thead>
+    <colgroup><col style="width:36px"><col style="width:210px"><col><col style="width:76px"><col style="width:44px"></colgroup>
+    <thead><tr><th></th><th>소재 · 주제</th><th>지침</th><th class="c">편수</th><th></th></tr></thead>
     <tbody>
-      {% for t in topics %}
+      {% for g in groups %}{% with site=forloop.counter %}
+      <tr class="tp-site">
+        <td class="c"><input type="checkbox" class="checkbox" data-tp-site="{{ site }}" aria-label="{{ g.name|default:'사이트 미정' }} 모두 고르기"></td>
+        <td colspan="4"><strong>{{ g.name|default:"사이트 미정" }}</strong><span class="muted small"> · {{ g.count }}줄</span></td>
+      </tr>
+      {% for c in g.cats %}
+      {% if c.topics %}
+      {# 고정 주제가 있는 소재는 머리 줄: 그 아래 고정 주제를 골라 실행한다 (2026-10-23 사용자) #}
+      <tr class="tp-cat">
+        <td></td>
+        <td class="tp-name"><strong>{{ c.name }}</strong></td>
+        <td class="tp-note" title="{{ c.direction }}{% if c.question %} — {{ c.question }}{% endif %}"><span class="tp-note-text muted">{{ c.direction|default:"-" }}</span></td>
+        <td colspan="2"></td>
+      </tr>
+      {% for t in c.topics %}{% include "routines/_topic_row.html" with sub=True %}{% endfor %}
+      {% else %}
       <tr>
-        <td class="tp-name"><strong>{{ t.name }}</strong>{% if t.site %}<span class="muted small"> · {{ t.site }}</span>{% endif %}</td>
-        <td class="tp-note" data-tp-edit="{{ t.pk }}" title="눌러서 지침 전체 보기·고치기">{% if t.note %}<span class="tp-note-text">{{ t.note }}</span>{% else %}<span class="muted">지침 없음 — 눌러서 적기</span>{% endif %}</td>
-        <td>{% include "routines/_topic_dots.html" with next=request.get_full_path %}</td>
-        <td class="c small">{{ t.per_week }}편</td>
-        <td>{% if t.prompt %}{% include "routines/_launch.html" with key="writing" name=t.name kind="run" text=t.prompt day=today label="실행" %}{% endif %}</td>
-        <td class="r"><button type="button" class="btn ghost sm icon" data-tp-edit="{{ t.pk }}" title="주제·사이트·지침 고치기" aria-label="{{ t.name }} 고치기">{% include "includes/ic.html" with name="edit" %}</button></td>
+        <td class="c"><input type="checkbox" class="checkbox" data-tp-pick data-site="{{ site }}" value="c{{ c.pk }}" aria-label="{{ c.name }} 고르기"></td>
+        <td class="tp-name">{{ c.name }}</td>
+        <td class="tp-note" title="{{ c.direction }}{% if c.question %} — {{ c.question }}{% endif %} (지침은 글 분류에서 고칩니다)"><span class="tp-note-text">{{ c.direction|default:"-" }}{% if c.question %} <span class="muted">· {{ c.question }}</span>{% endif %}</span></td>
+        <td class="c"><input class="input sm tp-n" type="number" min="1" max="10" value="1" data-tp-n aria-label="{{ c.name }} 편수"></td>
+        <td></td>
       </tr>
-      <tr class="tp-edit" id="tp-edit-{{ t.pk }}" hidden>
-        <td colspan="6">
-          <form method="post" action="{% url 'routines:topic_save' t.pk %}" class="tp-form">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <input class="input sm" name="name" value="{{ t.name }}" maxlength="60" aria-label="주제" required>
-            <select class="input sm" name="site" aria-label="사이트"><option value="">사이트: 주제에 맞게</option>{% for s in site_names %}<option value="{{ s }}"{% if s == t.site %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>
-            <select class="input sm" name="per_week" aria-label="주당 편수">{% for n in "1234567" %}<option value="{{ n }}"{% if n|add:0 == t.per_week %} selected{% endif %}>주 {{ n }}편</option>{% endfor %}</select>
-            <textarea class="input" name="note" rows="4" placeholder="이 주제를 쓸 때 지킬 것 — 다룰 범위(예: 이번 주 청약 일정 · 상장일), 볼 출처(예: 38커뮤니케이션 · DART), 구성 등" aria-label="지침">{{ t.note }}</textarea>
-            <div class="tp-form-foot">
-              <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
-              <button class="btn ghost sm danger" type="submit" formaction="{% url 'routines:topic_delete' t.pk %}" formnovalidate onclick="return confirm('{{ t.name|escapejs }} 주제를 휴지통으로 옮길까요?')">{% include "includes/ic.html" with name="trash" %}삭제</button>
-            </div>
-          </form>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="6" class="grid-empty">고정 주제가 없습니다. 아래에서 추가하세요.</td></tr>
+      {% endif %}
       {% endfor %}
-      <tr class="tp-addrow"><td colspan="6">
+      {% for t in g.topics %}{% include "routines/_topic_row.html" with sub=False %}{% endfor %}
+      {% endwith %}
+      {% empty %}
+      <tr><td colspan="5" class="grid-empty">글 분류도 고정 주제도 없습니다. 아래에서 고정 주제를 추가하세요.</td></tr>
+      {% endfor %}
+      <tr class="tp-addrow"><td colspan="5">
         <form method="post" action="{% url 'routines:topic_add' %}" class="tp-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <select class="input sm" name="category" aria-label="새 고정 주제의 소재"><option value="">소재 없음</option>{% for pk, label in categories %}<option value="{{ pk }}">{{ label }}</option>{% endfor %}</select>
           <input class="input sm" name="name" maxlength="60" placeholder="+ 고정 주제 (예: 청약 일정 · 수도권) 이름 입력 후 Enter" aria-label="새 고정 주제" autocomplete="off">
         </form>
       </td></tr>
     </tbody>
   </table>
 </section>
-<p class="muted small">점은 그 주에 발행했는지 (왼쪽이 오래된 주, 테두리가 이번 주). 발행하고 직접 눌러 표시합니다. '실행'은 PC 터미널에서 claude 가 그 주제로 이번 주 글 한 편을 써서 글 관리 임시글로 보냅니다.</p>
+<p class="muted small">사이트 &gt; 소재는 일일루틴 글쓰기가 매일 보는 글 분류이고, 고정 주제는 지침을 따로 적어 둔 주제로 그 소재 아래에 있습니다. 고정 주제가 없는 소재는 소재 줄을 고르면 claude 가 주제를 정합니다. 체크한 줄을 '실행'하면 PC 터미널에서 claude 가 한꺼번에 써서 글 관리 임시글로 보냅니다. 글감이 없는 줄은 쓰지 않습니다.</p>
 </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{% include "routines/_topic_run_js.html" %}
 <script>
-/* 자유 글쓰기: 추가 실행(코멘트)과 같은 안내문을 받아 복사하고 PC 터미널 claude 를 연다 */
+/* 자유 글쓰기: 코멘트로 안내문을 받아 복사하고 PC 터미널 claude 를 연다 */
 document.addEventListener("click", function (e) {
   var go = e.target.closest("[data-tp-free]");
   if (!go) return;

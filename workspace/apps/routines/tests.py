@@ -56,8 +56,9 @@ class TempRepoTests(Login):
         self.assertEqual(list(Routine.objects.values_list("key", flat=True)), ["daily_ideas", "writing", "prompt_update"])
         res = self.client.get(INDEX)
         for text in ["일일루틴", "글쓰기", "프롬프트 최신화", ">실행<", "미완료",
-                     "실행 이력", ">추가 실행<"]:
+                     "실행 이력"]:
             self.assertContains(res, text)
+        self.assertNotContains(res, "추가 실행")  # 중메뉴 '추가 실행'은 뺐다 (2026-10-23 사용자, 커스텀 글쓰기로)
         self.assertNotContains(res, "클라우드")  # 로컬·클라우드 구분 없음
         self.assertTrue(Routine.all_objects.filter(key="naver", deleted_at__isnull=False).exists())  # 네이버 글쓰기 루틴은 휴지통
 
@@ -476,46 +477,26 @@ class RepoTests(Login):
         row = next(r for r in res.context["routines"] if r.key == "writing")
         self.assertIn("/routines/report/writing/?token=tok&day=2026-10-17&via=run", row.prompt)
 
-    def test_extra_writing_by_categories_or_comment(self):
-        from apps.blog_types.models import Category
-        legacy_tree()
+    def test_extra_comment_or_count(self):
+        """하루 분량과 따로: 커스텀 글쓰기의 자유 글쓰기(코멘트) · 개수 + 방향. 분류 고르기는 커스텀 글쓰기(topics.run)로 옮겼다."""
         writing = Routine.objects.get(key="writing")
         url = reverse("routines:extra", args=[writing.pk])
-        it = Category.objects.get(section__name="IT/AI", name="AI 도구·활용")
-        res = self.client.post(url, {"day": "2026-10-16", "mode": "cats", f"n_{it.sel}": "2"})
+        res = self.client.post(url, {"day": "2026-10-16", "mode": "comment", "comment": "IT/AI 로 3편, 아이폰 18 가격 비교"})
         text = res.json()["prompt"]
         self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가 실행) — 2026-10-16"))
-        self.assertIn("### 이번에 할 것 (추가 실행)\n(총 2편 · 추가로 고른 분류)\n- IT/AI > AI 도구·활용 — 2편", text)
-        self.assertNotIn("### 오늘 쓸 분류", text)
+        self.assertIn("사용자 코멘트: IT/AI 로 3편, 아이폰 18 가격 비교", text)
+        self.assertIn("### 글 분류 전체", text)  # 코멘트로 시키면 분류를 골라야 해서 트리를 싣는다
         self.assertIn("### 이미 있는 글", text)  # 겹침 피하기 자료는 그대로
-        self.assertFalse(RoutinePick.objects.exists())  # 추가 실행은 그날 아침 분량을 저장하지 않는다
-        res = self.client.post(url, {"day": "2026-10-16", "mode": "comment", "comment": "IT/AI 로 3편, 아이폰 18 가격 비교"})
-        self.assertIn("사용자 코멘트: IT/AI 로 3편, 아이폰 18 가격 비교", res.json()["prompt"])
-        self.assertIn("### 글 분류 전체", res.json()["prompt"])  # 코멘트로 시키면 분류를 골라야 해서 트리를 싣는다
-        self.assertNotIn("### 글 분류 전체", text)
+        self.assertNotIn("### 오늘 쓸 분류", text)
+        self.assertFalse(RoutinePick.objects.exists())  # 그날 아침 분량을 저장하지 않는다
         self.assertEqual(self.client.post(url, {"mode": "comment", "comment": " "}).status_code, 400)
         self.assertEqual(self.client.post(url, {"mode": "cats"}).status_code, 400)
-        page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
-        for html in ['data-ex-mode="cats" class="on"', 'data-ex-mode="comment"', ">추가 실행<", 'id="ex-comment"',
-                     "10월 16일 하루 분량", 'id="pk-morning"']:
-            self.assertContains(page, html)
-        self.assertNotContains(page, 'class="num-in pk-n" type="number" min="0" max="20" name="n_c' + str(it.pk) + '" value')  # 빈 칸으로 시작
-
-    def test_extra_daily_ideas_by_count(self):
         ideas = Routine.objects.get(key="daily_ideas")
         url = reverse("routines:extra", args=[ideas.pk])
         text = self.client.post(url, {"day": "2026-10-16", "mode": "count", "count": "4", "comment": "겨울 시즌 상품"}).json()["prompt"]
-        self.assertTrue(text.startswith("# 일일루틴 · 일일 아이디어 (추가 실행) — 2026-10-16"))
         self.assertIn("### 이번에 할 것 (추가 실행)\n4개 더 한다.\n방향 (사용자 코멘트): 겨울 시즌 상품", text)
-        self.assertIn("### 검색 표준", text)
         for bad in ["0", "31", "x"]:
             self.assertEqual(self.client.post(url, {"mode": "count", "count": bad}).status_code, 400)
-        page = self.client.get(reverse("routines:extra_page"), {"r": "daily_ideas"})
-        self.assertContains(page, 'name="count"')
-        self.assertContains(page, 'data-mode="count"')
-        index = self.client.get(INDEX)
-        self.assertContains(index, ">실행<")  # 예약이 안 돌았을 때 손으로
-        self.assertContains(index, f'{reverse("routines:extra_page")}?r=daily_ideas')
 
     def test_capture_version_when_md_changes(self):
         tistory = Routine.objects.get(key="writing")
@@ -543,12 +524,11 @@ class RepoTests(Login):
 
 
 class WritingPickTests(Login):
-    """글쓰기: 그날 쓸 분류 (기본 = 모든 소재 한 편씩, 소재 있는 것만), 고르기·기본값 (추가 실행 화면)."""
+    """글쓰기: 그날 쓸 분류 (기본 = 모든 소재 한 편씩, 소재 있는 것만). 예전에 저장한 그날 분류(RoutinePick)는 그대로 쓴다."""
 
     def setUp(self):
         super().setUp()
         self.writing = Routine.objects.get(key="writing")
-        self.url = reverse("routines:picks", args=[self.writing.pk])
 
     def by_section(self, picks):
         from apps.blog_types.models import Category
@@ -562,31 +542,23 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 7, "black_lukey": 6, "밤밤": 4})  # AI 소식은 커스텀 (0018)
+        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 6, "밤밤": 5})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
         self.assertEqual((row.target, row.state), ("", "todo"))  # 정해진 목표 없음 — 한 편이라도 쓰면 완료
 
-    def test_save_and_default(self):
+    def test_saved_picks(self):
         from apps.blog_types.models import Category
         it = Category.objects.get(section__name="black_lukey", name="신제품 출시")
         t = Category.objects.get(section__name="밤밤", name="코스피")
-        self.client.post(self.url, {"day": "2026-10-16", f"n_{it.sel}": "3", f"n_{t.sel}": "1", "n_c999": "x", "n_g1": "2"})
-        pick = RoutinePick.objects.get()
-        self.assertEqual(pick.picks, {it.sel: 3, t.sel: 1})
+        RoutinePick.objects.create(routine=self.writing, day=date(2026, 10, 16), picks={it.sel: 3, t.sel: 1})
         text = launcher(self.writing, date(2026, 10, 16))
         self.assertIn("(총 4편 · 사용자가 고른 분류)", text)
         self.assertIn("- black_lukey > 신제품 출시 — 3편", text)
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
         self.assertEqual(row.target, 4)
-        page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
-        self.assertTrue(page.context["picker"]["custom"])
-        self.assertContains(page, "black_lukey &gt; 신제품 출시 <strong>3편</strong>")
-        res = self.client.post(self.url, {"day": "2026-10-16", "action": "default"})
-        self.assertEqual(res.url, reverse("routines:extra_page") + "?r=writing&date=2026-10-16#ex-morning")
-        self.assertFalse(RoutinePick.objects.exists())
 
 
 class ClassChangeTests(TestCase):
@@ -687,56 +659,100 @@ def decoded(cmd):
 
 
 class FixedTopicTests(Login):
-    """커스텀 글쓰기 (2026-10-21 사용자): 고정 주제를 주 단위로 쓰고 발행 여부를 점으로 본다. 일일루틴 글쓰기 줄 아래로 펼친다."""
+    """커스텀 글쓰기 (2026-10-21 사용자, 2026-10-23 사이트별로): 글 분류의 소재 + 고정 주제를 사이트별로, 체크·편수 → 한꺼번에 실행.
+    일일루틴 글쓰기 줄 아래로 같은 목록을 펼친다."""
 
-    def test_seed_page_and_weekly_dots(self):
-        from datetime import timedelta
+    def run_prompt(self, **picks):
+        return self.client.post(reverse("routines:topic_run"), picks)
 
-        from django.utils import timezone
-
-        from .models import FixedTopic, TopicWeek, week_start
-        names = list(FixedTopic.objects.values_list("name", flat=True))
-        self.assertEqual(names[:2], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 나머지는 지역별 (test_topic_feedback_migration)
+    def test_page_groups_by_site(self):
+        from .models import FixedTopic
         res = self.client.get(reverse("routines:topics"))
         self.assertEqual(res.context["ACTIVE_MENU"], "routine_topics")
-        self.assertEqual(len(res.context["weeks"]), 8)
-        t = FixedTopic.objects.get(name="공모주 일정 · 국내")
-        today = timezone.localdate()
-        url = reverse("routines:topic_week", args=[t.pk])
-        self.client.post(url, {"week": today.isoformat(), "next": "/routines/topics/"})
-        self.assertTrue(TopicWeek.objects.get(topic=t, week=week_start(today)).published)
-        res = self.client.get(reverse("routines:topics"))
-        self.assertEqual(res.context["done_this_week"], 1)
-        self.client.post(url, {"week": (week_start(today) + timedelta(days=3)).isoformat()})  # 그 주 어느 날이든 같은 주
-        self.assertFalse(TopicWeek.objects.get(topic=t, week=week_start(today)).published)
+        groups = res.context["groups"]
+        self.assertEqual([g["name"] for g in groups[:3]], ["눈잎", "black_lukey", "밤밤"])  # 글 분류의 사이트 순서
+        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 6, 5])  # 일일루틴 글쓰기가 보는 소재 그대로
+        ipo = next(c for c in groups[0]["cats"] if c.name == "공모주")
+        self.assertEqual([t.name for t in ipo.topics], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 고정 주제는 소재 아래
+        self.assertNotContains(res, f'value="c{ipo.pk}"')  # 고정 주제가 있는 소재는 머리 줄만 (고르지 않는다)
+        self.assertEqual(groups[0]["count"], 6)  # 청년·신혼 1 + 주택 1 + 공모주 2 + 일본 + 그 외
+        shown = [t.pk for g in groups for t in g["topics"]] + [t.pk for g in groups for c in g["cats"] for t in c.topics]
+        self.assertEqual(sorted(shown), sorted(FixedTopic.objects.values_list("pk", flat=True)))
+        nunip = next(c for c in groups[0]["cats"] if not c.topics)
+        for html in ["data-tp-run", f'value="c{nunip.pk}"', 'value="1" data-tp-n', "자유 글쓰기"]:
+            self.assertContains(res, html)
+        self.assertNotContains(res, "이번 주 발행")  # 주 단위 점·주당은 뺐다
+        self.assertNotContains(res, "tp-dot")
 
-    def test_add_edit_and_prompt(self):
+    def test_add_edit_and_run(self):
+        from apps.blog_types.models import Category
+
         from .models import FixedTopic
-        self.client.post(reverse("routines:topic_add"), {"name": "  청약   일정 · 수도권 "})
+        self.client.post(reverse("routines:topic_add"), {"name": "  청약   일정 · 수도권 ", "site": "눈잎"})
         t = FixedTopic.objects.get(name="청약 일정 · 수도권")
+        self.assertEqual(t.site, "눈잎")
         self.client.post(reverse("routines:topic_save", args=[t.pk]),
-                         {"name": "청약 일정 · 수도권", "site": "눈잎", "per_week": "2", "note": "이번 주 청약 단지와 당첨 발표일만"})
+                         {"name": "청약 일정 · 수도권", "site": "눈잎", "note": "이번 주 청약 단지와 당첨 발표일만"})
         t.refresh_from_db()
-        self.assertEqual((t.site, t.per_week, t.note), ("눈잎", 2, "이번 주 청약 단지와 당첨 발표일만"))
-        res = self.client.get(reverse("routines:topics"))
-        prompt = next(x for x in res.context["topics"] if x.pk == t.pk).prompt
-        self.assertTrue(prompt.startswith("# 일일루틴 · 글쓰기 (추가 실행)"))  # 글쓰기 루틴의 추가 실행처럼 PC 터미널에서
-        for text in ["고정 주제 (커스텀 글쓰기): 청약 일정 · 수도권 — 2편", "사이트: 눈잎", "이번 주 청약 단지와 당첨 발표일만",
-                     "고정주제: 청약 일정 · 수도권"]:
+        self.assertEqual((t.site, t.note), ("눈잎", "이번 주 청약 단지와 당첨 발표일만"))
+        self.assertIn(t, self.client.get(reverse("routines:topics")).context["groups"][0]["topics"])  # 눈잎 아래로
+        ipo = Category.objects.get(section__name="눈잎", name="공모주")
+        data = self.run_prompt(**{f"c{ipo.pk}": "1", f"f{t.pk}": "2", "c999999": "1", "x1": "3"}).json()
+        prompt = data["prompt"]
+        self.assertTrue(prompt.startswith("# 일일루틴 · 글쓰기 (추가 실행)"))  # PC 터미널 한 번에, 글쓰기 md 대로 서브 원고
+        for text in ["커스텀 글쓰기 (사용자가 고른 것, 최대 3편)", "#### 소재 — 보조 기획자가", "- 눈잎 > 공모주 — 1편",
+                     "#### 고정 주제 — 기획 없이 작가에게 바로", "고정 주제: 청약 일정 · 수도권 — 2편", "사이트: 눈잎",
+                     "이번 주 청약 단지와 당첨 발표일만", "고정주제: 청약 일정 · 수도권", "커스텀: 커스텀 글쓰기", "### 글 분류 전체"]:
             self.assertIn(text, prompt)
+        self.assertEqual((data["count"], data["name"], data["key"]), (3, "커스텀 글쓰기 2줄", "writing"))
+        only_cat = self.run_prompt(**{f"c{ipo.pk}": "15"}).json()
+        self.assertEqual((only_cat["count"], only_cat["name"]), (10, "공모주"))  # 한 줄 최대 10편
+        self.assertNotIn("### 글 분류 전체", only_cat["prompt"])  # 소재만이면 트리 없이
+        self.assertEqual(self.run_prompt().status_code, 400)
+        self.assertEqual(self.run_prompt(**{f"c{ipo.pk}": "0"}).status_code, 400)
         self.client.post(reverse("routines:topic_delete", args=[t.pk]))
         self.assertFalse(FixedTopic.objects.filter(pk=t.pk).exists())
         self.assertTrue(FixedTopic.all_objects.filter(pk=t.pk).exists())  # 휴지통
 
     def test_index_writing_row_unfolds_topics(self):
+        from apps.blog_types.models import Category
         res = self.client.get(reverse("routines:index"))
         self.assertContains(res, 'class="rt-has-sub" data-rt-toggle')
         self.assertContains(res, "공모주 일정 · 해외")
-        self.assertContains(res, "data-rt-sub hidden", count=6)  # 주제 다섯(AI 소식 포함) + 추가 줄
-        self.assertEqual(len(res.context["fixed_topics"][0].cells), 4)  # 최근 4주
+        self.assertContains(res, "지역 놀거리")
+        self.assertContains(res, f'data-tp-one="c{Category.objects.get(name="코스피").pk}"')  # 줄마다 실행 (1편)
+        groups = res.context["topic_groups"]
+        rows = len(groups) + sum(1 + len(c.topics) for g in groups for c in g["cats"]) + sum(len(g["topics"]) for g in groups) + 1  # 사이트 머리 + 소재(+그 아래 주제) + 줄 + 추가 줄
+        self.assertContains(res, "data-rt-sub hidden", count=rows)
+        self.assertNotContains(res, "tp-dot")
 
-    def test_free_writing_box_and_compact_picker(self):
-        legacy_tree()  # 소분류가 있는 옛 분류로 접힘 칸을 본다
+    def test_topics_under_materials_migration(self):
+        """2026-10-23 사용자 (0020): 고정 주제는 소재 아래 · 지침은 소재 방향이 먼저 · 일본 한 소재 · 해외여행은 밤밤"""
+        from apps.blog_types.models import Category
+
+        from .models import FixedTopic
+        links = {t.name: (t.category.section.name, t.category.name) for t in FixedTopic.objects.exclude(category=None)}
+        self.assertEqual(links, {"공모주 일정 · 국내": ("눈잎", "공모주"), "공모주 일정 · 해외": ("눈잎", "공모주"),
+                                 "청년·신혼 정책 (서울·경기)": ("눈잎", "청년·신혼 정책"),
+                                 "청약·임대주택 공고 (서울·경기)": ("눈잎", "주택 공고")})
+        kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
+        self.assertTrue(kr.note.startswith("방향 (우선): 새 종목 · 일정 변경 · 수요예측 결과"))
+        self.assertIn("🔥 화제 종목", kr.note)  # 기존 지침은 뒤에 그대로
+        housing = FixedTopic.objects.get(name="청약·임대주택 공고 (서울·경기)")
+        self.assertTrue(housing.note.startswith("방향 (우선): 새 공고의 자격 · 소득 기준 · 접수일을 표로"))
+        self.assertIn("신청 자격·소득 기준(", housing.note)
+        japan = Category.objects.get(section__name="눈잎", name="일본")
+        self.assertIn("엔화·환율", japan.direction)
+        self.assertFalse(Category.objects.filter(name__in=["엔화·환율", "일본 여행"]).exists())
+        self.assertTrue(Category.all_objects.filter(name="엔화·환율", deleted_at__isnull=False).exists())  # 휴지통 (7일 복원)
+        overseas = Category.objects.get(name="해외 여행")
+        self.assertEqual((overseas.section.name, overseas.code), ("밤밤", "D"))
+        self.assertIn("가볼 만한 곳", overseas.direction)
+        prompt = self.run_prompt(**{f"f{kr.pk}": "1"}).json()["prompt"]
+        self.assertIn("- 분류: 눈잎 > 공모주", prompt)
+        self.assertNotIn("### 글 분류 전체", prompt)  # 소재가 정해진 고정 주제는 트리 없이
+
+    def test_free_writing_box(self):
         writing = Routine.objects.get(key="writing")
         res = self.client.get(reverse("routines:topics"))
         self.assertContains(res, 'id="tp-free-text"')  # 왼쪽 자유 글쓰기
@@ -744,9 +760,6 @@ class FixedTopicTests(Login):
         data = self.client.post(reverse("routines:extra", args=[writing.pk]),
                                 {"mode": "comment", "comment": "신혼부부 전세대출 금리 비교 2편", "day": "2026-10-21"}).json()
         self.assertIn("신혼부부 전세대출 금리 비교 2편", data["prompt"])
-        res = self.client.get(reverse("routines:extra_page"), {"r": "writing"})
-        self.assertContains(res, "data-pk-tog")  # 하위 타입은 접어 둔다
-        self.assertContains(res, '<div class="pk-types" hidden>', html=False)
 
     def test_topic_feedback_migration(self):
         """주제별 피드백 (2026-10-21 사용자): 정책·청약 공고는 따로, 서울·경기는 한 글 안에서 나눈다, 공모주는 앞으로 한 달·분기"""
@@ -768,7 +781,7 @@ class FixedTopicTests(Login):
         self.assertIn("주택 청약·임대 공고는 다루지 않는다", policy.note)
         self.assertNotIn("기존 지침", policy.note)
         self.assertIn("이미 마감된 사업은 쓰지 않는다", policy.note)
-        prompt = self.client.get(reverse("routines:topics")).context["topics"][0].prompt
+        prompt = self.run_prompt(**{f"f{kr.pk}": "1"}).json()["prompt"]
         self.assertIn("공모주는 앞으로 한 달·분기", prompt)
         self.assertIn("🔥 화제 종목", prompt)
         # 3차 (2026-10-22, 0018): 글감 없으면 원고를 만들지 않는다 · 지난 날짜 금지 · AI 소식은 핵심 도구 근황 + 써 본 사람들 후기
@@ -792,15 +805,3 @@ class FixedTopicTests(Login):
         self.assertTrue(note.startswith("내가 쓴 지침\n\n추가 지침 (2026-10-22):"))
         self.assertIn("원고를 만들지 않는다 (글감 없음)", note)
         self.assertEqual(mig.update(note, mig.HOUSING_REPLACE, mig.HOUSING_ADD), note)
-
-    def test_run_all_topics(self):
-        """전체 실행 (2026-10-21 사용자): 고정 주제 모두를 한 터미널에서 차례로"""
-        res = self.client.get(reverse("routines:topics"))
-        text = res.context["all_prompt"]
-        self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가 실행)"))
-        self.assertIn("고정 주제 전체 실행 (커스텀 글쓰기): 아래 5개 주제를 순서대로", text)
-        for n, name in enumerate(["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)"], 1):
-            self.assertIn(f"#### {n}. {name}", text)
-        self.assertContains(res, "전체 실행")
-        res = self.client.get(reverse("routines:index"))
-        self.assertContains(res, "고정 주제 전체 실행")

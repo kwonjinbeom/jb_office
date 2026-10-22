@@ -5,15 +5,15 @@
 {% block toolbar %}{% include "includes/period_bar.html" %}{% endblock %}
 
 {% block content %}
-{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(최신화 → 글쓰기 → 아이디어) · '추가 실행'(더). #}
+{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(최신화 → 글쓰기 → 아이디어). 더 쓰는 건 커스텀 글쓰기. #}
 <section class="card br-sites">
   <table class="grid br-table rt-table">
     <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:230px"><col style="width:80px"></colgroup>
     <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
     <tbody>
       {% for r in routines %}
-      <tr id="rt-{{ r.key }}"{% if r.key == writing_key %} class="rt-has-sub" data-rt-toggle title="눌러서 고정 주제(커스텀 글쓰기) 펼치기"{% endif %}>
-        <td><div class="br-site">{% if r.key == writing_key %}<span class="rt-caret" aria-hidden="true">{% include "includes/ic.html" with name="chevron-right" %}</span>{% endif %}<a class="rt-name" href="{{ r.url }}">{{ r.name }}</a>{% if r.key == writing_key and fixed_topics %}<span class="rt-subcnt" title="고정 주제">+{{ fixed_topics|length }}</span>{% endif %}<a class="br-edit" href="{% url 'routines:edit' r.pk %}" title="루틴·프롬프트 수정" aria-label="{{ r.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a></div></td>
+      <tr id="rt-{{ r.key }}"{% if r.key == writing_key %} class="rt-has-sub" data-rt-toggle title="눌러서 커스텀 글쓰기(사이트별 소재·고정 주제) 펼치기"{% endif %}>
+        <td><div class="br-site">{% if r.key == writing_key %}<span class="rt-caret" aria-hidden="true">{% include "includes/ic.html" with name="chevron-right" %}</span>{% endif %}<a class="rt-name" href="{{ r.url }}">{{ r.name }}</a>{% if r.key == writing_key and topic_count %}<span class="rt-subcnt" title="커스텀 글쓰기 줄">+{{ topic_count }}</span>{% endif %}<a class="br-edit" href="{% url 'routines:edit' r.pk %}" title="루틴·프롬프트 수정" aria-label="{{ r.name }} 수정">{% include "includes/ic.html" with name="edit" %}</a></div></td>
         <td><div class="rt-task" title="{{ r.task }} · {% if r.key == writing_key %}소재 있는 것만{% else %}하루 {{ r.daily }}{{ r.unit }}{% endif %} · {{ r.output }}">{{ r.task }} <span class="br-sub">· {% if r.key == writing_key %}소재 있는 것만{% else %}하루 {{ r.daily }}{{ r.unit }}{% endif %} · {{ r.output }}</span></div></td>
         <td class="r">
           {% if mode == 'day' %}<form class="br-count" method="post" action="{% url 'routines:count' r.pk %}">{% csrf_token %}<input type="hidden" name="day" value="{{ day|date:'Y-m-d' }}"><input type="hidden" name="keep" value="{{ keep }}"><input class="num-in{% if r.fixed %} is-fixed{% endif %}" type="number" name="value" min="0" max="999" value="{{ r.result }}" placeholder="{{ r.auto }}" data-autosubmit title="{% if r.fixed %}고친 값 (자동 {{ r.auto }}) — 비우면 자동{% else %}화면에서 자동으로 센 값 — 고치면 그날 값으로 남음{% endif %}" aria-label="{{ r.name }} 결과"></form>
@@ -22,24 +22,52 @@
         <td>
           <div class="rt-acts">
             {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt day=run_day label="실행" %}
-            {% if r.key in extra_keys %}<a class="btn sm ghost" href="{% url 'routines:extra_page' %}?r={{ r.key }}" title="하루 분량과 별도로 더 돌리기">{% include "includes/ic.html" with name="plus" %}추가 실행</a>{% endif %}
           </div>
         </td>
         <td class="c">{% include "includes/state.html" with state=r.state %}</td>
       </tr>
       {% if r.key == writing_key %}
-      {# 고정 주제 (커스텀 글쓰기, 2026-10-21 사용자): 글쓰기 줄을 누르면 펼친다. 점은 최근 4주 발행(누르면 바뀜), 상태는 이번 주 #}
-      {% for t in fixed_topics %}
+      {# 커스텀 글쓰기 (2026-10-23 사용자): 글쓰기 줄을 누르면 사이트별 소재·고정 주제를 펼친다. 줄마다 '실행' = 그 줄 1편 (편수·여러 줄은 커스텀 글쓰기에서) #}
+      {% for g in topic_groups %}
+      <tr class="rt-sub rt-sub-site" data-rt-sub hidden><td colspan="5"><div class="br-site rt-sub-name"><span class="rt-branch" aria-hidden="true">└</span><strong>{{ g.name|default:"사이트 미정" }}</strong></div></td></tr>
+      {% for c in g.cats %}
+      {% if c.topics %}
       <tr class="rt-sub" data-rt-sub hidden>
-        <td><div class="br-site rt-sub-name"><span class="rt-branch" aria-hidden="true">└</span><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 지침 고치기">{{ t.name }}</a></div></td>
-        <td><div class="rt-task">{% if t.note %}<span title="{{ t.note }}">{{ t.note|striptags }}</span>{% else %}<span class="muted">지침 없음 — 커스텀 글쓰기에서 적기</span>{% endif %} <span class="br-sub">· 주 {{ t.per_week }}편{% if t.site %} · {{ t.site }}{% endif %}</span></div></td>
-        <td class="r">{% include "routines/_topic_dots.html" with next=request.get_full_path %}</td>
-        <td><div class="rt-acts">{% if t.prompt %}{% include "routines/_launch.html" with key="writing" name=t.name kind="run" text=t.prompt day=run_day label="실행" %}{% endif %}</div></td>
-        <td class="c">{% if t.week_done %}{% include "includes/state.html" with state="done" %}{% else %}{% include "includes/state.html" with state="todo" %}{% endif %}</td>
+        <td><div class="br-site rt-sub-name rt-sub-item"><strong class="rt-name">{{ c.name }}</strong></div></td>
+        <td><div class="rt-task muted" title="{{ c.direction }}">{{ c.direction|default:"-" }}</div></td>
+        <td></td><td></td><td></td>
+      </tr>
+      {% for t in c.topics %}
+      <tr class="rt-sub" data-rt-sub hidden>
+        <td><div class="br-site rt-sub-name rt-sub-topic"><span class="rt-branch" aria-hidden="true">└</span><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 지침 고치기">{{ t.name }}</a></div></td>
+        <td><div class="rt-task">{% if t.note %}<span title="{{ t.note }}">{{ t.note|striptags }}</span>{% else %}<span class="muted">지침 없음 — 커스텀 글쓰기에서 적기</span>{% endif %}</div></td>
+        <td></td>
+        <td><div class="rt-acts"><button class="btn sm" type="button" data-tp-one="f{{ t.pk }}" title="이 주제로 1편 (PC 터미널 claude, 글감 없으면 안 씀)">{% include "includes/ic.html" with name="server" %}실행</button></div></td>
+        <td></td>
       </tr>
       {% endfor %}
+      {% else %}
+      <tr class="rt-sub" data-rt-sub hidden>
+        <td><div class="br-site rt-sub-name rt-sub-item"><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 편수 정해 실행">{{ c.name }}</a></div></td>
+        <td><div class="rt-task" title="{{ c.direction }}{% if c.question %} — {{ c.question }}{% endif %}">{{ c.direction|default:"-" }}{% if c.question %} <span class="br-sub">· {{ c.question }}</span>{% endif %}</div></td>
+        <td></td>
+        <td><div class="rt-acts"><button class="btn sm" type="button" data-tp-one="c{{ c.pk }}" title="이 소재로 1편 (PC 터미널 claude, 글감 없으면 안 씀)">{% include "includes/ic.html" with name="server" %}실행</button></div></td>
+        <td></td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+      {% for t in g.topics %}
+      <tr class="rt-sub" data-rt-sub hidden>
+        <td><div class="br-site rt-sub-name rt-sub-item"><a class="rt-name" href="{% url 'routines:topics' %}" title="커스텀 글쓰기에서 지침 고치기">{{ t.name }}</a></div></td>
+        <td><div class="rt-task">{% if t.note %}<span title="{{ t.note }}">{{ t.note|striptags }}</span>{% else %}<span class="muted">지침 없음 — 커스텀 글쓰기에서 적기</span>{% endif %}</div></td>
+        <td></td>
+        <td><div class="rt-acts"><button class="btn sm" type="button" data-tp-one="f{{ t.pk }}" title="이 주제로 1편 (PC 터미널 claude, 글감 없으면 안 씀)">{% include "includes/ic.html" with name="server" %}실행</button></div></td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      {% endfor %}
       <tr class="rt-sub rt-sub-add" data-rt-sub hidden>
-        <td colspan="5"><form method="post" action="{% url 'routines:topic_add' %}" class="tp-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><span class="rt-branch" aria-hidden="true">└</span><input class="input sm" name="name" maxlength="60" placeholder="+ 고정 주제 추가 (이름 입력 후 Enter, 지침은 커스텀 글쓰기에서)" aria-label="새 고정 주제" autocomplete="off"></form>{% if topics_all_prompt %}<div class="tp-all">{% include "routines/_launch.html" with key="writing" name="커스텀 글쓰기 전체" kind="run" text=topics_all_prompt day=run_day label="고정 주제 전체 실행" %}</div>{% endif %}</td>
+        <td colspan="5"><form method="post" action="{% url 'routines:topic_add' %}" class="tp-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><span class="rt-branch" aria-hidden="true">└</span><input class="input sm" name="name" maxlength="60" placeholder="+ 고정 주제 추가 (이름 입력 후 Enter, 사이트·지침은 커스텀 글쓰기에서)" aria-label="새 고정 주제" autocomplete="off"></form></td>
       </tr>
       {% endif %}
       {% endfor %}
@@ -47,7 +75,7 @@
   </table>
 </section>
 
-{# 모든 루틴의 실행 이력 ('실행' · 전체 실행 · 추가 실행). claude 가 단계마다 서버로 보고한다. #}
+{# 모든 루틴의 실행 이력 ('실행' · 전체 실행 · 커스텀 글쓰기). claude 가 단계마다 서버로 보고한다. #}
 <section class="card rt-panel rt-history" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
   <div class="rt-panel-head">
     <h2 class="card-title">실행 이력 <span class="cnt">{{ runs|length }}</span></h2>
@@ -61,15 +89,16 @@
 {{ run.log }}</pre>
     </details>
     {% empty %}
-    <div class="rt-empty">이 기간에 실행한 기록이 없습니다.<br>'실행'·'전체 실행'·'추가 실행'으로 돌린 claude 가 단계마다 여기에 남깁니다.</div>
+    <div class="rt-empty">이 기간에 실행한 기록이 없습니다.<br>'실행'·'전체 실행'·커스텀 글쓰기로 돌린 claude 가 단계마다 여기에 남깁니다.</div>
     {% endfor %}
   </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
+{% include "routines/_topic_run_js.html" %}
 <script>
-/* 글쓰기 줄을 누르면 고정 주제가 아래로 펼쳐진다 (이 브라우저에 기억). 줄 안의 링크·버튼·입력은 그대로 동작. */
+/* 글쓰기 줄을 누르면 커스텀 글쓰기(사이트별 소재·고정 주제)가 아래로 펼쳐진다 (이 브라우저에 기억). 줄 안의 링크·버튼·입력은 그대로 동작. */
 (function () {
   var row = document.querySelector("[data-rt-toggle]");
   if (!row) return;
