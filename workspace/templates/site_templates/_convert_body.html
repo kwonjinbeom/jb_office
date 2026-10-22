@@ -13,7 +13,9 @@
     </div>
   </section>
   <section class="card st-col">
-    <div class="card-head"><h3 class="card-title">변환본</h3><span class="hint">{% if pl.converted_at %}{{ pl.converted_at|date:"m-d H:i" }} 변환{% else %}아직 없음{% endif %}</span></div>
+    <div class="card-head"><h3 class="card-title">변환본</h3><span class="hint">{% if pl.converted_at %}{{ pl.converted_at|date:"m-d H:i" }} 변환{% else %}아직 없음{% endif %}</span>
+      {# 원문 접기 (2026-10-23 사용자: 때때로 변환본만 크게). 고른 상태는 이 브라우저에 기억한다 (app.js data-st-solo) #}
+      <button type="button" class="btn ghost sm st-solo-btn" data-st-solo><span class="st-solo-off">원문 접기</span><span class="st-solo-on">원문 펴기</span></button></div>
     <div class="card-body wr-article st-preview st-converted{% if is_naver %} st-naver{% elif flat %} st-flat{% endif %}">
       {% if converted_html %}
       <h2 class="st-ptitle">{{ pl.converted_title|default:post.title }}</h2>
