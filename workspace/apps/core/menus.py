@@ -94,6 +94,8 @@ MENUS: list[Menu] = [
             Menu("studio_review", "검증 기록", "방식별로 AI 티·품질·손이 가는 정도를 따져 본 결과", "studio:review", "check-list"),
         ),
     ),
+    # 일정관리 (2026-10-22 사용자): 큰 월 달력 + 고른 날 일정 + 입력·수정 폼
+    Menu("schedule", "일정관리", "달력으로 일정을 보고 날짜별로 넣고 고치는 곳", "schedule:index", "calendar", "#0891b2"),
     Menu("discussions", "진행현황", "전체 주제별 현재 핵심과 다음 행동을 한곳에서", "discussions:list", "list", "#0f766e"),
     Menu("memos", "메모", "떠오른 생각, 참고 사항을 빠르게 기록", "memos:list", "memo", "#64748b"),
     Menu("trash", "휴지통", "모든 화면의 삭제 항목 · 7일간 복원", "core:trash", "trash", "#64748b"),

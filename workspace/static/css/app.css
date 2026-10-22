@@ -1696,3 +1696,47 @@ a.br-addr:hover { color: var(--accent); }
 .cc-num { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 12px; }
 .cc-sfx { font-size: 12px; color: var(--text-2); }
 @media (max-width: 900px) { .cc-shorts { grid-template-columns: minmax(0, 1fr); } .cc-player { position: static; } }
+
+/* 일정관리 (apps/schedule): 위 큰 월 달력 · 아래 두 칸(고른 날 일정 | 입력·수정). 칸 크기는 모두 같게 (2026-10-22 사용자) */
+.sc { display: flex; flex-direction: column; gap: 14px; }
+.sc-nav { display: flex; align-items: center; gap: 6px; }
+.sc-month { min-width: 92px; text-align: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sc-cal { overflow: hidden; }
+.sc-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.sc-week + .sc-week { border-top: 1px solid var(--border); }
+.sc-head { background: var(--bg); }
+.sc-wd { padding: 7px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.sc-wd.sun, .sc-num.sun { color: #d14343; }
+.sc-wd.sat, .sc-num.sat { color: #2f6bd8; }
+.sc-day { display: flex; flex-direction: column; gap: 2px; height: 104px; padding: 6px 8px; overflow: hidden; color: var(--text); border-left: 1px solid var(--border); }
+.sc-day:first-child { border-left: 0; }
+.sc-day:hover { background: #fafbfc; }
+.sc-day.out { background: #fafafa; }
+.sc-day.out .sc-num, .sc-day.out .sc-ev { opacity: .45; }
+.sc-day.picked { background: var(--accent-weak); }
+.sc-num { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 20px; }
+.sc-day.today .sc-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; }
+.sc-ev { display: block; font-size: 11.5px; line-height: 17px; padding: 0 5px; border-radius: 4px; background: #eef2f7; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-ev b { font-weight: 600; color: var(--text); }
+.sc-ev.done { text-decoration: line-through; color: var(--text-3); }
+.sc-more { font-size: 11px; color: var(--text-3); padding: 0 5px; }
+.sc-bottom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.sc-list { max-height: 300px; overflow-y: auto; }
+.sc-row { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-top: 1px solid var(--border); }
+.sc-row:first-child { border-top: 0; }
+.sc-row.on { background: var(--accent-weak); }
+.sc-row form { display: contents; }
+.sc-check { border: 0; background: none; padding: 0; color: var(--text-3); cursor: pointer; display: grid; place-items: center; }
+.sc-row.done .sc-check { color: var(--accent); }
+.sc-time { width: 40px; flex: none; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sc-title { min-width: 0; flex: 1; color: var(--text); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-row.done .sc-title { color: var(--text-3); text-decoration: line-through; }
+.sc-note { margin-left: 8px; font-size: 12px; color: var(--text-3); }
+.sc-list .empty { padding: 28px 16px; }
+.sc-form .form-foot { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.danger-text { color: var(--danger); }
+@media (max-width: 900px) {
+  .sc-bottom { grid-template-columns: minmax(0, 1fr); }
+  .sc-day { height: 76px; padding: 4px; }
+  .sc-ev b { display: none; }
+}
