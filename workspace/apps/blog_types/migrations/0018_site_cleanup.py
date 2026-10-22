@@ -1,6 +1,6 @@
 """사이트 타겟 바로잡기 (2026-10-22 사용자).
 
-1. AI 소식은 일일 분량(black_lukey)이 아니라 커스텀 글쓰기의 고정 주제로, 사이트는 memorily.
+1. AI 소식은 일일 분량(black_lukey)이 아니라 커스텀 글쓰기의 고정 주제로, 사이트는 memorily (한 번에 1편 — routines 0017).
    memorily 에는 애니와 이것 말고는 사용자가 따로 시키지 않는 한 글이 가지 않는다 → 글 분류 'black_lukey > AI 소식'은 휴지통으로.
 2. 지금 있는 글의 사이트·분류를 새 타겟대로: 코스피는 밤밤, 정전기·전기장판(상품)은 밤밤, 밤밤에 있던 공모주·주택 공고는 눈잎 등.
    커스텀 고정 주제 중 밤밤으로 된 공모주·주택 공고도 눈잎으로.
@@ -10,7 +10,7 @@ from django.db import migrations
 from django.db.models import Q
 from django.utils import timezone
 
-AI_NOTE = """매일 한 편. 사용자가 AI 최신 소식을 듣고 싶어 한다 (2026-10-22 사용자).
+AI_NOTE = """한 번에 한 편. 사용자가 AI 최신 소식을 듣고 싶어 한다 (2026-10-22 사용자).
 - 범위: 지난 24~72시간 (직전 AI 소식 원고 이후).
 - 담는 것: 새로 떠오르는 AI 서비스·모델·도구, 많이 쓰는(인기·조회수 있는) AI의 업데이트 중 쓰는 사람이 체감하는 것 — 새 기능, 무료 범위·가격 변경, 성능이 크게 오름, 한국어 지원·한국 출시.
 - 빼는 것: 설명할 가치가 없는 업그레이드 (버그 수정·소소한 화면 변경·이름만 바뀐 것·대기자 명단 소식뿐인 것·이미 쓴 소식·출처 없는 루머). 그런 날은 항목을 줄이고, 하나도 없으면 쓰지 않는다.
@@ -58,7 +58,7 @@ def forward(apps, schema_editor):
     # 1. AI 소식: 커스텀 고정 주제 (memorily) + 일일 분류에서 뺌
     if not FixedTopic.objects.filter(name="AI 소식", deleted_at__isnull=True).exists():
         order = max(FixedTopic.objects.values_list("order", flat=True), default=0) + 1
-        FixedTopic.objects.create(name="AI 소식", site="memorily", per_week=7, note=AI_NOTE, order=order)
+        FixedTopic.objects.create(name="AI 소식", site="memorily", per_week=1, note=AI_NOTE, order=order)
     for cat in Category.objects.filter(section__name="black_lukey", name="AI 소식", deleted_at__isnull=True):
         for label in ("writing", "naver_writing"):
             apps.get_model(label, "Post").objects.filter(bt_category=cat).update(bt_category=None)
