@@ -934,3 +934,36 @@ class TrimAiNewsTests(TestCase):
         mig.forward(django_apps, None)
         self.assertEqual(list(Post.objects.values_list("pk", flat=True)), [keep.pk])
         self.assertEqual(Post.all_objects.filter(pk__in=[p.pk for p in old], deleted_at__isnull=False).count(), 5)
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostPlanTests(TestCase):
+    """발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일을 정해 그 순서로 본다."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_site_filter_and_planned_date_order(self):
+        from datetime import date
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        a = Post.objects.create(title="날짜 없는 글", stage="post", target="눈잎")
+        b = NaverPost.objects.create(title="25일 글", stage="post", target="black_lukey")
+        c = Post.objects.create(title="24일 글", stage="post", target="눈잎")
+        url = reverse("posts:view")
+        for post, day in ((b, "2026-10-25"), (c, "2026-10-24")):
+            self.client.post(reverse("posts:plan"), {"post": f"{'naver' if post is b else 'tistory'}:{post.pk}", "day": day, "next": url})
+        c.refresh_from_db()
+        self.assertEqual(c.planned_on, date(2026, 10, 24))
+        res = self.client.get(url, {"stage": "post"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["24일 글", "25일 글", "날짜 없는 글"])  # 예정일 순, 없는 글은 끝
+        self.assertContains(res, 'name="day" value="2026-10-24"')
+        res = self.client.get(url, {"stage": "post", "site": "눈잎"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["24일 글", "날짜 없는 글"])
+        self.assertContains(res, '<option value="눈잎" selected>눈잎</option>', html=False)
+        self.client.post(reverse("posts:plan"), {"post": f"tistory:{c.pk}", "day": "", "next": url})  # 지우기
+        c.refresh_from_db()
+        self.assertIsNone(c.planned_on)
+        self.assertEqual(self.client.get(url, {"stage": "post", "site": "없는 사이트"}).context["site_filter"], "")
+        a.delete()
