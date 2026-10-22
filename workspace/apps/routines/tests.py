@@ -771,6 +771,27 @@ class FixedTopicTests(Login):
         prompt = self.client.get(reverse("routines:topics")).context["topics"][0].prompt
         self.assertIn("공모주는 앞으로 한 달·분기", prompt)
         self.assertIn("🔥 화제 종목", prompt)
+        # 3차 (2026-10-22, 0018): 글감 없으면 원고를 만들지 않는다 · 지난 날짜 금지 · AI 소식은 핵심 도구 근황 + 써 본 사람들 후기
+        self.assertIn("글감부터 본다", prompt)
+        self.assertIn("날짜가 지난 것은 쓰지 않는다", prompt)
+        policy.refresh_from_db()
+        self.assertIn("원고를 만들지 않는다 (글감 없음)", policy.note)
+        self.assertNotIn("방금 마감' 한 줄은 된다", policy.note)
+        self.assertIn("원고를 만들지 않는다 (글감 없음)", housing.note)
+        ai = FixedTopic.objects.get(name="AI 소식")
+        for text in ["핵심 AI 도구의 근황", "한 편에 여럿", "써 본 사람들 후기", "하나도 없으면 원고를 만들지 않는다"]:
+            self.assertIn(text, ai.note)
+        for t in (policy, housing, ai):
+            self.assertNotIn("추가 지침", t.note)  # 이전 migration 문장 그대로라 바꿔 넣었다
+
+    def test_topic_note_update_keeps_user_edits(self):
+        """사용자가 고친 지침이면 바꿀 문장이 없으니 맨 아래 '추가 지침'으로 붙인다 (0018). 두 번 돌려도 한 번만."""
+        from importlib import import_module
+        mig = import_module("apps.routines.migrations.0018_topic_material_first")
+        note = mig.update("내가 쓴 지침", mig.HOUSING_REPLACE, mig.HOUSING_ADD)
+        self.assertTrue(note.startswith("내가 쓴 지침\n\n추가 지침 (2026-10-22):"))
+        self.assertIn("원고를 만들지 않는다 (글감 없음)", note)
+        self.assertEqual(mig.update(note, mig.HOUSING_REPLACE, mig.HOUSING_ADD), note)
 
     def test_run_all_topics(self):
         """전체 실행 (2026-10-21 사용자): 고정 주제 모두를 한 터미널에서 차례로"""
