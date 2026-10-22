@@ -1,0 +1,16 @@
+{# 글 관리 목록 표 하나 (posts.html). rows: 글들, empty: 비었을 때 문구(없으면 기본) #}
+<div class="grid-wrap">
+  <table class="grid wrap clickable wr-grid wr-compact" style="min-width:{% if table_stage %}960{% else %}720{% endif %}px">
+    <thead>
+      <tr>
+        <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
+        <th>제목</th>
+        {% if table_stage %}<th style="width:120px">사이트</th><th style="width:180px">카테고리</th><th style="width:132px">변환</th><th style="width:154px">발행</th><th style="width:140px">{% if stage == 'done' %}발행일{% else %}발행 예정일{% endif %}</th>
+        {% else %}<th style="width:240px">분류</th><th style="width:140px">사이트</th><th style="width:112px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in rows %}{% if table_stage %}{% include "blog_types/_post_row.html" %}{% else %}{% include "blog_types/_draft_row.html" %}{% endif %}{% empty %}<tr><td colspan="{% if table_stage %}7{% else %}5{% endif %}" class="grid-empty">{% if empty %}{{ empty }}{% elif q or today or custom or site_filter %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>

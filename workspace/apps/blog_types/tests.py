@@ -967,3 +967,70 @@ class PostPlanTests(TestCase):
         self.assertIsNone(c.planned_on)
         self.assertEqual(self.client.get(url, {"stage": "post", "site": "없는 사이트"}).context["site_filter"], "")
         a.delete()
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostCategoryEditTests(TestCase):
+    """발행예정글 (2026-10-22 사용자): 예정일 → 사이트 순, '카테고리 수정'으로 넣은 카테고리를 바꾼다."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_order_by_date_then_site(self):
+        from datetime import date
+
+        from apps.writing.models import Post
+        day = date(2026, 10, 24)
+        for title, site, planned in [("밤밤 24일", "밤밤", day), ("눈잎 24일", "눈잎", day), ("눈잎 날짜 없음", "눈잎", None),
+                                     ("memorily 25일", "memorily", date(2026, 10, 25))]:
+            Post.objects.create(title=title, stage="post", target=site, planned_on=planned)
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["눈잎 24일", "밤밤 24일", "memorily 25일", "눈잎 날짜 없음"])
+        self.assertContains(res, "data-cat-edit")
+
+    def test_move_placement_to_other_category(self):
+        from apps.writing.models import Post
+        post = Post.objects.create(title="옮길 글", stage="post", target="눈잎")
+        old = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
+        same_site = SiteCategory.objects.get(blog__name="눈잎", name="주택 공고")
+        other_site = SiteCategory.objects.get(blog__name="black_lukey", name="낙서장")
+        pl = Placement.objects.create(site_category=old, tistory_post=post, convert_status="done")
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertContains(res, f'action="{reverse("blog_types:place_move", args=[pl.pk])}"')
+        self.assertContains(res, f'<option value="{old.pk}" selected>눈잎 › 공모주</option>', html=False)
+        self.client.post(reverse("blog_types:place_move", args=[pl.pk]), {"site_category": same_site.pk})
+        pl.refresh_from_db()
+        self.assertEqual((pl.site_category, pl.convert_status), (same_site, "done"))  # 같은 사이트면 변환본 그대로
+        self.client.post(reverse("blog_types:place_move", args=[pl.pk]), {"site_category": other_site.pk})
+        pl.refresh_from_db()
+        self.assertEqual((pl.site_category, pl.convert_status), (other_site, "none"))  # 다른 사이트면 다시 변환
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostPlanSplitTests(TestCase):
+    """발행예정글 (2026-10-22 사용자): 예정일 없음(위 7) · 정함(아래 3) 두 표, 체크한 글에 예정일 한꺼번에."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_two_grids_and_bulk_plan(self):
+        from datetime import date
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        a = Post.objects.create(title="가", stage="post", target="눈잎")
+        b = NaverPost.objects.create(title="나", stage="post", target="밤밤")
+        c = Post.objects.create(title="다", stage="post", target="눈잎", planned_on=date(2026, 10, 30))
+        url = reverse("posts:view")
+        res = self.client.get(url, {"stage": "post"})
+        self.assertEqual(([p.title for p in res.context["unplanned"]], [p.title for p in res.context["planned"]]), (["가", "나"], ["다"]))
+        self.assertContains(res, "발행 예정일 없음")
+        self.assertContains(res, 'name="plan" value="1"')
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{a.pk}", f"naver:{b.pk}"], "plan": "1", "plan_day": "2026-10-28", "next": url})
+        a.refresh_from_db(), b.refresh_from_db()
+        self.assertEqual((a.planned_on, b.planned_on), (date(2026, 10, 28), date(2026, 10, 28)))
+        res = self.client.get(url, {"stage": "post"})
+        self.assertEqual([p.title for p in res.context["planned"]], ["가", "나", "다"])  # 날짜 → 사이트(눈잎 · 밤밤) 순
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{c.pk}"], "plan": "1", "plan_day": "", "next": url})
+        c.refresh_from_db()
+        self.assertIsNone(c.planned_on)  # 비우면 지운다
