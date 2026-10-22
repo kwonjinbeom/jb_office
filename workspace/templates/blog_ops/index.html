@@ -48,6 +48,7 @@
         <tr>
           <td>
             <div class="op-blog"><span class="br-plat">{{ r.blog.get_platform_display }}</span><span class="op-name">{{ r.blog.name }}</span></div>
+            {% if r.blog.content %}<div class="op-concept" title="{{ r.blog.content }}">{{ r.blog.content }}</div>{% endif %}
             <div class="op-feed{% if r.state and not r.state.ok %} is-bad{% endif %}" title="{% if r.state %}{{ r.state.checked_at|date:'m-d H:i' }} · {{ r.state.message }}{% else %}아직 RSS 를 읽지 않았어요{% endif %}">{% if r.state %}{% if r.state.ok %}RSS {{ r.state.checked_at|date:"m-d H:i" }}{% else %}{{ r.state.message }}{% endif %}{% else %}RSS 확인 전{% endif %}</div>
           </td>
           {% for c in r.cells %}

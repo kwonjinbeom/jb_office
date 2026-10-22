@@ -96,6 +96,9 @@ def _collect(p, prefetch=False):
     posts.sort(key=lambda x: (x.created_at, x.pk), reverse=True)  # 만든 순서로 고정 (상태를 바꿔도 자리가 그대로)
     if p["stage"] == "post":  # 발행예정글: 미발행이 위, 그 안에서 최신 순
         posts.sort(key=lambda x: x.publish_status == x.Publish.DONE)
+    elif p["stage"] == "temp":  # 임시글: 사이트별로 묶어(운영 화면 순서, 사이트 없는 글은 끝), 그 안에서 최신 순 (2026-10-22 사용자)
+        order = {name: i for i, name in enumerate(sites.names())}
+        posts.sort(key=lambda x: order.get(x.target, len(order)))
     return posts, counts
 
 

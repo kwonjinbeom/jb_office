@@ -12,8 +12,8 @@
 로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
 PC 서버가 꺼져 있어도 된다. claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
-글쓰기(키 writing): 티스토리·네이버 구분 없이 하루 11편. 그날 쓸 분류·편수는 RoutinePick (없으면 기본 무작위:
-광고 수익 하위 6 · 판매 수익 하위 3 · IT/AI 2). 리스트에서 글쓰기 줄을 누르면 왼쪽 아래가 분류 고르기 칸이 된다.
+글쓰기(키 writing): 글 분류 = 사이트 > 고정 소재 (2026-10-22 사용자). 그날 쓸 분류·편수는 RoutinePick (없으면 기본:
+모든 소재 한 편씩 — 소재가 있는 것만 쓰고 없으면 쓰지 않는다, 주제 기획이 가린다). 리스트에서 글쓰기 줄을 누르면 왼쪽 아래가 분류 고르기 칸이 된다.
 전체 실행: 모든 루틴의 로컬 안내문을 이어 붙여 보내고, PC 가 루틴마다 나눠 새 터미널에서 차례로 돌린다 (local_run.open_chain).
 
 프롬프트 최신화: 리스트의 한 줄(루틴 키 prompt_update). 오늘의 자료 'evaluations'(루틴별 평가·점검 관점)를 보고
@@ -150,7 +150,7 @@ def _sites(key):
     from apps.blog_types.models import SiteCategory
     from apps.site_templates.models import SiteTemplate
     lines = []
-    blogs = Blog.objects.all() if key == "writing" else Blog.objects.filter(platform__in=PLATFORMS.get(key, []))
+    blogs = Blog.objects.filter(routine=True) if key == "writing" else Blog.objects.filter(platform__in=PLATFORMS.get(key, []))
     blogs = blogs.exclude(status=Blog.Status.HOLD).prefetch_related("checks")
     templates = {t.blog_id: t for t in SiteTemplate.objects.filter(blog__in=blogs)}
     cats = SiteCategory.objects.filter(blog__in=blogs, parent=None).prefetch_related("children").order_by("order", "pk")
@@ -287,8 +287,8 @@ def _evaluations():
     return "\n\n".join(blocks)
 
 
-# 글쓰기 기본: 대분류 이름 앞부분 → 그 아래 중분류에서 무작위로 고를 편수
-WRITING_MIX = [("광고 수익", 6), ("판매 수익", 3), ("IT/AI", 2)]
+# 글쓰기 기본 (2026-10-22 사용자): 사이트마다 고정 소재를 두고, 소재가 있는 날만 쓴다 (없으면 절대 쓰지 않는다).
+WRITING_DAILY = ("AI 소식",)  # 매일 쓰는 소재 (안내문에 '매일'로 표시)
 
 
 def _sections():
@@ -296,21 +296,10 @@ def _sections():
     return list(Section.objects.prefetch_related("categories__types"))
 
 
-def default_picks(day, salt=""):
-    """그날의 기본 분류: 날짜로 정해지는 무작위 (같은 날은 같은 결과). salt 를 주면 다시 뽑는다."""
-    rng = random.Random(f"{day}{salt}")
-    sections = _sections()
-    picks = {}
-    for prefix, n in WRITING_MIX:
-        section = next((s for s in sections if s.name.startswith(prefix)), None)
-        cats = list(section.categories.all()) if section else []
-        if not cats:
-            continue
-        chosen = rng.sample(cats, min(n, len(cats)))
-        for i in range(n):  # 중분류가 모자라면 같은 중분류에 한 편 더
-            sel = chosen[i % len(chosen)].sel
-            picks[sel] = picks.get(sel, 0) + 1
-    return picks
+def default_picks(day):
+    """그날의 기본 분류: 글 분류의 모든 소재 한 편씩 = '소재가 있으면 쓸' 후보. 실제로 몇 편 쓸지는 주제 기획이 정한다.
+    (day 는 예전 날짜별 무작위의 자리. 지금은 날마다 같다)"""
+    return {c.sel: 1 for s in _sections() for c in s.categories.all()}
 
 
 def day_picks(routine, day):
@@ -335,7 +324,7 @@ def _node_path(sel):
 
 def _picks_text(routine, day):
     picks, custom = day_picks(routine, day)
-    return _picks_lines(picks, "사용자가 고른 분류" if custom else "기본: 오늘 무작위")
+    return _picks_lines(picks, "사용자가 고른 분류" if custom else "기본: 소재가 있는 것만 쓴다, 없으면 건너뛴다")
 
 
 def _picks_lines(picks, how):
@@ -344,10 +333,10 @@ def _picks_lines(picks, how):
         node, path = _node_path(sel)
         if node is None:
             continue
-        line = f"- {path} — {n}편"
+        line = f"- {path} — {'매일 ' if node.name in WRITING_DAILY else ''}{n}편"
         cat = node if node.sel.startswith("c") else (node.category if node.sel.startswith("t") else None)
         if cat is not None and (cat.direction or cat.question):
-            line += f" (방향: {cat.direction or '-'} / 독자의 질문: {cat.question or '-'})"
+            line += f" (컨셉: {cat.direction or '-'} / 독자의 질문: {cat.question or '-'})"
         lines.append(line)
         if node.sel.startswith("c"):  # 분류 전체 트리 대신 고른 중분류의 소분류만 (원고의 '분류:' 줄에 쓴다)
             types = [t.name for t in node.types.all()]
@@ -437,7 +426,11 @@ def launcher(routine, day, report=None, extra="", tree=False):
         head = [f"# 일일루틴 · {routine.name} (추가 실행) — {day}", "",
                 f"할 일: 하루 분량과 별도로 더 한다 — 아래 '{EXTRA_TITLE}'만큼만."]
     else:
-        head = [f"# 일일루틴 · {routine.name} — {day}", "", f"오늘 할 일: {routine.task} — 하루 {routine.daily}{routine.unit}."]
+        amount = f"하루 {routine.daily}{routine.unit}"
+        if "picks" in routine.data_keys:  # 글쓰기: 그날 분류의 편수 (기본이면 소재 있는 것만)
+            picks, custom = day_picks(routine, day)
+            amount = f"{sum(picks.values())}{routine.unit}" if custom else f"최대 {sum(picks.values())}{routine.unit}, 소재 있는 것만"
+        head = [f"# 일일루틴 · {routine.name} — {day}", "", f"오늘 할 일: {routine.task} — {amount}."]
     lines = head + ["아래 md 를 읽고 그대로 따른다.", ""]
     lines.append(f"- `{routine.prompt_doc}` (이 루틴의 프롬프트)" if routine.prompt_doc else "- (프롬프트 md 가 아직 없습니다)")
     keys = routine.data_keys
@@ -606,17 +599,14 @@ def _picked(data):
 
 @require_POST
 def picks(request, pk):
-    """글쓰기의 그날 분류·편수: 저장 / 다시 뽑기(무작위) / 기본값(그날 무작위)."""
+    """글쓰기의 그날 분류·편수: 저장 / 기본값(모든 소재, 소재 있는 것만)."""
     routine = get_object_or_404(Routine, pk=pk)
     day = _day(request)
     action = request.POST.get("action", "save")
     if action == "default":
         RoutinePick.objects.filter(routine=routine, day=day).delete()
     else:
-        if action == "reroll":
-            value = default_picks(day, salt=timezone.now().timestamp())
-        else:
-            value = _picked(request.POST)
+        value = _picked(request.POST)
         RoutinePick.objects.update_or_create(routine=routine, day=day, defaults={"picks": value})
     return redirect(f"{reverse('routines:extra_page')}?{urlencode({'r': routine.key, 'date': day.isoformat()})}#ex-morning")
 
@@ -660,9 +650,16 @@ def index(request):
     for r in routines:
         r.result = total(r, start, end)
         r.target = r.daily * days
+        open_goal = False  # 글쓰기 기본(소재 있는 것만)은 정해진 목표가 없다 — 한 편이라도 쓰면 완료
         if "picks" in r.data_keys and mode == "day":  # 그날 고른 편수가 목표
-            r.target = sum(day_picks(r, sel)[0].values())
-        r.state = ("done" if r.result >= r.target else "todo") if r.target and start <= today else ""
+            picks, custom = day_picks(r, sel)
+            r.target, open_goal = (sum(picks.values()), False) if custom else ("", True)
+        if start > today:
+            r.state = ""
+        elif open_goal:
+            r.state = "done" if r.result else "todo"
+        else:
+            r.state = ("done" if r.result >= r.target else "todo") if r.target else ""
         r.auto = auto[r.pk][sel]
         r.fixed = (r.pk, sel) in fixed
         r.url = reverse(r.url_name)

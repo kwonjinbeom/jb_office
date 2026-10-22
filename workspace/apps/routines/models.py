@@ -161,7 +161,7 @@ class PromptVersion(models.Model):
 
 
 class RoutinePick(models.Model):
-    """글쓰기 루틴의 그날 분류·편수 ({"c3": 2, "t5": 1}). 없으면 그날의 기본 무작위(광고 6 · 판매 3 · IT/AI 2)."""
+    """글쓰기 루틴의 그날 분류·편수 ({"c3": 2, "t5": 1}). 없으면 그날의 기본 (AI 소식 1 고정 · 정보 6 · 소개 4 무작위)."""
 
     routine = models.ForeignKey(Routine, verbose_name="루틴", on_delete=models.CASCADE, related_name="picks")
     day = models.DateField("날짜")

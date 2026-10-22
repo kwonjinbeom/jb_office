@@ -31,6 +31,8 @@ class Blog(TrashableModel):
     daily = models.PositiveSmallIntegerField("하루 편수", default=1)
     daily_note = models.CharField("편수 메모", max_length=80, blank=True, help_text="예: 애드센스 승인 뒤 2편")
     content = models.CharField("컨셉", max_length=200, blank=True)
+    routine = models.BooleanField("글쓰기 루틴", default=True,
+                                  help_text="일일루틴 글쓰기가 이 사이트 원고를 쓴다 (끄면 사용자가 직접 쓰는 사이트)")
     kpi = models.CharField("지표", max_length=80, blank=True)
     note = models.TextField("메모", blank=True)
     order = models.PositiveIntegerField("순서", default=0)
