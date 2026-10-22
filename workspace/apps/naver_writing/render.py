@@ -10,7 +10,7 @@ from html.parser import HTMLParser
 
 import markdown
 
-from apps.writing.render import CARD_STYLES, SECTION_GAPS, cards, fix_bold, soft_check_dates
+from apps.writing.render import CARD_STYLES, SECTION_GAPS, SOURCE_STYLE, cards, fix_bold, soft_check_dates, soft_sources
 
 SLOT_STYLE = {
     "photo": "margin:18px 0;padding:14px;border:1px dashed #fca5a5;border-radius:8px;background:#fef2f2;"
@@ -115,7 +115,7 @@ def _known_styles() -> set[str]:
     base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE, POSTER_STYLE,
             "text-align:center;margin:18px 0"}
     cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE) for a in ("left", "center", "right")}
-    return {s.replace(" ", "") for s in base | cells | CARD_STYLES | {CELL_STYLE, HEAD_STYLE}}
+    return {s.replace(" ", "") for s in base | cells | CARD_STYLES | {CELL_STYLE, HEAD_STYLE, SOURCE_STYLE}}
 
 
 KNOWN_STYLES = _known_styles()
@@ -271,7 +271,7 @@ def _decorate(out: str) -> str:
     out = out.replace("<blockquote>", f'<blockquote style="{QUOTE_STYLE}">')
     out = re.sub(r"<hr\s*/?>", f'<hr style="{HR_STYLE}">', out)
     out = IMAGE_BLOCK.sub(_image, out)
-    return out
+    return soft_sources(out)
 
 
 def render_body(text: str) -> str:

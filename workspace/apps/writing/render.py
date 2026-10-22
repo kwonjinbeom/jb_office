@@ -126,6 +126,16 @@ def cards(text: str) -> str:
     return CARD.sub(_card, text)
 
 
+# 맨 끝 '참고:' 출처 줄은 작은 회색 글씨 (2026-10-23 사용자: 본문과 구분되게. 링크 색은 그대로).
+# 인라인 style 이라 네이버·티스토리에 붙여도 남는다 (네이버 글자 크기 단계 13).
+SOURCE_STYLE = "color:#999999;font-size:13px"
+_SOURCE_P = re.compile(r"<p>(?=\s*(?:<strong>)?\s*참고\s*(?:</strong>)?\s*[:：])")
+
+
+def soft_sources(body_html: str) -> str:
+    return _SOURCE_P.sub(f'<p style="{SOURCE_STYLE}">', body_html)
+
+
 BOLD = re.compile(r"\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*")
 
 
@@ -214,7 +224,7 @@ def _known_styles() -> set[str]:
     base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
             "text-align:center;margin:18px 0"}
     cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE, HOT_CELL_STYLE) for a in ("left", "center", "right")}
-    return {s.replace(" ", "") for s in base | cells | CARD_STYLES | {CELL_STYLE, HEAD_STYLE}}
+    return {s.replace(" ", "") for s in base | cells | CARD_STYLES | {CELL_STYLE, HEAD_STYLE, SOURCE_STYLE}}
 
 
 KNOWN_STYLES = _known_styles()
@@ -318,7 +328,7 @@ def _decorate(out: str) -> str:
     out = out.replace("<blockquote>", f'<blockquote style="{QUOTE_STYLE}">')
     out = re.sub(r"<hr\s*/?>", f'<hr style="{HR_STYLE}">', out)
     out = IMAGE_BLOCK.sub(_image, out)
-    return out
+    return soft_sources(out)
 
 
 def render_body(text: str) -> str:
