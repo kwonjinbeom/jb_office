@@ -11,6 +11,7 @@ urlpatterns = [
     path("panel/", views.panel, name="panel"),
     path("post/", views.post_page, name="post"),
     path("api/convert/<int:pk>/", views.api_save, name="api_save"),
+    path("api/state/", views.api_state, name="api_state"),
     path("<int:pk>/", views.site, name="site"),
     path("convert/<int:pk>/", views.convert, name="convert"),
 ]

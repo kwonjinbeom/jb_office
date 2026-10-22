@@ -202,6 +202,35 @@ def api_save(request, pk):
     return HttpResponse(f"ok {placement.pk} done", content_type="text/plain; charset=utf-8")
 
 
+@login_not_required
+def api_state(request):
+    """PC 터미널 claude 가 서버 값을 읽는 곳 (2026-10-23: 발행한 글의 변환본을 고쳐 다시 보내려면 매핑 번호·지난 변환본이 필요하다).
+    토큰은 api_save 와 같다. ?site=<사이트 이름> 이면 그 사이트만. 사이트 템플릿 · 카테고리 컨셉 · 넣은 글(원문과 변환본)."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    blogs = Blog.objects.all()
+    if request.GET.get("site"):
+        blogs = blogs.filter(name=request.GET["site"])
+    out = []
+    for blog in blogs:
+        tpl = prompt.template_for(blog)
+        cats = [{"id": c.pk, "name": str(c), "concept": c.concept} for c in _cats_of(blog)]
+        pls = []
+        for pl in _placements(blog):
+            post = pl.post
+            if post is None:
+                continue
+            pls.append({"id": pl.pk, "category": str(pl.site_category), "status": pl.status,
+                        "convert": pl.convert_status, "title": post.title, "body": post.body,
+                        "converted_title": pl.converted_title, "converted_tags": pl.converted_tags,
+                        "converted_body": pl.converted_body, "converted_check": pl.converted_check})
+        out.append({"name": blog.name, "platform": blog.platform, "content": blog.content,
+                    "template": {"tone": tpl.tone, "structure": tpl.structure, "rules": tpl.rules},
+                    "categories": cats, "placements": pls})
+    return JsonResponse({"sites": out}, json_dumps_params={"ensure_ascii": False})
+
+
 def site(request, pk):
     """예전 사이트 화면 주소 → 사이트별 템플릿에서 그 사이트를 고른 화면 (2026-10-22: 화면에서는 보기만)."""
     blog = get_object_or_404(Blog, pk=pk)

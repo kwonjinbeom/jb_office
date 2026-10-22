@@ -119,6 +119,23 @@ class SiteTemplateTests(TestCase):
         self.assertContains(res, '<a href="https://example.com/a?x=1&amp;y=2" target="_blank" rel="noopener">')
         self.assertContains(res, "&lt;아직 발표 없음&gt;")
 
+    def test_api_state_reads_with_token(self):
+        """PC claude 가 매핑 번호·지난 변환본·컨셉을 읽는다 (2026-10-23, 발행한 글 고쳐 다시 보내기). 토큰이 있어야 한다"""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.pl.converted_body = "지난 변환본"
+        self.pl.save()
+        url = reverse("site_templates:api_state")
+        self.client.logout()
+        self.assertEqual(self.client.get(url, {"token": "bad"}).status_code, 403)
+        data = self.client.get(url, {"token": "tok", "site": "memorily"}).json()
+        site = data["sites"][0]
+        self.assertEqual((len(data["sites"]), site["name"]), (1, "memorily"))
+        self.assertIn("개발자", site["template"]["tone"])
+        self.assertIn("Java", [c["name"] for c in site["categories"]])
+        pl = site["placements"][0]
+        self.assertEqual((pl["id"], pl["title"], pl["converted_body"]), (self.pl.pk, "자바 정리", "지난 변환본"))
+
     def test_old_site_page_redirects(self):
         url = reverse("site_templates:site", args=[self.memorily.pk])
         self.assertRedirects(self.client.get(url), f'{reverse("site_templates:index")}?site={self.memorily.sel}',
