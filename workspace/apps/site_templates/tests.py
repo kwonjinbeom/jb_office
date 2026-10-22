@@ -240,6 +240,53 @@ class PasteFormatTests(TestCase):
         res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
         self.assertIn('data-ke-style="style2"', res.context["paste_html"])
 
+    def test_info_card_and_naver_photo_620(self):
+        """정보 카드 (2026-10-23 사용자: 입장 마감·입장료 같은 건 서술 말고 보기 쉽게, 시간표와 다른 디자인) · 네이버 사진 620"""
+        pl = self.place("black_lukey", "낙서장")
+        pl.converted_body = ("![오죽헌](https://a.com/x.jpg)\n\n설명 문장\n\n::: 장소 | 오죽헌\n⏰ 관람 | 09:00~18:00\n"
+                             "🎫 예약 | 현장 매표 · [공식 안내](https://gn.go.kr/a?b=1&c=2)\n:::\n\n| 시간 | 동선 |\n|---|---|\n| 오전 | KTX |")
+        pl.save()
+        rich = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
+        self.assertIn('style="width:620px;max-width:100%;height:auto"', rich)  # 사진은 가운데 620
+        self.assertIn("background-color:#1f6f5c;color:#ffffff", rich)  # 카드 머리 칸 (장소 = 초록)
+        self.assertIn(">가 볼 곳</td>", rich)
+        self.assertIn(">오죽헌</td>", rich)
+        self.assertIn(">⏰ 관람</td>", rich)
+        self.assertIn('<a href="https://gn.go.kr/a?b=1&amp;c=2" target="_blank" rel="noopener">공식 안내</a>', rich)
+        self.assertNotIn(":::", rich)
+        self.assertIn("background:#f3f4f6", rich)  # 보통 표(시간표)는 그대로 회색 머리
+        tistory = self.place("memorily")
+        tistory.converted_body = "::: 작품 | 가능한 사랑\n📺 볼 곳 | 넷플릭스\n:::"
+        tistory.save()
+        html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["paste_html"]
+        self.assertIn("background-color:#3b3a8c", html)  # 티스토리에도 같은 카드 (작품 = 남색)
+        self.assertIn(">작품 정보</td>", html)
+        pl.converted_body = "![포스터: 가능한 사랑](https://a.com/p.jpg)\n\n![풍경](https://a.com/x.jpg)"  # 포스터는 작게 300
+        pl.save()
+        rich = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
+        self.assertIn('alt="포스터: 가능한 사랑" style="width:300px;max-width:100%;height:auto"', rich)
+        self.assertIn('alt="풍경" style="width:620px;max-width:100%;height:auto"', rich)
+        tistory.converted_body = pl.converted_body
+        tistory.save()
+        html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["paste_html"]
+        self.assertIn('<img width="300" src="https://a.com/p.jpg"', html)
+        self.assertIn('<img width="620" src="https://a.com/x.jpg"', html)
+
+    def test_black_lukey_category_concepts(self):
+        """black_lukey 카테고리별 글 모양 (2026-10-23 사용자 피드백, 0008): 템플릿 · 요청문에 글 모양이 들어간다"""
+        from importlib import import_module
+        mig = import_module("apps.site_templates.migrations.0008_black_lukey_categories")
+        blog = Blog.objects.get(name="black_lukey")
+        self.assertIn("링크 자리", SiteTemplate.objects.get(blog=blog).rules)
+        cat = SiteCategory.objects.create(blog=blog, name="지역 놀거리", concept=mig.PLACE)
+        pl = Placement.objects.create(site_category=cat, tistory_post=self.post)
+        text = prompt.build(pl)
+        self.assertIn("이런 분께 맞아요", text)  # 빼라는 단락
+        self.assertIn("::: 장소", text)
+        self.assertIn("원문에 없어도 변환이 채우고 맞춘다", text)
+        self.assertIn("너비 620", text)
+        self.assertNotIn("예약·제휴 링크 자리는 원문 그대로 둔다", text)
+
     def test_tistory_paste_gaps_and_photo_width(self):
         """티스토리 (2026-10-22 사용자): 스킨이 문단 간격을 0 으로 둬서 답답하다 → 블록 사이 빈 줄, 사진은 가운데 620"""
         pl = self.place("memorily")
@@ -294,7 +341,8 @@ class PasteFormatTests(TestCase):
         naver_text = self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"]
         self.assertIn("## 사진·그림", naver_text)
         self.assertNotIn("사진 → 한두 줄 설명을 반복", naver_text)  # 원문을 다시 짜게 만들던 구성 (0007 에서 뺐다)
-        self.assertNotIn("### 구성", naver_text)  # 빈 칸은 늘어놓지 않는다
+        nunip = self.client.get(reverse("site_templates:convert", args=[self.place("눈잎").pk])).context["request_text"]
+        self.assertNotIn("### 구성", nunip)  # 빈 칸은 늘어놓지 않는다 (black_lukey 는 0008 에서 구성이 생겼다)
         self.assertIn("쇼핑커넥트", naver_text)
         self.assertEqual(PlatformFormat.objects.get(platform="naver").guide.count("\n"), 3)
         wordpress = self.place("워드프레스")
