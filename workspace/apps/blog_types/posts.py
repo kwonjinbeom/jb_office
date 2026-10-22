@@ -110,8 +110,9 @@ def _collect(p, prefetch=False):
             post.writer_label = "네이버" if w == "naver" else "티스토리"  # 편집기 (분류가 아니다)
             posts.append(post)
     posts.sort(key=lambda x: (x.created_at, x.pk), reverse=True)  # 만든 순서로 고정 (상태를 바꿔도 자리가 그대로)
-    if p["stage"] == "post":  # 발행예정글: 발행 예정일이 빠른 순, 날짜 없는 글은 끝 (그 안에서 최신 순)
-        posts.sort(key=lambda x: x.planned_on.toordinal() if x.planned_on else float("inf"))  # 같은 날·날짜 없음은 최신 순 그대로
+    if p["stage"] == "post":  # 발행예정글: 발행 예정일 빠른 순 → 사이트(운영 화면 순서) → 최신 순. 날짜 없는 글은 끝
+        order = {name: i for i, name in enumerate(sites.names())}
+        posts.sort(key=lambda x: (x.planned_on.toordinal() if x.planned_on else float("inf"), order.get(x.target, len(order))))
     elif p["stage"] == "done":  # 게시글 관리: 최근 발행한 글이 위
         posts.sort(key=lambda x: x.published_on or x.created_at.date(), reverse=True)
     elif p["stage"] == "temp":  # 임시글: 사이트별로 묶어(운영 화면 순서, 사이트 없는 글은 끝), 그 안에서 최신 순 (2026-10-22 사용자)
@@ -162,6 +163,8 @@ def _list_page(request, p):
                   "url": f"{reverse('posts:view')}?{_query(p, stage=k, view=p['view'] if k not in TABLE_STAGES else '')}"}
                  for k, label in STAGES],
         "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p), "table_stage": stage in TABLE_STAGES,
+        "plan_split": stage == "post",  # 예정일 없는 글 · 정한 글을 두 표로 (2026-10-22 사용자)
+        "unplanned": [x for x in posts if not x.planned_on], "planned": [x for x in posts if x.planned_on],
         "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='', site='')}",
         "site_filter": p["site"],
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
@@ -329,6 +332,18 @@ def bulk(request):
     back = _back(request)
     if not posts:
         messages.warning(request, "먼저 글을 체크하세요.")
+        return back
+    if request.POST.get("plan"):  # 발행 예정일 한꺼번에 (2026-10-22 사용자). 날짜를 비우면 지운다
+        raw = request.POST.get("plan_day", "").strip()
+        try:
+            day = timezone.datetime.fromisoformat(raw).date() if raw else None
+        except ValueError:
+            messages.warning(request, "날짜를 YYYY-MM-DD 로 넣으세요.")
+            return back
+        for post in posts:
+            post.planned_on = day
+            post.save(update_fields=["planned_on", "updated_at"])
+        messages.success(request, f"{len(posts)}건의 발행 예정일을 {day:%Y-%m-%d}(으)로 정했습니다." if day else f"{len(posts)}건의 발행 예정일을 지웠습니다.")
         return back
     publish = request.POST.get("publish")
     if publish in ("done", "todo"):

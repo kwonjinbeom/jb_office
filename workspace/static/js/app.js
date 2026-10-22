@@ -264,7 +264,7 @@
     var sel = 'input[type="checkbox"][name="' + all.getAttribute("data-check-all") + '"]';
     var formId = all.getAttribute("form");
     if (formId) sel += '[form="' + formId + '"]';
-    document.querySelectorAll(sel).forEach(function (box) { box.checked = all.checked; });
+    (all.closest("table") || document).querySelectorAll(sel).forEach(function (box) { box.checked = all.checked; });  // 표가 둘이면 그 표만
   });
 
   // 좌측 트리 메뉴: 화살표로 접었다 펴고, 편 것은 이 브라우저에 기억한다.
