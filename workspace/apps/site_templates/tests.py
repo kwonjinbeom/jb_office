@@ -261,6 +261,16 @@ class PasteFormatTests(TestCase):
         html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["paste_html"]
         self.assertIn("background-color:#3b3a8c", html)  # 티스토리에도 같은 카드 (작품 = 남색)
         self.assertIn(">작품 정보</td>", html)
+        pl.converted_body = "![포스터: 가능한 사랑](https://a.com/p.jpg)\n\n![풍경](https://a.com/x.jpg)"  # 포스터는 작게 300
+        pl.save()
+        rich = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
+        self.assertIn('alt="포스터: 가능한 사랑" style="width:300px;max-width:100%;height:auto"', rich)
+        self.assertIn('alt="풍경" style="width:620px;max-width:100%;height:auto"', rich)
+        tistory.converted_body = pl.converted_body
+        tistory.save()
+        html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["paste_html"]
+        self.assertIn('<img width="300" src="https://a.com/p.jpg"', html)
+        self.assertIn('<img width="620" src="https://a.com/x.jpg"', html)
 
     def test_black_lukey_category_concepts(self):
         """black_lukey 카테고리별 글 모양 (2026-10-23 사용자 피드백, 0008): 템플릿 · 요청문에 글 모양이 들어간다"""
