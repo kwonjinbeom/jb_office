@@ -1,11 +1,11 @@
 {# 글 관리 목록 표 하나 (posts.html). rows: 글들, empty: 비었을 때 문구(없으면 기본) #}
 <div class="grid-wrap">
-  <table class="grid wrap clickable wr-grid wr-compact" style="min-width:{% if table_stage %}960{% else %}720{% endif %}px">
+  <table class="grid wrap clickable wr-grid wr-compact{% if table_stage %} wr-fit{% endif %}"{% if not table_stage %} style="min-width:720px"{% endif %}>
     <thead>
       <tr>
         <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
         <th>제목</th>
-        {% if table_stage %}<th style="width:120px">사이트</th><th style="width:180px">카테고리</th><th style="width:132px">변환</th><th style="width:154px">발행</th><th style="width:140px">{% if stage == 'done' %}발행일{% else %}발행 예정일{% endif %}</th>
+        {% if table_stage %}<th class="wr-c-site">사이트</th><th class="wr-c-cat">카테고리</th><th class="wr-c-cv">변환</th><th class="wr-c-pub">발행</th><th class="wr-c-date">{% if stage == 'done' %}발행일{% else %}발행 예정일{% endif %}</th>
         {% else %}<th style="width:240px">분류</th><th style="width:140px">사이트</th><th style="width:112px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
       </tr>
     </thead>
