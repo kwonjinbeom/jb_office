@@ -467,6 +467,22 @@ class PostHubTests(TestCase):
         self.assertEqual([p.title for p in res.context["pl_items"]], ["오늘 글"])
         self.assertIsNone(res.context["pl_current"])  # 조건에 안 맞는 글을 열어도 화면은 열린다
 
+    def test_custom_filter(self):
+        """[커스텀]: 일일루틴 하루 분량이 아닌 글만 (2026-10-22 사용자). 오늘 버튼 옆, 목록·글 보기 둘 다."""
+        self.T.objects.create(title="루틴 글", stage="temp")
+        self.N.objects.create(title="커스텀 네이버", stage="temp", custom=True)
+        mine = self.T.objects.create(title="커스텀 글", stage="temp", custom=True)
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "custom": "1"})
+        self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["커스텀 글", "커스텀 네이버"])
+        self.assertEqual(res.context["pl_tabs"][0]["count"], 2)
+        self.assertIn("custom=1", res.context["pl_tabs"][1]["url"])  # 단계를 바꿔도 조건은 그대로
+        self.assertContains(res, ">커스텀</a>")
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "view": "list", "custom": "1"})
+        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["커스텀 글", "커스텀 네이버"])
+        self.assertNotIn("custom", res.context["clear_url"])
+        from apps.blog_types import transfer
+        self.assertTrue(transfer.send(mine).custom)  # 상대 글쓰기로 보내도 커스텀
+
     def test_side_menu_has_collapse_button(self):
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, "data-nav-mini")

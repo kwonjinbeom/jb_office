@@ -8,12 +8,13 @@
     <span class="bt-tree-title">{{ pl_stage_label }} <span class="cnt">{{ pl_items|length }}</span></span>
   </div>
   <form method="get" action="{% url 'posts:view' %}" class="pl-filter">
-    <input type="hidden" name="stage" value="{{ pl_stage }}">{% if pl_sel %}<input type="hidden" name="sel" value="{{ pl_sel }}">{% endif %}{% if pl_today %}<input type="hidden" name="today" value="1">{% endif %}
+    <input type="hidden" name="stage" value="{{ pl_stage }}">{% if pl_sel %}<input type="hidden" name="sel" value="{{ pl_sel }}">{% endif %}{% if pl_today %}<input type="hidden" name="today" value="1">{% endif %}{% if pl_custom %}<input type="hidden" name="custom" value="1">{% endif %}
     <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ pl_q }}" placeholder="제목, 내용 검색" aria-label="글 목록 검색"></div>
     <a class="btn sm{% if pl_today %} primary{% endif %}" href="{{ pl_today_url }}" aria-pressed="{% if pl_today %}true{% else %}false{% endif %}" title="오늘 만든 글만">오늘</a>
+    <a class="btn sm{% if pl_custom %} primary{% endif %}" href="{{ pl_custom_url }}" aria-pressed="{% if pl_custom %}true{% else %}false{% endif %}" title="커스텀 글만 (고정 주제·추가 실행·따로 요청한 글)">커스텀</a>
   </form>
-  {% if pl_path or pl_q or pl_today %}
-  <div class="pl-cond small muted">{% if pl_path %}{{ pl_path|join:" › " }}{% endif %}{% if pl_q %}{% if pl_path %} · {% endif %}"{{ pl_q }}"{% endif %}{% if pl_today %}{% if pl_path or pl_q %} · {% endif %}오늘{% endif %}
+  {% if pl_path or pl_q or pl_today or pl_custom %}
+  <div class="pl-cond small muted">{% if pl_path %}{{ pl_path|join:" › " }}{% endif %}{% if pl_q %}{% if pl_path %} · {% endif %}"{{ pl_q }}"{% endif %}{% if pl_today %}{% if pl_path or pl_q %} · {% endif %}오늘{% endif %}{% if pl_custom %}{% if pl_path or pl_q or pl_today %} · {% endif %}커스텀{% endif %}
     <a href="{{ pl_clear_url }}">전체 보기</a></div>
   {% endif %}
   <div class="pl-items">

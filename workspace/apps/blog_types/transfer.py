@@ -28,7 +28,7 @@ def send(post):
     if render.is_html(body):
         body = render.clean_html(body)
     copy = Target(stage=Target.Stage.TEMP, title=post.title, summary=post.summary, tags=post.tags, body=body,
-                  target=post.target)
+                  target=post.target, custom=post.custom)
     node = classify.node_of(post)
     if node is not None and classify.categories_for(dst).filter(pk=post.bt_category_id).exists():
         classify.assign(copy, node.sel)
