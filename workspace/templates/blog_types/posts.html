@@ -54,7 +54,7 @@
     <form id="ph-bulk" method="post" action="{% url 'posts:bulk' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
 
     {% if plan_split %}
-    {# 발행예정글 (2026-10-22 사용자): 예정일 없는 글(위 7) · 예정일 정한 글(아래 3, 날짜 → 사이트 순) #}
+    {# 발행예정글 (2026-10-22 사용자): 예정일 없는 글(위) · 예정일 정한 글(아래, 날짜 → 사이트 순), 높이 반반 #}
     <div class="ph-split">
       <div class="ph-split-part"><div class="ph-split-head">발행 예정일 없음 <span class="cnt">{{ unplanned|length }}</span></div>
         {% include "blog_types/_post_table.html" with rows=unplanned empty="예정일이 없는 글이 없습니다." %}</div>
