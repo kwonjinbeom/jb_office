@@ -1781,8 +1781,8 @@ a.br-addr:hover { color: var(--accent); }
 .cat-editing .wr-cat-move { display: block; }
 .cat-editing .wr-cat-chip { display: none; }
 .cat-editing .wr-cat-move + .wr-cat-move { margin-top: 4px; }
-/* 발행예정글 두 표: 예정일 없음 7 · 정함 3 (2026-10-22 사용자) */
-.ph-split { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 7.5fr) minmax(0, 2.5fr); gap: 8px; padding-bottom: 10px; }
+/* 발행예정글 두 표: 예정일 없음 · 정함 반반 (2026-10-22 사용자) */
+.ph-split { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding-bottom: 10px; }
 .ph-split-part { display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--border); }
 .ph-split-part > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
 .ph-split-head { padding: 7px var(--gutter); font-size: 12.5px; font-weight: 700; color: var(--text); background: var(--muted-weak); border-bottom: 1px solid var(--border); }
