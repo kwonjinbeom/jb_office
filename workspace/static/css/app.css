@@ -1552,6 +1552,12 @@ a.br-addr:hover { color: var(--accent); }
 .st-compare .st-ptitle { margin: 0 0 .8em; }
 .st-compare .st-ptags { margin: 1.6em 0 0; font-size: 14px; color: var(--text-3); }
 @media (max-width: 900px) { .st-cols { grid-template-columns: minmax(0, 1fr); } .st-compare .st-preview { height: 60vh; } }
+/* 원문 접기 (2026-10-23 사용자: 때때로 변환본만 크게). html.st-solo 는 app.js 가 기억해 둔 대로 붙인다 */
+.st-solo-btn { margin-left: auto; flex: none; }
+.st-solo-on, html.st-solo .st-solo-off { display: none; }
+html.st-solo .st-solo-on { display: inline; }
+html.st-solo .st-compare { grid-template-columns: minmax(0, 1fr); }
+html.st-solo .st-compare > .st-col:first-child { display: none; }
 /* 변환 화면: 붙여넣기 줄 (제목 → 본문 → 태그) */
 .st-paste .st-paste-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .st-paste .st-after { border-top: 1px solid var(--line-soft); padding-top: 10px; font-size: 13px; color: var(--text-2); }

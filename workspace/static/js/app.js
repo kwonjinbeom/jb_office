@@ -293,6 +293,13 @@
     try { localStorage.setItem("nav.mini", mini ? "1" : "0"); } catch (err) { /* 기억 못 해도 동작은 한다 */ }
   }
   if (root.classList.contains("nav-mini")) setMini(true);
+  // 변환 비교에서 원문 접기 (2026-10-23 사용자: 때때로 변환본만 크게). 글 관리 펼침 칸은 나중에 끼워 넣으므로 html 에 붙여 둔다.
+  try { root.classList.toggle("st-solo", localStorage.getItem("st.solo") === "1"); } catch (err) { /* 기억 못 해도 동작은 한다 */ }
+  document.addEventListener("click", function (e) {
+    if (!(e.target.closest && e.target.closest("[data-st-solo]"))) return;
+    var solo = root.classList.toggle("st-solo");
+    try { localStorage.setItem("st.solo", solo ? "1" : "0"); } catch (err) { /* 기억 못 해도 동작은 한다 */ }
+  });
   document.addEventListener("click", function (e) {
     if (e.target.closest && e.target.closest("[data-nav-mini]")) { setMini(!root.classList.contains("nav-mini")); return; }
     var caret = e.target.closest && e.target.closest("[data-nav-toggle]");

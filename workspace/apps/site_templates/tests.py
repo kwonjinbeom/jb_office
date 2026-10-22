@@ -233,6 +233,7 @@ class PasteFormatTests(TestCase):
         res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
         self.assertIn("<blockquote", res.context["paste_html"])
         self.assertContains(res, "st-converted st-naver")
+        self.assertContains(res, "data-st-solo")  # 원문 접기 버튼 (2026-10-23 사용자: 변환본만 크게)
         self.assertContains(res, "따옴표")
         tistory = self.place("memorily")
         tistory.converted_body = pl.converted_body
