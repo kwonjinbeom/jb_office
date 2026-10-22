@@ -196,8 +196,10 @@ class PasteFormatTests(TestCase):
         self.assertEqual(res.context["converted_html"], rich)  # 미리보기도 붙여넣을 HTML 그대로
         self.assertIn('<span style="color:#999999;font-size:13px">(10.20 확인)</span>', rich)
         self.assertNotIn("2026년 10월 20일 확인", rich)
-        self.assertIn("color:#999999;font-size:13px\">참고: <a href=\"https://a.com\"", rich)  # 참고 줄은 작은 회색 (2026-10-23)
-        self.assertEqual(rich.count("color:#999999;font-size:13px\">"), 2)  # 참고 줄 + 확인 날짜만, 본문은 그대로
+        self.assertIn("font-size:13px;line-height:1.8;margin:0;color:#999999\">참고: <a href=\"https://a.com\"", rich)  # 참고 줄은 작은 회색 (2026-10-23)
+        self.assertEqual(rich.count("color:#999999"), 2)  # 참고 줄 + 확인 날짜만, 본문은 그대로
+        from apps.writing.render import render_body, tistory_html
+        self.assertIn('<p style="color:#999999;font-size:13px">참고:', tistory_html(render_body(pl.converted_body)))  # 티스토리도
         self.assertContains(res, f'<textarea id="st-tags-{pl.pk}" hidden>#태그1 #태그2 #태그3</textarea>', html=False)
         self.assertEqual(res.context["tag_items"], ["태그1", "태그2", "태그3"])  # 하나씩 복사 (태그 칸은 Enter 로 하나씩)
         self.assertContains(res, 'data-copy-text="태그2"')
