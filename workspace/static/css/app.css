@@ -1697,33 +1697,35 @@ a.br-addr:hover { color: var(--accent); }
 .cc-sfx { font-size: 12px; color: var(--text-2); }
 @media (max-width: 900px) { .cc-shorts { grid-template-columns: minmax(0, 1fr); } .cc-player { position: static; } }
 
-/* 일정관리 (apps/schedule): 위 큰 월 달력 · 아래 두 칸(고른 날 일정 | 입력·수정). 칸 크기는 모두 같게 (2026-10-22 사용자) */
-.sc { display: flex; flex-direction: column; gap: 14px; }
+/* 일정관리 (apps/schedule): 화면 높이에 딱 맞춘다, 스크롤 없음 (2026-10-22 사용자).
+   위 달력이 남은 높이를 주 수만큼 나눠 채우고, 아래 두 칸(고른 날 일정 | 입력·수정)은 높이 고정. 칸 크기는 모두 같게 */
+.sc { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) 214px; gap: 12px; padding: 14px var(--gutter); }
 .sc-nav { display: flex; align-items: center; gap: 6px; }
 .sc-month { min-width: 92px; text-align: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
-.sc-cal { overflow: hidden; }
-.sc-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.sc-week + .sc-week { border-top: 1px solid var(--border); }
+.sc-cal { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sc-weeks { flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(var(--weeks), minmax(0, 1fr)); }
+.sc-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-height: 0; }
+.sc-weeks .sc-week + .sc-week, .sc-head + .sc-weeks .sc-week:first-child { border-top: 1px solid var(--border); }
 .sc-head { background: var(--bg); }
-.sc-wd { padding: 7px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.sc-wd { padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
 .sc-wd.sun, .sc-num.sun { color: #d14343; }
 .sc-wd.sat, .sc-num.sat { color: #2f6bd8; }
-.sc-day { display: flex; flex-direction: column; gap: 2px; height: 92px; padding: 6px 8px; overflow: hidden; color: var(--text); border-left: 1px solid var(--border); }
+.sc-day { display: flex; flex-direction: column; gap: 2px; min-height: 0; padding: 5px 8px; overflow: hidden; color: var(--text); border-left: 1px solid var(--border); }
 .sc-day:first-child { border-left: 0; }
 .sc-day:hover { background: #fafbfc; }
 .sc-day.out { background: #fafafa; }
 .sc-day.out .sc-num, .sc-day.out .sc-ev { opacity: .45; }
 .sc-day.picked { background: var(--accent-weak); }
-.sc-num { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 20px; }
+.sc-num { flex: none; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 20px; }
 .sc-day.today .sc-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; }
-.sc-ev { display: block; font-size: 11.5px; line-height: 17px; padding: 0 5px; border-radius: 4px; background: #eef2f7; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-ev { flex: none; display: block; font-size: 11.5px; line-height: 17px; padding: 0 5px; border-radius: 4px; background: #eef2f7; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-ev b { font-weight: 600; color: var(--text); }
 .sc-ev.done { text-decoration: line-through; color: var(--text-3); }
-.sc-more { font-size: 11px; color: var(--text-3); padding: 0 5px; }
-.sc-bottom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
-.sc-bottom > .card { display: flex; flex-direction: column; }
-.sc-list { flex: 1; max-height: 232px; overflow-y: auto; }
-.sc-row { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-top: 1px solid var(--border); }
+.sc-more { flex: none; font-size: 11px; color: var(--text-3); padding: 0 5px; }
+.sc-bottom { min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sc-bottom > .card { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sc-list { flex: 1; min-height: 0; overflow-y: auto; }
+.sc-row { display: flex; align-items: center; gap: 10px; padding: 7px 16px; border-top: 1px solid var(--border); }
 .sc-row:first-child { border-top: 0; }
 .sc-row.on { background: var(--accent-weak); }
 .sc-row form { display: contents; }
@@ -1733,12 +1735,35 @@ a.br-addr:hover { color: var(--accent); }
 .sc-title { min-width: 0; flex: 1; color: var(--text); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-row.done .sc-title { color: var(--text-3); text-decoration: line-through; }
 .sc-note { margin-left: 8px; font-size: 12px; color: var(--text-3); }
-.sc-list .empty { padding: 28px 16px; }
-.sc-form .card-body { padding: 12px 16px; gap: 10px; }
+.sc-list .empty { padding: 24px 16px; }
+.sc-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sc-fields { flex: 1; display: grid; grid-template-columns: 150px 130px minmax(0, 1fr); gap: 8px 10px; align-content: start; padding: 10px 16px; }
+.sc-fields .field { margin: 0; }
+.sc-fields .sc-wide { grid-column: 1 / -1; }
 .sc-form .form-foot { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
 .danger-text { color: var(--danger); }
 @media (max-width: 900px) {
-  .sc-bottom { grid-template-columns: minmax(0, 1fr); }
-  .sc-day { height: 76px; padding: 4px; }
+  .sc { display: flex; flex-direction: column; overflow-y: auto; }
+  .sc-cal { flex: none; }
+  .sc-weeks { flex: none; grid-template-rows: none; grid-auto-rows: 76px; }
+  .sc-day { padding: 4px; }
   .sc-ev b { display: none; }
+  .sc-bottom { grid-template-columns: minmax(0, 1fr); }
+  .sc-bottom > .card { min-height: 200px; }
+  .sc-fields { grid-template-columns: 1fr 1fr; }
+  .sc-fields .field:nth-child(3) { grid-column: 1 / -1; }
 }
+
+
+/* 일정 알림 (static/js/alarm.js): 우측 상단, 오른쪽에서 들어오고 누르면 오른쪽으로 들어간다 (2026-10-22 사용자) */
+.alarm-root { position: fixed; top: 60px; right: 16px; z-index: 90; width: 300px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.alarm { pointer-events: auto; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; text-align: left; font: inherit; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-lg); background: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+  transform: translateX(calc(100% + 24px)); opacity: 0; transition: transform .28s ease, opacity .28s ease; }
+.alarm.in { transform: none; opacity: 1; }
+.alarm.out { transform: translateX(calc(100% + 24px)); opacity: 0; }
+.alarm:hover { border-color: var(--accent-line); }
+.alarm-k { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.alarm-k .ic { width: 13px; height: 13px; }
+.alarm-t { font-size: 14px; font-weight: 700; color: var(--text); }
+.alarm-n { font-size: 12.5px; color: var(--text-2); }
