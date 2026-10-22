@@ -194,3 +194,20 @@ class ClassChange(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class SiteLink(models.Model):
+    """블로그·카페 화면 위쪽 가운데의 바로가기 (2026-10-23 사용자): 각 사이트 주소, 글쓰기 주소 등 누르면 새 탭으로.
+    화면에서 추가·수정·삭제·순서 바꾸기 (apps/blog_types/links.py). 처음 값은 운영 화면 블로그의 주소."""
+
+    name = models.CharField("이름", max_length=30)
+    url = models.URLField("주소", max_length=500)
+    order = models.PositiveIntegerField("순서", default=0)
+
+    class Meta:
+        ordering = ["order", "pk"]
+        verbose_name = "바로가기"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.name

@@ -280,8 +280,6 @@ pre code { background: none; padding: 0; }
 .wr-cv-box { margin-top: 10px; }
 /* 글 관리 위 버튼 줄 (2026-10-22 사용자): 같은 모양, 성격이 다르면 세로줄로 나눈다 */
 .grid.wrap.wr-grid.wr-compact td.num { white-space: nowrap; }
-.rc-box { display: inline-flex; gap: 4px; align-items: center; }
-.rc-box .input { width: 180px; }
 .bar-sep { display: inline-block; width: 1px; height: 18px; background: var(--border); margin: 0 4px; vertical-align: middle; flex: none; }
 .wr-cat-pick select { width: 100%; }
 
@@ -1774,7 +1772,7 @@ a.br-addr:hover { color: var(--accent); }
 /* 글 관리 › 발행예정글: 사이트로 거르기 · 발행 예정일 (2026-10-22 사용자) */
 .wr-site-filter { width: 128px; }
 .wr-plan { margin: 0; }
-.wr-plan .input { width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+.wr-plan .input { width: 100%; min-width: 0; padding-left: 6px; padding-right: 4px; font-variant-numeric: tabular-nums; }
 /* 발행예정글 카테고리 수정: 누르면 넣은 카테고리 칩 대신 바꾸기 고르기 */
 .wr-cat-move { display: none; }
 .cat-editing .wr-cat-move { display: block; }
@@ -1787,19 +1785,63 @@ a.br-addr:hover { color: var(--accent); }
 .ph-split-head { padding: 7px var(--gutter); font-size: 12.5px; font-weight: 700; color: var(--text); background: var(--muted-weak); border-bottom: 1px solid var(--border); }
 .wr-plan-all { width: 128px; }
 /* 발행예정글·게시글 관리 표: 화면 너비에 맞춘다 (2026-10-22 사용자: 오른쪽이 잘렸다). 제목이 줄고, 좁으면 칸도 준다 */
-.wr-fit { table-layout: fixed; width: 100%; min-width: 640px; }
+.wr-fit { table-layout: fixed; width: 100%; min-width: 860px; }  /* 좁은 화면에서도 제목 칸이 남게 (넘치면 가로로 민다) */
 .wr-fit th:first-child { width: 40px; }
 .wr-fit .wr-c-site { width: 108px; } .wr-fit .wr-c-cat { width: 168px; } .wr-fit .wr-c-cv { width: 112px; }
-.wr-fit .wr-c-pub { width: 140px; } .wr-fit .wr-c-date { width: 132px; }
+.wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 150px; }
 .wr-fit .wr-site-pick select { min-width: 0; }
 .wr-fit td { overflow: hidden; }
 .wr-fit .status-seg { flex-wrap: nowrap; white-space: nowrap; }
 @media (max-width: 1280px) {
   .wr-fit .wr-c-site { width: 92px; } .wr-fit .wr-c-cat { width: 132px; } .wr-fit .wr-c-cv { width: 92px; }
-  .wr-fit .wr-c-pub { width: 140px; } .wr-fit .wr-c-date { width: 126px; }
+  .wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 146px; }
 }
 /* 홈 › 사이트 주소 (2026-10-22 사용자) */
 .hm-sites { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 6px 24px; }
 .hm-site { display: grid; grid-template-columns: 72px 92px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 32px; }
 .hm-site-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-site-url { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); font-size: 13px; }
+
+/* 발행 예정일 묶음 머리 (2026-10-23 사용자): 날짜마다 한 줄 — 그날 쓸 글. 게시글 관리는 사이트 › 카테고리 묶음 */
+.grid tbody tr.wr-day-row td { padding: 4px 10px; background: var(--muted-weak); font-size: 12px; font-weight: 700; color: var(--text-2); border-bottom: 1px solid var(--border); }
+.grid tbody tr.wr-day-row:hover td { background: var(--muted-weak); }
+.wr-day-row .wr-day { font-variant-numeric: tabular-nums; }
+.wr-day-row .wr-day-tag { margin-left: 6px; font-weight: 600; color: var(--text-3); }
+.wr-day-row.is-today .wr-day, .wr-day-row.is-today .wr-day-tag { color: var(--accent); }
+.wr-day-row .cnt { margin-left: 8px; font-weight: 600; }
+
+/* 중메뉴 발행예정글 (2026-10-23 사용자): 위 띠 한 줄 + 두 표를 화면 가득. 가운데 손잡이로 높이, 머리 버튼으로 한 표만 크게 */
+.pp-main { flex: 1; min-height: 0; }
+.pp-split { --pp-top: 45%; flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, var(--pp-top)) 7px minmax(0, 1fr); }
+.pp-split[data-max="top"] { grid-template-rows: minmax(0, 1fr) 0 auto; }
+.pp-split[data-max="bottom"] { grid-template-rows: auto 0 minmax(0, 1fr); }
+.pp-split[data-max="top"] [data-pp-part="bottom"] > .grid-wrap, .pp-split[data-max="bottom"] [data-pp-part="top"] > .grid-wrap { display: none; }
+.pp-split[data-max="top"] .pp-gutter, .pp-split[data-max="bottom"] .pp-gutter { visibility: hidden; }
+.pp-part { display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--border); }
+.pp-part > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
+.pp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 8px 3px var(--gutter); font-size: 12.5px; font-weight: 700; color: var(--text); background: var(--muted-weak); border-bottom: 1px solid var(--border); }
+.pp-head .btn.icon { width: 24px; height: 24px; min-height: 24px; }
+.pp-head .btn.icon.on .ic { transform: rotate(180deg); }
+.pp-gutter { cursor: row-resize; background: var(--panel); border-top: 1px solid var(--border); position: relative; touch-action: none; }
+.pp-gutter::after { content: ""; position: absolute; left: 50%; top: 2px; width: 36px; height: 3px; margin-left: -18px; border-radius: 2px; background: var(--border); }
+.pp-gutter:hover::after { background: var(--text-3); }
+.pp-sites > a .cnt { margin-left: 2px; font-size: 11px; }
+
+/* 블로그·카페 위쪽 가운데 바로가기 (2026-10-23 사용자): 작은 버튼, 누르면 새 탭. 연필로 편집 */
+.site-links { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.site-links::-webkit-scrollbar { display: none; }
+.sl-chip { flex: none; height: 24px; padding: 0 9px; display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.sl-chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.sl-empty { font-size: 12px; color: var(--text-3); }
+.sl-edit { flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer; }
+.sl-edit:hover { background: var(--muted-weak); color: var(--text); }
+.sl-edit .ic { width: 13px; height: 13px; }
+.sl-dialog { max-width: 680px; }
+.sl-help { margin: 6px 0 10px; }
+.sl-rows { display: grid; gap: 6px; }
+.sl-row { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto auto auto auto; gap: 4px; align-items: center; margin: 0; }
+.sl-row.sl-new { grid-template-columns: 150px minmax(0, 1fr) auto; padding-top: 8px; margin-top: 4px; border-top: 1px solid var(--border); }
+@media (max-width: 760px) {
+  .site-links { order: 3; flex-basis: 100%; justify-content: flex-start; }
+  .sl-row, .sl-row.sl-new { grid-template-columns: 1fr; }
+}

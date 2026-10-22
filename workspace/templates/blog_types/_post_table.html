@@ -10,7 +10,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for p in rows %}{% if table_stage %}{% include "blog_types/_post_row.html" %}{% else %}{% include "blog_types/_draft_row.html" %}{% endif %}{% empty %}<tr><td colspan="{% if table_stage %}7{% else %}5{% endif %}" class="grid-empty">{% if empty %}{{ empty }}{% elif q or today or custom or site_filter %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
+      {% for p in rows %}{% if p.day_head and table_stage %}{# 발행 예정일 묶음 머리 (2026-10-23 사용자: 날짜별로 그날 쓸 글을 본다) #}<tr class="wr-day-row{% if p.day_head.today %} is-today{% elif p.day_head.past %} is-past{% endif %}"><td colspan="7"><span class="wr-day">{{ p.day_head.day|date:"m-d" }} ({{ p.day_head.dow }})</span>{% if p.day_head.today %}<span class="wr-day-tag">오늘</span>{% elif p.day_head.past %}<span class="wr-day-tag">지남</span>{% endif %}<span class="cnt">{{ p.day_head.count }}편</span></td></tr>{% endif %}{% if table_stage %}{% include "blog_types/_post_row.html" %}{% else %}{% include "blog_types/_draft_row.html" %}{% endif %}{% empty %}<tr><td colspan="{% if table_stage %}7{% else %}5{% endif %}" class="grid-empty">{% if empty %}{{ empty }}{% elif q or today or custom or site_filter %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>

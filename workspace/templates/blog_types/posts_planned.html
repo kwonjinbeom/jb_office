@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load trash_tags %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}{{ page_title }} <span class="cnt">{{ posts|length }}</span>{% endblock %}
+
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+{% comment %}블로그·카페 › 발행예정글 (2026-10-23 사용자): 날짜를 정해 두고 그날 각 블로그에 쓰는 화면. 글 관리의 발행예정글 탭과 같은 기능을,
+위 띠 한 줄 + 두 표(예정일 없음 · 정함)를 화면 가득. 가운데 손잡이로 높이를 바꾸고, 머리의 버튼으로 한 표만 크게 (이 브라우저에 기억){% endcomment %}
+<section class="ph-main pp-main">
+  <div class="filter-bar pp-bar">
+    <form method="get" class="inline-form">
+      {% if today %}<input type="hidden" name="today" value="1">{% endif %}{% if custom %}<input type="hidden" name="custom" value="1">{% endif %}
+      <div class="search-box">{% include "includes/ic.html" with name="search" %}<input class="input sm" type="search" name="q" value="{{ q }}" placeholder="제목, 내용 검색  ( / )"></div>
+      <button class="btn sm" type="submit">검색</button>
+      <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 보기 (다시 누르면 전체)">오늘</a>
+      <a class="btn sm{% if custom %} primary{% endif %}" href="{{ custom_url }}" aria-pressed="{% if custom %}true{% else %}false{% endif %}" title="커스텀 글만 (고정 주제·추가 실행·따로 요청한 글, 다시 누르면 전체)">커스텀</a>
+      <select class="input sm wr-site-filter" name="site" data-autosubmit aria-label="사이트로 거르기"><option value="">사이트 전체</option>{% for s in site_names %}<option value="{{ s }}"{% if s == site_filter %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>
+      {% include "blog_types/_plan_tools.html" %}
+      {% if q or today or custom or site_filter %}<a class="btn ghost sm" href="{{ clear_url }}">{% include "includes/ic.html" with name="x" %}전체</a>{% endif %}
+    </form>
+    {% if posts %}
+    <span class="wr-bulk">
+      {% include "blog_types/_plan_bulk.html" %}
+      <span class="bar-sep" aria-hidden="true"></span>
+      <button type="button" class="btn sm danger" data-trash-checked="ids" title="체크한 글을 휴지통으로 (7일 안에 되돌릴 수 있음)">삭제</button>
+    </span>
+    {% endif %}
+  </div>
+  <form id="ph-bulk" method="post" action="{% url 'posts:bulk' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"></form>
+
+  <div class="pp-split" data-pp-split>
+    <div class="pp-part" data-pp-part="top">
+      <div class="pp-head"><span>발행 예정일 없음 <span class="cnt">{{ unplanned|length }}</span></span>
+        <button type="button" class="btn ghost sm icon" data-pp-max="top" title="이 표만 크게 (다시 누르면 둘 다)" aria-label="발행 예정일 없음 표만 크게" aria-pressed="false"><svg class="ic"><use href="#i-chevron-down"/></svg></button></div>
+      {% include "blog_types/_post_table.html" with rows=unplanned empty="예정일이 없는 글이 없습니다." %}
+    </div>
+    <div class="pp-gutter" data-pp-gutter role="separator" aria-orientation="horizontal" aria-label="두 표 높이 조절" title="끌어서 두 표 높이 조절 · 두 번 누르면 반반"></div>
+    <div class="pp-part" data-pp-part="bottom">
+      <div class="pp-head"><span>발행 예정일 정함 <span class="cnt">{{ planned|length }}</span></span>
+        <button type="button" class="btn ghost sm icon" data-pp-max="bottom" title="이 표만 크게 (다시 누르면 둘 다)" aria-label="발행 예정일 정함 표만 크게" aria-pressed="false"><svg class="ic"><use href="#i-chevron-down"/></svg></button></div>
+      {% include "blog_types/_post_table.html" with rows=planned empty="예정일을 정한 글이 없습니다. 줄의 날짜 칸이나 위 '예정일' 버튼으로 정하세요." %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "blog_types/_tree_js.html" %}
+{% include "blog_types/_plan_js.html" %}
+<script>
+/* 두 표 높이 (2026-10-23 사용자: 두 표를 크게 보고 싶다). 손잡이를 끌면 위 표 비율이 바뀌고, 머리 버튼은 그 표만 크게. 이 브라우저에 기억 */
+(function () {
+  var box = document.querySelector("[data-pp-split]");
+  if (!box) return;
+  var KEY = "posts.planSplit", st = { top: 45, max: "" };
+  try { st = Object.assign(st, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+  function apply() {
+    box.style.setProperty("--pp-top", st.top + "%");
+    box.setAttribute("data-max", st.max || "");
+    box.querySelectorAll("[data-pp-max]").forEach(function (b) {
+      var on = b.getAttribute("data-pp-max") === st.max;
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.classList.toggle("on", on);
+    });
+  }
+  apply();
+  box.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-pp-max]");
+    if (!b) return;
+    var which = b.getAttribute("data-pp-max");
+    st.max = st.max === which ? "" : which;
+    apply(); save();
+  });
+  var gutter = box.querySelector("[data-pp-gutter]");
+  gutter.addEventListener("dblclick", function () { st.top = 50; st.max = ""; apply(); save(); });
+  gutter.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    gutter.setPointerCapture(e.pointerId);
+    st.max = "";
+    var rect = box.getBoundingClientRect();
+    function move(ev) {
+      st.top = Math.max(12, Math.min(88, Math.round((ev.clientY - rect.top) / rect.height * 100)));
+      apply();
+    }
+    function up() { gutter.removeEventListener("pointermove", move); gutter.removeEventListener("pointerup", up); save(); }
+    gutter.addEventListener("pointermove", move);
+    gutter.addEventListener("pointerup", up);
+  });
+})();
+</script>
+{% endblock %}

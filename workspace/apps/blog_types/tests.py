@@ -465,7 +465,7 @@ class PostHubTests(TestCase):
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, f'href="{reverse("posts:view")}"')
         nav = [c.title for m in res.context["MENUS"] if m.key == "blog" for c in m.children]
-        self.assertEqual(nav[:3], ["글 관리", "카테고리 관리", "사이트별 템플릿"])
+        self.assertEqual(nav[:5], ["글 관리", "발행예정글", "게시글 관리", "카테고리 관리", "사이트별 템플릿"])  # 2026-10-23
         self.assertNotIn("운영", nav)
         self.assertEqual(nav[-2:], ["모니터링", "논의 현황"])
 
@@ -513,7 +513,7 @@ class PostHubTests(TestCase):
         url = reverse("posts:view")
         res = self.client.get(url)
         self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 임시", "티 임시"])
-        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0, 0])  # … 발행예정글 · 게시글 관리
+        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0])  # … 발행예정글 (게시글 관리는 중메뉴로)
         res = self.client.get(url, {"sel": "u", "stage": "review"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["티 검토"])  # 미분류
         res = self.client.get(url, {"sel": self.season.category.sel})
@@ -694,10 +694,11 @@ class SitePublishTests(TestCase):
         self.assertNotContains(res, 'data-bt-tree="class"')
         self.assertNotContains(res, 'class="wr-group"')
         self.assertContains(res, "bt-layout-1")
-        # 게시글 관리 (2026-10-22 사용자): 발행예정글 다음 탭, 발행 완료한 글
-        res = self.client.get(url, {"stage": "done"})
+        # 게시글 관리 (2026-10-23 사용자): 글 관리 탭에서 빼 중메뉴로. 예전 주소는 그리로
+        self.assertEqual([t["label"] for t in res.context["tabs"]], ["임시글", "검토글", "발행예정글"])
+        self.assertRedirects(self.client.get(url, {"stage": "done"}), reverse("posts:published"), fetch_redirect_response=False)
+        res = self.client.get(reverse("posts:published"))
         self.assertEqual([p.title for p in res.context["posts"]], ["발행한 글"])
-        self.assertEqual([(t["label"], t["count"]) for t in res.context["tabs"]][2:], [("발행예정글", 3), ("게시글 관리", 1)])
         self.assertContains(res, "wr-compact")  # 발행예정글과 같은 표
         view = self.client.get(url, {"p": f"tistory:{done.pk}"})
         self.assertEqual(view.context["pl_stage"], "done")  # 글 보기 왼쪽 목록도 게시글 관리
@@ -741,8 +742,8 @@ class SitePublishTests(TestCase):
         self.assertNotContains(res, "data-cv-panel")  # 줄을 눌러 펼치지 않는다
         self.assertContains(res, "data-trash-norow")  # 줄마다 휴지통 없이, 체크하고 위 '삭제'
         self.assertNotContains(res, "체크한 것을")
-        self.assertContains(res, 'id="rc-note"')  # 재변환 코멘트 칸
-        self.assertContains(res, 'data-reconvert data-url="/blog/site-templates/reconvert/"')
+        self.assertNotContains(res, 'id="rc-note"')  # 재변환 코멘트는 뺐다 (2026-10-23 사용자)
+        self.assertContains(res, "data-feeds-check")  # 갱신: 사이트에 올라온 글로 발행 완료
         self.assertContains(res, f'data-st-run="{self.pl.pk}"')  # 줄의 변환 버튼
         page = self.client.get(reverse("site_templates:post"), {"p": f"tistory:{self.a.pk}", "back": "/blog/posts/view/?stage=post"})
         self.assertEqual(page.context["ACTIVE_MENU"], "posts_view")
@@ -1034,3 +1035,107 @@ class PostPlanSplitTests(TestCase):
         self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{c.pk}"], "plan": "1", "plan_day": "", "next": url})
         c.refresh_from_db()
         self.assertIsNone(c.planned_on)  # 비우면 지운다
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostMenusTests(TestCase):
+    """2026-10-23 사용자: 글 관리 아래 중메뉴 발행예정글(크게) · 게시글 관리(발행 완료), 발행예정글 '갱신', 위쪽 바로가기."""
+
+    def setUp(self):
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        self.T, self.N = Post, NaverPost
+
+    def test_planned_menu_page(self):
+        from django.utils import timezone
+        today = timezone.localdate()
+        self.T.objects.create(title="날짜 없음", stage="post", target="눈잎")
+        self.T.objects.create(title="오늘 쓸 글", stage="post", target="눈잎", planned_on=today)
+        self.N.objects.create(title="오늘 쓸 네이버", stage="post", target="black_lukey", planned_on=today)
+        self.T.objects.create(title="발행한 글", stage="post", publish_status="done")
+        res = self.client.get(reverse("posts:planned"))
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.context["ACTIVE_MENU"], "posts_planned")
+        self.assertEqual([p.title for p in res.context["unplanned"]], ["날짜 없음"])
+        self.assertEqual([p.title for p in res.context["planned"]], ["오늘 쓸 글", "오늘 쓸 네이버"])
+        self.assertEqual(res.context["planned"][0].day_head["count"], 2)  # 날짜 묶음 머리
+        self.assertContains(res, "wr-day-row is-today")
+        self.assertContains(res, "data-pp-split")  # 두 표 + 높이 손잡이
+        self.assertContains(res, "data-feeds-check")  # 갱신
+        self.assertContains(res, ">예정일</button>", html=False)  # 짧은 버튼
+        self.assertNotContains(res, "예정일 주기")
+        self.assertNotContains(res, "재변환")
+        res = self.client.get(reverse("posts:planned"), {"site": "black_lukey"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["오늘 쓸 네이버"])
+
+    def test_published_menu_sorted_site_category_date(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+        today = timezone.localdate()
+        java = SiteCategory.objects.create(blog=Blog.objects.get(name="memorily"), name="자바", order=2)
+        vue = SiteCategory.objects.create(blog=Blog.objects.get(name="memorily"), name="뷰", order=1)
+
+        def done(title, target, days, cat=None):
+            post = self.T.objects.create(title=title, stage="post", target=target, publish_status="done",
+                                         published_on=today - timedelta(days=days))
+            if cat:
+                Placement.objects.create(site_category=cat, tistory_post=post, status="published")
+            return post
+        done("눈잎 글", "눈잎", 0)
+        done("자바 옛글", "memorily", 3, java)
+        done("자바 새글", "memorily", 1, java)
+        done("뷰 글", "memorily", 5, vue)
+        self.T.objects.create(title="아직 안 쓴 글", stage="post", target="memorily")
+        url = reverse("posts:published")
+        res = self.client.get(url)
+        self.assertEqual(res.context["ACTIVE_MENU"], "posts_published")
+        # 사이트(운영 순서: memorily → 눈잎) → 카테고리 순서(뷰 → 자바) → 발행일 최근이 위
+        self.assertEqual([p.title for p in res.context["posts"]], ["뷰 글", "자바 새글", "자바 옛글", "눈잎 글"])
+        self.assertContains(res, "memorily › 자바")  # 묶음 머리
+        res = self.client.get(url, {"today": "1"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["눈잎 글"])  # 오늘 발행한 글
+        res = self.client.get(url, {"site": "memorily", "q": "자바"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 새글", "자바 옛글"])
+        self.assertNotContains(res, "custom=1")  # 조건은 검색 · 오늘 · 사이트 · 전체만
+        self.assertContains(res, ">전체</a>", html=False)
+
+    def test_refresh_marks_placement_published(self):
+        """갱신 = 모니터링 '발행 확인': 사이트에 올라온 글과 제목이 같으면 넣은 곳·글이 발행 완료 → 게시글 관리로"""
+        from django.utils import timezone
+
+        from apps.blog_ops import feeds
+        blog = Blog.objects.get(name="memorily")
+        cat = SiteCategory.objects.create(blog=blog, name="자바")
+        post = self.T.objects.create(title="자바 스트림 정리", stage="post", target="memorily")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post)
+        feeds.record(blog, True, "", [("자바 스트림 정리", "https://jinbaam.tistory.com/9", timezone.now())], where="PC")
+        pl.refresh_from_db(), post.refresh_from_db()
+        self.assertEqual((pl.status, post.publish_status), ("published", "done"))
+        self.assertEqual([p.title for p in self.client.get(reverse("posts:published")).context["posts"]], ["자바 스트림 정리"])
+
+    def test_site_links_bar(self):
+        from .models import SiteLink
+        seeded = list(SiteLink.objects.values_list("url", flat=True))
+        self.assertIn("https://blog.naver.com/black_lukey", seeded)  # 처음 값은 운영 사이트 주소
+        res = self.client.get(reverse("posts:planned"))
+        self.assertContains(res, 'class="site-links"')
+        self.assertContains(res, 'href="https://blog.naver.com/black_lukey" target="_blank"')
+        self.assertNotContains(self.client.get(reverse("memos:list")), 'class="site-links"')  # 블로그·카페 밖에서는 없다
+        back = reverse("posts:planned")
+        self.client.post(reverse("blog_types:link_add"), {"name": "눈잎 글쓰기", "url": "nunip.tistory.com/manage/newpost", "next": back})
+        link = SiteLink.objects.get(name="눈잎 글쓰기")
+        self.assertEqual(link.url, "https://nunip.tistory.com/manage/newpost")
+        self.assertEqual(link, list(SiteLink.objects.all())[-1])
+        self.client.post(reverse("blog_types:link_move", args=[link.pk]), {"dir": "up", "next": back})
+        self.assertEqual(list(SiteLink.objects.all())[-2], link)
+        self.client.post(reverse("blog_types:link_save", args=[link.pk]), {"name": "글쓰기", "url": "javascript:alert(1)", "next": back})
+        link.refresh_from_db()
+        self.assertEqual(link.name, "눈잎 글쓰기")  # 틀린 주소면 그대로
+        res = self.client.post(reverse("blog_types:link_save", args=[link.pk]), {"name": "글쓰기", "url": "https://a.tistory.com/manage", "next": back})
+        self.assertRedirects(res, back, fetch_redirect_response=False)
+        link.refresh_from_db()
+        self.assertEqual((link.name, link.url), ("글쓰기", "https://a.tistory.com/manage"))
+        self.client.post(reverse("blog_types:link_delete", args=[link.pk]), {"next": back})
+        self.assertFalse(SiteLink.objects.filter(pk=link.pk).exists())
