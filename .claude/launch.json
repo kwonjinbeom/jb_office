@@ -22,6 +22,17 @@
         "--noreload"
       ],
       "port": 8010
+    },
+    {
+      "name": "workserver-custom-wt",
+      "runtimeExecutable": "C:\\JBWORKSPACE\\jb_office\\workspace\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": [
+        "C:\\JBWORKSPACE\\jb_office_wt_custom\\workspace\\manage.py",
+        "runserver",
+        "127.0.0.1:8020",
+        "--noreload"
+      ],
+      "port": 8020
     }
   ]
 }

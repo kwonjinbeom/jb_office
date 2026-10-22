@@ -25,6 +25,7 @@ HEAD_STYLE = "border:1px solid #d1d5db;background:#f3f4f6;padding:8px"
 QUOTE_STYLE = "margin:18px 0;padding:12px 16px;border-left:4px solid #d1d5db;background:#f9fafb;color:#374151"
 HR_STYLE = "border:0;border-top:1px solid #e5e7eb;margin:28px 0"
 IMG_STYLE = "width:620px;max-width:100%;height:auto"  # 사진은 가운데 620 (2026-10-23 사용자: 너무 크다)
+POSTER_STYLE = "width:300px;max-width:100%;height:auto"  # 설명이 '포스터'로 시작하면 작게 고정 300 (영화·OTT)
 
 # [사진] 설명 · [사진: 설명] (변환 요청문이 쓰는 꼴) · 📷 설명
 LINE_MARK = re.compile(r"^\s*(?:>\s*)?(?:\[(?P<kind>사진|그림|캡션)(?:\s*[:：]\s*(?P<inner>[^\]]*))?\]|(?P<emoji>📷|🖼️?))"
@@ -84,7 +85,8 @@ def _image(m: re.Match) -> str:
     src, alt = attrs.get("src", ""), attrs.get("alt", "")
     caption = m.group(2) or m.group(3)
     if re.match(r"(https?:)?//|data:image/", src):
-        out = f'<p style="text-align:center;margin:18px 0"><img src="{src}" alt="{alt}" style="{IMG_STYLE}"></p>'
+        style = POSTER_STYLE if alt.startswith("포스터") else IMG_STYLE
+        out = f'<p style="text-align:center;margin:18px 0"><img src="{src}" alt="{alt}" style="{style}"></p>'
     else:
         # 인터넷 주소가 아닌 파일 이름(그림1.png) → 붙여넣은 뒤 그 파일을 올릴 자리
         name = src.rsplit("/", 1)[-1]
@@ -110,7 +112,7 @@ ALIGN_STYLE = re.compile(r"^\s*text-align:\s*(left|center|right|justify)\s*;?\s*
 
 def _known_styles() -> set[str]:
     """이 도구가 직접 다는 style 만 남긴다. 웹 문서에서 붙여 온 글꼴·색 같은 꾸밈은 버린다."""
-    base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
+    base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE, POSTER_STYLE,
             "text-align:center;margin:18px 0"}
     cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE) for a in ("left", "center", "right")}
     return {s.replace(" ", "") for s in base | cells | CARD_STYLES | {CELL_STYLE, HEAD_STYLE}}

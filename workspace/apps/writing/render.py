@@ -386,6 +386,7 @@ TISTORY_GAP = '<p data-ke-size="size16">&nbsp;</p>'
 _TOP_BLOCK = re.compile(r"<(p|h[2-4]|ul|ol|table|blockquote|hr|pre|figure)\b", re.I)
 _EMPTY_P = re.compile(r"<p[^>]*>(?:\s|&nbsp;|\xa0|<br\s*/?>)*</p>")
 IMG_WIDTH = 620
+POSTER_WIDTH = 300  # 설명(alt)이 '포스터'로 시작하는 그림 (2026-10-23 사용자: 포스터는 작게 고정)
 # 글 덩어리(## 소제목) 앞은 빈 줄 셋 — 엔터 두 번 더 (2026-10-22 사용자: 자주 묻는 것 · 화수 환산기 · 장별 대응 사이가 답답하다.
 # 스킨이 아니라 글에 넣는다: 스킨은 모든 글에 걸린다). 네이버 붙여넣기도 같은 수 (naver_writing.render).
 SECTION_GAPS = 3
@@ -412,7 +413,8 @@ def tistory_html(body_html: str) -> str:
     """티스토리·블로거에 붙일 HTML (2026-10-22 사용자: 문단 사이가 답답하다 · 사진은 가운데 620).
     티스토리 본문은 문단 여백이 0 이라 맨 바깥 블록 사이에 빈 줄 하나, ## 소제목 앞에는 SECTION_GAPS 줄을 끼운다.
     소제목 바로 뒤에는 끼우지 않아 소제목이 아래 글에 붙는다. 이미 빈 줄이 있는 글(사용자가 편집기에서 띄운 글)은 그대로 둔다."""
-    out = re.sub(r"<img (?![^>]*\bwidth=)", f'<img width="{IMG_WIDTH}" ', body_html)
+    out = re.sub(r'<img (?![^>]*\bwidth=)(?=[^>]*\balt="포스터)', f'<img width="{POSTER_WIDTH}" ', body_html)  # 포스터는 300
+    out = re.sub(r"<img (?![^>]*\bwidth=)", f'<img width="{IMG_WIDTH}" ', out)
     if _EMPTY_P.search(out):
         return out
     parser = _TopBlocks()
