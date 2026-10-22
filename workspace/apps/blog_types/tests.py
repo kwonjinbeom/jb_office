@@ -348,15 +348,17 @@ class SideNavTests(TestCase):
         self.client.force_login(user)
 
     def test_parent_menus_only_expand_and_list_child_keeps_old_page(self):
-        res = self.client.get(reverse("video:list"))
-        self.assertContains(res, "영상 콘텐츠 리스트")  # 블로그·카페 리스트는 뺐다 (listing=False)
+        res = self.client.get(reverse("studio:index"))
+        self.assertContains(res, "창작콘텐츠 리스트")  # 블로그·카페 리스트는 뺐다 (listing=False)
         self.assertNotContains(res, "블로그·카페 리스트")
         self.assertContains(res, 'class="nav-item nav-toggle" data-nav-toggle')
-        group = next(n for n in res.context["NAV"] if n["menu"].key == "video")
+        group = next(n for n in res.context["NAV"] if n["menu"].key == "studio")
         self.assertTrue(group["open"])
         self.assertTrue(group["children"][0]["active"])  # 리스트 중메뉴가 강조된다
         memos = next(n for n in res.context["NAV"] if n["menu"].key == "memos")
         self.assertEqual(memos["children"], [])  # 하위 없는 메뉴는 그대로
+        video = next(n for n in res.context["NAV"] if n["menu"].key == "video")
+        self.assertEqual(video["children"], [])  # 논의 현황을 빼서 (2026-10-23) 하위가 없다
 
 
 class ClassifyExistingPostsTests(TestCase):
@@ -464,10 +466,16 @@ class PostHubTests(TestCase):
         모니터링은 새로 (일자별 발행 수 · 발행 완료 자동 처리)"""
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, f'href="{reverse("posts:view")}"')
-        nav = [c.title for m in res.context["MENUS"] if m.key == "blog" for c in m.children]
-        self.assertEqual(nav[:5], ["글 관리", "발행예정글", "게시글 관리", "카테고리 관리", "사이트별 템플릿"])  # 2026-10-23
-        self.assertNotIn("운영", nav)
-        self.assertEqual(nav[-2:], ["모니터링", "논의 현황"])
+        blog = next(m for m in res.context["MENUS"] if m.key == "blog")
+        # 2026-10-23 사용자: 논의 현황은 빼고, 발행예정글·게시글 관리는 글 관리 아래, 모니터링이 memorily 티스토리 앞
+        self.assertEqual([c.title for c in blog.children], ["글 관리", "카테고리 관리", "사이트별 템플릿", "모니터링", "memorily 티스토리"])
+        self.assertEqual([c.title for c in blog.children[0].children], ["발행예정글", "게시글 관리"])
+        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")["children"][0]
+        self.assertTrue(group["link"] and group["self_active"])  # 글 관리 이름 줄이 곧 글 관리 화면 링크
+        self.assertContains(res, f'<a class="nav-item sub active" href="{reverse("posts:view")}">', html=False)
+        planned = self.client.get(reverse("posts:planned"))
+        group = next(n for n in planned.context["NAV"] if n["menu"].key == "blog")["children"][0]
+        self.assertEqual((group["self_active"], [s["active"] for s in group["children"]]), (False, [True, False]))
 
     def test_today_filter(self):
         from datetime import timedelta

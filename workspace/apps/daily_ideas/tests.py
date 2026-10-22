@@ -84,7 +84,7 @@ class DailyIdeasTests(TestCase):
 
         self.assertEqual(titles[:2], ["일일루틴", "아이디어"])  # 일일루틴이 맨 위, 일일·내 아이디어는 '아이디어' 아래
         hub = get_menus()[1]
-        self.assertEqual([m.title for m in hub.children], ["일일 아이디어", "내 아이디어", "논의 현황"])
+        self.assertEqual([m.title for m in hub.children], ["일일 아이디어", "내 아이디어"])  # 논의 현황은 뺐다 (2026-10-23)
         self.assertFalse(hub.listing)  # '아이디어 리스트' 는 만들지 않는다
 
     def test_my_ideas_grid_has_no_status_or_stars(self):

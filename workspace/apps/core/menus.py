@@ -55,7 +55,6 @@ MENUS: list[Menu] = [
         children=(
             Menu("daily_ideas", "일일 아이디어", "날짜별로 조사한 후보를 비교하고 필요한 것만 담는 곳", "daily_ideas:list", "sparkles"),
             Menu("ideas", "내 아이디어", "내가 고른 후보를 단계별로 실제 작업으로 바꾸는 곳", "ideas:list", "bulb"),
-            Menu("idea_discussions", "논의 현황", "아이디어(일일·내 아이디어)에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=idea"),
         ),
     ),
     Menu(
@@ -64,27 +63,24 @@ MENUS: list[Menu] = [
         children=(
             # 2026-10-22 사용자: 운영 · (예전) 글 관리는 메뉴에서 뺀다 (주소는 남는다). 모니터링은 새로 — 일자별 발행 수 · 발행 완료 자동 처리.
             # 글 보기 → '글 관리', 카테고리 관리 → '카테고리 관리'. 변환은 글 관리(검토글·발행예정글)에서 한다.
-            Menu("posts_view", "글 관리", "임시글 → 검토글 → 발행예정글. 카테고리 넣기 · 변환 · 발행까지", "posts:view", "file"),
-            # 2026-10-23 사용자: 발행예정글(날짜 정해 두고 그날 쓰는 화면, 크게) · 게시글 관리(발행 완료)를 글 관리 아래 중메뉴로
-            Menu("posts_planned", "발행예정글", "발행 예정일을 정하고 그날 각 블로그에 올릴 글을 보는 곳", "posts:planned", "calendar"),
-            Menu("posts_published", "게시글 관리", "발행 완료한 글을 사이트 › 카테고리별로", "posts:published", "check-list"),
+            # 2026-10-23 사용자: 발행예정글(날짜 정해 두고 그날 쓰는 화면, 크게) · 게시글 관리(발행 완료)는 글 관리 아래 소메뉴.
+            # 글 관리 이름 줄은 그대로 글 관리 화면으로 간다 (주소가 첫 소메뉴와 다르면 이름 줄이 링크, base.html)
+            Menu("posts_view", "글 관리", "임시글 → 검토글 → 발행예정글. 카테고리 넣기 · 변환 · 발행까지", "posts:view", "file", children=(
+                Menu("posts_planned", "발행예정글", "발행 예정일을 정하고 그날 각 블로그에 올릴 글을 보는 곳", "posts:planned", "calendar"),
+                Menu("posts_published", "게시글 관리", "발행 완료한 글을 사이트 › 카테고리별로", "posts:published", "check-list"),
+            )),
             Menu("blog_types", "카테고리 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
             Menu("site_templates", "사이트별 템플릿", "사이트·카테고리마다 글쓰기·변환 컨셉과 규칙", "site_templates:index", "layers"),
+            Menu("blog_ops", "모니터링", "사이트마다 일자별로 몇 편 발행했는지 (한 주씩), 발행 완료 자동 처리", "blog_ops:index", "check-list"),
             # memorily 티스토리 (2026-10-21 사용자): 중메뉴 아래 소메뉴 둘 — 블로그 자동화(예전 'memorily 연재') · 애니 총정리
             Menu("memorily_tistory", "memorily 티스토리", "memorily 티스토리에 쓰는 연재와 애니 정리 글", "series:index", "book", children=(
                 Menu("series", "블로그 자동화", "AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 곳", "series:index", "book"),
                 Menu("anime", "애니 총정리", "애니↔만화 환산기 글을 작품마다 쓰는 곳 (나루토부터)", "anime:index", "book"),
             )),
-            Menu("blog_ops", "모니터링", "사이트마다 일자별로 몇 편 발행했는지 (한 주씩), 발행 완료 자동 처리", "blog_ops:index", "check-list"),
-            Menu("blog_discussions", "논의 현황", "블로그·카페에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=blog"),
         ),
     ),
     Menu(
-        "video", "영상 콘텐츠", "시리즈별 소재·대본과 플랫폼별 버전", "video:list", "layers", "#7c3aed",
-        children=(
-            Menu("video_discussions", "논의 현황", "영상 콘텐츠에서 정한 것과 다음 행동", "discussions:list", "message", query="?area=video"),
-        ),
-    ),
+        "video", "영상 콘텐츠", "시리즈별 소재·대본과 플랫폼별 버전", "video:list", "layers", "#7c3aed"),
     # 창작콘텐츠 (2026-10-22 사용자): 상상 소재 하나를 여러 방식으로 만들어 보는 검증. 게시용이 아니다.
     Menu(
         "studio", "창작콘텐츠", "상상 소재 하나를 카툰·숏폼·글 등 여러 방식으로 만들어 비교하는 곳", "studio:index", "palette", "#b45309",
@@ -188,6 +184,10 @@ def find_menu(key: str) -> Menu | None:
     return next((m for m in walk() if m.key == key), None)
 
 
+# 대메뉴마다 있던 '논의 현황' 중메뉴는 뺐다 (2026-10-23 사용자). 논의는 진행현황(discussions) 한곳에서 본다.
+# 블로그·카페 중메뉴 순서 (2026-10-23 사용자): 글 관리(› 발행예정글 · 게시글 관리) · 카테고리 관리 · 사이트별 템플릿 · 모니터링 · memorily 티스토리.
+
+
 def build_nav(active_key: str, user=None) -> list[dict]:
     """좌측 메뉴용 트리. 현재 화면이 속한 가지는 펼친 채로 내보낸다. user 를 주면 볼 수 있는 메뉴만."""
     nav = []
@@ -199,6 +199,9 @@ def build_nav(active_key: str, user=None) -> list[dict]:
         children = []
         for child in (*first, *menu.children):  # 중메뉴 아래 소메뉴는 이름 한 줄 + 들여 쓴 링크로 (memorily 티스토리)
             subs = [{"menu": g, "active": g.key == active_key} for g in child.children]
-            children.append({"menu": child, "active": child.key == active_key or any(s["active"] for s in subs), "children": subs})
+            # 이름 줄이 링크인가: 주소가 첫 소메뉴와 다르면 (글 관리). 같으면 이름만 (memorily 티스토리)
+            link = bool(subs) and child.url != child.children[0].url
+            children.append({"menu": child, "active": child.key == active_key or any(s["active"] for s in subs), "children": subs,
+                             "link": link, "self_active": child.key == active_key})
         nav.append({"menu": menu, "active": False, "open": any(c["active"] for c in children), "children": children})
     return nav

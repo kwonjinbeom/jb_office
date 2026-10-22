@@ -86,34 +86,26 @@ class DiscussionTests(TestCase):
         response = self.client.post(reverse("discussions:quick", args=[self.deep.pk]), {"summary": "비교 기준 확정", "next_action": "샘플 검토", "status": "decided", "return_to": "/discussions/?area=blog"})
         self.assertEqual(response["Location"], "/discussions/?area=blog")
 
-    def test_blog_and_video_discussions_sit_under_their_menu_and_the_rest_is_progress(self):
+    def test_all_discussions_sit_under_progress(self):
+        """대메뉴 아래 '논의 현황'은 뺐다 (2026-10-23 사용자): 블로그·영상 논의도 모두 진행현황 한곳에서."""
         def active_keys(response):
             keys = [n["menu"].key for n in response.context["NAV"] if n["active"]]
             return keys + [c["menu"].key for n in response.context["NAV"] for c in n["children"] if c["active"]]
 
-        # 전체 = 진행현황
         response = self.client.get(reverse("discussions:list"))
         self.assertEqual(active_keys(response), ["discussions"])
         self.assertContains(response, "진행현황")
         self.assertContains(response, ">메뉴</th>")
 
-        # 블로그·카페 아래 논의 현황: 그 메뉴 것만, 메뉴 열은 없다.
+        # ?area= 로 거르는 것은 그대로, 강조는 진행현황
         video = Discussion.objects.create(area="video", name="첫 영상")
         response = self.client.get(reverse("discussions:list"), {"area": "blog"})
-        self.assertEqual(active_keys(response), ["blog_discussions"])
-        self.assertTrue(next(n for n in response.context["NAV"] if n["menu"].key == "blog")["open"])
+        self.assertEqual(active_keys(response), ["discussions"])
         self.assertNotIn(video.pk, [x.pk for x in response.context["entries"]])
-        self.assertNotContains(response, ">메뉴</th>")
 
-        # 상세·수정·새 주제도 같은 가지에 머문다.
         for url in [self.deep.get_absolute_url(), reverse("discussions:edit", args=[self.deep.pk]), reverse("discussions:create") + "?area=video"]:
-            expected = "video_discussions" if "area=video" in url else "blog_discussions"
-            self.assertEqual(active_keys(self.client.get(url)), [expected])
-
-        # 하위 메뉴가 없는 영역은 진행현황에 남는다.
-        other = Discussion.objects.create(area="other", name="공통 주제")
-        self.assertEqual(active_keys(self.client.get(other.get_absolute_url())), ["discussions"])
-        self.assertEqual(self.client.post(reverse("discussions:delete", args=[video.pk]))["Location"], "/discussions/?area=video")
+            self.assertEqual(active_keys(self.client.get(url)), ["discussions"])
+        self.assertEqual(self.client.post(reverse("discussions:delete", args=[video.pk]))["Location"], "/discussions/")
 
     def test_dates_order_group_and_filter(self):
         from datetime import timedelta
@@ -260,6 +252,6 @@ class IdeaGroupDiscussionTests(TestCase):
             res = self.client.get(reverse("discussions:list"), {"area": "idea"})
         names = [e.name for e in res.context["entries"]]
         self.assertEqual(sorted(names), ["내 아이디어 쪽 논의", "일일 쪽 논의"])
-        self.assertEqual(res.context["scope_label"], "아이디어")
-        active = [c["menu"].key for n in res.context["NAV"] for c in n["children"] if c["active"]]
-        self.assertEqual(active, ["idea_discussions"])
+        # 대메뉴 아래 '논의 현황'은 뺐다 (2026-10-23 사용자): 거른 목록도 진행현황으로 강조
+        self.assertEqual(res.context["scope_label"], "")
+        self.assertEqual([n["menu"].key for n in res.context["NAV"] if n["active"]], ["discussions"])
