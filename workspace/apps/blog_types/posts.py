@@ -10,6 +10,9 @@
 
 발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일(planned_on)을 정해 그 날짜 순으로 늘어놓는다.
 
+중메뉴 셋 (2026-10-23 사용자): 글 관리(임시글 → 검토글 → 발행예정글 탭, 그대로) · 발행예정글(planned: 매일 보고 각 블로그에
+쓰는 화면이라 두 표를 크게) · 게시글 관리(published: 발행 완료한 글, 사이트 → 카테고리 → 발행일 순). 게시글 관리는 글 관리의 탭에서 뺐다.
+
 커스텀 (2026-10-22 사용자): 일일루틴 하루 분량(11편)이 아닌 글 — 커스텀 글쓰기의 고정 주제·추가 실행·따로 요청한 글.
 원고의 `고정주제:`·`커스텀:` 줄로 가린다 (writing.Post.custom).
 
@@ -35,9 +38,11 @@ from django.views.decorators.http import require_POST
 from . import classify, sites, transfer
 from .views import _find, _path, _placements_qs, _site_groups
 
-# 게시글 관리 (2026-10-22 사용자): 발행예정글 다음 탭. 발행 완료한 발행예정글 (글의 stage 는 그대로 post)
+# 게시글 관리 (2026-10-22 사용자): 발행 완료한 발행예정글 (글의 stage 는 그대로 post).
+# 2026-10-23 사용자: 글 관리의 탭에서 빼 중메뉴로 (posts:published). 글 관리 탭은 TAB_KEYS 셋.
 STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글"), ("done", "게시글 관리")]
 STAGE_KEYS = [k for k, _ in STAGES]
+TAB_KEYS = ("temp", "review", "post")
 TABLE_STAGES = ("post", "done")  # 늘 표로 보는 탭 (분류 트리·한 건씩 보기 없음)
 CLASS_KINDS = {"section", "category", "type", "sub", "unclassified"}
 
@@ -102,7 +107,7 @@ def _collect(p, prefetch=False):
         for key in STAGE_KEYS:
             counts[key] += _in_stage(base, key).count()
         qs = classify.with_classification(_in_stage(base, p["stage"]))
-        if prefetch:
+        if prefetch or p["stage"] == "done":  # 게시글 관리는 넣은 곳(카테고리) 순으로 늘어놓는다
             qs = qs.prefetch_related(Prefetch("placements", queryset=_placements_qs()))
         for post in qs:
             post.writer = w
@@ -113,12 +118,32 @@ def _collect(p, prefetch=False):
     if p["stage"] == "post":  # 발행예정글: 발행 예정일 빠른 순 → 사이트(운영 화면 순서) → 최신 순. 날짜 없는 글은 끝
         order = {name: i for i, name in enumerate(sites.names())}
         posts.sort(key=lambda x: (x.planned_on.toordinal() if x.planned_on else float("inf"), order.get(x.target, len(order))))
-    elif p["stage"] == "done":  # 게시글 관리: 최근 발행한 글이 위
-        posts.sort(key=lambda x: x.published_on or x.created_at.date(), reverse=True)
+    elif p["stage"] == "done":  # 게시글 관리 (2026-10-23 사용자): 사이트 → 카테고리 → 발행일(최근이 위)
+        order = {name: i for i, name in enumerate(sites.names())}
+        posts.sort(key=lambda x: -(x.published_on or x.created_at.date()).toordinal())
+        posts.sort(key=lambda x: (order.get(site_of(x), len(order)), _category_key(x)))
     elif p["stage"] == "temp":  # 임시글: 사이트별로 묶어(운영 화면 순서, 사이트 없는 글은 끝), 그 안에서 최신 순 (2026-10-22 사용자)
         order = {name: i for i, name in enumerate(sites.names())}
         posts.sort(key=lambda x: order.get(x.target, len(order)))
     return posts, counts
+
+
+def site_of(post):
+    """글의 사이트: 고른 사이트, 없으면 넣은 곳의 사이트 (placements 를 미리 읽어 둔 글)."""
+    if post.target:
+        return post.target
+    pls = list(post.placements.all())
+    return pls[0].site_category.blog.name if pls else ""
+
+
+def _category_key(post):
+    """넣은 곳(첫 번째)의 사이트 카테고리 순서: 상위 카테고리 순서 → 그 아래 하위 순서. 넣은 곳 없는 글은 끝."""
+    pls = list(post.placements.all())
+    if not pls:
+        return (1,)
+    c = pls[0].site_category
+    top = c.parent or c
+    return (0, top.order, top.pk, (c.order, c.pk) if c.parent_id else (-1, 0))
 
 
 def index(request):
@@ -142,8 +167,24 @@ def _mode_urls(p):
             "on": p["view"] or "one"}
 
 
-def _list_page(request, p):
-    """글 관리 목록 (분류 트리 없이 표만): 발행예정글, 또는 목록 보기로 바꾼 임시글·검토글."""
+DAY_NAMES = "월화수목금토일"
+# 표의 발행 버튼은 짧게 (2026-10-23 사용자: 발행예정글 표의 버튼 글씨를 줄인다)
+PUBLISH_SHORT = [("todo", "미발행"), ("done", "발행")]
+
+
+def _day_heads(posts):
+    """발행 예정일 정한 글(날짜순)에 날짜 묶음 머리: 묶음 첫 글에 (날짜, 요일, 글 수, 오늘인가, 지났나)."""
+    by_day, today, seen = Counter(x.planned_on for x in posts), timezone.localdate(), set()
+    for x in posts:
+        if x.planned_on and x.planned_on not in seen:
+            seen.add(x.planned_on)
+            x.day_head = {"day": x.planned_on, "dow": DAY_NAMES[x.planned_on.weekday()], "count": by_day[x.planned_on],
+                          "today": x.planned_on == today, "past": x.planned_on < today}
+
+
+def _list_page(request, p, template="blog_types/posts.html", base="posts:view", extra=None):
+    """글 관리 목록 (분류 트리 없이 표만): 발행예정글, 또는 목록 보기로 바꾼 임시글·검토글.
+    중메뉴 발행예정글(planned)도 같은 내용을 다른 화면(template)으로 쓴다. base: 조건 지우기가 갈 주소."""
     sel, kind, obj, q, today, stage = p["sel"], p["kind"], p["obj"], p["q"], p["today"], p["stage"]
     posts, counts = _collect(p, prefetch=stage in TABLE_STAGES)
     list_q = _query(p, view="")  # 제목을 누르면 한 건씩 보기로 (같은 조건의 목록과 함께)
@@ -154,24 +195,78 @@ def _list_page(request, p):
         post.site_groups = sorted(groups, key=lambda g, t=post.target: g[0] != t)  # 그 글의 사이트를 맨 위에
     # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 글 중 넣은 곳이 미변환인 것
     ready = [str(pl.pk) for post in posts for pl in post.placements.all() if pl.convert_status == "none"]
-    return render(request, "blog_types/posts.html", {
+    planned = [x for x in posts if x.planned_on]
+    _day_heads(planned)
+    return render(request, template, {
         "page_title": "글 관리",
         "sel": sel, "q": q, "stage": p["stage"], "today": today,
         "today_url": "?" + _query(p, today="" if today else "1"),
         "custom": p["custom"], "custom_url": "?" + _query(p, custom="" if p["custom"] else "1"),
         "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == stage,
                   "url": f"{reverse('posts:view')}?{_query(p, stage=k, view=p['view'] if k not in TABLE_STAGES else '')}"}
-                 for k, label in STAGES],
+                 for k, label in STAGES if k in TAB_KEYS],
         "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p), "table_stage": stage in TABLE_STAGES,
         "plan_split": stage == "post",  # 예정일 없는 글 · 정한 글을 두 표로 (2026-10-22 사용자)
-        "unplanned": [x for x in posts if not x.planned_on], "planned": [x for x in posts if x.planned_on],
-        "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='', site='')}",
+        "unplanned": [x for x in posts if not x.planned_on], "planned": planned,
+        "clear_url": f"{reverse(base)}?{_query(p, sel='', q='', today='', custom='', site='')}",
         "site_filter": p["site"],
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
         "posts": posts,
         "ready_ids": ",".join(ready), "ready_count": len(ready),
         "site_names": sites.names(),
-        "publish_choices": classify.post_model("tistory").Publish.choices,
+        "publish_choices": PUBLISH_SHORT,
+        **(extra or {}),
+    })
+
+
+def planned(request):
+    """블로그·카페 › 발행예정글 (2026-10-23 사용자): 날짜를 정해 두고 그날 각 블로그에 쓰는 화면이라 매일 많이 쓴다.
+    글 관리의 발행예정글 탭과 같은 기능(사이트 · 카테고리 · 변환 · 발행 · 예정일 · 갱신)을, 두 표(예정일 없음 · 정함)를 크게."""
+    request.nav_key = "posts_planned"
+    p = _params(request, stage="post")
+    p.update(stage="post", sel="", kind=None, obj=None, view="")
+    return _list_page(request, p, template="blog_types/posts_planned.html", base="posts:planned",
+                      extra={"page_title": "발행예정글"})
+
+
+def published(request):
+    """블로그·카페 › 게시글 관리 (2026-10-23 사용자: 글 관리 탭에서 중메뉴로): 발행 완료한 글.
+    사이트 → 카테고리 → 발행일 순. 조건은 검색 · 오늘(오늘 발행한 글) · 사이트 · 전체만."""
+    request.nav_key = "posts_published"
+    get = request.GET
+    q, today = get.get("q", "").strip(), get.get("today") == "1"
+    p = {"stage": "done", "sel": "", "kind": None, "obj": None, "view": "", "site": "", "q": q, "today": False, "custom": False}
+    posts, _ = _collect(p, prefetch=True)
+    if today:
+        posts = [x for x in posts if x.published_on == timezone.localdate()]
+    names, by_site = sites.names(), Counter(site_of(x) for x in posts)
+    site = get.get("site", "") if get.get("site", "") in names else ""
+    if site:
+        posts = [x for x in posts if site_of(x) == site]
+    base = reverse("posts:published")
+
+    def url(**override):
+        vals = {"q": q, "today": "1" if today else "", "site": site, **override}
+        query = urlencode({k: v for k, v in vals.items() if v})
+        return f"{base}?{query}" if query else base
+
+    groups = []  # 사이트 › 카테고리 묶음마다 머리 한 줄 (이름 · 글 수)
+    for x in posts:
+        pls = list(x.placements.all())
+        x.site_name = site_of(x)
+        label = f"{x.site_name or '사이트 없음'} › {pls[0].site_category if pls else '카테고리 없음'}"
+        if not groups or groups[-1][0] != label:
+            groups.append([label, x, 0])
+        groups[-1][2] += 1
+    for label, first, count in groups:
+        first.group_head = (label, count)
+    return render(request, "blog_types/posts_published.html", {
+        "page_title": "게시글 관리",
+        "posts": posts, "q": q, "today": today, "site_filter": site,
+        "today_url": url(today="" if today else "1"),
+        "site_buttons": [{"name": n, "count": by_site[n], "on": n == site, "url": url(site="" if n == site else n)} for n in names],
+        "all_url": base, "filtered": bool(q or today or site),
+        "publish_choices": PUBLISH_SHORT,
     })
 
 
@@ -224,7 +319,7 @@ def post_list_for(request, post):
         "pl_query": list_q,
         "pl_keep": keep,
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
-                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
+                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES if k in TAB_KEYS],
         "pl_next_url": f"{reverse('posts:view')}?{list_q}",  # 옮기기·휴지통 뒤: 목록의 다음 글 (없으면 이 단계 첫 글)
         "site_names": sites.names(),
         "post_placements": placements,
@@ -248,6 +343,9 @@ def view(request):
     request.nav_key = "posts_view"
     _import_new_drafts(request)
     post = _one(request.GET.get("p"))
+    if post is None and request.GET.get("stage") == "done":  # 게시글 관리는 중메뉴로 옮겼다 (2026-10-23 사용자)
+        keep = urlencode({k: request.GET[k] for k in ("q", "site") if request.GET.get(k)})
+        return redirect(f"{reverse('posts:published')}{'?' + keep if keep else ''}")
     if post is None and (request.GET.get("stage") in TABLE_STAGES or _params(request)["view"] == "list"):
         return _list_page(request, _params(request))  # 목록 보기 · 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
     if post is None:
@@ -265,7 +363,7 @@ def view(request):
         "page_title": "글 관리",
         "pl_stage_label": dict(STAGES)[p["stage"]],
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
-                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
+                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES if k in TAB_KEYS],
         "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='')}",
         "has_filter": bool(p["sel"] or p["q"] or p["today"] or p["custom"]),
     })

@@ -31,12 +31,7 @@
         <a class="btn sm{% if today %} primary{% endif %}" href="{{ today_url }}" aria-pressed="{% if today %}true{% else %}false{% endif %}" title="오늘 만든 글만 보기 (다시 누르면 전체)">{% include "includes/ic.html" with name="calendar" %}오늘</a>
         <a class="btn sm{% if custom %} primary{% endif %}" href="{{ custom_url }}" aria-pressed="{% if custom %}true{% else %}false{% endif %}" title="커스텀 글만 (고정 주제·추가 실행·따로 요청한 글, 다시 누르면 전체)">커스텀</a>
         {% if table_stage %}<select class="input sm wr-site-filter" name="site" data-autosubmit aria-label="사이트로 거르기"><option value="">사이트 전체</option>{% for s in site_names %}<option value="{{ s }}"{% if s == site_filter %} selected{% endif %}>{{ s }}</option>{% endfor %}</select>{% endif %}
-        {% if stage == 'post' %}
-        <span class="bar-sep" aria-hidden="true"></span><input class="input sm wr-plan-all" type="date" name="plan_day" form="ph-bulk" aria-label="체크한 글에 줄 발행 예정일"><button class="btn sm" form="ph-bulk" name="plan" value="1" title="체크한 글의 발행 예정일을 이 날짜로 (비우면 지움)">예정일 주기</button>
-        <span class="bar-sep" aria-hidden="true"></span><button type="button" class="btn sm" data-cat-edit aria-pressed="false" title="넣은 카테고리를 줄마다 바꾼다 (다시 누르면 끝)">{% include "includes/ic.html" with name="edit" %}카테고리 수정</button><button type="button" class="btn sm" data-st-run="{{ ready_ids }}" data-st-count="{{ ready_count }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_count %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% endif %}>변환 가능 글 전체 변환{% if ready_count %} ({{ ready_count }}){% endif %}</button>
-        {# 재변환 (2026-10-22 사용자): 체크한 글 하나에 코멘트를 달아 다시 변환 — 지난 변환본을 코멘트대로 고친다 #}
-        <span class="rc-box"><input class="input sm" id="rc-note" type="text" maxlength="2000" placeholder="재변환 코멘트 (체크한 글 하나)" aria-label="재변환 코멘트"><button type="button" class="btn sm" data-reconvert data-url="{% url 'site_templates:reconvert' %}" title="체크한 글 하나를 이 코멘트대로 다시 변환 (PC 터미널 claude)">재변환</button></span>
-        {% endif %}
+        {% if stage == 'post' %}{% include "blog_types/_plan_tools.html" %}{% endif %}
         {% if q or sel or today or custom or site_filter %}<a class="btn ghost sm" href="{{ clear_url }}">{% include "includes/ic.html" with name="x" %}전체 보기</a>{% endif %}
       </form>
       {% if posts %}
@@ -44,8 +39,7 @@
       <span class="wr-bulk">
         {% if stage == 'temp' %}<button class="btn sm" form="ph-bulk" name="to" value="review" title="체크한 글을 검토글로">검토글</button>
         {% elif stage == 'review' %}<button class="btn sm" form="ph-bulk" name="to" value="temp" title="체크한 글을 임시글로">임시글</button><button class="btn sm" form="ph-bulk" name="to" value="post" title="체크한 글을 발행예정글로">발행예정글</button>
-        {% else %}<button class="btn sm" form="ph-bulk" name="to" value="review">검토글</button>
-        <span class="bar-sep" aria-hidden="true"></span><button class="btn sm" form="ph-bulk" name="publish" value="todo" title="체크한 글과 넣은 곳을 미발행으로">미발행</button><button class="btn sm" form="ph-bulk" name="publish" value="done" title="체크한 글과 넣은 곳(사이트 카테고리)을 발행 완료로">발행 완료</button>{% endif %}
+        {% else %}{% include "blog_types/_plan_bulk.html" %}{% endif %}
         <span class="bar-sep" aria-hidden="true"></span>
         <button type="button" class="btn sm danger" data-trash-checked="ids" title="체크한 글을 휴지통으로 (7일 안에 되돌릴 수 있음)">삭제</button>
       </span>
@@ -59,7 +53,7 @@
       <div class="ph-split-part"><div class="ph-split-head">발행 예정일 없음 <span class="cnt">{{ unplanned|length }}</span></div>
         {% include "blog_types/_post_table.html" with rows=unplanned empty="예정일이 없는 글이 없습니다." %}</div>
       <div class="ph-split-part"><div class="ph-split-head">발행 예정일 정함 <span class="cnt">{{ planned|length }}</span></div>
-        {% include "blog_types/_post_table.html" with rows=planned empty="예정일을 정한 글이 없습니다. 줄의 날짜 칸이나 위 '예정일 주기'로 정하세요." %}</div>
+        {% include "blog_types/_post_table.html" with rows=planned empty="예정일을 정한 글이 없습니다. 줄의 날짜 칸이나 위 '예정일' 버튼으로 정하세요." %}</div>
     </div>
     {% else %}
     {% include "blog_types/_post_table.html" with rows=posts %}
@@ -70,20 +64,5 @@
 
 {% block scripts %}
 {% include "blog_types/_tree_js.html" %}
-<script>
-/* 카테고리 수정 (2026-10-22 사용자): 누르면 넣은 카테고리가 고르기로 바뀐다. 하나 바꾼 뒤에도(새로 고침) 계속 수정 중 — 다시 누르면 끝 */
-(function () {
-  var btn = document.querySelector("[data-cat-edit]");
-  if (!btn) return;
-  var grid = document.querySelector(".ph-main");  // 두 표 모두
-  function set(on) {
-    grid.classList.toggle("cat-editing", on);
-    btn.classList.toggle("primary", on);
-    btn.setAttribute("aria-pressed", on ? "true" : "false");
-    try { on ? sessionStorage.setItem("posts.catEdit", "1") : sessionStorage.removeItem("posts.catEdit"); } catch (e) {}
-  }
-  try { if (sessionStorage.getItem("posts.catEdit") === "1") set(true); } catch (e) {}
-  btn.addEventListener("click", function () { set(!grid.classList.contains("cat-editing")); });
-})();
-</script>
+{% include "blog_types/_plan_js.html" %}
 {% endblock %}

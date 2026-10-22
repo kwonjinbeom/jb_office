@@ -9,4 +9,6 @@ urlpatterns = [
     path("site/", posts.site, name="site"),
     path("plan/", posts.plan, name="plan"),
     path("view/", posts.view, name="view"),
+    path("planned/", posts.planned, name="planned"),
+    path("published/", posts.published, name="published"),
 ]

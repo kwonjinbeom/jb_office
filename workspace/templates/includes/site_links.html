@@ -1,0 +1,37 @@
+{# 블로그·카페 화면 위쪽 가운데 바로가기 (2026-10-23 사용자): 사이트·글쓰기 주소로 새 탭. 연필로 추가·수정·삭제·순서 (apps/blog_types/links.py) #}
+<nav class="site-links" aria-label="바로가기">
+  {% for l in SITE_LINKS %}<a class="sl-chip" href="{{ l.url }}" target="_blank" rel="noopener" title="{{ l.name }} — {{ l.url }} (새 탭)">{{ l.name }}</a>{% empty %}<span class="sl-empty">바로가기 없음</span>{% endfor %}
+  <button type="button" class="sl-edit" data-sl-open title="바로가기 추가·수정·삭제" aria-label="바로가기 편집"><svg class="ic"><use href="#i-edit"/></svg></button>
+</nav>
+<dialog class="wr-dialog sl-dialog" id="sl-dialog" aria-labelledby="sl-title">
+  <div class="wr-dialog-head"><h3 id="sl-title">바로가기</h3><button type="button" class="btn ghost sm icon" data-sl-close aria-label="닫기"><svg class="ic"><use href="#i-x"/></svg></button></div>
+  <p class="muted small sl-help">사이트 주소나 글쓰기 주소를 넣으면 위쪽에 버튼이 생깁니다. 누르면 새 탭으로 엽니다.</p>
+  <div class="sl-rows">
+    {% for l in SITE_LINKS %}
+    <form method="post" action="{% url 'blog_types:link_save' l.pk %}" class="sl-row">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <input class="input sm sl-name" name="name" value="{{ l.name }}" maxlength="30" required aria-label="이름">
+      <input class="input sm sl-url" name="url" value="{{ l.url }}" required aria-label="주소">
+      <button class="btn sm" title="이름·주소 저장">저장</button>
+      <button class="btn ghost sm icon" formaction="{% url 'blog_types:link_move' l.pk %}" name="dir" value="up" formnovalidate title="앞으로" aria-label="앞으로"{% if forloop.first %} disabled{% endif %}><svg class="ic"><use href="#i-arrow-up"/></svg></button>
+      <button class="btn ghost sm icon" formaction="{% url 'blog_types:link_move' l.pk %}" name="dir" value="down" formnovalidate title="뒤로" aria-label="뒤로"{% if forloop.last %} disabled{% endif %}><svg class="ic"><use href="#i-arrow-down"/></svg></button>
+      <button class="btn ghost sm icon danger" formaction="{% url 'blog_types:link_delete' l.pk %}" formnovalidate data-sl-delete="{{ l.name }}" title="삭제" aria-label="{{ l.name }} 삭제"><svg class="ic"><use href="#i-trash"/></svg></button>
+    </form>
+    {% endfor %}
+    <form method="post" action="{% url 'blog_types:link_add' %}" class="sl-row sl-new">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <input class="input sm sl-name" name="name" maxlength="30" required placeholder="이름 (예: 눈잎 글쓰기)" aria-label="새 이름">
+      <input class="input sm sl-url" name="url" required placeholder="주소 (예: https://○○.tistory.com/manage/newpost)" aria-label="새 주소">
+      <button class="btn primary sm">{% include "includes/ic.html" with name="plus" %}추가</button>
+    </form>
+  </div>
+</dialog>
+<script>
+(function () {
+  var dlg = document.getElementById("sl-dialog");
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-sl-open]")) { dlg.showModal(); return; }
+    if (e.target.closest("[data-sl-close]")) { dlg.close(); return; }
+    var del = e.target.closest("[data-sl-delete]");
+    if (del && !confirm("'" + del.getAttribute("data-sl-delete") + "' 바로가기를 지울까요?")) e.preventDefault();
+  });
+})();
+</script>

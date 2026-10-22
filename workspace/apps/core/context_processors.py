@@ -2,7 +2,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from . import gitstate
-from .menus import build_nav, get_menus
+from .menus import build_nav, find_menu, get_menus, walk
 
 
 def _asset_version() -> str:
@@ -14,6 +14,20 @@ def _asset_version() -> str:
         except OSError:
             pass
     return str(latest)
+
+
+def _site_links(active):
+    """블로그·카페 아래 메뉴에 있을 때만 위쪽 바로가기 (2026-10-23 사용자). 그 밖에서는 None (띠를 그리지 않는다)."""
+    blog = find_menu("blog")
+    if not active or blog is None or active not in {m.key for m in walk([blog])}:
+        return None
+    from django.db import DatabaseError
+
+    from apps.blog_types.models import SiteLink
+    try:
+        return list(SiteLink.objects.all())
+    except DatabaseError:  # migrate 전
+        return None
 
 
 def navigation(request):
@@ -31,6 +45,7 @@ def navigation(request):
         "MENUS": get_menus(getattr(request, "user", None)),
         "NAV": build_nav(active, getattr(request, "user", None)),
         "ACTIVE_MENU": active or "home",
+        "SITE_LINKS": _site_links(active),
         "today": timezone.localdate(),
         "ASSET_VER": _asset_version(),
         "DEPLOY_INFO": {

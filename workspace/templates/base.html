@@ -110,6 +110,7 @@
         {% block breadcrumb %}{% endblock %}
         <h1 class="page-title">{% block heading %}{{ page_title }}{% endblock %}</h1>
       </div>
+      {% if SITE_LINKS is not None %}{% include "includes/site_links.html" %}{% endif %}
       {% block subtitle %}{% endblock %}
       <div class="page-actions">{% block actions %}{% endblock %}</div>
     </header>
