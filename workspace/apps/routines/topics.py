@@ -1,8 +1,10 @@
 """커스텀 글쓰기: 내가 골라서 더 쓰는 글쓰기 (2026-10-21 사용자, 2026-10-23 사이트별로 다시 정리).
 
-- 사이트마다 두 가지 줄이 있다 (2026-10-23 사용자: 일일루틴 글쓰기가 쓰는 소재를 여기서도 골라 더 쓰고 싶다).
-  ① 소재: 글 분류의 '사이트 > 고정 소재' 그대로 (blog_types.Category). 일일루틴 글쓰기가 매일 보는 그 소재다.
-  ② 고정 주제(FixedTopic): 주제·지침을 따로 적어 둔 것 (공모주 일정 · AI 소식 등). 사이트가 같으면 그 사이트 아래에.
+- 사이트 > 소재 > 고정 주제 (2026-10-23 사용자: 일일루틴 글쓰기가 쓰는 소재를 여기서도 골라 더 쓰고 싶다.
+  카테고리를 그대로 늘어놓는 게 아니라, 고정 주제는 그 소재 아래에 — 공모주 일정 국내·해외는 눈잎 > 공모주 아래).
+  ① 소재: 글 분류의 '사이트 > 고정 소재' (blog_types.Category). 고정 주제가 없는 소재는 그 줄을 골라 실행한다 (기획자가 주제를 정한다).
+  ② 고정 주제(FixedTopic): 주제·지침을 따로 적어 둔 것. 소재(FixedTopic.category) 아래에 보이고, 고정 주제가 있는 소재는
+     머리 줄만 된다. 소재가 없는 고정 주제(AI 소식 등)는 그 사이트 아래 맨 끝에.
 - 줄 앞 체크 + 편수(기본 1) → 위의 '실행': 고른 것을 한 터미널에서 한꺼번에 쓴다. 메인 claude 는 글쓰기 md 대로
   소재는 보조 기획자에게, 고정 주제는 바로 보조 작가에게 나눠 준다 (서브 원고).
 - 왼쪽 자유 글쓰기: 쓰고 싶은 걸 자유롭게 적고 '글쓰기' (views.extra mode=comment).
@@ -38,7 +40,8 @@ def topic_text(topic, today, n=1):
         "- 날짜가 지난 것은 쓰지 않는다: 접수·마감·청약·상장·발표일이 오늘 이전에 끝난 항목은 빼고, 쓰기 직전에 항목마다 날짜를 오늘과 다시 대조한다."
         " 남는 게 지난 원고와 같은 항목뿐이고 바뀐 게 없으면 글감 없음이다.",
         f"- 원고 제작 정보 맨 위 `사이트:` · `분류:` 줄 아래에 `고정주제: {topic.name}` 줄을 넣는다.",
-        "- 분류는 '글 분류 전체'에서 주제에 맞는 것을 고른다.",
+        f"- 분류: {topic.category.section.name} > {topic.category.name}" if topic.category_id
+        else "- 분류는 '글 분류 전체'에서 주제에 맞는 것을 고른다.",
     ]
     if topic.note.strip():
         lines += ["", "이 주제의 지침 (사용자):", topic.note.strip()]
@@ -64,20 +67,45 @@ def run_text(cats, topics, today):
 
 
 def groups():
-    """사이트별 묶음 [{name, cats, topics}]: 글 분류의 사이트(대분류) 순서대로 그 소재와 그 사이트의 고정 주제,
-    그 뒤로 글 분류에 없는 사이트(예: memorily)의 고정 주제, 마지막에 사이트를 안 정한 고정 주제(name 이 빈 값)."""
+    """사이트별 묶음 [{name, cats, topics, count}]: 글 분류의 사이트(대분류) 순서대로 그 소재(.topics = 그 아래 고정 주제)와
+    소재가 없는 그 사이트 고정 주제, 그 뒤로 글 분류에 없는 사이트(예: memorily)의 고정 주제, 마지막에 사이트를 안 정한 것.
+    count 는 실행할 수 있는 줄 수 (고정 주제가 있는 소재는 머리 줄이라 세지 않는다)."""
     from apps.blog_types.models import Section
-    out, by_name = [], {}
+    out, by_name, cats = [], {}, {}
     for s in Section.objects.prefetch_related("categories"):
         by_name[s.name] = {"name": s.name, "cats": list(s.categories.all()), "topics": []}
         out.append(by_name[s.name])
+        for c in by_name[s.name]["cats"]:
+            c.topics = []
+            cats[c.pk] = c
     for t in FixedTopic.objects.all():
+        if t.category_id in cats:
+            cats[t.category_id].topics.append(t)
+            continue
         key = t.site.strip()
         if key not in by_name:
             by_name[key] = {"name": key, "cats": [], "topics": []}
         by_name[key]["topics"].append(t)
-    rest = [g for name, g in by_name.items() if g not in out]
-    return out + sorted(rest, key=lambda g: not g["name"])
+    rest = [g for g in by_name.values() if g not in out]
+    result = out + sorted(rest, key=lambda g: not g["name"])
+    for g in result:
+        g["count"] = sum(len(c.topics) or 1 for c in g["cats"]) + len(g["topics"])
+    return result
+
+
+def categories():
+    """고정 주제 고치기의 소재 고르기: [(번호, '사이트 > 소재')]"""
+    from apps.blog_types.models import Category
+    return [(c.pk, f"{c.section.name} > {c.name}") for c in Category.objects.select_related("section").order_by("section__order", "order")]
+
+
+def _set_category(topic, raw):
+    """폼의 category(번호) → 소재. 소재를 고르면 사이트는 그 소재의 사이트."""
+    from apps.blog_types.models import Category
+    cat = Category.objects.select_related("section").filter(pk=raw).first() if str(raw).isdigit() else None
+    topic.category = cat
+    if cat is not None:
+        topic.site = cat.section.name
 
 
 def _picked(data):
@@ -88,7 +116,7 @@ def _picked(data):
         if re.fullmatch(r"[cf]\d+", name) and str(raw).strip().isdigit() and int(raw) > 0:
             want[name] = min(int(raw), MAX_EACH)
     cats = Category.objects.filter(pk__in=[k[1:] for k in want if k[0] == "c"]).select_related("section")
-    tops = FixedTopic.objects.filter(pk__in=[k[1:] for k in want if k[0] == "f"])
+    tops = FixedTopic.objects.filter(pk__in=[k[1:] for k in want if k[0] == "f"]).select_related("category__section")
     return [(c, want[f"c{c.pk}"]) for c in cats], [(t, want[f"f{t.pk}"]) for t in tops]
 
 
@@ -103,7 +131,8 @@ def run(request):
     if not cats and not topics:
         return JsonResponse({"error": "쓸 줄을 체크하세요."}, status=400)
     day = timezone.localdate()
-    prompt = launcher(writing, day, report=report_url(request, writing, day), extra=run_text(cats, topics, day), tree=bool(topics))
+    prompt = launcher(writing, day, report=report_url(request, writing, day), extra=run_text(cats, topics, day),
+                      tree=any(t.category_id is None for t, _ in topics))  # 소재 없는 고정 주제만 트리에서 분류를 고른다
     names = [c.name for c, _ in cats] + [t.name for t, _ in topics]
     return JsonResponse({"prompt": prompt, "key": writing.key, "day": day.isoformat(),
                          "name": names[0] if len(names) == 1 else f"커스텀 글쓰기 {len(names)}줄",
@@ -119,6 +148,7 @@ def page(request):
     request.nav_key = "routine_topics"
     return render(request, "routines/topics.html", {
         "page_title": "커스텀 글쓰기", "groups": groups(), "today": timezone.localdate(), "site_names": sites.names(),
+        "categories": categories(),
         "writing": Routine.objects.filter(key=WRITING_KEY).first(),
     })
 
@@ -130,7 +160,9 @@ def add(request):
         messages.warning(request, "주제 이름을 적으세요.")
         return _back(request)
     order = (FixedTopic.all_objects.aggregate(m=Max("order"))["m"] or 0) + 1
-    FixedTopic.objects.create(name=name, order=order, site=request.POST.get("site", "").strip()[:60])
+    topic = FixedTopic(name=name, order=order, site=request.POST.get("site", "").strip()[:60])
+    _set_category(topic, request.POST.get("category", ""))
+    topic.save()
     messages.success(request, f"고정 주제 '{name}'을(를) 추가했습니다. 지침은 연필을 눌러 적으세요.")
     return _back(request)
 
@@ -142,6 +174,7 @@ def save(request, pk):
     if name:
         topic.name = name
     topic.site = request.POST.get("site", "").strip()[:60]
+    _set_category(topic, request.POST.get("category", ""))
     topic.note = request.POST.get("note", "").strip()
     topic.save()
     messages.success(request, f"'{topic.name}'을(를) 저장했습니다.")
