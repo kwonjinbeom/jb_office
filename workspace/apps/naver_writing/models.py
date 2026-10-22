@@ -39,6 +39,8 @@ class Post(TrashableModel):
     publish_status = models.CharField("발행", max_length=10, choices=Publish.choices, default=Publish.TODO)
     published_url = models.URLField("발행 주소", max_length=500, blank=True)
     published_on = models.DateField("발행일", null=True, blank=True)
+    planned_on = models.DateField("발행 예정일", null=True, blank=True,
+                                  help_text="사용자가 정한 발행할 날 (글 관리 › 발행예정글에서 고르고, 이 날짜 순으로 본다)")
     # 글 관리의 글 분류 (대분류 › 카테고리 › 타입 › 하위). 가장 깊게 고른 단계까지 채운다. apps/blog_types/classify.py
     bt_category = models.ForeignKey("blog_types.Category", verbose_name="분류 카테고리", null=True, blank=True,
                                     on_delete=models.SET_NULL, related_name="%(app_label)s_posts")
@@ -48,6 +50,7 @@ class Post(TrashableModel):
                                on_delete=models.SET_NULL, related_name="%(app_label)s_posts")
     # 어느 계정(블로그)을 겨냥해 쓴 글인지 (2026-10-16 사용자: 글 관리에 '타겟' 칸). 원고.md 의 `사이트:` 줄에서 온다.
     target = models.CharField("사이트", max_length=60, blank=True, help_text="이 글을 올릴 사이트 이름 (예: memorily, 눈잎)")
+    custom = models.BooleanField("커스텀", default=False, help_text="일일루틴 하루 분량이 아닌 글 (고정 주제·추가 실행·따로 요청한 글)")
     created_at = models.DateTimeField("만든 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 

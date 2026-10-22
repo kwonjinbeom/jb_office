@@ -268,7 +268,8 @@ class PasteFormatTests(TestCase):
         tistory = self.place("memorily")
         request_text = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["request_text"]
         self.assertIn("## 변환 원칙 (원문이 기준)", request_text)
-        self.assertIn("## 사진·그림 (변환이 끝까지 채운다)", request_text)
+        self.assertIn("## 사진·그림 (변환이 끝까지 채운다", request_text)
+        self.assertIn("원문에 자리가 없어도 글마다 두 가지를 판단한다", request_text)  # 사진 1장 · 가공이미지 (2026-10-22 사용자)
         self.assertIn("맞는 사진이 없으면 그 줄을 지운다", request_text)
         self.assertNotIn("못 찾았으면 [사진: 설명]", request_text)
         self.assertNotIn("## 글 다듬기", request_text)  # 원문을 다시 짜게 만들던 규칙
@@ -289,3 +290,20 @@ class PasteFormatTests(TestCase):
         html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["clean_html"]
         self.assertIn('<img width="620" src="https://images.unsplash.com/photo-1?w=1200&amp;q=80" alt="병원 대기실"', html)
         self.assertIn("사진: 홍길동 · Unsplash</p>", html)
+
+
+class BloggerLabelTests(TestCase):
+    """블로거 라벨은 5개쯤 (2026-10-22 사용자: 태그를 그대로 붙여 라벨이 너무 많아졌다)."""
+
+    def test_prompt_asks_five_labels_and_copy_keeps_five(self):
+        from .views import _tags_for
+        bambam = Blog.objects.get(name="밤밤")
+        cat = SiteCategory.objects.create(blog=bambam, name="코스피")
+        pl = Placement.objects.create(site_category=cat, tistory_post=Post.objects.create(title="코스피 글", body="본문"),
+                                      converted_tags="코스피, 증시, 반도체, 외국인, 환율, 금리, 나스닥, 2026")
+        text = prompt.build(pl)
+        self.assertIn("## 블로거 라벨", text)
+        self.assertIn("첫째는 넣을 카테고리 이름", text)
+        self.assertEqual(_tags_for(pl), "코스피, 증시, 반도체, 외국인, 환율")
+        pl.site_category = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
+        self.assertNotIn("## 블로거 라벨", prompt.build(pl))

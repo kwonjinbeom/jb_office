@@ -217,7 +217,8 @@
   document.addEventListener("change", function (e) {
     var el = e.target;
     if (!el.matches || !el.matches("select[data-autosubmit], input[data-autosubmit]") || !el.form) return;
-    if (el.tagName === "INPUT" && el.type !== "number" && !el.value) return;  // 날짜를 지운 것은 이동이 아니다 (숫자 칸을 비우면 자동 값으로)
+    if (el.tagName === "INPUT" && el.type !== "number" && !el.value && !el.hasAttribute("data-allow-empty")) return;  // 날짜를 지운 것은 이동이 아니다 (숫자 칸을 비우면 자동 값으로, 발행 예정일은 지우기)
+    if (el.type === "date" && el.value && el.value.slice(0, 4) < "2000") return;  // 연도를 치는 중 (0002-…)
     el.form.submit();
   });
 
@@ -263,7 +264,7 @@
     var sel = 'input[type="checkbox"][name="' + all.getAttribute("data-check-all") + '"]';
     var formId = all.getAttribute("form");
     if (formId) sel += '[form="' + formId + '"]';
-    document.querySelectorAll(sel).forEach(function (box) { box.checked = all.checked; });
+    (all.closest("table") || document).querySelectorAll(sel).forEach(function (box) { box.checked = all.checked; });  // 표가 둘이면 그 표만
   });
 
   // 좌측 트리 메뉴: 화살표로 접었다 펴고, 편 것은 이 브라우저에 기억한다.

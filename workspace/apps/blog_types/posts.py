@@ -5,7 +5,13 @@
 발행예정글 탭과 그 단계의 글. 트리에서 고르면 그 아래 글만 보인다. 글 보기·쓰기·상태 바꾸기·옮기기는 각 글쓰기 앱의 주소를 그대로 쓴다
 (글은 여전히 writing.Post / naver_writing.Post 두 표에 있다).
 
-주소: ?stage=temp|review|post &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만) &view=list(임시글·검토글을 목록으로)
+주소: ?stage=temp|review|post|done &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만) &custom=1(커스텀 글만) &site=사이트 이름
+     &view=list(임시글·검토글을 목록으로)
+
+발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일(planned_on)을 정해 그 날짜 순으로 늘어놓는다.
+
+커스텀 (2026-10-22 사용자): 일일루틴 하루 분량(11편)이 아닌 글 — 커스텀 글쓰기의 고정 주제·추가 실행·따로 요청한 글.
+원고의 `고정주제:`·`커스텀:` 줄로 가린다 (writing.Post.custom).
 
 보기 (2026-10-22 사용자): 임시글·검토글은 기본이 한 건씩 보기(글 화면 + 왼쪽 글 목록), '목록'으로 바꾸면 체크해서 한꺼번에
 옮기기·삭제하는 표. 발행예정글은 늘 표.
@@ -16,6 +22,7 @@
 단계별 칸 (2026-10-17 사용자): 임시글은 사이트(읽기)·내용, 검토글은 사이트 고르기, 발행예정글은 사이트 고르기 ·
 넣은 곳(사이트 › 카테고리) · 변환 · 발행(미발행/발행 완료, 한 건씩 또는 체크한 것 한꺼번에). 작성 상태는 글 보기에서.
 """
+from collections import Counter
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -28,44 +35,61 @@ from django.views.decorators.http import require_POST
 from . import classify, sites, transfer
 from .views import _find, _path, _placements_qs, _site_groups
 
-STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글")]
+# 게시글 관리 (2026-10-22 사용자): 발행예정글 다음 탭. 발행 완료한 발행예정글 (글의 stage 는 그대로 post)
+STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글"), ("done", "게시글 관리")]
 STAGE_KEYS = [k for k, _ in STAGES]
+TABLE_STAGES = ("post", "done")  # 늘 표로 보는 탭 (분류 트리·한 건씩 보기 없음)
 CLASS_KINDS = {"section", "category", "type", "sub", "unclassified"}
 
 
-def _filtered(writer, kind, obj, q, today=False):
+def _filtered(writer, kind, obj, q, today=False, custom=False, site=""):
     qs = classify.post_model(writer).objects.all()
+    if site:
+        qs = qs.filter(target=site)
     if kind in CLASS_KINDS:
         qs = qs.filter(classify.node_filter(kind, obj))
     if q:
         qs = qs.filter(Q(title__icontains=q) | Q(summary__icontains=q) | Q(body__icontains=q))
     if today:
         qs = qs.filter(created_at__date=timezone.localdate())  # 오늘 만든 글 (원고에서 온 글은 원고를 쓴 날)
+    if custom:
+        qs = qs.filter(custom=True)
     return qs
 
 
-PUBLISH_FILTERS = [("", "전체"), ("todo", "미발행"), ("done", "발행 완료")]
+def _in_stage(qs, key):
+    """탭의 글: 발행예정글은 아직 발행 안 한 것, 게시글 관리는 발행 완료한 것."""
+    if key == "done":
+        return qs.filter(stage="post", publish_status=qs.model.Publish.DONE)
+    if key == "post":
+        return qs.filter(stage="post").exclude(publish_status=qs.model.Publish.DONE)
+    return qs.filter(stage=key)
+
+
+def tab_of(post):
+    """글이 보이는 탭"""
+    return "done" if post.stage == "post" and post.publish_status == post.Publish.DONE else post.stage
 
 
 def _params(request, stage=None):
-    """목록 조건: 단계 · 분류(sel) · 검색어 · 오늘 · 발행(pub, 발행예정글만). 모르는 값은 버린다.
-    발행예정글은 분류로 나누지 않는다 (2026-10-21 사용자: 트리·분류 줄 없이 미발행 → 날짜순)."""
+    """목록 조건: 단계 · 분류(sel) · 검색어 · 오늘 · 커스텀. 모르는 값은 버린다.
+    발행예정글·게시글 관리는 분류로 나누지 않는다 (2026-10-21 사용자: 트리·분류 줄 없이 날짜순)."""
     get = request.GET
     stage = get.get("stage") if get.get("stage") in STAGE_KEYS else (stage or "temp")
-    sel = get.get("sel", "") if stage != "post" else ""
+    sel = get.get("sel", "") if stage not in TABLE_STAGES else ""
     kind, obj = _find(sel)
     if kind not in CLASS_KINDS or obj is None:
         sel, kind, obj = "", None, None
-    pub = get.get("pub", "") if stage == "post" and get.get("pub") in ("todo", "done") else ""
-    view = "list" if stage != "post" and get.get("view") == "list" else ""  # 임시글·검토글 목록 보기
-    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "pub": pub, "view": view,
-            "q": get.get("q", "").strip(), "today": get.get("today") == "1"}
+    view = "list" if stage not in TABLE_STAGES and get.get("view") == "list" else ""  # 임시글·검토글 목록 보기
+    site = get.get("site", "") if get.get("site", "") in sites.names() else ""
+    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "view": view, "site": site,
+            "q": get.get("q", "").strip(), "today": get.get("today") == "1", "custom": get.get("custom") == "1"}
 
 
 def _query(p, **override):
     """조건을 주소 뒤에 붙일 문자열로 (빈 값은 뺀다)."""
-    vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "", "pub": p.get("pub", ""),
-            "view": p.get("view", "")}
+    vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "",
+            "custom": "1" if p.get("custom") else "", "site": p.get("site", ""), "view": p.get("view", "")}
     vals.update(override)
     return urlencode({k: v for k, v in vals.items() if v})
 
@@ -74,12 +98,10 @@ def _collect(p, prefetch=False):
     """두 편집기의 글을 한 목록으로 (만든 순서, 최신이 위) + 단계별 글 수."""
     posts, counts = [], dict.fromkeys(STAGE_KEYS, 0)
     for w in classify.WRITERS:
-        base = _filtered(w, p["kind"], p["obj"], p["q"], p["today"])
+        base = _filtered(w, p["kind"], p["obj"], p["q"], p["today"], p["custom"], p.get("site", ""))
         for key in STAGE_KEYS:
-            counts[key] += base.filter(stage=key).count()
-        qs = classify.with_classification(base.filter(stage=p["stage"]))
-        if p.get("pub"):
-            qs = qs.filter(publish_status=p["pub"])
+            counts[key] += _in_stage(base, key).count()
+        qs = classify.with_classification(_in_stage(base, p["stage"]))
         if prefetch:
             qs = qs.prefetch_related(Prefetch("placements", queryset=_placements_qs()))
         for post in qs:
@@ -88,8 +110,14 @@ def _collect(p, prefetch=False):
             post.writer_label = "네이버" if w == "naver" else "티스토리"  # 편집기 (분류가 아니다)
             posts.append(post)
     posts.sort(key=lambda x: (x.created_at, x.pk), reverse=True)  # 만든 순서로 고정 (상태를 바꿔도 자리가 그대로)
-    if p["stage"] == "post":  # 발행예정글: 미발행이 위, 그 안에서 최신 순
-        posts.sort(key=lambda x: x.publish_status == x.Publish.DONE)
+    if p["stage"] == "post":  # 발행예정글: 발행 예정일 빠른 순 → 사이트(운영 화면 순서) → 최신 순. 날짜 없는 글은 끝
+        order = {name: i for i, name in enumerate(sites.names())}
+        posts.sort(key=lambda x: (x.planned_on.toordinal() if x.planned_on else float("inf"), order.get(x.target, len(order))))
+    elif p["stage"] == "done":  # 게시글 관리: 최근 발행한 글이 위
+        posts.sort(key=lambda x: x.published_on or x.created_at.date(), reverse=True)
+    elif p["stage"] == "temp":  # 임시글: 사이트별로 묶어(운영 화면 순서, 사이트 없는 글은 끝), 그 안에서 최신 순 (2026-10-22 사용자)
+        order = {name: i for i, name in enumerate(sites.names())}
+        posts.sort(key=lambda x: order.get(x.target, len(order)))
     return posts, counts
 
 
@@ -108,7 +136,7 @@ def _import_new_drafts(request):
 
 def _mode_urls(p):
     """임시글·검토글의 보기 바꾸기: 한 건씩 · 목록 (조건은 그대로)."""
-    if p["stage"] == "post":
+    if p["stage"] in TABLE_STAGES:
         return None
     return {"one": f"{reverse('posts:view')}?{_query(p, view='')}", "list": f"{reverse('posts:view')}?{_query(p, view='list')}",
             "on": p["view"] or "one"}
@@ -117,9 +145,9 @@ def _mode_urls(p):
 def _list_page(request, p):
     """글 관리 목록 (분류 트리 없이 표만): 발행예정글, 또는 목록 보기로 바꾼 임시글·검토글."""
     sel, kind, obj, q, today, stage = p["sel"], p["kind"], p["obj"], p["q"], p["today"], p["stage"]
-    posts, counts = _collect(p, prefetch=stage == "post")
+    posts, counts = _collect(p, prefetch=stage in TABLE_STAGES)
     list_q = _query(p, view="")  # 제목을 누르면 한 건씩 보기로 (같은 조건의 목록과 함께)
-    groups = _site_groups() if stage == "post" else []  # 카테고리 칸에서 바로 넣는다
+    groups = _site_groups() if stage in TABLE_STAGES else []  # 카테고리 칸에서 바로 넣는다
     for post in posts:
         post.list_url = _view_url(post, list_q)
         post.path_label = classify.label_of(post)
@@ -130,16 +158,18 @@ def _list_page(request, p):
         "page_title": "글 관리",
         "sel": sel, "q": q, "stage": p["stage"], "today": today,
         "today_url": "?" + _query(p, today="" if today else "1"),
+        "custom": p["custom"], "custom_url": "?" + _query(p, custom="" if p["custom"] else "1"),
         "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == stage,
-                  "url": f"{reverse('posts:view')}?{_query(p, stage=k, pub='', view=p['view'] if k != 'post' else '')}"}
+                  "url": f"{reverse('posts:view')}?{_query(p, stage=k, view=p['view'] if k not in TABLE_STAGES else '')}"}
                  for k, label in STAGES],
-        "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p),
-        "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', pub='')}",
+        "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p), "table_stage": stage in TABLE_STAGES,
+        "plan_split": stage == "post",  # 예정일 없는 글 · 정한 글을 두 표로 (2026-10-22 사용자)
+        "unplanned": [x for x in posts if not x.planned_on], "planned": [x for x in posts if x.planned_on],
+        "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='', site='')}",
+        "site_filter": p["site"],
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
         "posts": posts,
-        "pub": p["pub"],
         "ready_ids": ",".join(ready), "ready_count": len(ready),
-        "pub_filters": [{"key": k, "label": label, "on": k == p["pub"], "url": "?" + _query(p, pub=k)} for k, label in PUBLISH_FILTERS],
         "site_names": sites.names(),
         "publish_choices": classify.post_model("tistory").Publish.choices,
     })
@@ -161,7 +191,7 @@ def _one(value):
 def post_list_for(request, post):
     """글 보기 왼쪽의 글 목록: 단계 탭(임시글·검토글·발행예정글)의 글 + 글 관리에서 넘어온 조건(분류·검색·오늘).
     단계가 주소에 없으면 그 글의 단계. 위·아래 화살표, 옮기기·휴지통 뒤에 갈 글도 이 목록 순서를 따른다 (한 건씩 처리)."""
-    p = _params(request, stage=post.stage)
+    p = _params(request, stage=tab_of(post))
     p["view"] = ""  # 한 건씩 보기
     posts, counts = _collect(p)
     # 검토글·발행예정글: 넣은 곳 · 변환 (2026-10-22 사용자: 검토글에서도 카테고리 고르고 변환해 보고 발행예정으로)
@@ -175,15 +205,22 @@ def post_list_for(request, post):
         item.path_label = classify.label_of(item)
         if (item.writer, item.pk) == me:
             current = item
+    if p["stage"] == "temp":  # 임시글: 사이트 묶음마다 첫 글에 머리 (이름 · 글 수) — 2026-10-22 사용자: 잘 안 보인다
+        by_site, seen = Counter(item.target for item in posts), set()
+        for item in posts:
+            if item.target not in seen:
+                seen.add(item.target)
+                item.group_head = (item.target or "사이트 없음", by_site[item.target])
     keep = _query(p, stage="")
     ctx = {
         "pl_items": posts,
         "pl_current": current,
         "pl_stage": p["stage"], "pl_stage_label": dict(STAGES)[p["stage"]],
-        "pl_q": p["q"], "pl_sel": p["sel"], "pl_today": p["today"],
+        "pl_q": p["q"], "pl_sel": p["sel"], "pl_today": p["today"], "pl_custom": p["custom"],
         "pl_path": [label for label, _ in _path(p["kind"], p["obj"])][1:] if p["kind"] else [],
         "pl_today_url": f"{reverse('posts:view')}?{_query(p, today='' if p['today'] else '1')}",
-        "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='')}",
+        "pl_custom_url": f"{reverse('posts:view')}?{_query(p, custom='' if p['custom'] else '1')}",
+        "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='')}",
         "pl_query": list_q,
         "pl_keep": keep,
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
@@ -211,7 +248,7 @@ def view(request):
     request.nav_key = "posts_view"
     _import_new_drafts(request)
     post = _one(request.GET.get("p"))
-    if post is None and (request.GET.get("stage") == "post" or _params(request)["view"] == "list"):
+    if post is None and (request.GET.get("stage") in TABLE_STAGES or _params(request)["view"] == "list"):
         return _list_page(request, _params(request))  # 목록 보기 · 발행예정글은 한 건 대신 전체 목록 (2026-10-20 사용자)
     if post is None:
         posts, _ = _collect(_params(request))
@@ -229,8 +266,8 @@ def view(request):
         "pl_stage_label": dict(STAGES)[p["stage"]],
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
                      "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES],
-        "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='')}",
-        "has_filter": bool(p["sel"] or p["q"] or p["today"]),
+        "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='')}",
+        "has_filter": bool(p["sel"] or p["q"] or p["today"] or p["custom"]),
     })
 
 
@@ -271,6 +308,23 @@ def site(request):
 
 
 @require_POST
+def plan(request):
+    """발행 예정일 정하기 (발행예정글 줄마다). post='tistory:3', day=YYYY-MM-DD (빈 값이면 지운다)."""
+    post = _one(request.POST.get("post"))
+    if post is None:
+        messages.warning(request, "글을 찾을 수 없습니다.")
+        return _back(request)
+    raw = request.POST.get("day", "").strip()
+    try:
+        post.planned_on = timezone.datetime.fromisoformat(raw).date() if raw else None
+    except ValueError:
+        messages.warning(request, "날짜를 YYYY-MM-DD 로 넣으세요.")
+        return _back(request)
+    post.save(update_fields=["planned_on", "updated_at"])
+    return _back(request)
+
+
+@require_POST
 def bulk(request):
     """체크한 글을 이웃 단계로 옮기거나(to), 상대 글쓰기로 보내거나(send), 발행 상태를 바꾼다(publish=done|todo).
     두 글쓰기 글이 섞여 있어도 된다."""
@@ -278,6 +332,18 @@ def bulk(request):
     back = _back(request)
     if not posts:
         messages.warning(request, "먼저 글을 체크하세요.")
+        return back
+    if request.POST.get("plan"):  # 발행 예정일 한꺼번에 (2026-10-22 사용자). 날짜를 비우면 지운다
+        raw = request.POST.get("plan_day", "").strip()
+        try:
+            day = timezone.datetime.fromisoformat(raw).date() if raw else None
+        except ValueError:
+            messages.warning(request, "날짜를 YYYY-MM-DD 로 넣으세요.")
+            return back
+        for post in posts:
+            post.planned_on = day
+            post.save(update_fields=["planned_on", "updated_at"])
+        messages.success(request, f"{len(posts)}건의 발행 예정일을 {day:%Y-%m-%d}(으)로 정했습니다." if day else f"{len(posts)}건의 발행 예정일을 지웠습니다.")
         return back
     publish = request.POST.get("publish")
     if publish in ("done", "todo"):

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{# 일정관리: 위 큰 월 달력 · 아래 왼쪽 고른 날 일정 · 아래 오른쪽 입력·수정 폼 (2026-10-22 사용자) #}
+
+{% block heading %}일정관리{% endblock %}
+
+{% block actions %}
+<div class="sc-nav">
+  <a class="btn ghost sm icon" href="{{ prev_url }}" title="이전 달" aria-label="이전 달">{% include "includes/ic.html" with name="chevron-left" %}</a>
+  <span class="sc-month">{{ month|date:"Y년 n월" }}</span>
+  <a class="btn ghost sm icon" href="{{ next_url }}" title="다음 달" aria-label="다음 달">{% include "includes/ic.html" with name="chevron-right" %}</a>
+  <a class="btn sm" href="{{ today_url }}">오늘</a>
+</div>
+{% endblock %}
+
+{% block body_class %}fill{% endblock %}
+
+{% block content %}
+<div class="sc">
+  <section class="card sc-cal" aria-label="{{ month|date:'Y년 n월' }} 달력">
+    <div class="sc-week sc-head">{% for w in weekdays %}<div class="sc-wd{% if forloop.first %} sun{% elif forloop.last %} sat{% endif %}">{{ w }}</div>{% endfor %}</div>
+    <div class="sc-weeks" style="--weeks:{{ weeks|length }}">
+    {% for week in weeks %}
+    <div class="sc-week">
+      {% for c in week %}
+      <a class="sc-day{% if not c.in_month %} out{% endif %}{% if c.today %} today{% endif %}{% if c.picked %} picked{% endif %}" href="{{ c.url }}"{% if c.picked %} aria-current="date"{% endif %}>
+        <span class="sc-num{% if forloop.first %} sun{% elif forloop.last %} sat{% endif %}">{{ c.day.day }}</span>
+        {% for e in c.events %}<span class="sc-ev{% if e.done %} done{% endif %}">{% if e.time %}<b>{{ e.time|time:"H:i" }}</b> {% endif %}{{ e.title }}</span>{% endfor %}
+        {% if c.more %}<span class="sc-more">+{{ c.more }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    </div>
+  </section>
+
+  <div class="sc-bottom">
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="calendar" %}{% if picked == today %}오늘 일정{% else %}{{ picked|date:"n월 j일 (D)" }} 일정{% endif %}</h2>
+        <span class="cnt">{{ day_events|length }}</span>
+      </div>
+      <div class="sc-list">
+        {% for e in day_events %}
+        <div class="sc-row{% if e.done %} done{% endif %}{% if e == editing %} on{% endif %}">
+          <form method="post" action="{% url 'schedule:done' e.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ back }}">
+            <button class="sc-check" title="{% if e.done %}완료 취소{% else %}완료{% endif %}" aria-label="{% if e.done %}완료 취소{% else %}완료{% endif %}">{% if e.done %}{% include "includes/ic.html" with name="square-check" %}{% else %}{% include "includes/ic.html" with name="square" %}{% endif %}</button>
+          </form>
+          <span class="sc-time">{% if e.time %}{{ e.time|time:"H:i" }}{% else %}종일{% endif %}</span>
+          <a class="sc-title" href="{{ back }}&amp;e={{ e.pk }}">{{ e.title }}{% if e.note %}<span class="sc-note">{{ e.note|truncatechars:40 }}</span>{% endif %}</a>
+        </div>
+        {% empty %}
+        <div class="empty small"><p>일정이 없습니다.</p></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="edit" %}{% if editing %}일정 고치기{% else %}새 일정{% endif %}</h2>
+        {% if editing %}<a class="btn ghost sm" href="{{ back }}">새로 쓰기</a>{% endif %}
+      </div>
+      <form method="post" action="{% url 'schedule:save' %}" class="sc-form">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ back }}">{% if editing %}<input type="hidden" name="pk" value="{{ editing.pk }}">{% endif %}
+        <div class="sc-fields">
+          {% include "includes/field.html" with field=form.date %}
+          {% include "includes/field.html" with field=form.time %}
+          {% include "includes/field.html" with field=form.title %}
+          {% include "includes/field.html" with field=form.note cls="sc-wide" nolabel=True %}
+        </div>
+        <div class="form-foot">
+          {% if editing %}<button class="btn ghost sm danger-text" formaction="{% url 'schedule:delete' editing.pk %}" formnovalidate>{% include "includes/ic.html" with name="trash" %}삭제</button>{% endif %}
+          <span style="margin-left:auto"></span>
+          <button class="btn primary sm">{% include "includes/ic.html" with name="save" %}저장</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

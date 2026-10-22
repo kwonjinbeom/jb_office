@@ -480,6 +480,27 @@ def place_status(request, pk):
 
 
 @require_POST
+def place_move(request, pk):
+    """넣은 곳의 사이트 카테고리 바꾸기 (글 관리 › 발행예정글의 '카테고리 수정', 2026-10-22 사용자).
+    다른 사이트로 옮기면 그 사이트에 맞게 다시 변환해야 하니 변환 상태를 '미변환'으로 돌린다 (변환본은 남는다)."""
+    placement = get_object_or_404(Placement, pk=pk)
+    cat = get_object_or_404(SiteCategory, pk=request.POST.get("site_category") or 0)
+    if cat.pk != placement.site_category_id:
+        field = "naver_post" if placement.naver_post_id else "tistory_post"
+        if Placement.objects.filter(site_category=cat, **{field: placement.post}).exists():
+            messages.warning(request, "이미 그 카테고리에 넣은 글입니다.")
+            return _back(request, _url(cat.sel))
+        fields = ["site_category", "updated_at"]
+        if cat.blog_id != placement.site_category.blog_id:
+            placement.convert_status = Placement.Convert.NONE
+            fields.append("convert_status")
+        placement.site_category = cat
+        placement.save(update_fields=fields)
+        messages.success(request, f"'{placement.post.title}'을(를) {cat.blog.name} › {cat}(으)로 옮겼습니다.")
+    return _back(request, _url(cat.sel))
+
+
+@require_POST
 def place_remove(request, pk):
     placement = get_object_or_404(Placement, pk=pk)
     sel = placement.site_category.sel

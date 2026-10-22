@@ -2,11 +2,12 @@
 
 Claude 가 원고.md 를 써서 main 에 올리면 서버에도 같은 파일이 있다 (웹훅이 git pull).
 '원고 가져오기' 화면에서 고르면 본문(마크다운)·제목·태그·소개가 그대로 들어간다.
-T26 부터(일일루틴 글쓰기)는 글 관리를 열 때 저절로 들어간다 (views.auto_import_drafts).
+T88 부터(일일루틴 글쓰기, 2026-10-22 임시글 정리 뒤)는 글 관리를 열 때 저절로 들어간다 (views.auto_import_drafts).
 
 원고.md 형식 (원고/README.md):
   위쪽 제작 정보 → <!-- 본문 시작 --> → # 제목 → 본문 → <!-- 본문 끝 --> → 태그: … → 소개: …
   제작 정보의 `사이트: …` · `분류: 대 > 중 > 소` 줄(일일루틴 글쓰기)은 가져올 때 사이트·글 분류로 쓴다.
+  `고정주제: …` · `커스텀: …` 줄이 있으면 커스텀 글 (일일루틴 하루 분량이 아닌 글, 글 관리의 '커스텀'으로 따로 본다).
 """
 import re
 import subprocess
@@ -34,6 +35,7 @@ class Draft:
     modified: float
     site: str = ""
     classification: str = ""
+    custom: bool = False
 
     @property
     def code(self) -> str:
@@ -61,6 +63,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     classification = re.search(r"^[-*\s]*`?분류:\s*([^`\n]+)`?\s*$", head, re.M)
     tags = re.search(r"^태그:\s*(.+)$", tail, re.M)
     summary = re.search(r"^소개:\s*(.+)$", tail, re.M)
+    custom = re.search(r"^[-*\s]*`?(?:고정주제|커스텀):", head, re.M)
     return Draft(
         key=key,
         title=title[:200],
@@ -70,6 +73,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
         modified=modified,
         site=site.group(1).strip()[:60] if site else "",
         classification=classification.group(1).strip()[:200] if classification else "",
+        custom=bool(custom),
     )
 
 

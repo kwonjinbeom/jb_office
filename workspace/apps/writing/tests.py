@@ -229,6 +229,15 @@ class RenderTests(TestCase):
         self.assertIn("<strong>산</strong></td>", out)
         self.assertIn("background:#f3f4f6", out)
 
+    def test_hot_row_gets_color(self):
+        """첫 칸이 🔥 인 표 줄은 칸마다 연한 주황 바탕 (공모주 화제 종목, 2026-10-22 사용자). 편집기 HTML 로 다시 걸러도 남는다."""
+        out = render_body("| 종목 | 공모가 |\n|---|---|\n| 🔥 큰회사 | 30,000 |\n| 작은회사 | 9,000 |")
+        hot, plain = out.split("큰회사")[0], out.split("큰회사")[1]
+        self.assertEqual(hot.count("background:#fff4e5"), 1)
+        self.assertEqual(plain.count("background:#fff4e5"), 1)  # 같은 줄의 둘째 칸까지, 다음 줄은 칠하지 않는다
+        self.assertNotIn("#fff4e5", plain.split("</tr>", 1)[1])
+        self.assertEqual(render_body(out), out)
+
     def test_markdown_raw_html_is_cleaned_too(self):
         out = render_body('본문 <a href="javascript:alert(1)">링크</a> <img src=x onerror="alert(1)">')
         self.assertNotIn("javascript", out)
@@ -375,6 +384,25 @@ class DraftImportTests(TestCase):
         self.assertContains(res, "memorily")  # 글 관리 왼쪽 목록에 사이트
         form = PostForm(instance=old)
         self.assertIn(("memorily", "memorily"), form.fields["target"].choices)  # 운영 목록에 없어도 지금 값은 남긴다
+
+    def test_custom_line_marks_custom_post(self):
+        """`고정주제:`·`커스텀:` 줄이 있는 원고는 커스텀 글. 그 표시 전에 들어온 같은 제목 글도 커스텀으로 (2026-10-22 사용자)."""
+        from pathlib import Path
+
+        from .drafts import parse
+        from .views import auto_import_drafts
+
+        root = Path(self.tmp.name)
+        for key, line, title in [("T95_고정", "고정주제: 공모주 일정 · 국내", "고정 주제 글"), ("T94_요청", "커스텀: 직접 요청", "요청 글")]:
+            (root / key).mkdir()
+            md = DRAFT_MD.replace("| 항목 | 내용 |", f"사이트: 눈잎\n{line}\n\n| 항목 | 내용 |", 1).replace("# 시험 원고 제목", f"# {title}")
+            (root / key / "원고.md").write_text(md, encoding="utf-8")
+            self.assertTrue(parse(md).custom)
+        self.assertFalse(parse(DRAFT_MD).custom)
+        Post.objects.create(title="요청 글")  # 커스텀 표시 전에 가져온 글
+        auto_import_drafts()
+        self.assertEqual(set(Post.objects.filter(custom=True).values_list("title", flat=True)), {"고정 주제 글", "요청 글"})
+        self.assertFalse(Post.objects.get(title="시험 원고 제목").custom)
 
     def test_import_creates_temp_post_once(self):
         url = reverse("writing:import")

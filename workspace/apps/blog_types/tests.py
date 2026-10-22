@@ -10,8 +10,19 @@ from .models import Category, Placement, PostType, Section, SiteCategory, SubTyp
 INDEX = reverse("blog_types:index")
 
 
+def legacy_tree():
+    """0017 이전 글 분류(판매 수익·광고 수익·IT/AI 와 그 아래)를 되살린다.
+    아래 테스트들은 분류 화면·글 넣기 같은 동작을 옛 시드 이름으로 확인한다 (2026-10-22 새 분류는 SimpleClassesTests)."""
+    from apps.core.models import TrashEntry
+    Section.all_objects.filter(name__in=["눈잎", "black_lukey", "밤밤"]).delete()
+    for model in (Section, Category, PostType, SubType):
+        model.all_objects.update(deleted_at=None)
+    TrashEntry.objects.filter(model_label="blog_types.section").delete()
+
+
 class BlogTypesTests(TestCase):
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
 
@@ -146,6 +157,7 @@ class SiteCategoryTests(TestCase):
     """사이트 카테고리: 사이트(규칙 화면의 블로그) › 카테고리 › 하위 카테고리"""
 
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         self.memorily = Blog.objects.get(name="memorily")
@@ -158,7 +170,7 @@ class SiteCategoryTests(TestCase):
         self.assertEqual(names, ["Vue.js, Node.js", "Java", "Database", "Android Studio", "Make",
                                  "공모전 및 프로젝트", "자격증", "일상생활", "기타"])
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
-        self.assertFalse(SiteCategory.objects.filter(blog__name="눈잎").exists())
+        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 6)  # 0019 티스토리 화면 그대로
 
     def test_tree_shows_both_grids(self):
         res = self.client.get(INDEX)
@@ -199,6 +211,7 @@ class PostManageTests(TestCase):
     """글 관리: 글에 붙는 분류, 글쓰기 목록의 분류별 묶음, 사이트 카테고리에 글 넣기(매핑)"""
 
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         from apps.naver_writing.models import Post as NaverPost
@@ -330,6 +343,7 @@ class PostManageTests(TestCase):
 
 class SideNavTests(TestCase):
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
 
@@ -346,6 +360,9 @@ class SideNavTests(TestCase):
 
 
 class ClassifyExistingPostsTests(TestCase):
+    def setUp(self):
+        legacy_tree()
+
     def test_existing_titles_get_classified_once(self):
         from importlib import import_module
 
@@ -370,6 +387,7 @@ class PostHubTests(TestCase):
     """글 관리(티스토리·네이버 합친 화면)와 카테고리 관리의 미분류·글 쪽 넣기"""
 
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         from apps.naver_writing.models import Post as NaverPost
@@ -467,6 +485,22 @@ class PostHubTests(TestCase):
         self.assertEqual([p.title for p in res.context["pl_items"]], ["오늘 글"])
         self.assertIsNone(res.context["pl_current"])  # 조건에 안 맞는 글을 열어도 화면은 열린다
 
+    def test_custom_filter(self):
+        """[커스텀]: 일일루틴 하루 분량이 아닌 글만 (2026-10-22 사용자). 오늘 버튼 옆, 목록·글 보기 둘 다."""
+        self.T.objects.create(title="루틴 글", stage="temp")
+        self.N.objects.create(title="커스텀 네이버", stage="temp", custom=True)
+        mine = self.T.objects.create(title="커스텀 글", stage="temp", custom=True)
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "custom": "1"})
+        self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["커스텀 글", "커스텀 네이버"])
+        self.assertEqual(res.context["pl_tabs"][0]["count"], 2)
+        self.assertIn("custom=1", res.context["pl_tabs"][1]["url"])  # 단계를 바꿔도 조건은 그대로
+        self.assertContains(res, ">커스텀</a>")
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "view": "list", "custom": "1"})
+        self.assertEqual(sorted(p.title for p in res.context["posts"]), ["커스텀 글", "커스텀 네이버"])
+        self.assertNotIn("custom", res.context["clear_url"])
+        from apps.blog_types import transfer
+        self.assertTrue(transfer.send(mine).custom)  # 상대 글쓰기로 보내도 커스텀
+
     def test_side_menu_has_collapse_button(self):
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, "data-nav-mini")
@@ -479,7 +513,7 @@ class PostHubTests(TestCase):
         url = reverse("posts:view")
         res = self.client.get(url)
         self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 임시", "티 임시"])
-        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0])
+        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0, 0])  # … 발행예정글 · 게시글 관리
         res = self.client.get(url, {"sel": "u", "stage": "review"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["티 검토"])  # 미분류
         res = self.client.get(url, {"sel": self.season.category.sel})
@@ -520,6 +554,7 @@ class MappingPanesTests(TestCase):
     """카테고리 관리 오른쪽: 위 매핑 · 아래 글을 함께, 트리를 누르면 그 칸만"""
 
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         from apps.writing.models import Post
@@ -559,6 +594,7 @@ class SitePublishTests(TestCase):
     """글 관리·글 보기의 사이트 고르기, 발행 완료 (한 건 · 일괄), 카테고리 관리 아래 목록의 조건 (2026-10-17 사용자)"""
 
     def setUp(self):
+        legacy_tree()
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         from apps.naver_writing.models import Post as NaverPost
@@ -653,16 +689,18 @@ class SitePublishTests(TestCase):
         self.N.objects.filter(pk=self.b.pk).update(created_at=timezone.now() - timedelta(days=1))
         url = reverse("posts:view")
         res = self.client.get(url, {"stage": "post", "sel": "u"})
-        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리", "패딩 고르기", "오래된 미발행", "발행한 글"])
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리", "패딩 고르기", "오래된 미발행"])  # 발행 완료는 게시글 관리
         self.assertEqual(res.context["sel"], "")  # 분류 조건은 쓰지 않는다
         self.assertNotContains(res, 'data-bt-tree="class"')
         self.assertNotContains(res, 'class="wr-group"')
         self.assertContains(res, "bt-layout-1")
-        res = self.client.get(url, {"stage": "post", "pub": "done"})
+        # 게시글 관리 (2026-10-22 사용자): 발행예정글 다음 탭, 발행 완료한 글
+        res = self.client.get(url, {"stage": "done"})
         self.assertEqual([p.title for p in res.context["posts"]], ["발행한 글"])
-        res = self.client.get(url, {"stage": "post", "pub": "todo"})
-        self.assertNotIn(done.title, [p.title for p in res.context["posts"]])
-        self.assertContains(res, '<a href="?stage=post&amp;pub=done">발행 완료</a>', html=False)
+        self.assertEqual([(t["label"], t["count"]) for t in res.context["tabs"]][2:], [("발행예정글", 3), ("게시글 관리", 1)])
+        self.assertContains(res, "wr-compact")  # 발행예정글과 같은 표
+        view = self.client.get(url, {"p": f"tistory:{done.pk}"})
+        self.assertEqual(view.context["pl_stage"], "done")  # 글 보기 왼쪽 목록도 게시글 관리
         self.T.objects.create(title="임시", stage="temp")
         res = self.client.get(url, {"stage": "temp"})
         self.assertContains(res, 'data-bt-tree="list"')  # 다른 단계는 한 건씩 (왼쪽은 글 목록)
@@ -686,7 +724,7 @@ class SitePublishTests(TestCase):
         """글 관리·글 보기 발행예정글 (2026-10-21 사용자): 카테고리 칸에서 바로 사이트 카테고리에 넣는다"""
         res = self.client.get(reverse("posts:view"), {"stage": "post"})
         self.assertContains(res, "wr-compact")
-        row = next(p for p in res.context["posts"] if p.pk == self.b.pk)
+        row = next(p for p in res.context["posts"] if p.pk == self.b.pk and p.writer == "naver")  # 두 표의 pk 가 겹친다
         self.assertEqual(row.site_groups[0][0], "black_lukey")  # 그 글의 사이트가 위
         self.assertContains(res, f'<input type="hidden" name="post" value="naver:{self.b.pk}">', html=False)
         lukey = SiteCategory.objects.get(name="낙서장")
@@ -737,3 +775,262 @@ class SitePublishTests(TestCase):
             "action": "save", "converted_title": "t", "converted_body": "b", "convert_note": "", "converted_tags": "",
             "converted_check": "", "next": back})
         self.assertRedirects(res, back, fetch_redirect_response=False)
+
+
+class SimpleClassesTests(TestCase):
+    """0017: 글 분류를 '사이트 > 고정 소재' 로 줄임 (2026-10-22 사용자). 옛 분류는 휴지통, 글은 가까운 새 소재로."""
+
+    def test_new_tree_and_old_in_trash(self):
+        from apps.core.models import TrashEntry
+        self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤"])
+        self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
+                         ["코스피", "나스닥", "상품 추천", "그 외"])
+        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.all()))  # 사이트마다 '그 외' 하나
+        self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
+        self.assertTrue(Category.objects.get(name="코스피").direction)  # 방향 = 글쓰기 컨셉
+        trashed = TrashEntry.objects.filter(model_label="blog_types.section")
+        self.assertEqual(sorted(trashed.values_list("title", flat=True)), ["IT/AI", "광고 수익 (조회수)", "판매 수익 (커넥트)"])
+        self.assertIn("blog_types.subtype", trashed.get(title="판매 수익 (커넥트)").members)  # 복원하면 아래까지 함께
+
+    def test_posts_move_to_new_keyword(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.writing.models import Post
+        legacy_tree()
+        old = Category.objects.get(name="여행·체험")
+        post = Post.objects.create(title="경주 당일치기", bt_category=old, bt_type=old.types.first())
+        import_module("apps.blog_types.migrations.0017_simple_classes").forward(django_apps, None)
+        post.refresh_from_db()
+        self.assertEqual((post.bt_category.section.name, post.bt_category.name, post.bt_type), ("black_lukey", "지역 놀거리", None))
+        self.assertEqual(Section.objects.count(), 3)
+
+    def test_draft_line_with_old_style_depth_finds_keyword(self):
+        from apps.writing import drafts
+        from apps.writing.models import Post
+        from apps.writing.views import _classify_draft
+        d = drafts.parse("분류: 눈잎 > 공모주 > 일정 달력\n<!-- 본문 시작 -->\n# 공모주\n본문\n<!-- 본문 끝 -->\n", "T1_공모주")
+        post = Post(title=d.title)
+        _classify_draft(post, d)
+        self.assertEqual(post.bt_category.name, "공모주")
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class TempPostsTests(TestCase):
+    """임시글 (2026-10-22 사용자): 커스텀·그날 글 말고는 휴지통으로 정리, 왼쪽 목록은 사이트별로."""
+
+    def test_old_temp_posts_go_to_trash(self):
+        from datetime import datetime
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+        from django.utils import timezone
+
+        from apps.core.models import TrashEntry
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        old, today = timezone.make_aware(datetime(2026, 10, 20, 9)), timezone.make_aware(datetime(2026, 10, 22, 10))
+        for model, title, when, extra in [(Post, "옛 임시글", old, {}), (Post, "옛 커스텀", old, {"custom": True}),
+                                          (Post, "오늘 글", today, {}), (NaverPost, "옛 검토글", old, {"stage": "review"}),
+                                          (NaverPost, "옛 네이버 임시글", old, {})]:
+            post = model.objects.create(title=title, **extra)
+            model.objects.filter(pk=post.pk).update(created_at=when)
+        import_module("apps.writing.migrations.0017_clear_old_temp").forward(django_apps, None)
+        self.assertEqual(set(Post.objects.values_list("title", flat=True)), {"옛 커스텀", "오늘 글"})
+        self.assertEqual(set(NaverPost.objects.values_list("title", flat=True)), {"옛 검토글"})
+        self.assertEqual(TrashEntry.objects.filter(model_label__in=["writing.post", "naver_writing.post"]).count(), 2)
+
+    def test_temp_list_grouped_by_site(self):
+        from apps.writing.models import Post
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        for title, site in [("밤밤 글", "밤밤"), ("사이트 없는 글", ""), ("눈잎 글", "눈잎"), ("눈잎 새 글", "눈잎")]:
+            Post.objects.create(title=title, target=site)
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "view": "list"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["눈잎 새 글", "눈잎 글", "밤밤 글", "사이트 없는 글"])
+        one = self.client.get(reverse("posts:view"), {"stage": "temp", "p": f"tistory:{Post.objects.first().pk}"})
+        self.assertContains(one, '<div class="pl-group"><span>눈잎</span><span class="cnt">2</span></div>', count=1)
+
+
+class SiteCleanupTests(TestCase):
+    """0018 (2026-10-22 사용자): AI 소식은 커스텀 고정 주제(memorily), 글 사이트·분류 바로잡기, memorily 에러 글은 휴지통."""
+
+    def test_ai_news_is_custom_topic_on_memorily(self):
+        from apps.routines.models import FixedTopic
+        topic = FixedTopic.objects.get(name="AI 소식")
+        self.assertEqual((topic.site, topic.per_week), ("memorily", 1))  # 한 번에 1편 (routines 0017)
+        self.assertTrue(topic.note.startswith("한 번에 한 편"))
+        self.assertIn("설명할 가치가 없는 업그레이드", topic.note)
+        self.assertFalse(Category.objects.filter(name="AI 소식").exists())
+        self.assertNotIn("AI", Blog.objects.get(name="black_lukey").content)
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        res = self.client.get(reverse("routines:topics"))
+        self.assertContains(res, f'<td class="tp-note" data-tp-edit="{topic.pk}"')  # 지침 칸을 누르면 전체가 보이는 고치기 칸이 열린다
+        self.assertContains(res, "주 1편</option>")
+
+    def test_posts_get_new_site_and_error_post_goes_to_trash(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        mig = import_module("apps.blog_types.migrations.0018_site_cleanup")
+        kospi = Post.objects.create(title="코스피 3.29% 반등 다음 날 다시 약세, 9거래일 종가표로 보는 지금 위치", target="눈잎")
+        heat = NaverPost.objects.create(title="전기장판 vs 온수매트 vs 탄소매트, 월 전기료 직접 계산하고 고르기 (2026 겨울)", target="black_lukey")
+        anime = Post.objects.create(title="나루토 회차정리 애니만화 환산기 명장면 등 모음", target="memorily",
+                                    bt_category=Category.objects.get(name="그 외", section__name="눈잎"))
+        err = Post.objects.create(title=mig.TRASH_TITLES[0], target="memorily")
+        mig.forward(django_apps, None)
+        kospi.refresh_from_db(), heat.refresh_from_db(), anime.refresh_from_db()
+        self.assertEqual((kospi.target, kospi.bt_category.name), ("밤밤", "코스피"))
+        self.assertEqual((heat.target, heat.bt_category.section.name, heat.bt_category.name), ("밤밤", "밤밤", "상품 추천"))
+        self.assertEqual((anime.target, anime.bt_category), ("memorily", None))
+        self.assertFalse(Post.objects.filter(pk=err.pk).exists())
+        self.assertTrue(Post.all_objects.filter(pk=err.pk, deleted_at__isnull=False).exists())
+
+
+class NunipSiteCategoryTests(TestCase):
+    """0019: 눈잎 사이트 카테고리 = 티스토리 관리 화면 그대로, 순서도 (2026-10-22 사용자)."""
+    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상"]
+
+    def site_names(self):
+        return list(SiteCategory.objects.filter(blog__name="눈잎", parent=None).order_by("order", "pk").values_list("name", flat=True))
+
+    def test_seeded_in_tistory_order(self):
+        self.assertEqual(self.site_names(), self.NAMES)
+        self.assertEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").note, "티스토리 주제: 경제")
+        self.assertEqual(list(Category.objects.filter(section__name="눈잎").values_list("name", flat=True)),
+                         ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "엔화·환율", "그 외"])
+
+    def test_extra_categories_trashed_unless_they_hold_posts(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.writing.models import Post
+        nunip = Blog.objects.get(name="눈잎")
+        empty = SiteCategory.objects.create(blog=nunip, name="빈 메뉴", order=0)
+        used = SiteCategory.objects.create(blog=nunip, name="쓰는 메뉴", order=0)
+        Placement.objects.create(site_category=used, tistory_post=Post.objects.create(title="넣은 글"))
+        SiteCategory.objects.filter(name="공모주").update(order=99)
+        import_module("apps.blog_types.migrations.0019_nunip_site_categories").forward(django_apps, None)
+        self.assertEqual(self.site_names(), self.NAMES + ["쓰는 메뉴"])
+        self.assertTrue(SiteCategory.all_objects.filter(pk=empty.pk, deleted_at__isnull=False).exists())
+
+
+class TrimAiNewsTests(TestCase):
+    """writing 0018 (2026-10-22 사용자): AI 소식 6편 중 가장 최근 T108 만 남기고 5편은 휴지통."""
+
+    def test_only_latest_ai_news_stays(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.writing.models import Post
+        mig = import_module("apps.writing.migrations.0018_trim_ai_news")
+        old = [Post.objects.create(title=t, custom=True) for t in mig.TITLES]
+        keep = Post.objects.create(title="시리 AI 한국어가 iOS 27.2 RC에 들어왔고, 윈도우는 Copilot 진입점을 줄입니다 (AI 소식 10-22)", custom=True)
+        mig.forward(django_apps, None)
+        self.assertEqual(list(Post.objects.values_list("pk", flat=True)), [keep.pk])
+        self.assertEqual(Post.all_objects.filter(pk__in=[p.pk for p in old], deleted_at__isnull=False).count(), 5)
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostPlanTests(TestCase):
+    """발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일을 정해 그 순서로 본다."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_site_filter_and_planned_date_order(self):
+        from datetime import date
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        a = Post.objects.create(title="날짜 없는 글", stage="post", target="눈잎")
+        b = NaverPost.objects.create(title="25일 글", stage="post", target="black_lukey")
+        c = Post.objects.create(title="24일 글", stage="post", target="눈잎")
+        url = reverse("posts:view")
+        for post, day in ((b, "2026-10-25"), (c, "2026-10-24")):
+            self.client.post(reverse("posts:plan"), {"post": f"{'naver' if post is b else 'tistory'}:{post.pk}", "day": day, "next": url})
+        c.refresh_from_db()
+        self.assertEqual(c.planned_on, date(2026, 10, 24))
+        res = self.client.get(url, {"stage": "post"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["24일 글", "25일 글", "날짜 없는 글"])  # 예정일 순, 없는 글은 끝
+        self.assertContains(res, 'name="day" value="2026-10-24"')
+        res = self.client.get(url, {"stage": "post", "site": "눈잎"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["24일 글", "날짜 없는 글"])
+        self.assertContains(res, '<option value="눈잎" selected>눈잎</option>', html=False)
+        self.client.post(reverse("posts:plan"), {"post": f"tistory:{c.pk}", "day": "", "next": url})  # 지우기
+        c.refresh_from_db()
+        self.assertIsNone(c.planned_on)
+        self.assertEqual(self.client.get(url, {"stage": "post", "site": "없는 사이트"}).context["site_filter"], "")
+        a.delete()
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostCategoryEditTests(TestCase):
+    """발행예정글 (2026-10-22 사용자): 예정일 → 사이트 순, '카테고리 수정'으로 넣은 카테고리를 바꾼다."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_order_by_date_then_site(self):
+        from datetime import date
+
+        from apps.writing.models import Post
+        day = date(2026, 10, 24)
+        for title, site, planned in [("밤밤 24일", "밤밤", day), ("눈잎 24일", "눈잎", day), ("눈잎 날짜 없음", "눈잎", None),
+                                     ("memorily 25일", "memorily", date(2026, 10, 25))]:
+            Post.objects.create(title=title, stage="post", target=site, planned_on=planned)
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertEqual([p.title for p in res.context["posts"]], ["눈잎 24일", "밤밤 24일", "memorily 25일", "눈잎 날짜 없음"])
+        self.assertContains(res, "data-cat-edit")
+
+    def test_move_placement_to_other_category(self):
+        from apps.writing.models import Post
+        post = Post.objects.create(title="옮길 글", stage="post", target="눈잎")
+        old = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
+        same_site = SiteCategory.objects.get(blog__name="눈잎", name="주택 공고")
+        other_site = SiteCategory.objects.get(blog__name="black_lukey", name="낙서장")
+        pl = Placement.objects.create(site_category=old, tistory_post=post, convert_status="done")
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertContains(res, f'action="{reverse("blog_types:place_move", args=[pl.pk])}"')
+        self.assertContains(res, f'<option value="{old.pk}" selected>눈잎 › 공모주</option>', html=False)
+        self.client.post(reverse("blog_types:place_move", args=[pl.pk]), {"site_category": same_site.pk})
+        pl.refresh_from_db()
+        self.assertEqual((pl.site_category, pl.convert_status), (same_site, "done"))  # 같은 사이트면 변환본 그대로
+        self.client.post(reverse("blog_types:place_move", args=[pl.pk]), {"site_category": other_site.pk})
+        pl.refresh_from_db()
+        self.assertEqual((pl.site_category, pl.convert_status), (other_site, "none"))  # 다른 사이트면 다시 변환
+
+
+@override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
+class PostPlanSplitTests(TestCase):
+    """발행예정글 (2026-10-22 사용자): 예정일 없음(위 7) · 정함(아래 3) 두 표, 체크한 글에 예정일 한꺼번에."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_two_grids_and_bulk_plan(self):
+        from datetime import date
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        a = Post.objects.create(title="가", stage="post", target="눈잎")
+        b = NaverPost.objects.create(title="나", stage="post", target="밤밤")
+        c = Post.objects.create(title="다", stage="post", target="눈잎", planned_on=date(2026, 10, 30))
+        url = reverse("posts:view")
+        res = self.client.get(url, {"stage": "post"})
+        self.assertEqual(([p.title for p in res.context["unplanned"]], [p.title for p in res.context["planned"]]), (["가", "나"], ["다"]))
+        self.assertContains(res, "발행 예정일 없음")
+        self.assertContains(res, 'name="plan" value="1"')
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{a.pk}", f"naver:{b.pk}"], "plan": "1", "plan_day": "2026-10-28", "next": url})
+        a.refresh_from_db(), b.refresh_from_db()
+        self.assertEqual((a.planned_on, b.planned_on), (date(2026, 10, 28), date(2026, 10, 28)))
+        res = self.client.get(url, {"stage": "post"})
+        self.assertEqual([p.title for p in res.context["planned"]], ["가", "나", "다"])  # 날짜 → 사이트(눈잎 · 밤밤) 순
+        self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{c.pk}"], "plan": "1", "plan_day": "", "next": url})
+        c.refresh_from_db()
+        self.assertIsNone(c.planned_on)  # 비우면 지운다

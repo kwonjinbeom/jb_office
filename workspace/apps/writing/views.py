@@ -72,13 +72,17 @@ def _classify_draft(post, draft):
     from apps.blog_types.changes import resolve
     from apps.blog_types.models import Section
 
-    node = resolve(draft.classification) if draft.classification else None
+    parts, node = draft.classification.split(">"), None
+    while parts and node is None:  # 없는 소분류까지 적혀 있으면 찾은 데까지 (2026-10-22: 글 분류를 대 > 키워드로 줄임)
+        node = resolve(">".join(parts))
+        parts = parts[:-1]
     if node is not None and not isinstance(node, Section):
         classify.assign(post, node.sel)
 
 
 def _draft_post(d):
-    post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site)
+    post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site,
+                custom=d.custom)
     _classify_draft(post, d)
     post.save()
     post.created_at = drafts_mod.written_at(d)  # 만든 날 = 원고를 쓴 날 (가져온 날이 아니라)
@@ -87,8 +91,8 @@ def _draft_post(d):
 
 
 # 루틴이 쓴 원고는 글 관리에 바로 들어온다 (2026-10-16 사용자: "글 관리에 16일자가 안 보인다").
-# 그 전 원고(T01~T25)는 지금처럼 '원고 가져오기'에서 고른다.
-AUTO_IMPORT_FROM = 26
+# 그 전 원고(T01~T87)는 지금처럼 '원고 가져오기'에서 고른다.
+AUTO_IMPORT_FROM = 88  # 2026-10-22 사용자: 그 전 임시글은 휴지통으로 정리 — 휴지통이 비워져도 옛 원고가 다시 들어오지 않게
 
 
 def fill_targets(drafts):
@@ -104,8 +108,18 @@ def fill_targets(drafts):
             post.save(update_fields=["target"])
 
 
+def fill_custom(drafts):
+    """이미 들어온 글 중 커스텀 원고(`고정주제:`·`커스텀:` 줄)와 제목이 같은 것을 커스텀으로 (그 표시가 생기기 전에 가져온 글)."""
+    from apps.naver_writing.models import Post as NaverPost
+
+    titles = [d.title for d in drafts if d.custom]
+    if titles:
+        for model in (Post, NaverPost):
+            model.all_objects.filter(custom=False, title__in=titles).update(custom=True)
+
+
 def auto_import_drafts():
-    """T26 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
+    """T88 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
 
     같은 제목의 글이 (휴지통 포함, 티스토리·네이버 어느 표든) 있으면 건너뛴다 — 지운 글이 다시 생기지 않게.
     """
@@ -114,6 +128,7 @@ def auto_import_drafts():
     existing = set(Post.all_objects.values_list("title", flat=True)) | set(NaverPost.all_objects.values_list("title", flat=True))
     drafts = drafts_mod.list_drafts()
     fill_targets(drafts)
+    fill_custom(drafts)
     added = 0
     for d in drafts:
         number = d.code[1:]

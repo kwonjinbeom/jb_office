@@ -30,7 +30,7 @@
       {% for t in topics %}
       <tr>
         <td class="tp-name"><strong>{{ t.name }}</strong>{% if t.site %}<span class="muted small"> · {{ t.site }}</span>{% endif %}</td>
-        <td class="tp-note">{% if t.note %}<span title="{{ t.note }}">{{ t.note|linebreaksbr|striptags }}</span>{% else %}<span class="muted">지침 없음 — 연필로 적기</span>{% endif %}</td>
+        <td class="tp-note" data-tp-edit="{{ t.pk }}" title="눌러서 지침 전체 보기·고치기">{% if t.note %}<span class="tp-note-text">{{ t.note }}</span>{% else %}<span class="muted">지침 없음 — 눌러서 적기</span>{% endif %}</td>
         <td>{% include "routines/_topic_dots.html" with next=request.get_full_path %}</td>
         <td class="c small">{{ t.per_week }}편</td>
         <td>{% if t.prompt %}{% include "routines/_launch.html" with key="writing" name=t.name kind="run" text=t.prompt day=today label="실행" %}{% endif %}</td>
@@ -88,7 +88,11 @@ document.addEventListener("click", function (e) {
   if (!b) return;
   var row = document.getElementById("tp-edit-" + b.dataset.tpEdit);
   row.hidden = !row.hidden;
-  if (!row.hidden) row.querySelector("textarea").focus();
+  if (row.hidden) return;
+  var area = row.querySelector("textarea");
+  area.style.height = "auto";
+  area.style.height = Math.min(area.scrollHeight + 4, Math.max(window.innerHeight * 0.6, 320)) + "px";  // 지침이 길어도 잘리지 않게 (2026-10-22 사용자)
+  area.focus();
 });
 </script>
 {% endblock %}

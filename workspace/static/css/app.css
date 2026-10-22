@@ -1370,7 +1370,11 @@ a.br-addr:hover { color: var(--accent); }
 .op-week td { height: 52px; }
 .op-blog { display: flex; align-items: center; gap: 8px; white-space: nowrap; overflow: hidden; }
 .op-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.op-link { display: inline-flex; color: var(--text-3); flex: none; }
+.op-link:hover { color: var(--accent); }
+.op-link .ic { width: 14px; height: 14px; }
 .op-feed { margin-top: 2px; font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.op-concept { margin-top: 2px; font-size: 11px; line-height: 1.4; color: var(--text-2); white-space: normal; word-break: keep-all; }
 .op-feed.is-bad { color: var(--warn); }
 .op-cell { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); padding: 0 !important; }
 .op-cell a { display: flex; align-items: center; justify-content: center; height: 52px; color: inherit; }
@@ -1450,8 +1454,10 @@ a.br-addr:hover { color: var(--accent); }
 @media (max-width: 1100px) { .tp-layout { grid-template-columns: minmax(0, 1fr); } }
 .tp-table { table-layout: fixed; width: 100%; }
 .tp-table td { padding-top: 5px; padding-bottom: 5px; vertical-align: middle; font-size: 13px; }
-.tp-name, .tp-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tp-note { color: var(--text-2); }
+.tp-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tp-note { color: var(--text-2); cursor: pointer; }
+.tp-note:hover { color: var(--text); }
+.tp-note-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; line-height: 1.45; }
 .tp-table .btn.sm { height: 26px; }
 .tp-edit td { background: var(--hover); }
 .tp-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px 100px; gap: 6px; }
@@ -1534,6 +1540,8 @@ a.br-addr:hover { color: var(--accent); }
 .pl-item:hover { background: var(--hover); text-decoration: none; }
 .pl-item.on { background: var(--accent-weak); }
 .pl-item.on .pl-title { color: var(--accent); font-weight: 600; }
+.pl-group { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; margin: 12px 0 4px; padding: 7px 10px; background: var(--muted-weak); border: 1px solid var(--border); border-radius: var(--radius); font-size: 12.5px; font-weight: 700; color: var(--text); }
+.pl-group:first-child { margin-top: 0; }
 .pl-path { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pl-item.on .pl-path { color: var(--accent); opacity: .8; }
 .pl-title { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -1696,3 +1704,106 @@ a.br-addr:hover { color: var(--accent); }
 .cc-num { font-variant-numeric: tabular-nums; color: var(--text-2); font-size: 12px; }
 .cc-sfx { font-size: 12px; color: var(--text-2); }
 @media (max-width: 900px) { .cc-shorts { grid-template-columns: minmax(0, 1fr); } .cc-player { position: static; } }
+
+/* 일정관리 (apps/schedule): 화면 높이에 딱 맞춘다, 스크롤 없음 (2026-10-22 사용자).
+   위 달력이 남은 높이를 주 수만큼 나눠 채우고, 아래 두 칸(고른 날 일정 | 입력·수정)은 높이 고정. 칸 크기는 모두 같게 */
+.sc { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) 214px; gap: 12px; padding: 14px var(--gutter); }
+.sc-nav { display: flex; align-items: center; gap: 6px; }
+.sc-month { min-width: 92px; text-align: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sc-cal { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sc-weeks { flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(var(--weeks), minmax(0, 1fr)); }
+.sc-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); min-height: 0; }
+.sc-weeks .sc-week + .sc-week, .sc-head + .sc-weeks .sc-week:first-child { border-top: 1px solid var(--border); }
+.sc-head { background: var(--bg); }
+.sc-wd { padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.sc-wd.sun, .sc-num.sun { color: #d14343; }
+.sc-wd.sat, .sc-num.sat { color: #2f6bd8; }
+.sc-day { display: flex; flex-direction: column; gap: 2px; min-height: 0; padding: 5px 8px; overflow: hidden; color: var(--text); border-left: 1px solid var(--border); }
+.sc-day:first-child { border-left: 0; }
+.sc-day:hover { background: #fafbfc; }
+.sc-day.out { background: #fafafa; }
+.sc-day.out .sc-num, .sc-day.out .sc-ev { opacity: .45; }
+.sc-day.picked { background: var(--accent-weak); }
+.sc-num { flex: none; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 20px; }
+.sc-day.today .sc-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; }
+.sc-ev { flex: none; display: block; font-size: 11.5px; line-height: 17px; padding: 0 5px; border-radius: 4px; background: #eef2f7; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-ev b { font-weight: 600; color: var(--text); }
+.sc-ev.done { text-decoration: line-through; color: var(--text-3); }
+.sc-more { flex: none; font-size: 11px; color: var(--text-3); padding: 0 5px; }
+.sc-bottom { min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sc-bottom > .card { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.sc-list { flex: 1; min-height: 0; overflow-y: auto; }
+.sc-row { display: flex; align-items: center; gap: 10px; padding: 7px 16px; border-top: 1px solid var(--border); }
+.sc-row:first-child { border-top: 0; }
+.sc-row.on { background: var(--accent-weak); }
+.sc-row form { display: contents; }
+.sc-check { border: 0; background: none; padding: 0; color: var(--text-3); cursor: pointer; display: grid; place-items: center; }
+.sc-row.done .sc-check { color: var(--accent); }
+.sc-time { width: 40px; flex: none; font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sc-title { min-width: 0; flex: 1; color: var(--text); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-row.done .sc-title { color: var(--text-3); text-decoration: line-through; }
+.sc-note { margin-left: 8px; font-size: 12px; color: var(--text-3); }
+.sc-list .empty { padding: 24px 16px; }
+.sc-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sc-fields { flex: 1; display: grid; grid-template-columns: 150px 130px minmax(0, 1fr); gap: 8px 10px; align-content: start; padding: 10px 16px; }
+.sc-fields .field { margin: 0; }
+.sc-fields .sc-wide { grid-column: 1 / -1; }
+.sc-form .form-foot { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.danger-text { color: var(--danger); }
+@media (max-width: 900px) {
+  .sc { display: flex; flex-direction: column; overflow-y: auto; }
+  .sc-cal { flex: none; }
+  .sc-weeks { flex: none; grid-template-rows: none; grid-auto-rows: 76px; }
+  .sc-day { padding: 4px; }
+  .sc-ev b { display: none; }
+  .sc-bottom { grid-template-columns: minmax(0, 1fr); }
+  .sc-bottom > .card { min-height: 200px; }
+  .sc-fields { grid-template-columns: 1fr 1fr; }
+  .sc-fields .field:nth-child(3) { grid-column: 1 / -1; }
+}
+
+
+/* 일정 알림 (static/js/alarm.js): 우측 상단, 오른쪽에서 들어오고 누르면 오른쪽으로 들어간다 (2026-10-22 사용자) */
+.alarm-root { position: fixed; top: 60px; right: 16px; z-index: 90; width: 300px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.alarm { pointer-events: auto; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; text-align: left; font: inherit; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-lg); background: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+  transform: translateX(calc(100% + 24px)); opacity: 0; transition: transform .28s ease, opacity .28s ease; }
+.alarm.in { transform: none; opacity: 1; }
+.alarm.out { transform: translateX(calc(100% + 24px)); opacity: 0; }
+.alarm:hover { border-color: var(--accent-line); }
+.alarm-k { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.alarm-k .ic { width: 13px; height: 13px; }
+.alarm-t { font-size: 14px; font-weight: 700; color: var(--text); }
+.alarm-n { font-size: 12.5px; color: var(--text-2); }
+/* 글 관리 › 발행예정글: 사이트로 거르기 · 발행 예정일 (2026-10-22 사용자) */
+.wr-site-filter { width: 128px; }
+.wr-plan { margin: 0; }
+.wr-plan .input { width: 100%; min-width: 0; font-variant-numeric: tabular-nums; }
+/* 발행예정글 카테고리 수정: 누르면 넣은 카테고리 칩 대신 바꾸기 고르기 */
+.wr-cat-move { display: none; }
+.cat-editing .wr-cat-move { display: block; }
+.cat-editing .wr-cat-chip { display: none; }
+.cat-editing .wr-cat-move + .wr-cat-move { margin-top: 4px; }
+/* 발행예정글 두 표: 예정일 없음 · 정함 반반 (2026-10-22 사용자) */
+.ph-split { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; padding-bottom: 10px; }
+.ph-split-part { display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--border); }
+.ph-split-part > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
+.ph-split-head { padding: 7px var(--gutter); font-size: 12.5px; font-weight: 700; color: var(--text); background: var(--muted-weak); border-bottom: 1px solid var(--border); }
+.wr-plan-all { width: 128px; }
+/* 발행예정글·게시글 관리 표: 화면 너비에 맞춘다 (2026-10-22 사용자: 오른쪽이 잘렸다). 제목이 줄고, 좁으면 칸도 준다 */
+.wr-fit { table-layout: fixed; width: 100%; min-width: 640px; }
+.wr-fit th:first-child { width: 40px; }
+.wr-fit .wr-c-site { width: 108px; } .wr-fit .wr-c-cat { width: 168px; } .wr-fit .wr-c-cv { width: 112px; }
+.wr-fit .wr-c-pub { width: 140px; } .wr-fit .wr-c-date { width: 132px; }
+.wr-fit .wr-site-pick select { min-width: 0; }
+.wr-fit td { overflow: hidden; }
+.wr-fit .status-seg { flex-wrap: nowrap; white-space: nowrap; }
+@media (max-width: 1280px) {
+  .wr-fit .wr-c-site { width: 92px; } .wr-fit .wr-c-cat { width: 132px; } .wr-fit .wr-c-cv { width: 92px; }
+  .wr-fit .wr-c-pub { width: 140px; } .wr-fit .wr-c-date { width: 126px; }
+}
+/* 홈 › 사이트 주소 (2026-10-22 사용자) */
+.hm-sites { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 6px 24px; }
+.hm-site { display: grid; grid-template-columns: 72px 92px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 32px; }
+.hm-site-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-site-url { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); font-size: 13px; }
