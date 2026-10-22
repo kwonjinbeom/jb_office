@@ -15,7 +15,7 @@ class BlogForm(_Styled):
     class Meta:
         model = Blog
         fields = ["name", "platform", "status", "address", "account", "revenue", "daily", "daily_note",
-                  "content", "kpi", "note"]
+                  "content", "routine", "kpi", "note"]
         widgets = {"note": forms.Textarea(attrs={"rows": 4}), "daily": forms.NumberInput(attrs={"min": 0, "max": 5})}
 
 

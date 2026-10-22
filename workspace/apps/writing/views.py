@@ -72,7 +72,10 @@ def _classify_draft(post, draft):
     from apps.blog_types.changes import resolve
     from apps.blog_types.models import Section
 
-    node = resolve(draft.classification) if draft.classification else None
+    parts, node = draft.classification.split(">"), None
+    while parts and node is None:  # 없는 소분류까지 적혀 있으면 찾은 데까지 (2026-10-22: 글 분류를 대 > 키워드로 줄임)
+        node = resolve(">".join(parts))
+        parts = parts[:-1]
     if node is not None and not isinstance(node, Section):
         classify.assign(post, node.sel)
 
@@ -88,8 +91,8 @@ def _draft_post(d):
 
 
 # 루틴이 쓴 원고는 글 관리에 바로 들어온다 (2026-10-16 사용자: "글 관리에 16일자가 안 보인다").
-# 그 전 원고(T01~T25)는 지금처럼 '원고 가져오기'에서 고른다.
-AUTO_IMPORT_FROM = 26
+# 그 전 원고(T01~T87)는 지금처럼 '원고 가져오기'에서 고른다.
+AUTO_IMPORT_FROM = 88  # 2026-10-22 사용자: 그 전 임시글은 휴지통으로 정리 — 휴지통이 비워져도 옛 원고가 다시 들어오지 않게
 
 
 def fill_targets(drafts):
@@ -116,7 +119,7 @@ def fill_custom(drafts):
 
 
 def auto_import_drafts():
-    """T26 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
+    """T88 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
 
     같은 제목의 글이 (휴지통 포함, 티스토리·네이버 어느 표든) 있으면 건너뛴다 — 지운 글이 다시 생기지 않게.
     """

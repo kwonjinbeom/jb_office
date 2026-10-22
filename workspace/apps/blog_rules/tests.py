@@ -20,13 +20,15 @@ class BlogRulesTests(TestCase):
     def test_seed(self):
         self.assertEqual(list(Blog.objects.values_list("name", flat=True)),
                          ["memorily", "눈잎", "black_lukey", "밤밤", "워드프레스"])
-        self.assertTrue(Blog.objects.get(name="밤밤").content.startswith("정보성"))
-        self.assertTrue(Blog.objects.get(name="memorily").content.startswith("IT·개발"))
+        self.assertTrue(Blog.objects.get(name="밤밤").content.startswith("코스피"))  # 사이트별 타겟 (2026-10-22 사용자)
+        memorily = Blog.objects.get(name="memorily")
+        self.assertTrue(memorily.content.startswith("직접 쓰는 글"))
+        self.assertFalse(memorily.routine)  # 사용자가 직접 쓰는 사이트는 글쓰기 루틴에서 뺀다
         naver = Blog.objects.get(name="black_lukey")
         self.assertEqual((naver.platform, naver.daily, naver.address, naver.daily_note),
                          ("naver", 1, "https://blog.naver.com/black_lukey", ""))
         blogger = Blog.objects.get(platform="blogger")
-        self.assertEqual((blogger.address, blogger.status), ("https://bambam2222.blogspot.com/", "ready"))
+        self.assertEqual((blogger.address, blogger.status), ("https://bambam2222.blogspot.com/", "active"))  # 2026-10-22 운영 (모니터링에 넣음)
 
     def test_checks_by_site_and_generic_rules_in_trash(self):
         # 0007: 체크는 모두 사이트에 붙고, 예전 일반 규칙은 휴지통 (7일 복원)
@@ -42,7 +44,7 @@ class BlogRulesTests(TestCase):
     def test_page_shows_sites_and_checks(self):
         res = self.client.get(INDEX)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual((res.context["mode"], res.context["target_total"]), ("day", 3))  # 운영 중인 셋 × 1편
+        self.assertEqual((res.context["mode"], res.context["target_total"]), ("day", 5))  # 운영 중인 넷: 1 + 1 + 1 + 밤밤 2편
         self.assertEqual(res.context["accounts"], [("카카오 계정 1", 2)])
         for text in ["jinbaam.tistory.com", "nunip.tistory.com", "쇼핑커넥트 링크는", "하루 편수 정하기", "하루 1편 · 애드센스",
                      "발행", "임시저장", "일별", "월별", "data-open-picker"]:
@@ -59,7 +61,7 @@ class BlogRulesTests(TestCase):
         rows = {b.name: (b.published, b.target, b.drafts, b.state) for b in res.context["blogs"]}
         self.assertEqual(rows["눈잎"], (1, 1, 1, "done"))
         self.assertEqual(rows["black_lukey"], (0, 1, 0, "todo"))
-        self.assertEqual(rows["밤밤"][3], "")  # 준비 중인 사이트는 상태 없음
+        self.assertEqual(rows["밤밤"][1:], (2, 0, "todo"))  # 2026-10-22 운영으로
         self.assertEqual([c["state"] for c in res.context["bar"]["cells"]][:3], ["todo", "todo", "todo"])  # 모두 채워야 완료
         self.assertContains(res, "미완료")
         res = self.client.get(INDEX, {"month": "2026-10"})
@@ -107,4 +109,4 @@ class BlogRulesTests(TestCase):
         b = Blog.objects.get(name="세번째")
         self.assertEqual(b.order, 6)
         res = self.client.get(INDEX)
-        self.assertEqual(res.context["target_total"], 3)  # 준비 상태는 목표에 넣지 않는다
+        self.assertEqual(res.context["target_total"], 5)  # 준비 상태는 목표에 넣지 않는다

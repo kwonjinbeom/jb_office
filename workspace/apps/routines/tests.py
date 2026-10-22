@@ -9,6 +9,8 @@ from urllib.parse import unquote_plus
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase, override_settings
+
+from apps.blog_types.tests import legacy_tree
 from django.urls import reverse
 from django.utils import timezone
 
@@ -60,12 +62,13 @@ class TempRepoTests(Login):
         self.assertTrue(Routine.all_objects.filter(key="naver", deleted_at__isnull=False).exists())  # 네이버 글쓰기 루틴은 휴지통
 
     def test_results_count_and_edit(self):
+        self.assertEqual((self.row("writing").target, self.row("writing").state), ("", "todo"))  # 기본: 정해진 목표 없음
         TistoryPost.objects.create(title="오늘 원고")
         NaverPost.objects.create(title="오늘 네이버 원고")  # 글쓰기는 두 글 표를 합쳐 센다
         tistory = Routine.objects.get(key="writing")
         today = timezone.localdate().isoformat()
         r = self.row("writing")
-        self.assertEqual((r.result, r.target, r.state), (2, 11, "todo"))  # 목표 = 그날 고른 편수 (기본 11)
+        self.assertEqual((r.result, r.target, r.state), (2, "", "done"))  # 소재 있는 것만 쓰니 한 편이라도 쓰면 완료 (2026-10-22)
         self.client.post(reverse("routines:count", args=[tistory.pk]), {"day": today, "value": "11"})
         r = self.row("writing")
         self.assertEqual((r.result, r.state, r.fixed), (11, "done", True))
@@ -87,14 +90,16 @@ class TempRepoTests(Login):
             self.assertIn("체크: 쇼핑커넥트 링크는", text)
             self.assertIn("이미 쓴 네이버 글", text)
             # 처음 쓸 때부터 사이트별 템플릿·카테고리 컨셉에 맞춘다 (2026-10-20 사용자)
-            self.assertRegex(text, r"\n  - 말투: .*개발자")
-            self.assertRegex(text, r"\n  - 카테고리: .*Java")
+            self.assertRegex(text, r"\n  - 말투: 소개·정보 해요체")
+            self.assertRegex(text, r"\n  - 카테고리: 낙서장")
+            self.assertNotIn("- memorily (", text)  # 사용자가 직접 쓰는 사이트는 빼고 (2026-10-22 사용자)
             self.assertNotIn("클라우드", text)  # 로컬·클라우드 구분 없음
         self.assertIn("routine_report writing <상태>", run)
         self.assertNotIn("routine_report", scheduled)
         # 글쓰기는 분류 전체 트리 대신 그날 분류(+ 고른 중분류의 소분류)만
         self.assertNotIn("### 글 분류 전체", run)
-        self.assertIn("  - 소분류: ", run)
+        self.assertIn("- black_lukey > AI 소식 — 매일 1편 (컨셉: ", run)  # 분류 방향 = 글쓰기 컨셉 (2026-10-22)
+        self.assertIn("최대 ", run.split("\n")[2])  # 기본은 소재 있는 것만
         self.assertIn("### 글 분류 전체", launcher(Routine.objects.get(key="prompt_update"), day))
         # 글쓰기의 이미 있는 글 = 원고 장부(중분류별) + 원고 말고 최근 글 15줄
         for i in range(60):
@@ -473,6 +478,7 @@ class RepoTests(Login):
 
     def test_extra_writing_by_categories_or_comment(self):
         from apps.blog_types.models import Category
+        legacy_tree()
         writing = Routine.objects.get(key="writing")
         url = reverse("routines:extra", args=[writing.pk])
         it = Category.objects.get(section__name="IT/AI", name="AI 도구·활용")
@@ -537,7 +543,7 @@ class RepoTests(Login):
 
 
 class WritingPickTests(Login):
-    """글쓰기: 그날 쓸 분류 (기본 광고 6 · 판매 3 · IT/AI 2), 고르기·다시 뽑기·기본값 (추가 실행 화면)."""
+    """글쓰기: 그날 쓸 분류 (기본 = 모든 소재 한 편씩, 소재 있는 것만), 고르기·기본값 (추가 실행 화면)."""
 
     def setUp(self):
         super().setUp()
@@ -552,38 +558,42 @@ class WritingPickTests(Login):
             out[name] = out.get(name, 0) + n
         return out
 
-    def test_default_mix_is_stable_for_the_day(self):
+    def test_default_is_every_keyword_once(self):
+        """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
-        a, b = default_picks(date(2026, 10, 16)), default_picks(date(2026, 10, 16))
-        self.assertEqual(a, b)
-        self.assertEqual(self.by_section(a), {"광고 수익 (조회수)": 6, "판매 수익 (커넥트)": 3, "IT/AI": 2})
-        self.assertEqual(len(a), 11)  # 중분류가 넉넉하면 모두 다른 중분류
+        a = default_picks(date(2026, 10, 16))
+        self.assertEqual(self.by_section(a), {"눈잎": 7, "black_lukey": 7, "밤밤": 4})
+        self.assertEqual(set(a.values()), {1})
+        res = self.client.get(INDEX, {"date": "2026-10-16"})
+        row = next(r for r in res.context["routines"] if r.key == "writing")
+        self.assertEqual((row.target, row.state), ("", "todo"))  # 정해진 목표 없음 — 한 편이라도 쓰면 완료
 
-    def test_save_reroll_default(self):
-        from apps.blog_types.models import Category, PostType
-        it = Category.objects.get(section__name="IT/AI", name="AI 도구·활용")
-        t = PostType.objects.first()
+    def test_save_and_default(self):
+        from apps.blog_types.models import Category
+        it = Category.objects.get(section__name="black_lukey", name="신제품 출시")
+        t = Category.objects.get(section__name="밤밤", name="코스피")
         self.client.post(self.url, {"day": "2026-10-16", f"n_{it.sel}": "3", f"n_{t.sel}": "1", "n_c999": "x", "n_g1": "2"})
         pick = RoutinePick.objects.get()
         self.assertEqual(pick.picks, {it.sel: 3, t.sel: 1})
         text = launcher(self.writing, date(2026, 10, 16))
         self.assertIn("(총 4편 · 사용자가 고른 분류)", text)
-        self.assertIn("- IT/AI > AI 도구·활용 — 3편", text)
+        self.assertIn("- black_lukey > 신제품 출시 — 3편", text)
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
         self.assertEqual(row.target, 4)
         page = self.client.get(reverse("routines:extra_page"), {"r": "writing", "date": "2026-10-16"})
         self.assertTrue(page.context["picker"]["custom"])
-        self.assertContains(page, "IT/AI &gt; AI 도구·활용 <strong>3편</strong>")
-        res = self.client.post(self.url, {"day": "2026-10-16", "action": "reroll"})
+        self.assertContains(page, "black_lukey &gt; 신제품 출시 <strong>3편</strong>")
+        res = self.client.post(self.url, {"day": "2026-10-16", "action": "default"})
         self.assertEqual(res.url, reverse("routines:extra_page") + "?r=writing&date=2026-10-16#ex-morning")
-        self.assertEqual(sum(RoutinePick.objects.get().picks.values()), 11)
-        self.client.post(self.url, {"day": "2026-10-16", "action": "default"})
         self.assertFalse(RoutinePick.objects.exists())
 
 
 class ClassChangeTests(TestCase):
     """AI 가 남긴 일일루틴/분류변경/*.json 을 글 분류에 반영 (중·소 추가·이름, 대분류는 안 고침, 한 번만)."""
+
+    def setUp(self):
+        legacy_tree()
 
     def test_sync_adds_and_renames_once(self):
         from apps.blog_types import changes
@@ -627,11 +637,11 @@ class ClassChangeTests(TestCase):
 
 
 class DraftAutoImportTests(Login):
-    """루틴이 쓴 원고(T26~)는 글 관리를 열면 임시글에 바로 들어온다. 그 전 원고와 이미 있는(휴지통 포함) 글은 건너뛴다."""
+    """루틴이 쓴 원고(T88~)는 글 관리를 열면 임시글에 바로 들어온다. 그 전 원고와 이미 있는(휴지통 포함) 글은 건너뛴다."""
 
     def test_new_drafts_show_up_in_posts(self):
         with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
-            for key, title in [("T25_옛원고", "옛 원고"), ("T26_새원고", "새 원고"), ("T27_지운원고", "지운 원고")]:
+            for key, title in [("T87_옛원고", "옛 원고"), ("T88_새원고", "새 원고"), ("T89_지운원고", "지운 원고")]:
                 (Path(tmp) / key).mkdir()
                 (Path(tmp) / key / "원고.md").write_text(DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
             TistoryPost.objects.create(title="지운 원고").delete()  # 휴지통
@@ -643,8 +653,8 @@ class DraftAutoImportTests(Login):
     def test_routines_screen_imports_new_drafts_for_count(self):
         """글 관리를 안 열어도 일일루틴 화면이 새 원고를 가져와 글쓰기 결과에 센다 (2026-10-20)."""
         with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
-            (Path(tmp) / "T61_새원고").mkdir()
-            (Path(tmp) / "T61_새원고" / "원고.md").write_text(DRAFT.replace("네이버 첫 원고", "오늘 쓴 원고"), encoding="utf-8")
+            (Path(tmp) / "T101_새원고").mkdir()
+            (Path(tmp) / "T101_새원고" / "원고.md").write_text(DRAFT.replace("네이버 첫 원고", "오늘 쓴 원고"), encoding="utf-8")
             row = next(r for r in self.client.get(INDEX).context["routines"] if r.key == "writing")
         self.assertTrue(TistoryPost.objects.filter(title="오늘 쓴 원고").exists())
         self.assertEqual(row.result, 1)
@@ -657,7 +667,7 @@ class DraftAutoImportTests(Login):
 
         written = timezone.make_aware(timezone.datetime(2026, 10, 16, 20, 35))
         with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp)):
-            for key, title in [("T26_새원고", "새 원고"), ("T27_먼저가져온원고", "먼저 가져온 원고")]:
+            for key, title in [("T88_새원고", "새 원고"), ("T89_먼저가져온원고", "먼저 가져온 원고")]:
                 (Path(tmp) / key).mkdir()
                 f = Path(tmp) / key / "원고.md"
                 f.write_text(DRAFT.replace("네이버 첫 원고", title), encoding="utf-8")
@@ -726,6 +736,7 @@ class FixedTopicTests(Login):
         self.assertEqual(len(res.context["fixed_topics"][0].cells), 4)  # 최근 4주
 
     def test_free_writing_box_and_compact_picker(self):
+        legacy_tree()  # 소분류가 있는 옛 분류로 접힘 칸을 본다
         writing = Routine.objects.get(key="writing")
         res = self.client.get(reverse("routines:topics"))
         self.assertContains(res, 'id="tp-free-text"')  # 왼쪽 자유 글쓰기

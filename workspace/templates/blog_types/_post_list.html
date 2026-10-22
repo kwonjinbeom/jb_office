@@ -19,6 +19,7 @@
   {% endif %}
   <div class="pl-items">
     {% for p in pl_items %}
+    {% if pl_stage == 'temp' %}{% ifchanged p.target %}<div class="pl-group">{{ p.target|default:"사이트 없음" }}</div>{% endifchanged %}{% endif %}
     <a class="pl-item{% if p == pl_current %} on{% endif %}" href="{{ p.list_url }}"{% if p == pl_current %} aria-current="page"{% endif %}>
       <span class="pl-path">{{ p.path_label }}</span>
       <span class="pl-title">{{ p.title }}</span>
