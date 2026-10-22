@@ -98,7 +98,7 @@ class TempRepoTests(Login):
         self.assertNotIn("routine_report", scheduled)
         # 글쓰기는 분류 전체 트리 대신 그날 분류(+ 고른 중분류의 소분류)만
         self.assertNotIn("### 글 분류 전체", run)
-        self.assertIn("- black_lukey > AI 소식 — 매일 1편 (컨셉: ", run)  # 분류 방향 = 글쓰기 컨셉 (2026-10-22)
+        self.assertIn("- 밤밤 > 코스피 — 1편 (컨셉: ", run)  # 분류 방향 = 글쓰기 컨셉 (2026-10-22)
         self.assertIn("최대 ", run.split("\n")[2])  # 기본은 소재 있는 것만
         self.assertIn("### 글 분류 전체", launcher(Routine.objects.get(key="prompt_update"), day))
         # 글쓰기의 이미 있는 글 = 원고 장부(중분류별) + 원고 말고 최근 글 15줄
@@ -562,7 +562,7 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 7, "black_lukey": 7, "밤밤": 4})
+        self.assertEqual(self.by_section(a), {"눈잎": 7, "black_lukey": 6, "밤밤": 4})  # AI 소식은 커스텀 (0018)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
@@ -732,7 +732,7 @@ class FixedTopicTests(Login):
         res = self.client.get(reverse("routines:index"))
         self.assertContains(res, 'class="rt-has-sub" data-rt-toggle')
         self.assertContains(res, "공모주 일정 · 해외")
-        self.assertContains(res, "data-rt-sub hidden", count=5)  # 주제 넷 + 추가 줄
+        self.assertContains(res, "data-rt-sub hidden", count=6)  # 주제 다섯(AI 소식 포함) + 추가 줄
         self.assertEqual(len(res.context["fixed_topics"][0].cells), 4)  # 최근 4주
 
     def test_free_writing_box_and_compact_picker(self):
@@ -752,7 +752,7 @@ class FixedTopicTests(Login):
         """주제별 피드백 (2026-10-21 사용자): 정책·청약 공고는 따로, 서울·경기는 한 글 안에서 나눈다, 공모주는 앞으로 한 달·분기"""
         from .models import FixedTopic
         names = list(FixedTopic.objects.values_list("name", flat=True))
-        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)"])
+        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)", "AI 소식"])  # AI 소식은 0018
         self.assertEqual(FixedTopic.all_objects.filter(deleted_at__isnull=False).count(), 2)  # 경기 주제 둘은 휴지통
         kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
         self.assertIn("앞으로 한 달", kr.note)
@@ -777,7 +777,7 @@ class FixedTopicTests(Login):
         res = self.client.get(reverse("routines:topics"))
         text = res.context["all_prompt"]
         self.assertTrue(text.startswith("# 일일루틴 · 글쓰기 (추가 실행)"))
-        self.assertIn("고정 주제 전체 실행 (커스텀 글쓰기): 아래 4개 주제를 순서대로", text)
+        self.assertIn("고정 주제 전체 실행 (커스텀 글쓰기): 아래 5개 주제를 순서대로", text)
         for n, name in enumerate(["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)"], 1):
             self.assertIn(f"#### {n}. {name}", text)
         self.assertContains(res, "전체 실행")

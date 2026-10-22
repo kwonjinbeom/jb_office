@@ -96,18 +96,6 @@
 | 유니클로 | https://www.uniqlo.com/kr/ko/ | 감사제·한정 특가 기간 | 확인 전 |
 | 다나와 | https://danawa.com/ | 가격 추이 (세일이 진짜 싼지) | 바로 |
 
-### AI 소식
-| 사이트 | 주소 | 무엇을 보나 | 읽기 |
-|---|---|---|---|
-| Anthropic 뉴스 | https://www.anthropic.com/news | Claude 출시·기능 | 바로 |
-| OpenAI 뉴스 | https://openai.com/news/ | ChatGPT·Codex 출시·기능 | 바로 |
-| Google AI 블로그 | https://blog.google/technology/ai/ | Gemini 등 구글 AI | 확인 전 |
-| Hugging Face 인기 모델 | https://huggingface.co/models?sort=trending | 뜨는 오픈소스 모델 | 확인 전 |
-| Product Hunt AI | https://www.producthunt.com/topics/artificial-intelligence | 새로 뜨는 AI 서비스 | 확인 전 |
-| GeekNews | https://news.hada.io/ | 국내 개발자가 모은 AI·도구 소식 | 바로 |
-| AI타임스 | https://www.aitimes.com/ | 국내 AI 소식 (네이버·카카오·LG·업스테이지 등) | 확인 전 |
-| Hacker News | https://news.ycombinator.com/ | 해외에서 화제인 AI 출시 | 확인 전 |
-
 ## 밤밤 (구글 블로거)
 ### 코스피 · 나스닥
 | 사이트 | 주소 | 무엇을 보나 | 읽기 |
@@ -129,3 +117,16 @@
 | 대한민국 구석구석 | https://korean.visitkorea.or.kr/ | 여행·체험 코스 (예약 연결 전 확인) | 바로 |
 
 막힘: 뽐뿌(403) → WebSearch "뽐뿌 <품목>". 다음 뉴스 랭킹(주소 없어짐) → 네이버 뉴스 많이 본.
+
+## memorily (커스텀 글쓰기 · AI 소식)
+### AI 소식
+| 사이트 | 주소 | 무엇을 보나 | 읽기 |
+|---|---|---|---|
+| Anthropic 뉴스 | https://www.anthropic.com/news | Claude 출시·기능 | 바로 |
+| OpenAI 뉴스 | https://openai.com/news/ | ChatGPT·Codex 출시·기능 | 바로 |
+| Google AI 블로그 | https://blog.google/technology/ai/ | Gemini 등 구글 AI | 확인 전 |
+| Hugging Face 인기 모델 | https://huggingface.co/models?sort=trending | 뜨는 오픈소스 모델 | 확인 전 |
+| Product Hunt AI | https://www.producthunt.com/topics/artificial-intelligence | 새로 뜨는 AI 서비스 | 확인 전 |
+| GeekNews | https://news.hada.io/ | 국내 개발자가 모은 AI·도구 소식 | 바로 |
+| AI타임스 | https://www.aitimes.com/ | 국내 AI 소식 (네이버·카카오·LG·업스테이지 등) | 확인 전 |
+| Hacker News | https://news.ycombinator.com/ | 해외에서 화제인 AI 출시 | 확인 전 |

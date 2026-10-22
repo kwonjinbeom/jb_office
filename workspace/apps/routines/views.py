@@ -288,7 +288,7 @@ def _evaluations():
 
 
 # 글쓰기 기본 (2026-10-22 사용자): 사이트마다 고정 소재를 두고, 소재가 있는 날만 쓴다 (없으면 절대 쓰지 않는다).
-WRITING_DAILY = ("AI 소식",)  # 매일 쓰는 소재 (안내문에 '매일'로 표시)
+# AI 소식은 일일 분량이 아니라 커스텀 글쓰기의 고정 주제 (memorily).
 
 
 def _sections():
@@ -333,7 +333,7 @@ def _picks_lines(picks, how):
         node, path = _node_path(sel)
         if node is None:
             continue
-        line = f"- {path} — {'매일 ' if node.name in WRITING_DAILY else ''}{n}편"
+        line = f"- {path} — {n}편"
         cat = node if node.sel.startswith("c") else (node.category if node.sel.startswith("t") else None)
         if cat is not None and (cat.direction or cat.question):
             line += f" (컨셉: {cat.direction or '-'} / 독자의 질문: {cat.question or '-'})"
