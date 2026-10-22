@@ -6,7 +6,8 @@
   var DATA = __DATA__;
   // 글에 적힌 작품 이름을 넓게 받는다 (2026-10-22: 원피스 글이 [환산기: onpiece] 로 안 바뀌었다). 대소문자·빈칸 무시, 한글 이름·흔한 오타도
   var ALIAS = {"onpiece": "onepiece", "one-piece": "onepiece", "원피스": "onepiece", "나루토": "naruto", "블리치": "bleach",
-               "헌터헌터": "hunterxhunter", "헌터x헌터": "hunterxhunter", "헌터×헌터": "hunterxhunter", "hxh": "hunterxhunter"};
+               "헌터헌터": "hunterxhunter", "헌터x헌터": "hunterxhunter", "헌터×헌터": "hunterxhunter", "hxh": "hunterxhunter",
+               "강철의연금술사": "fma", "강연금": "fma", "히로아카": "mha", "나의히어로아카데미아": "mha"};
   function keyOf(raw) {
     var k = String(raw).toLowerCase().replace(/\s+/g, "");
     k = ALIAS[k] || k;

@@ -49,7 +49,7 @@ if len(series) == 1:  # 시리즈가 하나면 '만화 전체 중 애니가 따�
 cover = (f'<div class="f" style="height:325px;padding:44px 50px">'
          f'<div style="width:30px;height:4px;border-radius:2px;background:{color}"></div>'
          f'<div style="margin-top:18px;font-size:16px;font-weight:600;color:#6B7280">{w["name"]} · 애니 ↔ 만화</div>'
-         f'<div style="margin-top:6px;font-size:44px;font-weight:800;letter-spacing:-1px">{w["name"]} 회차정리</div>'
+         f'<div style="margin-top:6px;font-size:{38 if len(w["name"]) > 9 else 44}px;font-weight:800;letter-spacing:-1px">{w["name"]} 회차정리</div>'
          f'<div style="margin-top:10px;font-size:18px;color:#374151">환산기 · 애니 오리지널 회차 · 명장면 몇 화</div>'
          f'<div style="position:absolute;left:50px;right:50px;bottom:40px"><div style="display:flex;gap:8px">{bars}</div>'
          f'<div style="display:flex;gap:8px;margin-top:8px">{labels}</div></div></div>')
