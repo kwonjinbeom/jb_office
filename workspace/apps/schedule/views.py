@@ -23,7 +23,7 @@ class EventForm(forms.ModelForm):
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "time": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
-            "note": forms.Textarea(attrs={"rows": 3}),
+            "note": forms.Textarea(attrs={"rows": 2}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -32,6 +32,8 @@ class EventForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs.setdefault("class", "input")
         self.fields["title"].widget.attrs["placeholder"] = "무엇을 하나요"
+        self.fields["time"].help_text = ""  # 폼은 작게: 시각을 비우면 하루 종일 (목록에 '종일')
+        self.fields["time"].label = "시각 (비우면 종일)"
 
 
 def _parse_day(value, default):

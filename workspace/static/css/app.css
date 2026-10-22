@@ -1708,7 +1708,7 @@ a.br-addr:hover { color: var(--accent); }
 .sc-wd { padding: 7px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
 .sc-wd.sun, .sc-num.sun { color: #d14343; }
 .sc-wd.sat, .sc-num.sat { color: #2f6bd8; }
-.sc-day { display: flex; flex-direction: column; gap: 2px; height: 104px; padding: 6px 8px; overflow: hidden; color: var(--text); border-left: 1px solid var(--border); }
+.sc-day { display: flex; flex-direction: column; gap: 2px; height: 92px; padding: 6px 8px; overflow: hidden; color: var(--text); border-left: 1px solid var(--border); }
 .sc-day:first-child { border-left: 0; }
 .sc-day:hover { background: #fafbfc; }
 .sc-day.out { background: #fafafa; }
@@ -1720,8 +1720,9 @@ a.br-addr:hover { color: var(--accent); }
 .sc-ev b { font-weight: 600; color: var(--text); }
 .sc-ev.done { text-decoration: line-through; color: var(--text-3); }
 .sc-more { font-size: 11px; color: var(--text-3); padding: 0 5px; }
-.sc-bottom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
-.sc-list { max-height: 300px; overflow-y: auto; }
+.sc-bottom { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+.sc-bottom > .card { display: flex; flex-direction: column; }
+.sc-list { flex: 1; max-height: 232px; overflow-y: auto; }
 .sc-row { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-top: 1px solid var(--border); }
 .sc-row:first-child { border-top: 0; }
 .sc-row.on { background: var(--accent-weak); }
@@ -1733,7 +1734,8 @@ a.br-addr:hover { color: var(--accent); }
 .sc-row.done .sc-title { color: var(--text-3); text-decoration: line-through; }
 .sc-note { margin-left: 8px; font-size: 12px; color: var(--text-3); }
 .sc-list .empty { padding: 28px 16px; }
-.sc-form .form-foot { padding: 10px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.sc-form .card-body { padding: 12px 16px; gap: 10px; }
+.sc-form .form-foot { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
 .danger-text { color: var(--danger); }
 @media (max-width: 900px) {
   .sc-bottom { grid-template-columns: minmax(0, 1fr); }
