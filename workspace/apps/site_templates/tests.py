@@ -331,7 +331,8 @@ class PasteFormatTests(TestCase):
         naver_text = self.client.get(reverse("site_templates:convert", args=[naver.pk])).context["request_text"]
         self.assertIn("## 사진·그림", naver_text)
         self.assertNotIn("사진 → 한두 줄 설명을 반복", naver_text)  # 원문을 다시 짜게 만들던 구성 (0007 에서 뺐다)
-        self.assertNotIn("### 구성", request_text)  # 빈 칸은 늘어놓지 않는다 (black_lukey 는 0008 에서 구성이 생겼다)
+        nunip = self.client.get(reverse("site_templates:convert", args=[self.place("눈잎").pk])).context["request_text"]
+        self.assertNotIn("### 구성", nunip)  # 빈 칸은 늘어놓지 않는다 (black_lukey 는 0008 에서 구성이 생겼다)
         self.assertIn("쇼핑커넥트", naver_text)
         self.assertEqual(PlatformFormat.objects.get(platform="naver").guide.count("\n"), 3)
         wordpress = self.place("워드프레스")
