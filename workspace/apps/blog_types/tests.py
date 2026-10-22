@@ -513,7 +513,7 @@ class PostHubTests(TestCase):
         url = reverse("posts:view")
         res = self.client.get(url)
         self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 임시", "티 임시"])
-        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0])
+        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0, 0])  # … 발행예정글 · 게시글 관리
         res = self.client.get(url, {"sel": "u", "stage": "review"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["티 검토"])  # 미분류
         res = self.client.get(url, {"sel": self.season.category.sel})
@@ -689,16 +689,18 @@ class SitePublishTests(TestCase):
         self.N.objects.filter(pk=self.b.pk).update(created_at=timezone.now() - timedelta(days=1))
         url = reverse("posts:view")
         res = self.client.get(url, {"stage": "post", "sel": "u"})
-        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리", "패딩 고르기", "오래된 미발행", "발행한 글"])
+        self.assertEqual([p.title for p in res.context["posts"]], ["자바 정리", "패딩 고르기", "오래된 미발행"])  # 발행 완료는 게시글 관리
         self.assertEqual(res.context["sel"], "")  # 분류 조건은 쓰지 않는다
         self.assertNotContains(res, 'data-bt-tree="class"')
         self.assertNotContains(res, 'class="wr-group"')
         self.assertContains(res, "bt-layout-1")
-        res = self.client.get(url, {"stage": "post", "pub": "done"})
+        # 게시글 관리 (2026-10-22 사용자): 발행예정글 다음 탭, 발행 완료한 글
+        res = self.client.get(url, {"stage": "done"})
         self.assertEqual([p.title for p in res.context["posts"]], ["발행한 글"])
-        res = self.client.get(url, {"stage": "post", "pub": "todo"})
-        self.assertNotIn(done.title, [p.title for p in res.context["posts"]])
-        self.assertContains(res, '<a href="?stage=post&amp;pub=done">발행 완료</a>', html=False)
+        self.assertEqual([(t["label"], t["count"]) for t in res.context["tabs"]][2:], [("발행예정글", 3), ("게시글 관리", 1)])
+        self.assertContains(res, "wr-compact")  # 발행예정글과 같은 표
+        view = self.client.get(url, {"p": f"tistory:{done.pk}"})
+        self.assertEqual(view.context["pl_stage"], "done")  # 글 보기 왼쪽 목록도 게시글 관리
         self.T.objects.create(title="임시", stage="temp")
         res = self.client.get(url, {"stage": "temp"})
         self.assertContains(res, 'data-bt-tree="list"')  # 다른 단계는 한 건씩 (왼쪽은 글 목록)
@@ -785,7 +787,7 @@ class SimpleClassesTests(TestCase):
                          ["코스피", "나스닥", "상품 추천", "그 외"])
         self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.all()))  # 사이트마다 '그 외' 하나
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
-        self.assertTrue(Category.objects.get(name="AI 소식").direction)  # 방향 = 글쓰기 컨셉
+        self.assertTrue(Category.objects.get(name="코스피").direction)  # 방향 = 글쓰기 컨셉
         trashed = TrashEntry.objects.filter(model_label="blog_types.section")
         self.assertEqual(sorted(trashed.values_list("title", flat=True)), ["IT/AI", "광고 수익 (조회수)", "판매 수익 (커넥트)"])
         self.assertIn("blog_types.subtype", trashed.get(title="판매 수익 (커넥트)").members)  # 복원하면 아래까지 함께
@@ -848,3 +850,36 @@ class TempPostsTests(TestCase):
         self.assertEqual([p.title for p in res.context["posts"]], ["눈잎 새 글", "눈잎 글", "밤밤 글", "사이트 없는 글"])
         one = self.client.get(reverse("posts:view"), {"stage": "temp", "p": f"tistory:{Post.objects.first().pk}"})
         self.assertContains(one, '<div class="pl-group">눈잎</div>', count=1)
+
+
+class SiteCleanupTests(TestCase):
+    """0018 (2026-10-22 사용자): AI 소식은 커스텀 고정 주제(memorily), 글 사이트·분류 바로잡기, memorily 에러 글은 휴지통."""
+
+    def test_ai_news_is_custom_topic_on_memorily(self):
+        from apps.routines.models import FixedTopic
+        topic = FixedTopic.objects.get(name="AI 소식")
+        self.assertEqual((topic.site, topic.per_week), ("memorily", 7))
+        self.assertIn("설명할 가치가 없는 업그레이드", topic.note)
+        self.assertFalse(Category.objects.filter(name="AI 소식").exists())
+        self.assertNotIn("AI", Blog.objects.get(name="black_lukey").content)
+
+    def test_posts_get_new_site_and_error_post_goes_to_trash(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.naver_writing.models import Post as NaverPost
+        from apps.writing.models import Post
+        mig = import_module("apps.blog_types.migrations.0018_site_cleanup")
+        kospi = Post.objects.create(title="코스피 3.29% 반등 다음 날 다시 약세, 9거래일 종가표로 보는 지금 위치", target="눈잎")
+        heat = NaverPost.objects.create(title="전기장판 vs 온수매트 vs 탄소매트, 월 전기료 직접 계산하고 고르기 (2026 겨울)", target="black_lukey")
+        anime = Post.objects.create(title="나루토 회차정리 애니만화 환산기 명장면 등 모음", target="memorily",
+                                    bt_category=Category.objects.get(name="그 외", section__name="눈잎"))
+        err = Post.objects.create(title=mig.TRASH_TITLES[0], target="memorily")
+        mig.forward(django_apps, None)
+        kospi.refresh_from_db(), heat.refresh_from_db(), anime.refresh_from_db()
+        self.assertEqual((kospi.target, kospi.bt_category.name), ("밤밤", "코스피"))
+        self.assertEqual((heat.target, heat.bt_category.section.name, heat.bt_category.name), ("밤밤", "밤밤", "상품 추천"))
+        self.assertEqual((anime.target, anime.bt_category), ("memorily", None))
+        self.assertFalse(Post.objects.filter(pk=err.pk).exists())
+        self.assertTrue(Post.all_objects.filter(pk=err.pk, deleted_at__isnull=False).exists())
