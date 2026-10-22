@@ -268,7 +268,8 @@ class PasteFormatTests(TestCase):
         tistory = self.place("memorily")
         request_text = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["request_text"]
         self.assertIn("## 변환 원칙 (원문이 기준)", request_text)
-        self.assertIn("## 사진·그림 (변환이 끝까지 채운다)", request_text)
+        self.assertIn("## 사진·그림 (변환이 끝까지 채운다", request_text)
+        self.assertIn("원문에 자리가 없어도 글마다 두 가지를 판단한다", request_text)  # 사진 1장 · 가공이미지 (2026-10-22 사용자)
         self.assertIn("맞는 사진이 없으면 그 줄을 지운다", request_text)
         self.assertNotIn("못 찾았으면 [사진: 설명]", request_text)
         self.assertNotIn("## 글 다듬기", request_text)  # 원문을 다시 짜게 만들던 규칙
