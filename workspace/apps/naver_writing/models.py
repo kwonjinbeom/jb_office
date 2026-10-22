@@ -48,6 +48,7 @@ class Post(TrashableModel):
                                on_delete=models.SET_NULL, related_name="%(app_label)s_posts")
     # 어느 계정(블로그)을 겨냥해 쓴 글인지 (2026-10-16 사용자: 글 관리에 '타겟' 칸). 원고.md 의 `사이트:` 줄에서 온다.
     target = models.CharField("사이트", max_length=60, blank=True, help_text="이 글을 올릴 사이트 이름 (예: memorily, 눈잎)")
+    custom = models.BooleanField("커스텀", default=False, help_text="일일루틴 하루 분량이 아닌 글 (고정 주제·추가 실행·따로 요청한 글)")
     created_at = models.DateTimeField("만든 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 

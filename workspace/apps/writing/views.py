@@ -78,7 +78,8 @@ def _classify_draft(post, draft):
 
 
 def _draft_post(d):
-    post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site)
+    post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site,
+                custom=d.custom)
     _classify_draft(post, d)
     post.save()
     post.created_at = drafts_mod.written_at(d)  # 만든 날 = 원고를 쓴 날 (가져온 날이 아니라)
@@ -104,6 +105,16 @@ def fill_targets(drafts):
             post.save(update_fields=["target"])
 
 
+def fill_custom(drafts):
+    """이미 들어온 글 중 커스텀 원고(`고정주제:`·`커스텀:` 줄)와 제목이 같은 것을 커스텀으로 (그 표시가 생기기 전에 가져온 글)."""
+    from apps.naver_writing.models import Post as NaverPost
+
+    titles = [d.title for d in drafts if d.custom]
+    if titles:
+        for model in (Post, NaverPost):
+            model.all_objects.filter(custom=False, title__in=titles).update(custom=True)
+
+
 def auto_import_drafts():
     """T26 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
 
@@ -114,6 +125,7 @@ def auto_import_drafts():
     existing = set(Post.all_objects.values_list("title", flat=True)) | set(NaverPost.all_objects.values_list("title", flat=True))
     drafts = drafts_mod.list_drafts()
     fill_targets(drafts)
+    fill_custom(drafts)
     added = 0
     for d in drafts:
         number = d.code[1:]

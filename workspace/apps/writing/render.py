@@ -29,6 +29,7 @@ CAPTION_STYLE = "text-align:center;color:#6b7280;font-size:14px;margin-top:-8px"
 TABLE_STYLE = "border-collapse:collapse;width:100%;font-size:15px"
 CELL_STYLE = "border:1px solid #d1d5db;padding:8px"
 HEAD_STYLE = "border:1px solid #d1d5db;background:#f3f4f6;padding:8px"
+HOT_CELL_STYLE = CELL_STYLE + ";background:#fff4e5"  # 🔥 로 시작하는 표 줄 (화제 종목 등, 2026-10-22 사용자)
 QUOTE_STYLE = "margin:18px 0;padding:12px 16px;border-left:4px solid #d1d5db;background:#f9fafb;color:#374151"
 HR_STYLE = "border:0;border-top:1px solid #e5e7eb;margin:28px 0"
 IMG_STYLE = "max-width:100%;height:auto"
@@ -97,6 +98,15 @@ def _flatten_header(out: str) -> str:
     return re.sub(r"<th(\s[^>]*)?>(.*?)</th>", head_cell, out, flags=re.S)
 
 
+HOT_ROW = re.compile(r"<tr>\s*<td[^>]*>\s*(?:<strong>\s*)?🔥.*?</tr>", re.S)
+
+
+def _hot_rows(out: str) -> str:
+    """첫 칸이 🔥 로 시작하는 표 줄은 칸마다 연한 주황 바탕 (공모주 화제 종목 등, 2026-10-22 사용자: 색을 칠해 줘)."""
+    plain = f'style="{CELL_STYLE};text-align:'
+    return HOT_ROW.sub(lambda m: m.group(0).replace(plain, f'style="{HOT_CELL_STYLE};text-align:'), out)
+
+
 # 문단 하나에 이미지만 있는 것 + 바로 뒤 기울임(*문장*) 한 줄 = 이미지와 캡션
 IMAGE_BLOCK = re.compile(
     r"<p>\s*<img ([^>]*?)\s*/?>\s*(?:<br\s*/?>\s*<em>(.*?)</em>\s*)?</p>(?:\s*<p><em>(.*?)</em></p>)?", re.S
@@ -136,7 +146,7 @@ def _known_styles() -> set[str]:
     """이 도구가 직접 다는 style 만 남긴다. 웹 문서에서 붙여 온 글꼴·색 같은 꾸밈은 버린다."""
     base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
             "text-align:center;margin:18px 0"}
-    cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE) for a in ("left", "center", "right")}
+    cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE, HOT_CELL_STYLE) for a in ("left", "center", "right")}
     return {s.replace(" ", "") for s in base | cells | {CELL_STYLE, HEAD_STYLE}}
 
 
@@ -237,7 +247,7 @@ def _decorate(out: str) -> str:
     """꾸밈 없는 표·인용·구분선·이미지에 붙여넣기용 인라인 style 을 단다. 이미 style 이 있으면 그대로 둔다."""
     out = out.replace("<table>", f'<table style="{TABLE_STYLE}">')
     out = re.sub(r'<(th|td)(?: style="text-align: (\w+);")?>', lambda m: _cell(m.group(1), m.group(2)), out)
-    out = _flatten_header(out)
+    out = _hot_rows(_flatten_header(out))
     out = out.replace("<blockquote>", f'<blockquote style="{QUOTE_STYLE}">')
     out = re.sub(r"<hr\s*/?>", f'<hr style="{HR_STYLE}">', out)
     out = IMAGE_BLOCK.sub(_image, out)

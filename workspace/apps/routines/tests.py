@@ -725,16 +725,21 @@ class FixedTopicTests(Login):
         self.assertEqual(FixedTopic.all_objects.filter(deleted_at__isnull=False).count(), 2)  # 경기 주제 둘은 휴지통
         kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
         self.assertIn("앞으로 한 달", kr.note)
-        self.assertIn("최대한 많이", kr.note)
+        # 2차 피드백 (2026-10-22, 0015): 제목 고정 · 청약 풀이 · 🔥 화제 종목 · 잡주 빼기
+        for text in ["제목은 고정, 날짜만 바꾼다", "'청약'은 상장 전에", "🔥 화제 종목", "빼는 종목 (잡주)"]:
+            self.assertIn(text, kr.note)
+        self.assertNotIn("기존 지침", kr.note)
         housing = FixedTopic.objects.get(name="청약·임대주택 공고 (서울·경기)")
         self.assertIn("한 글 안에서 '서울' · '경기' 소제목으로 나눠 쓴다", housing.note)
         self.assertIn("SH 서울주택도시공사 · GH 경기주택도시공사", housing.note)
+        self.assertIn("서울을 먼저 다 적고 경기를 그다음에", housing.note)
         policy = FixedTopic.objects.get(name="청년·신혼 정책 (서울·경기)")
         self.assertIn("주택 청약·임대 공고는 다루지 않는다", policy.note)
         self.assertNotIn("기존 지침", policy.note)
+        self.assertIn("이미 마감된 사업은 쓰지 않는다", policy.note)
         prompt = self.client.get(reverse("routines:topics")).context["topics"][0].prompt
         self.assertIn("공모주는 앞으로 한 달·분기", prompt)
-        self.assertIn("최대한 많이", prompt)
+        self.assertIn("🔥 화제 종목", prompt)
 
     def test_run_all_topics(self):
         """전체 실행 (2026-10-21 사용자): 고정 주제 모두를 한 터미널에서 차례로"""
