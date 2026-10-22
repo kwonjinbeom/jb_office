@@ -59,6 +59,73 @@ def _mark_lines(text: str) -> str:
     return "\n".join(out)
 
 
+# 정보 카드 (2026-10-23 사용자: 갈 곳·작품의 입장 마감·입장료·출연·러닝타임 같은 정보는 서술하지 말고 보기 쉽게 —
+# 시간표 표와는 완전히 다른 디자인으로, 앞으로 같은 유형에 똑같이). 원고·변환본에 이렇게 쓴다:
+#   ::: 장소 | 오죽헌
+#   ⏰ 관람 | 09:00~18:00
+#   🎫 예약 | [공식 안내](https://…)
+#   :::
+# 종류마다 색 하나: 장소(지역 놀거리·축제) · 맛집(카페·식당) · 작품(영화·OTT) · 제품(출시).
+# 칸 합치기 없이 두 칸 표로 그린다 — 네이버·티스토리에 붙여도 표·칸 바탕색·글자색이 남는다 (칸 합치기는 네이버에서 깨진다).
+CARD_KINDS = {  # 종류: (머리 칸 이름, 진한 색, 연한 바탕, 테두리)
+    "장소": ("가 볼 곳", "#1f6f5c", "#eef6f2", "#cfe3da"),
+    "맛집": ("맛집·카페", "#a4501d", "#fcf3ec", "#efd9c7"),
+    "작품": ("작품 정보", "#3b3a8c", "#f0f0fa", "#d7d7ef"),
+    "제품": ("제품 정보", "#24527a", "#edf3f9", "#cddcea"),
+}
+CARD_TABLE_STYLE = "border-collapse:collapse;width:100%;font-size:15px;margin:18px 0"
+
+
+def _card_styles(kind: str) -> dict:
+    _, dark, tint, line = CARD_KINDS[kind]
+    return {
+        "head_label": f"border:1px solid {dark};background-color:{dark};color:#ffffff;padding:10px 12px;"
+                      "font-size:13px;font-weight:bold;text-align:center;width:28%",
+        "head_name": f"border:1px solid {dark};background-color:{dark};color:#ffffff;padding:10px 14px;"
+                     "font-size:16px;font-weight:bold;text-align:left",
+        "label": f"border:1px solid {line};background-color:{tint};color:{dark};padding:9px 12px;"
+                 "font-weight:bold;text-align:left;width:28%",
+        "value": f"border:1px solid {line};background-color:#ffffff;color:#333333;padding:9px 14px;text-align:left",
+    }
+
+
+CARD_STYLES = {s for kind in CARD_KINDS for s in _card_styles(kind).values()} | {CARD_TABLE_STYLE}
+CARD = re.compile(r"^:::[ \t]*(?P<kind>장소|맛집|작품|제품)[ \t]*\|[ \t]*(?P<name>[^\n]+?)[ \t]*\n(?P<rows>.*?)\n:::[ \t]*$",
+                  re.M | re.S)
+_CARD_LINK = re.compile(r"\[([^\]\n]+)\]\((https?://[^)\s]+)\)")
+
+
+def _card_inline(text: str) -> str:
+    """카드 칸 안의 글: 이스케이프하고 [글](주소) 링크와 **굵게** 만 살린다 (마크다운 변환기는 HTML 표 안을 보지 않는다)."""
+    out, last = [], 0
+    for m in _CARD_LINK.finditer(text):
+        out.append(html.escape(text[last:m.start()], quote=False))
+        out.append(f'<a href="{html.escape(m.group(2), quote=True)}">{html.escape(m.group(1), quote=False)}</a>')
+        last = m.end()
+    out.append(html.escape(text[last:], quote=False))
+    return BOLD.sub(r"<strong>\1</strong>", "".join(out))
+
+
+def _card(m: re.Match) -> str:
+    kind, s = m["kind"], _card_styles(m["kind"])
+    rows = [f'<tr><td style="{s["head_label"]}">{CARD_KINDS[kind][0]}</td>'
+            f'<td style="{s["head_name"]}">{_card_inline(m["name"])}</td></tr>']
+    for line in m["rows"].split("\n"):
+        label, sep, value = line.partition("|")
+        if not line.strip():
+            continue
+        if not sep:  # 이름표 없는 줄은 앞 줄 값에 이어 쓴 것
+            label, value = "", line
+        rows.append(f'<tr><td style="{s["label"]}">{_card_inline(label.strip())}</td>'
+                    f'<td style="{s["value"]}">{_card_inline(value.strip())}</td></tr>')
+    return f'\n<table style="{CARD_TABLE_STYLE}"><tbody>{"".join(rows)}</tbody></table>\n'
+
+
+def cards(text: str) -> str:
+    """::: 종류 | 이름 … ::: 덩어리를 정보 카드 표(HTML)로. 마크다운 변환 전에 부른다."""
+    return CARD.sub(_card, text)
+
+
 BOLD = re.compile(r"\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*")
 
 
@@ -147,7 +214,7 @@ def _known_styles() -> set[str]:
     base = {*SLOT_STYLE.values(), CAPTION_STYLE, TABLE_STYLE, QUOTE_STYLE, HR_STYLE, IMG_STYLE,
             "text-align:center;margin:18px 0"}
     cells = {f"{b};text-align:{a}" for b in (CELL_STYLE, HEAD_STYLE, HOT_CELL_STYLE) for a in ("left", "center", "right")}
-    return {s.replace(" ", "") for s in base | cells | {CELL_STYLE, HEAD_STYLE}}
+    return {s.replace(" ", "") for s in base | cells | CARD_STYLES | {CELL_STYLE, HEAD_STYLE}}
 
 
 KNOWN_STYLES = _known_styles()
@@ -259,7 +326,7 @@ def render_body(text: str) -> str:
     if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
         return quote_as_body(soft_check_dates(_decorate(clean_html(text))))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(cards(text))), extensions=["tables", "sane_lists", "nl2br"]))
     return quote_as_body(soft_check_dates(clean_html(out)))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 
