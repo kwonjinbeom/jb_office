@@ -1776,3 +1776,14 @@ a.br-addr:hover { color: var(--accent); }
 .wr-site-filter { width: 128px; }
 .wr-plan { margin: 0; }
 .wr-plan .input { width: 128px; font-variant-numeric: tabular-nums; }
+/* 발행예정글 카테고리 수정: 누르면 넣은 카테고리 칩 대신 바꾸기 고르기 */
+.wr-cat-move { display: none; }
+.cat-editing .wr-cat-move { display: block; }
+.cat-editing .wr-cat-chip { display: none; }
+.cat-editing .wr-cat-move + .wr-cat-move { margin-top: 4px; }
+/* 발행예정글 두 표: 예정일 없음 7 · 정함 3 (2026-10-22 사용자) */
+.ph-split { flex: 1; min-height: 0; display: grid; grid-template-rows: minmax(0, 7fr) minmax(0, 3fr); gap: 8px; }
+.ph-split-part { display: flex; flex-direction: column; min-height: 0; border-top: 1px solid var(--border); }
+.ph-split-part > .grid-wrap { flex: 1; min-height: 0; overflow: auto; }
+.ph-split-head { padding: 7px var(--gutter); font-size: 12.5px; font-weight: 700; color: var(--text); background: var(--muted-weak); border-bottom: 1px solid var(--border); }
+.wr-plan-all { width: 128px; }
