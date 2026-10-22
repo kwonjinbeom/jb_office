@@ -5,7 +5,10 @@
 발행예정글 탭과 그 단계의 글. 트리에서 고르면 그 아래 글만 보인다. 글 보기·쓰기·상태 바꾸기·옮기기는 각 글쓰기 앱의 주소를 그대로 쓴다
 (글은 여전히 writing.Post / naver_writing.Post 두 표에 있다).
 
-주소: ?stage=temp|review|post|done &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만) &custom=1(커스텀 글만) &view=list(임시글·검토글을 목록으로)
+주소: ?stage=temp|review|post|done &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만) &custom=1(커스텀 글만) &site=사이트 이름
+     &view=list(임시글·검토글을 목록으로)
+
+발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일(planned_on)을 정해 그 날짜 순으로 늘어놓는다.
 
 커스텀 (2026-10-22 사용자): 일일루틴 하루 분량(11편)이 아닌 글 — 커스텀 글쓰기의 고정 주제·추가 실행·따로 요청한 글.
 원고의 `고정주제:`·`커스텀:` 줄로 가린다 (writing.Post.custom).
@@ -39,8 +42,10 @@ TABLE_STAGES = ("post", "done")  # 늘 표로 보는 탭 (분류 트리·한 건
 CLASS_KINDS = {"section", "category", "type", "sub", "unclassified"}
 
 
-def _filtered(writer, kind, obj, q, today=False, custom=False):
+def _filtered(writer, kind, obj, q, today=False, custom=False, site=""):
     qs = classify.post_model(writer).objects.all()
+    if site:
+        qs = qs.filter(target=site)
     if kind in CLASS_KINDS:
         qs = qs.filter(classify.node_filter(kind, obj))
     if q:
@@ -76,14 +81,15 @@ def _params(request, stage=None):
     if kind not in CLASS_KINDS or obj is None:
         sel, kind, obj = "", None, None
     view = "list" if stage not in TABLE_STAGES and get.get("view") == "list" else ""  # 임시글·검토글 목록 보기
-    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "view": view,
+    site = get.get("site", "") if get.get("site", "") in sites.names() else ""
+    return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "view": view, "site": site,
             "q": get.get("q", "").strip(), "today": get.get("today") == "1", "custom": get.get("custom") == "1"}
 
 
 def _query(p, **override):
     """조건을 주소 뒤에 붙일 문자열로 (빈 값은 뺀다)."""
     vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "",
-            "custom": "1" if p.get("custom") else "", "view": p.get("view", "")}
+            "custom": "1" if p.get("custom") else "", "site": p.get("site", ""), "view": p.get("view", "")}
     vals.update(override)
     return urlencode({k: v for k, v in vals.items() if v})
 
@@ -92,7 +98,7 @@ def _collect(p, prefetch=False):
     """두 편집기의 글을 한 목록으로 (만든 순서, 최신이 위) + 단계별 글 수."""
     posts, counts = [], dict.fromkeys(STAGE_KEYS, 0)
     for w in classify.WRITERS:
-        base = _filtered(w, p["kind"], p["obj"], p["q"], p["today"], p["custom"])
+        base = _filtered(w, p["kind"], p["obj"], p["q"], p["today"], p["custom"], p.get("site", ""))
         for key in STAGE_KEYS:
             counts[key] += _in_stage(base, key).count()
         qs = classify.with_classification(_in_stage(base, p["stage"]))
@@ -104,7 +110,9 @@ def _collect(p, prefetch=False):
             post.writer_label = "네이버" if w == "naver" else "티스토리"  # 편집기 (분류가 아니다)
             posts.append(post)
     posts.sort(key=lambda x: (x.created_at, x.pk), reverse=True)  # 만든 순서로 고정 (상태를 바꿔도 자리가 그대로)
-    if p["stage"] == "done":  # 게시글 관리: 최근 발행한 글이 위
+    if p["stage"] == "post":  # 발행예정글: 발행 예정일이 빠른 순, 날짜 없는 글은 끝 (그 안에서 최신 순)
+        posts.sort(key=lambda x: x.planned_on.toordinal() if x.planned_on else float("inf"))  # 같은 날·날짜 없음은 최신 순 그대로
+    elif p["stage"] == "done":  # 게시글 관리: 최근 발행한 글이 위
         posts.sort(key=lambda x: x.published_on or x.created_at.date(), reverse=True)
     elif p["stage"] == "temp":  # 임시글: 사이트별로 묶어(운영 화면 순서, 사이트 없는 글은 끝), 그 안에서 최신 순 (2026-10-22 사용자)
         order = {name: i for i, name in enumerate(sites.names())}
@@ -154,7 +162,8 @@ def _list_page(request, p):
                   "url": f"{reverse('posts:view')}?{_query(p, stage=k, view=p['view'] if k not in TABLE_STAGES else '')}"}
                  for k, label in STAGES],
         "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p), "table_stage": stage in TABLE_STAGES,
-        "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='')}",
+        "clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='', site='')}",
+        "site_filter": p["site"],
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
         "posts": posts,
         "ready_ids": ",".join(ready), "ready_count": len(ready),
@@ -292,6 +301,23 @@ def site(request):
         messages.warning(request, "먼저 글을 고르세요.")
     elif len(posts) > 1:
         messages.success(request, f"{len(posts)}건의 사이트를 {value or '없음'}(으)로 정했습니다.")
+    return _back(request)
+
+
+@require_POST
+def plan(request):
+    """발행 예정일 정하기 (발행예정글 줄마다). post='tistory:3', day=YYYY-MM-DD (빈 값이면 지운다)."""
+    post = _one(request.POST.get("post"))
+    if post is None:
+        messages.warning(request, "글을 찾을 수 없습니다.")
+        return _back(request)
+    raw = request.POST.get("day", "").strip()
+    try:
+        post.planned_on = timezone.datetime.fromisoformat(raw).date() if raw else None
+    except ValueError:
+        messages.warning(request, "날짜를 YYYY-MM-DD 로 넣으세요.")
+        return _back(request)
+    post.save(update_fields=["planned_on", "updated_at"])
     return _back(request)
 
 

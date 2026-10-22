@@ -39,6 +39,8 @@ class Post(TrashableModel):
     publish_status = models.CharField("발행", max_length=10, choices=Publish.choices, default=Publish.TODO)
     published_url = models.URLField("발행 주소", max_length=500, blank=True)
     published_on = models.DateField("발행일", null=True, blank=True)
+    planned_on = models.DateField("발행 예정일", null=True, blank=True,
+                                  help_text="사용자가 정한 발행할 날 (글 관리 › 발행예정글에서 고르고, 이 날짜 순으로 본다)")
     # 글 관리의 글 분류 (대분류 › 카테고리 › 타입 › 하위). 가장 깊게 고른 단계까지 채운다. apps/blog_types/classify.py
     bt_category = models.ForeignKey("blog_types.Category", verbose_name="분류 카테고리", null=True, blank=True,
                                     on_delete=models.SET_NULL, related_name="%(app_label)s_posts")
