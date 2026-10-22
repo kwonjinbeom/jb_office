@@ -188,13 +188,7 @@ def _existing(key, day):
             if len(titles) >= 80:
                 break
     elif key == "writing":
-        from apps.naver_writing.models import Post as NaverPost
-        from apps.writing import drafts
-        from apps.writing.models import Post
-        titles += _newest_drafts(drafts.list_drafts()) + _newest_drafts(drafts.list_drafts(naver_drafts_dir()))
-        for model in (Post, NaverPost):
-            titles += list(model.all_objects.order_by("-created_at").values_list("title", flat=True)[:60])
-        titles += list(FeedEntry.objects.order_by("-published_at").values_list("title", flat=True)[:80])
+        return _ledger()
     elif key in PLATFORMS:
         from apps.writing import drafts
         if key == "tistory":
@@ -218,12 +212,55 @@ def _existing(key, day):
 EXISTING_LINES = 40  # 이미 있는 글은 최근 것만 (2026-10-19 사용자: 120줄이 안내문을 키웠다. 더 옛 원고는 원고 폴더에서 찾는다)
 
 
-def _newest_drafts(items):
+def _by_number(items):
     """원고 폴더를 최근 것(T번호 큰 것)부터. 폴더 이름순이면 T100 이 T11 앞에 온다."""
     def number(d):
         digits = re.sub(r"\D", "", d.key.split("_", 1)[0])
         return int(digits) if digits else -1
-    return [d.title for d in sorted(items, key=number, reverse=True)]
+    return sorted(items, key=number, reverse=True)
+
+
+def _newest_drafts(items):
+    return [d.title for d in _by_number(items)]
+
+
+LEDGER_DRAFTS = 120  # 장부에 넣는 최근 원고 수
+LEDGER_TITLES = 5  # 중분류마다 최근 제목 몇 개
+LEDGER_POSTS = 15  # 원고 말고 글 관리·발행 피드의 최근 글
+LEDGER_CHARS = 36  # 장부 제목 길이
+
+
+def _ledger():
+    """글쓰기의 '이미 있는 글' = 최근 원고 장부: 중분류마다 소분류(글 틀) 횟수 + 최근 제목.
+    작가마다 따로 주제를 고르니 같은 소재·같은 틀이 되풀이됐다 (2026-10-22 사용자).
+    주제 기획(writing_topics.md)이 이걸 보고 글 틀을 돌리고 반복을 막는다. 원고 전체 제목은 기획자가 원고 폴더를 Grep 한다."""
+    from apps.naver_writing.models import Post as NaverPost
+    from apps.writing import drafts
+    from apps.writing.models import Post
+    items = _by_number(drafts.list_drafts())[:LEDGER_DRAFTS]
+    groups = {}
+    for d in items:
+        parts = [p.strip() for p in d.classification.split(">")] if d.classification else ["분류 없음"]
+        parts[0] = re.sub(r"\s*\(.*\)$", "", parts[0])  # '광고 수익 (조회수)' 와 '광고 수익' 을 한 줄로
+        types, titles = groups.setdefault(" > ".join(parts[:2]), (Counter(), []))
+        if len(parts) > 2:
+            types[parts[2]] += 1
+        if len(titles) < LEDGER_TITLES:
+            short = d.title if len(d.title) <= LEDGER_CHARS else d.title[:LEDGER_CHARS] + "…"
+            titles.append(f"{d.code} {short}" + (" [커스텀]" if d.custom else ""))
+    lines = [f"최근 원고 {len(items)}편 — 중분류 [글 틀(소분류) 횟수]: 새 것부터 {LEDGER_TITLES}편"]
+    for cat, (types, titles) in sorted(groups.items()):
+        count = " [" + ", ".join(f"{t} {n}" for t, n in types.most_common()) + "]" if types else ""
+        lines.append(f"- {cat}{count}: " + " / ".join(titles))
+    drafted = {d.title for d in items}
+    others = []
+    for model in (Post, NaverPost):
+        others += list(model.all_objects.order_by("-created_at").values_list("title", flat=True)[:LEDGER_POSTS])
+    others += list(FeedEntry.objects.order_by("-published_at").values_list("title", flat=True)[:LEDGER_POSTS])
+    others = list(dict.fromkeys(t for t in others if t and t not in drafted))[:LEDGER_POSTS]
+    if others:
+        lines += ["", "원고 말고 글 관리·발행 피드의 최근 글:"] + [f"- {t}" for t in others]
+    return "\n".join(lines)
 
 
 def _standard(day):
