@@ -12,10 +12,13 @@
 </div>
 {% endblock %}
 
+{% block body_class %}fill{% endblock %}
+
 {% block content %}
 <div class="sc">
   <section class="card sc-cal" aria-label="{{ month|date:'Y년 n월' }} 달력">
     <div class="sc-week sc-head">{% for w in weekdays %}<div class="sc-wd{% if forloop.first %} sun{% elif forloop.last %} sat{% endif %}">{{ w }}</div>{% endfor %}</div>
+    <div class="sc-weeks" style="--weeks:{{ weeks|length }}">
     {% for week in weeks %}
     <div class="sc-week">
       {% for c in week %}
@@ -27,6 +30,7 @@
       {% endfor %}
     </div>
     {% endfor %}
+    </div>
   </section>
 
   <div class="sc-bottom">
@@ -57,11 +61,11 @@
       </div>
       <form method="post" action="{% url 'schedule:save' %}" class="sc-form">{% csrf_token %}
         <input type="hidden" name="next" value="{{ back }}">{% if editing %}<input type="hidden" name="pk" value="{{ editing.pk }}">{% endif %}
-        <div class="card-body form-grid">
+        <div class="sc-fields">
           {% include "includes/field.html" with field=form.date %}
           {% include "includes/field.html" with field=form.time %}
-          {% include "includes/field.html" with field=form.title cls="span-2" %}
-          {% include "includes/field.html" with field=form.note cls="span-2" %}
+          {% include "includes/field.html" with field=form.title %}
+          {% include "includes/field.html" with field=form.note cls="sc-wide" nolabel=True %}
         </div>
         <div class="form-foot">
           {% if editing %}<button class="btn ghost sm danger-text" formaction="{% url 'schedule:delete' editing.pk %}" formnovalidate>{% include "includes/ic.html" with name="trash" %}삭제</button>{% endif %}

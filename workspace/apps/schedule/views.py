@@ -1,10 +1,12 @@
 """일정관리 (2026-10-22 사용자): 위는 큰 월 달력(칸마다 그날 일정을 작게), 아래 왼쪽은 고른 날 일정 목록, 아래 오른쪽은 입력·수정 폼.
-한 화면에서 다 한다. 주소: ?m=2026-10 (보는 달) · d=2026-10-22 (고른 날) · e=<번호> (고칠 일정)."""
+한 화면에서 다 한다, 스크롤 없이 화면 높이에 맞춘다. 주소: ?m=2026-10 (보는 달) · d=2026-10-22 (고른 날) · e=<번호> (고칠 일정).
+알림: 모든 화면의 static/js/alarm.js 가 alarms 를 묻고, 시각이 된 일정을 우측 상단에 띄운다. 누르면 ack 로 확인을 적는다."""
 import calendar
 from datetime import date, timedelta
 
 from django import forms
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -23,7 +25,7 @@ class EventForm(forms.ModelForm):
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "time": forms.TimeInput(attrs={"type": "time"}, format="%H:%M"),
-            "note": forms.Textarea(attrs={"rows": 2}),
+            "note": forms.TextInput(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -33,7 +35,7 @@ class EventForm(forms.ModelForm):
             field.widget.attrs.setdefault("class", "input")
         self.fields["title"].widget.attrs["placeholder"] = "무엇을 하나요"
         self.fields["time"].help_text = ""  # 폼은 작게: 시각을 비우면 하루 종일 (목록에 '종일')
-        self.fields["time"].label = "시각 (비우면 종일)"
+        self.fields["note"].widget.attrs["placeholder"] = "메모 (선택)"
 
 
 def _parse_day(value, default):
@@ -88,9 +90,13 @@ def index(request):
 @require_POST
 def save(request):
     editing = Event.objects.filter(pk=request.POST.get("pk")).first() if request.POST.get("pk", "").isdigit() else None
+    before = (editing.date, editing.time) if editing else None
     form = EventForm(request.POST, instance=editing)
     if form.is_valid():
-        event = form.save()
+        event = form.save(commit=False)
+        if before and before != (event.date, event.time):
+            event.alarm_ack = None  # 시각을 바꾸면 새 시각에 다시 알린다
+        event.save()
         messages.success(request, "일정을 저장했습니다." if editing else "일정을 추가했습니다.")
         return redirect(_url(event.date, event.date))
     messages.error(request, "날짜와 일정을 확인하세요.")
@@ -111,3 +117,18 @@ def delete(request, pk):
     event.delete()  # 휴지통으로 (7일간 복원)
     messages.success(request, "일정을 휴지통으로 옮겼습니다.")
     return redirect(_url(event.date, event.date))
+
+
+def alarms(request):
+    """지금 알릴 일정: 오늘 · 시각이 지났고 · 아직 확인 안 했고 · 완료 안 한 것."""
+    now = timezone.localtime()
+    due = Event.objects.filter(date=now.date(), time__isnull=False, time__lte=now.time(), alarm_ack__isnull=True, done=False)
+    return JsonResponse({"alarms": [{"id": e.pk, "time": e.time.strftime("%H:%M"), "title": e.title, "note": e.note,
+                                     "ack": reverse("schedule:ack", args=[e.pk]), "url": _url(e.date, e.date, f"&e={e.pk}")}
+                                    for e in due]})
+
+
+@require_POST
+def ack(request, pk):
+    Event.objects.filter(pk=pk).update(alarm_ack=timezone.now())
+    return JsonResponse({"ok": True})
