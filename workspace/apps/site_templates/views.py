@@ -229,10 +229,16 @@ def _render_for(placement, text):
 
 
 def _tags_for(placement):
-    """태그 칸에 붙일 꼴. 네이버는 '#태그 #태그' (쉼표로 붙이면 한 태그로 붙는다), 나머지는 쉼표 그대로."""
-    if placement.site_category.blog.platform == Blog.Platform.NAVER:
+    """태그 칸에 붙일 꼴. 네이버는 '#태그 #태그' (쉼표로 붙이면 한 태그로 붙는다), 블로거는 앞 5개만 (라벨, 2026-10-22 사용자),
+    나머지는 쉼표 그대로."""
+    platform = placement.site_category.blog.platform
+    if platform == Blog.Platform.NAVER:
         from apps.naver_writing.render import tag_line
         return tag_line(placement.converted_tags)
+    if platform == Blog.Platform.BLOGGER:
+        from .prompt import BLOGGER_LABELS
+        labels = [t.strip() for t in placement.converted_tags.split(",") if t.strip()]
+        return ", ".join(labels[:BLOGGER_LABELS])
     return placement.converted_tags
 
 
