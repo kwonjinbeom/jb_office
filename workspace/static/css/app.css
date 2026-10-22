@@ -1430,22 +1430,7 @@ a.br-addr:hover { color: var(--accent); }
 .tp-add { display: flex; align-items: center; gap: 6px; margin: 0; }
 .tp-add .input { flex: 1; max-width: 460px; }
 .rt-sub-add .tp-add { padding-left: 14px; }
-.rt-sub-add td > .tp-add { display: inline-flex; width: calc(100% - 200px); }
-.rt-sub-add .tp-all { float: right; }
-.tp-table .rt-th-run { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-/* 주별 발행 점: 한 칸 34px (topics.DOT_W) — 머리글 날짜와 같은 폭. 채운 점 = 발행, 테두리 진한 점 = 이번 주 */
-.tp-dots { display: inline-flex; vertical-align: middle; }
-.tp-dots form { margin: 0; width: 34px; display: grid; place-items: center; }
-.rt-table .tp-dots form { width: 20px; }
-.tp-dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--border); background: transparent; padding: 0; cursor: pointer; }
-.tp-dot:hover { border-color: var(--accent); }
-.tp-dot.on { background: var(--ok); border-color: var(--ok); }
-.tp-dot.now { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--text-3); }
-.tp-weekhead { display: inline-flex; }
-.tp-weekhead span { width: 34px; text-align: center; font-size: 11px; color: var(--text-3); font-weight: 600; }
-.tp-weekhead span.now { color: var(--text); }
-/* 커스텀 글쓰기 표: 한 줄에 한 주제 */
-/* 커스텀 글쓰기: 왼쪽 자유 글쓰기 · 오른쪽 고정 주제 표 */
+/* 커스텀 글쓰기: 왼쪽 자유 글쓰기 · 오른쪽 사이트별 소재·고정 주제 표 */
 .tp-layout { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 14px; align-items: start; }
 .tp-right { min-width: 0; }
 .tp-free-body { display: grid; gap: 10px; padding: 12px 14px 14px; }
@@ -1460,7 +1445,15 @@ a.br-addr:hover { color: var(--accent); }
 .tp-note-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; line-height: 1.45; }
 .tp-table .btn.sm { height: 26px; }
 .tp-edit td { background: var(--hover); }
-.tp-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px 100px; gap: 6px; }
+.tp-form { display: grid; grid-template-columns: minmax(0, 1fr) 170px; gap: 6px; }
+/* 커스텀 글쓰기 (2026-10-23): 사이트 묶음 머리 줄 · 줄 앞 체크 · 편수 칸 */
+.tp-head { display: flex; align-items: center; gap: 10px; }
+.tp-head .card-title { flex: 1; }
+.tp-site td { background: var(--hover); font-size: 13px; }
+.tp-n { width: 56px; text-align: center; }
+.tp-addrow .tp-add select { flex: none; width: 170px; }
+.rt-sub-site td { padding-top: 7px; padding-bottom: 3px; }
+.rt-sub-item { padding-left: 30px; }
 .tp-form textarea { grid-column: 1 / -1; width: 100%; }
 .tp-form-foot { grid-column: 1 / -1; display: flex; gap: 6px; }
 .rt-panel.rt-history { margin-top: 14px; height: auto; max-height: 640px; min-height: 240px; }

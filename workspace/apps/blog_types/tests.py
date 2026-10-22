@@ -866,7 +866,7 @@ class SiteCleanupTests(TestCase):
         self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
         res = self.client.get(reverse("routines:topics"))
         self.assertContains(res, f'<td class="tp-note" data-tp-edit="{topic.pk}"')  # 지침 칸을 누르면 전체가 보이는 고치기 칸이 열린다
-        self.assertContains(res, "주 1편</option>")
+        self.assertNotContains(res, "주 1편</option>")  # 주당 편수는 뺐다 — 실행할 때 줄마다 편수 (2026-10-23 사용자)
 
     def test_posts_get_new_site_and_error_post_goes_to_trash(self):
         from importlib import import_module
