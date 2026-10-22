@@ -39,7 +39,7 @@
 <div class="op-page">
   <section class="card">
     <table class="grid op-week">
-      <colgroup><col style="width:220px">{% for d in days %}<col>{% endfor %}<col style="width:90px"></colgroup>
+      <colgroup><col style="width:260px">{% for d in days %}<col>{% endfor %}<col style="width:90px"></colgroup>
       <thead>
         <tr><th>사이트</th>{% for d, name, is_today in days %}<th class="c{% if is_today %} is-today{% endif %}">{{ name }} {{ d|date:"j" }}</th>{% endfor %}<th class="c">합계</th></tr>
       </thead>

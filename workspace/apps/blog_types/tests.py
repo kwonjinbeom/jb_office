@@ -858,10 +858,15 @@ class SiteCleanupTests(TestCase):
     def test_ai_news_is_custom_topic_on_memorily(self):
         from apps.routines.models import FixedTopic
         topic = FixedTopic.objects.get(name="AI 소식")
-        self.assertEqual((topic.site, topic.per_week), ("memorily", 7))
+        self.assertEqual((topic.site, topic.per_week), ("memorily", 1))  # 한 번에 1편 (routines 0017)
+        self.assertTrue(topic.note.startswith("한 번에 한 편"))
         self.assertIn("설명할 가치가 없는 업그레이드", topic.note)
         self.assertFalse(Category.objects.filter(name="AI 소식").exists())
         self.assertNotIn("AI", Blog.objects.get(name="black_lukey").content)
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        res = self.client.get(reverse("routines:topics"))
+        self.assertContains(res, f'<td class="tp-note" data-tp-edit="{topic.pk}"')  # 지침 칸을 누르면 전체가 보이는 고치기 칸이 열린다
+        self.assertContains(res, "주 1편</option>")
 
     def test_posts_get_new_site_and_error_post_goes_to_trash(self):
         from importlib import import_module
