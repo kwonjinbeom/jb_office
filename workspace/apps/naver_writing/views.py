@@ -216,15 +216,19 @@ def move(request):
     to = request.POST.get("to", "")
     ids = request.POST.getlist("ids") or [request.POST.get("pk", "")]
     posts = Post.objects.filter(pk__in=[i for i in ids if i.isdigit()])
-    moved, skipped, came_from = 0, 0, None
+    moved, skipped, came_from, arrived = 0, 0, None, []
     for post in posts:
         came_from = came_from or post.stage
         if post.can_move_to(to):
             post.stage = to
             post.save(update_fields=["stage", "updated_at"])
             moved += 1
+            arrived.append(post)
         else:
             skipped += 1
+    if to == Stage.POST:  # 발행예정글: 카테고리가 비면 원고의 '넣을 카테고리'로
+        from apps.blog_types.sites import place_defaults
+        place_defaults(arrived)
     if moved:
         messages.success(request, f"{moved}건을 {Stage(to).label}(으)로 옮겼습니다.")
     if skipped:

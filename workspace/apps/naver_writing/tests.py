@@ -171,3 +171,21 @@ class NaverFormattingTests(TestCase):
         out = paste_html("<p>가</p><h2>소제목</h2><p>나</p>", gaps=True)
         self.assertEqual(out.split("<h2")[0].count("&nbsp;"), 3)
         self.assertEqual(out.split("<h2")[1].count("&nbsp;"), 1)
+
+    def test_work_title_vertical_bar(self):
+        """영화·OTT: '::: 작품' 카드가 있는 소제목은 세로줄 인용 — 작품 이름 크게, 공개일은 아래 작은 줄 (2026-10-23 사용자)"""
+        body = ("> 요약.\n\n## 한눈에 보기\n\n| 공개일 | 작품 |\n|---|---|\n| 11월 6일 | 가능한 사랑 |\n\n"
+                "## 데블스 플랜: 데드 어게인 · 11월 10일\n\n두뇌 서바이벌이에요.\n\n::: 작품 | 데블스 플랜\n📅 공개 | 11월 10일\n:::\n")
+        out = render_body(body)
+        self.assertIn("<h2>한눈에 보기</h2>", out)  # 카드 없는 소제목은 그대로
+        self.assertIn(f'<blockquote style="{QUOTE_STYLES[1]}"><p style="font-size:19px;color:#333333;font-weight:bold">'
+                      '데블스 플랜: 데드 어게인</p><p style="font-size:13px;color:#888888">11월 10일</p></blockquote>', out)
+        self.assertNotIn("<h2>데블스", out)
+        pasted = paste_html(out, gaps=True)
+        self.assertEqual(pasted.split("데블스 플랜: 데드")[0].rsplit("</table>", 1)[1].count("&nbsp;"), 3)  # 글 덩어리처럼 빈 줄 셋
+
+    def test_first_summary_one_sentence_per_line(self):
+        """맨 위 인용 상자(첫 요약)는 문장마다 줄바꿈. 뒤의 인용은 그대로 (2026-10-23 사용자)"""
+        out = render_body("> 세 편이에요. 6일 영화, 10일 예능 순서예요! 1.5배 빨라요\n\n본문.\n\n## 소제목\n\n> 가요. 나요.\n")
+        self.assertIn("세 편이에요.<br>\n6일 영화, 10일 예능 순서예요!<br>\n1.5배 빨라요", out)
+        self.assertIn("가요. 나요.", out)
