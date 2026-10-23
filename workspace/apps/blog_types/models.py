@@ -108,6 +108,9 @@ class SiteCategory(TrashableModel):
     note = models.TextField("메모", blank=True, help_text="메뉴에 보이는 이름이 다르거나, 숨김·글 수 같은 것")
     concept = models.TextField("컨셉", blank=True,
                                help_text="이 카테고리 글의 방향·말투·구성 (사이트별 템플릿의 변환 요청문에 사이트 컨셉 다음으로 들어간다)")
+    # 2026-10-23 사용자 (memorily › AI): 소제목 앞에 빨간 세로 막대 — 부제목 느낌. 붙여넣는 HTML 의 ## 소제목에 인라인 style 로 단다.
+    heading_bar = models.BooleanField("소제목 빨간 막대", default=False,
+                                      help_text="붙여넣는 HTML 의 소제목(##) 앞에 빨간 세로 막대를 단다 (하위 카테고리도 따른다)")
     order = models.PositiveIntegerField("순서", default=0)
 
     class Meta:
