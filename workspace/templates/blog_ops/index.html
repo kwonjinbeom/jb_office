@@ -89,6 +89,7 @@
         <span class="badge {{ r.color }} od-state">{{ r.word }}</span>
         <span class="od-label">{{ r.label }}</span>
         <span class="od-detail">{% for title, url in r.posts %}<a href="{{ url }}" title="{{ title }}">{{ title }}</a>{% if not forloop.last %} · {% endif %}{% empty %}<span class="muted" title="{{ r.reason }}">{{ r.reason|default:"-" }}</span>{% endfor %}</span>
+        {% if r.run %}<span class="od-acts"><button type="button" class="btn sm" data-tp-one="{{ r.run }}" title="{{ r.label }} 1편만 지금 쓰기 (PC 터미널 claude)">{% include "includes/ic.html" with name="server" %}실행</button></span>{% endif %}
       </div>
       {% endfor %}
       {% else %}
@@ -153,4 +154,8 @@
   </section>
 </div>
 {% endwith %}
+{% endblock %}
+
+{% block scripts %}
+{% include "routines/_topic_run_js.html" %}{# 결과 줄의 '실행' = 커스텀 글쓰기 한 줄 실행 #}
 {% endblock %}

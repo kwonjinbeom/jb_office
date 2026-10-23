@@ -2,13 +2,16 @@
 
 - 왼쪽 위 발행 실적: 사이트 × 요일 한 주 (views.index). 칸을 누르면 왼쪽 아래가 그날 · 그 사이트로 바뀐다.
 - 오른쪽 위 일일루틴 글쓰기: 실행 버튼 + 오늘 실행 상태 + 글쓰기 결과 (분류마다 씀·예정·못 씀·없음, routines.results).
+  결과 줄마다 '실행' — 그 소재(또는 매일 고정 주제) 1편만 (커스텀 글쓰기의 한 줄 실행, routines.topics.run).
 - 왼쪽 아래 발행: 그날 발행 예정인 글(발행예정글, 예정일 = 그날)과 발행한 글을 사이트별로. 줄마다 변환 · 발행 완료.
+  오늘이면 오늘 만든 발행예정글 중 예정일을 안 정한 것도 (오늘의 글에서 옮긴 글, 2026-10-23 사용자).
 - 오른쪽 아래 오늘의 글: 오늘 만든 글을 사이트별로. 줄마다 '발행예정으로' (임시·검토에서 한 번에, posts.promote).
 
 글의 사이트는 글 관리와 같다 (posts.site_of: 고른 사이트, 없으면 넣은 곳의 사이트).
 """
 from django.conf import settings
 from django.db.models import Prefetch
+from django.utils import timezone
 
 STAGE_LABELS = {"temp": "임시", "review": "검토", "post": "발행예정"}
 
@@ -42,7 +45,8 @@ def day_posts(blogs, day, done, site=None):
     from apps.blog_types.posts import site_of
     names = {b.name for b in blogs if site in (None, b.pk)}
     rows, seen = [], set()
-    for post in _posts(stage="post", planned_on=day) + _posts(publish_status="done", published_on=day):
+    undated = _posts(stage="post", planned_on=None, created_at__date=day) if day == timezone.localdate() else []
+    for post in _posts(stage="post", planned_on=day) + undated + _posts(publish_status="done", published_on=day):
         if (post.writer, post.pk) in seen or site_of(post) not in names:
             continue
         seen.add((post.writer, post.pk))
@@ -76,7 +80,11 @@ def writing(request, day):
     routine = Routine.objects.filter(key="writing").first()
     if routine is None:
         return None
+    from apps.routines.models import FixedTopic
     rows = writing_results(day)
+    daily = {f"{t.site or '사이트 미정'} > {t.name}": f"f{t.pk}" for t in FixedTopic.objects.filter(daily=True, category=None)}
+    for r in rows:  # 줄마다 실행 (2026-10-23 사용자: 코스피는 시간을 보고 따로 돌린다)
+        r["run"] = r["sel"] or daily.get(r["label"], "")
     return {"routine": routine, "prompt": launcher(routine, day, report=report_url(request, routine, day)),
             "run": routine.runs.filter(day=day).first(), "results": rows, "counts": counts(rows),
             "on_server": settings.IS_SERVER}

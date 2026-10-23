@@ -7,6 +7,7 @@ PythonAnywhere 무료 계정은 허용 목록 밖 주소로 나갈 수 없다 (2
 
 읽은 글과 제목이 같은 '넣은 곳'(그 사이트 카테고리에 넣은 미발행 글)은 발행 완료로 바꾼다 (auto_publish, 2026-10-22 사용자).
 """
+import html
 import re
 import urllib.error
 import urllib.request
@@ -57,12 +58,12 @@ def parse(xml_bytes: bytes) -> list[tuple[str, str, datetime]]:
     root = ET.fromstring(xml_bytes)
     out = []
     for item in root.iter("item"):
-        title, link = (item.findtext("title") or "").strip(), (item.findtext("link") or "").strip()
+        title, link = _clean(item.findtext("title")), (item.findtext("link") or "").strip()
         when = _date(item.findtext("pubDate"))
         if title and link and when:
             out.append((title, link, when))
     for entry in root.iter(f"{ATOM}entry"):
-        title = (entry.findtext(f"{ATOM}title") or "").strip()
+        title = _clean(entry.findtext(f"{ATOM}title"))
         link_el = next((l for l in entry.findall(f"{ATOM}link") if l.get("rel", "alternate") == "alternate"), None)
         when = _date(entry.findtext(f"{ATOM}published") or entry.findtext(f"{ATOM}updated"))
         if title and link_el is not None and when:
@@ -70,9 +71,15 @@ def parse(xml_bytes: bytes) -> list[tuple[str, str, datetime]]:
     return out
 
 
+def _clean(title) -> str:
+    """RSS 제목. 티스토리는 '청약&amp;middot;환불' 처럼 한 번 더 감싸 보내 XML 을 풀어도 '&middot;' 가 남는다
+    (2026-10-23: 그래서 같은 글이 다른 제목이 되어 두 번 세어지고 자동 발행 완료도 안 됐다)."""
+    return html.unescape((title or "").strip())
+
+
 def _norm(title: str) -> str:
-    """제목 견주기: 빈칸·따옴표·가운뎃점은 빼고 소문자로"""
-    return re.sub(r"[\s\"'“”‘’·]", "", title or "").lower()
+    """제목 견주기: 엔티티를 풀고, 빈칸·따옴표·가운뎃점은 빼고 소문자로"""
+    return re.sub(r"[\s\"'“”‘’·]", "", html.unescape(title or "")).lower()
 
 
 def _store(blog, items) -> int:
@@ -95,6 +102,33 @@ def _mark(post, when):
     if post is not None and not post.published_on:  # 발행일은 RSS 에 올라온 날
         post.published_on = timezone.localtime(when).date()
         post.save(update_fields=["published_on", "updated_at"])
+
+
+def align_dates(blog, items) -> int:
+    """이미 발행 완료로 바꾼 글의 발행일을 RSS 에 올라온 날로 (2026-10-23 사용자: 어제 올린 글을 오늘 '발행 완료' 누르면
+    오늘 발행으로 세어졌다). RSS 날보다 늦게 적힌 것만 당긴다. 바꾼 수를 돌려준다."""
+    from apps.blog_types.models import Placement
+    from apps.naver_writing.models import Post as NaverPost
+    from apps.writing.models import Post
+
+    posts = {}
+    for pl in (Placement.objects.filter(site_category__blog=blog, status=Placement.Status.PUBLISHED)
+               .select_related("tistory_post", "naver_post")):
+        if pl.post is not None:
+            for t in {pl.converted_title, pl.post.title}:
+                if t.strip():
+                    posts.setdefault(_norm(t), []).append(pl.post)
+    for model in (Post, NaverPost):
+        for post in model.objects.filter(publish_status=model.Publish.DONE, target=blog.name, placements__isnull=True):
+            posts.setdefault(_norm(post.title), []).append(post)
+    fixed = 0
+    for title, _link, when in items:
+        day = timezone.localtime(when).date()
+        for post in posts.get(_norm(title), []):
+            if post.published_on and post.published_on > day:
+                type(post).objects.filter(pk=post.pk).update(published_on=day)
+                fixed += 1
+    return fixed
 
 
 def auto_publish(blog, items) -> int:
@@ -167,6 +201,7 @@ def record(blog, ok, message, items, where="서버") -> FeedState:
     state.ok = ok
     if ok:
         added, published = _store(blog, items), auto_publish(blog, items)
+        align_dates(blog, items)
         state.message = f"{where} 확인 · 새 글 {added}편" + (f" · 발행 완료 {published}건" if published else "")
     else:
         state.message = message[:200]

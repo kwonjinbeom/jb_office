@@ -1401,8 +1401,8 @@ a.br-addr:hover { color: var(--accent); }
 
 /* 모니터링 대시보드 (2026-10-23 사용자): 네 칸 2×2, 좌우 5:5. 넉넉하면 한 화면, 작으면 칸 높이를 지키고 화면이 스크롤 */
 .page-body.fill:has(.od) { overflow: auto; }
-.od { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      grid-template-rows: minmax(380px, 1fr) minmax(380px, 1fr); gap: 14px; padding: 14px var(--gutter) 18px; }
+.od { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: minmax(420px, 46vh) minmax(620px, 72vh); gap: 14px; padding: 14px var(--gutter) 28px; }
 .od-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .od-card .card-head { flex: none; gap: 10px; min-height: 52px; }
 .od-card .card-title { font-size: 15px; }
@@ -1427,9 +1427,11 @@ a.br-addr:hover { color: var(--accent); }
 /* 목록 칸 (글쓰기 결과 · 그날 발행 · 오늘의 글): 사이트 머리 + 한 줄에 상태 · 제목 · 버튼 */
 .od-step { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--text-2); }
 .od-counts { display: flex; gap: 6px; padding: 12px 18px 4px; }
-.od-group { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 8px 18px;
-            background: var(--muted-weak); border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--text); }
-.od-row { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 18px; border-bottom: 1px solid var(--line-soft); min-width: 0; }
+.od-group { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 14px 18px 8px;
+            background: var(--panel); border-bottom: 2px solid var(--text); font-size: 14px; font-weight: 800; color: var(--text); }
+.od-group .cnt { font-weight: 600; }
+.od-row + .od-group { margin-top: 10px; }
+.od-row { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 6px 18px; border-bottom: 1px solid var(--line-soft); min-width: 0; }
 .od-state { flex: none; min-width: 58px; justify-content: center; }
 .od-label { flex: none; width: 170px; font-weight: 600; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .od-label.od-title { flex: 1; width: auto; min-width: 0; font-weight: 500; }
