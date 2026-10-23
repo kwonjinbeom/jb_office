@@ -51,3 +51,29 @@ class FeedState(models.Model):
     checked_at = models.DateTimeField(null=True, blank=True)
     ok = models.BooleanField(default=False)
     message = models.CharField(max_length=200, blank=True)
+    # 통계 수집 (방문자 · 공감 · 댓글): RSS 와 같은 PC 실행에서 같이 읽는다 (stats.collect)
+    stat_checked_at = models.DateTimeField(null=True, blank=True)
+    stat_ok = models.BooleanField(default=False)
+    stat_message = models.CharField(max_length=200, blank=True)
+
+
+class SiteStat(models.Model):
+    """통계현황 (2026-10-23 사용자): 사이트별 하루 방문자 · 공감 · 댓글.
+    자동 수집(stats.collect)이 채우고, 화면에서 직접 넣을 수도 있다 (hand=True 인 날은 자동이 덮어쓰지 않는다).
+    likes_total · comments_total 은 자동 수집이 본 최근 글들의 공감·댓글 합계 — 전날 합계와의 차이가 그날 공감·댓글이다."""
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name="stats")
+    day = models.DateField("날짜")
+    visitors = models.PositiveIntegerField("방문자", null=True, blank=True)
+    likes = models.PositiveIntegerField("공감", null=True, blank=True)
+    comments = models.PositiveIntegerField("댓글", null=True, blank=True)
+    likes_total = models.PositiveIntegerField(null=True, blank=True)
+    comments_total = models.PositiveIntegerField(null=True, blank=True)
+    hand = models.BooleanField("직접 넣음", default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["day"]
+        constraints = [models.UniqueConstraint(fields=["blog", "day"], name="blog_ops_sitestat_unique")]
+
+    def __str__(self):
+        return f"{self.blog} {self.day}"

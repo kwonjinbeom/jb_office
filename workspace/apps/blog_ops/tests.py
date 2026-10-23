@@ -258,3 +258,85 @@ class DashboardRunTests(TestCase):
         self.assertIn("오늘의 AI 글", titles)
         self.assertIn(undated.title, titles)
         self.assertContains(res, reverse("routines:topic_run"))  # 줄 실행 스크립트
+
+
+class SiteStatsTests(TestCase):
+    """통계현황 (2026-10-23 사용자): 사이트별 방문자 · 공감 · 댓글 추이"""
+
+    def setUp(self):
+        user = get_user_model().objects.create_user("tester2", password="pw-test-1234")
+        self.client.force_login(user)
+        self.naver = Blog.objects.get(name="black_lukey")
+        self.tistory = Blog.objects.get(name="memorily")
+        self.today = timezone.localdate()
+
+    def test_collect_naver_and_tistory(self):
+        import json as _json
+        from datetime import date as _date
+
+        from . import stats
+        visit = b'<visitorcnts><visitorcnt id="20261022" cnt="31"/><visitorcnt id="20261023" cnt="12"/></visitorcnts>'
+        posts = _json.dumps({"result": {"items": [{"sympathyCnt": 3, "commentCnt": 1}, {"sympathyCnt": "2", "commentCnt": 0}]}}).encode()
+        pages = {stats.NAVER_VISIT.format(id="black_lukey"): visit, stats.NAVER_POSTS.format(id="black_lukey"): posts}
+        got = stats.collect(stats.target(self.naver), fetch=lambda url: pages[url], today=_date(2026, 10, 23))
+        self.assertEqual(got["visitors"], {"2026-10-22": 31, "2026-10-23": 12})
+        self.assertEqual((got["likes_total"], got["comments_total"]), (5, 1))
+        self.assertTrue(got["ok"])
+        home = b'<html><div id="jb-stat" hidden data-today="1,204" data-yesterday="987" data-total="5"></div></html>'
+        got = stats.collect(stats.target(self.tistory), fetch=lambda url: home, today=_date(2026, 10, 23))
+        self.assertEqual(got["visitors"], {"2026-10-23": 1204, "2026-10-22": 987})
+        got = stats.collect(stats.target(self.tistory), fetch=lambda url: b"<html></html>")
+        self.assertFalse(got["ok"])
+        self.assertIn("스킨에 통계 칸이 없어요", got["message"])
+
+    def test_record_keeps_hand_and_counts_daily_likes(self):
+        from . import stats
+        from .models import FeedState, SiteStat
+        y = self.today - timedelta(days=1)
+        SiteStat.objects.create(blog=self.naver, day=y, likes_total=10, comments_total=4)
+        SiteStat.objects.create(blog=self.naver, day=y - timedelta(days=1), visitors=7, hand=True)
+        stats.record(self.naver, {"ok": True, "message": "방문자 2일치 · 공감·댓글",
+                                  "visitors": {y.isoformat(): 40, (y - timedelta(days=1)).isoformat(): 99},
+                                  "likes_total": 13, "comments_total": 4})
+        row = SiteStat.objects.get(blog=self.naver, day=self.today)
+        self.assertEqual((row.likes, row.comments), (3, 0))  # 오늘 합계 − 어제 합계
+        self.assertEqual(SiteStat.objects.get(blog=self.naver, day=y).visitors, 40)
+        self.assertEqual(SiteStat.objects.get(blog=self.naver, day=y - timedelta(days=1)).visitors, 7)  # 직접 넣은 날은 그대로
+        self.assertTrue(FeedState.objects.get(blog=self.naver).stat_ok)
+
+    def test_page_and_hand_entry(self):
+        from .models import SiteStat
+        res = self.client.get(reverse("blog_ops:stats"))
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(res.context["has_data"])
+        self.assertContains(res, "직접 넣기")
+        self.client.post(reverse("blog_ops:stats_save"), {"day": self.today.isoformat(), f"visitors_{self.naver.pk}": "1,234",
+                                                           f"likes_{self.naver.pk}": "5", f"comments_{self.naver.pk}": ""})
+        row = SiteStat.objects.get(blog=self.naver, day=self.today)
+        self.assertEqual((row.visitors, row.likes, row.comments, row.hand), (1234, 5, None, True))
+        res = self.client.get(reverse("blog_ops:stats"), {"m": "visitors", "days": 7})
+        self.assertTrue(res.context["has_data"])
+        card = next(c for c in res.context["cards"] if c["blog"] == self.naver)
+        self.assertEqual(card["last"], (self.today, 1234))
+        self.assertEqual(len(res.context["chart"]["cols"]), 7)
+        self.assertContains(res, "black_lukey~")  # 꺾은선 말풍선 자료
+        # 색은 사이트 순서로 고정: 운영 중이 아닌 사이트를 빼도 같은 색
+        colors = {c["blog"].pk: c["color"] for c in res.context["cards"]}
+        self.assertEqual(len(set(colors.values())), len(colors))
+
+    def test_pc_report_carries_stats_and_menu_order(self):
+        import json as _json
+
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from .models import SiteStat
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        payload = _json.loads(self.client.post(reverse("blog_ops:check")).json()["prompt"].partition("\n")[2])
+        self.assertIn({"blog": self.naver.pk, "name": "black_lukey", "platform": "naver",
+                       "address": self.naver.address.rstrip("/"), "naver": "black_lukey"}, payload["stats"])
+        res = self.client.post(reverse("blog_ops:api_feeds"), _json.dumps({"token": "tok", "results": [], "stats": [
+            {"blog": self.naver.pk, "ok": True, "message": "방문자 1일치", "visitors": {self.today.isoformat(): 5}}]}),
+            content_type="application/json")
+        self.assertEqual(res.json()["results"][0]["blog"], "black_lukey 통계")
+        self.assertEqual(SiteStat.objects.get(blog=self.naver, day=self.today).visitors, 5)
+        nav = [c.title for m in self.client.get(reverse("blog_ops:stats")).context["MENUS"] if m.key == "blog" for c in m.children]
+        self.assertEqual(nav[:2], ["통계현황", "모니터링"])

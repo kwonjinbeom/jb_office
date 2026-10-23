@@ -282,14 +282,17 @@ def open_chain(steps, title, claude="claude", allow=()):
 
 
 def check_feeds(payload):
-    """PC 에서 사이트마다 RSS 를 읽어 서버(payload['api'])로 보낸다. 서버가 남긴 결과를 한 줄씩 돌려준다."""
+    """PC 에서 사이트마다 RSS 와 공개 통계(방문자 · 공감 · 댓글)를 읽어 서버(payload['api'])로 보낸다.
+    서버가 남긴 결과를 한 줄씩 돌려준다."""
     from apps.blog_ops import feeds
     results = []
     for f in payload.get("feeds") or []:
         ok, message, items = feeds.read(f.get("url", ""), where="PC")
         results.append({"blog": f.get("blog"), "ok": ok, "message": message,
                         "items": [[t, u, w.isoformat()] for t, u, w in items]})
-    body = json.dumps({"token": payload.get("token", ""), "results": results}, ensure_ascii=False).encode("utf-8")
+    from apps.blog_ops import stats
+    numbers = [stats.collect(s) for s in payload.get("stats") or []]  # 통계현황: 방문자 · 공감 · 댓글
+    body = json.dumps({"token": payload.get("token", ""), "results": results, "stats": numbers}, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(payload["api"], data=body, headers={"Content-Type": "application/json; charset=utf-8"})
     with urllib.request.urlopen(req, timeout=60) as res:
         out = json.loads(res.read().decode("utf-8"))

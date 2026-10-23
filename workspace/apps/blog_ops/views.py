@@ -6,6 +6,7 @@
 - 센 글: RSS 로 읽은 글 + 글 관리에서 발행 완료한 글(넣은 곳 · 사이트만 정한 글) + 예전 발행 계획. 같은 제목은 한 번만.
 - 발행 확인: 서버는 티스토리·네이버에 못 나가서(feeds 머리말) PC 가 RSS 를 읽어 api_feeds 로 보낸다
   ('발행 확인' 버튼 → jbroutine:feeds, 일일루틴 '전체 실행' 때도 같이). 읽은 글과 제목이 같은 미발행 글은 발행 완료로 바뀐다.
+- 통계현황 (stats, 2026-10-23 사용자): 사이트별 방문자 · 공감 · 댓글 추이. 같은 PC 실행에서 같이 읽는다 (stats.py).
 """
 import hmac
 import json
@@ -14,7 +15,8 @@ from datetime import date, datetime, timedelta
 from django.contrib.auth.decorators import login_not_required
 from django.db.models import Max
 from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
-from django.shortcuts import render
+from django.contrib import messages
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -23,8 +25,8 @@ from django.views.decorators.http import require_POST
 from apps.blog_rules.models import Blog
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from . import dash, feeds
-from .models import FeedEntry, FeedState, Plan
+from . import dash, feeds, stats
+from .models import FeedEntry, FeedState, Plan, SiteStat
 
 DAY_NAMES = "월화수목금토일"
 CHECK_HEAD = "# 발행 확인"  # apps/routines/local_run.FEEDS_HEAD
@@ -134,7 +136,9 @@ def check_text(request):
         return ""
     sites = [{"blog": b.pk, "name": b.name, "url": feeds.feed_url(b)}
              for b in Blog.objects.filter(status=Blog.Status.ACTIVE)]
-    payload = {"api": request.build_absolute_uri(reverse("blog_ops:api_feeds")), "token": token, "feeds": sites}
+    targets = [stats.target(b) for b in Blog.objects.filter(status=Blog.Status.ACTIVE)]
+    payload = {"api": request.build_absolute_uri(reverse("blog_ops:api_feeds")), "token": token, "feeds": sites,
+               "stats": targets}
     return f"{CHECK_HEAD}\n{json.dumps(payload, ensure_ascii=False)}\n"
 
 
@@ -182,4 +186,65 @@ def api_feeds(request):
                 items.append((title, url, when if when.tzinfo else timezone.make_aware(when)))
         state = feeds.record(blog, bool(r.get("ok")), str(r.get("message", "")), items, where="PC")
         out.append({"blog": blog.name, "ok": state.ok, "message": state.message})
+    for r in data.get("stats") or []:  # 통계 (방문자 · 공감 · 댓글)
+        blog = blogs.get(r.get("blog"))
+        if blog is not None and isinstance(r, dict):
+            state = stats.record(blog, r)
+            out.append({"blog": f"{blog.name} 통계", "ok": state.stat_ok, "message": state.stat_message})
     return JsonResponse({"results": out}, json_dumps_params={"ensure_ascii": False})
+
+
+PERIODS = [(7, "7일"), (30, "30일"), (90, "90일")]
+
+
+def stats_page(request):
+    """통계현황: 사이트별 방문자 · 공감 · 댓글 추이 (?days=7|30|90 &m=visitors|likes|comments)"""
+    request.nav_key = "blog_stats"
+    today = timezone.localdate()
+    try:
+        n = int(request.GET.get("days", 30))
+    except ValueError:
+        n = 30
+    n = n if n in dict(PERIODS) else 30
+    metric = request.GET.get("m") if request.GET.get("m") in dict(stats.METRICS) else "visitors"
+    days = [today - timedelta(days=n - 1 - i) for i in range(n)]
+    order = list(Blog.objects.values_list("pk", flat=True))  # 색은 사이트 순서로 고정
+    blogs = list(Blog.objects.filter(status=Blog.Status.ACTIVE))
+    data = stats.page_data(blogs, order, days, metric)
+    try:
+        hand_day = date.fromisoformat(request.GET.get("day", ""))
+    except ValueError:
+        hand_day = today
+    hand = {r.blog_id: r for r in SiteStat.objects.filter(blog__in=blogs, day=hand_day)}
+    return render(request, "blog_ops/stats.html", {
+        "page_title": "통계현황", **data, "days": days, "n": n, "metric": metric,
+        "metric_label": dict(stats.METRICS)[metric], "metrics": stats.METRICS, "periods": PERIODS,
+        "hand_day": hand_day, "today": today,
+        "hand_rows": [(b, hand.get(b.pk)) for b in blogs],
+        "checked_at": FeedState.objects.aggregate(m=Max("stat_checked_at"))["m"],
+    })
+
+
+@require_POST
+def stats_save(request):
+    """직접 넣기: 그날 사이트마다 방문자 · 공감 · 댓글. 빈 칸은 그대로 두고, 넣은 날은 자동 수집이 덮어쓰지 않는다."""
+    try:
+        day = date.fromisoformat(request.POST.get("day", ""))
+    except ValueError:
+        day = timezone.localdate()
+    saved = 0
+    for b in Blog.objects.filter(status=Blog.Status.ACTIVE):
+        vals = {m: request.POST.get(f"{m}_{b.pk}", "").strip().replace(",", "") for m, _ in stats.METRICS}
+        vals = {m: int(v) for m, v in vals.items() if v.isdigit()}
+        if not vals:
+            continue
+        row, _ = SiteStat.objects.get_or_create(blog=b, day=day)
+        for m, v in vals.items():
+            setattr(row, m, v)
+        row.hand = True
+        row.save()
+        saved += 1
+    if saved:
+        messages.success(request, f"{day:%m-%d} 숫자를 {saved}개 사이트에 넣었습니다.")
+    nxt = request.POST.get("next", "")
+    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("blog_ops:stats"))
