@@ -435,6 +435,7 @@ def promote(request):
         post.stage = "post"
         post.planned_on = post.planned_on or timezone.localdate()
         post.save(update_fields=["stage", "planned_on", "updated_at"])
+    sites.place_defaults(posts)  # 카테고리는 원고의 '넣을 카테고리'로 — 모니터링에서 바로 변환 (2026-10-23 사용자)
     if posts:
         messages.success(request, f"{len(posts)}건을 발행예정글로 옮겼습니다.")
     return _back(request)

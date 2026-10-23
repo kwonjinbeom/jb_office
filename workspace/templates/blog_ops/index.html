@@ -103,7 +103,7 @@
     <div class="card-head">
       <h3 class="card-title">{% include "includes/ic.html" with name="calendar" %}{% if sel == today %}오늘{% else %}{{ sel|date:"n월 j일" }}{% endif %} 발행{% if picked_site %} · {{ picked_site.name }}{% endif %}</h3>
       {% if picked_site or sel != today %}<a class="hint" href="{% url 'blog_ops:index' %}">오늘 · 모든 사이트</a>{% endif %}
-      <a class="btn sm ghost od-head-r" href="{% url 'posts:planned' %}">발행예정글{% include "includes/ic.html" with name="chevron-right" %}</a>
+      <span class="od-head-r"><button type="button" class="btn sm" data-st-run="{{ ready_ids|join:',' }}" data-st-count="{{ ready_ids|length }}" data-st-url="{% url 'site_templates:run' %}" {% if not ready_ids %}disabled title="카테고리에 넣은 미변환 글이 없습니다"{% else %}title="이 칸의 미변환 글 {{ ready_ids|length }}편을 모두 변환 (PC 터미널 claude)"{% endif %}>전체 변환{% if ready_ids %} {{ ready_ids|length }}{% endif %}</button><a class="btn sm ghost" href="{% url 'posts:planned' %}">발행예정글{% include "includes/ic.html" with name="chevron-right" %}</a></span>
     </div>
     <div class="od-scroll od-list">
       {% for site_name, items in day_groups %}
