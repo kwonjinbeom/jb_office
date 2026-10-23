@@ -377,3 +377,32 @@ class BloggerLabelTests(TestCase):
         self.assertEqual(_tags_for(pl), "코스피, 증시, 반도체, 외국인, 환율")
         pl.site_category = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
         self.assertNotIn("## 블로거 라벨", prompt.build(pl))
+
+
+class PanelPublishTests(TestCase):
+    """변환본 창의 '발행 완료' ('변환 화면 따로 열기' 자리, 2026-10-23 사용자)."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_publish_button_in_panel(self):
+        post = Post.objects.create(title="발행할 글", body="본문", stage="post", target="눈잎")
+        cat = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post, convert_status="done", converted_body="변환본")
+        url = reverse("site_templates:panel") + f"?p=tistory:{post.pk}&next=/blog/posts/view/"
+        res = self.client.get(url)
+        self.assertNotContains(res, "변환 화면 따로 열기")
+        self.assertContains(res, 'name="publish" value="done"')
+        self.client.post(reverse("posts:bulk"), {"ids": f"tistory:{post.pk}", "publish": "done", "next": "/blog/posts/view/"})
+        post.refresh_from_db(), pl.refresh_from_db()
+        self.assertEqual((post.publish_status, pl.status), ("done", "published"))
+        res = self.client.get(url)
+        self.assertContains(res, 'name="publish" value="todo"')  # 되돌리기
+
+
+    def test_publish_from_post_page_goes_back(self):
+        post = Post.objects.create(title="돌아갈 글", body="본문", stage="post", target="눈잎")
+        Placement.objects.create(site_category=SiteCategory.objects.get(blog__name="눈잎", name="공모주"), tistory_post=post)
+        back = "/blog/posts/view/?stage=post&site=%EB%88%88%EC%9E%8E"
+        res = self.client.get(reverse("site_templates:post"), {"p": f"tistory:{post.pk}", "back": back})
+        self.assertContains(res, f'<input type="hidden" name="next" value="{back.replace("&", "&amp;")}">', html=False)
