@@ -141,5 +141,9 @@ def launcher(request, placements, token, redo=""):
         if redo and pl.converted_body.strip():
             part += (f"\n\n## 지난 변환본 (재변환 코멘트대로 고친다)\n### 제목\n{pl.converted_title or '-'}\n"
                      f"### 태그\n{pl.converted_tags or '-'}\n### 본문\n{pl.converted_body}")
+        elif pl.converted_body.strip() and pl.convert_note.strip():
+            # 다시 변환 + '이 글만' (2026-10-23: 카테고리 글 모양을 바꾼 뒤 지난 변환본의 사진·사실은 살리고 모양만 새로)
+            part += (f"\n\n## 지난 변환본 (사진·사실 점검은 살리고 위 '이 글만'대로 고친다)\n### 제목\n{pl.converted_title or '-'}\n"
+                     f"### 태그\n{pl.converted_tags or '-'}\n### 본문\n{pl.converted_body}")
         parts.append(part)
     return "\n\n".join(parts)
