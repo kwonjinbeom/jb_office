@@ -200,6 +200,20 @@ class DashboardTests(TestCase):
         self.assertContains(res, "오늘 · 모든 사이트")
 
 
+    def test_rss_row_with_converted_title_is_not_doubled(self):
+        """밤밤 코스피 (2026-10-23 사용자): 원문 제목과 블로그에 올라간 변환 제목이 달라도 한 줄"""
+        from apps.blog_types.models import Placement, SiteCategory
+        from apps.writing.models import Post
+        bambam = Blog.objects.get(name="밤밤")
+        post = Post.objects.create(title="코스피 -4.13%까지", stage="post", target="밤밤", publish_status="done",
+                                   published_on=self.today)
+        Placement.objects.create(site_category=SiteCategory.objects.get_or_create(blog=bambam, name="주식")[0], tistory_post=post,
+                                 converted_title="코스피 -4.12%까지", status="published")
+        FeedEntry.objects.create(blog=bambam, title="코스피 -4.12%까지", url="https://bambam2222.blogspot.com/1.html",
+                                 published_at=timezone.now())
+        res = self.client.get(INDEX)
+        self.assertEqual([x["title"] for x in dict(res.context["day_groups"])["밤밤"]], ["코스피 -4.13%까지"])
+
 class FeedTitleTests(TestCase):
     """티스토리 RSS 의 '&amp;middot;' (2026-10-23 사용자: 눈잎 어제 숫자가 안 맞았다)."""
 

@@ -1207,6 +1207,25 @@ class DefaultPlacementTests(TestCase):
         self.assertEqual(post.placements.count(), 1)
         self.assertEqual(other.placements.count(), 0)
 
+    def test_monitoring_converts_without_picking(self):
+        """모니터링 (2026-10-23 사용자): '발행예정으로' 옮긴 글·오늘 예정 글은 원고의 넣을 카테고리로 — 고르는 화면 없이 '변환',
+        그 칸에 '전체 변환'."""
+        from django.utils import timezone
+
+        from apps.writing.models import Post
+        temp = Post.objects.create(title="공주 당일치기", stage="temp", target="black_lukey")
+        self.client.post(reverse("posts:promote"), {"ids": f"tistory:{temp.pk}", "next": "/blog/ops/"})
+        self.assertEqual([pl.site_category for pl in temp.placements.all()], [self.cat])
+        temp.placements.all().delete()  # 휴지통 — 다시 넣지 않는다
+        other = Post.objects.create(title="공주 당일치기", stage="post", target="black_lukey", planned_on=timezone.localdate())
+        res = self.client.get(reverse("blog_ops:index"))
+        pl = other.placements.get()
+        self.assertEqual(pl.site_category, self.cat)
+        self.assertFalse(temp.placements.exists())
+        self.assertEqual(res.context["ready_ids"], [pl.pk])
+        self.assertContains(res, f'data-st-run="{pl.pk}" data-st-count="1"', html=False)  # 전체 변환
+        self.assertContains(res, f'data-st-run="{pl.pk}" data-st-url=', html=False)  # 줄마다 변환 (카테고리 고르기 아님)
+
     def test_ai_news_goes_to_memorily_ai(self):
         """AI 소식은 원고의 넣을 카테고리(예: memorily › 기타)보다 memorily › AI 가 먼저 (2026-10-23 사용자: 발행 때 매핑)"""
         from django.conf import settings as dj_settings

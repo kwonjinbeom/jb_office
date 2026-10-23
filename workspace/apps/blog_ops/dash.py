@@ -13,6 +13,8 @@ from django.conf import settings
 from django.db.models import Prefetch
 from django.utils import timezone
 
+from .feeds import _norm
+
 STAGE_LABELS = {"temp": "임시", "review": "검토", "post": "발행예정"}
 
 
@@ -46,21 +48,42 @@ def day_posts(blogs, day, done, site=None):
     names = {b.name for b in blogs if site in (None, b.pk)}
     rows, seen = [], set()
     undated = _posts(stage="post", planned_on=None, created_at__date=day) if day == timezone.localdate() else []
-    for post in _posts(stage="post", planned_on=day) + undated + _posts(publish_status="done", published_on=day):
+    planned = _posts(stage="post", planned_on=day) + undated
+    _place_defaults(planned)
+    for post in planned + _posts(publish_status="done", published_on=day):
         if (post.writer, post.pk) in seen or site_of(post) not in names:
             continue
         seen.add((post.writer, post.pk))
         state = "done" if post.publish_status == post.Publish.DONE else "planned"
         pl = next(iter(post.placements.all()), None)
         rows.append({"post": post, "title": post.title, "url": "", "state": state, "placement": pl, "site": site_of(post)})
-    titles = {r["title"] for r in rows}
+    # 글 관리에 있는 글은 RSS 줄을 또 넣지 않는다. 블로그에는 변환 제목으로 올라가니 그것도 견준다
+    # (2026-10-23 사용자: 밤밤 코스피 글이 원문 제목 · 변환 제목으로 두 줄 떴다)
+    titles = {_norm(t) for r in rows if r["post"] for t in
+              [r["post"].title, *(pl.converted_title for pl in r["post"].placements.all())] if t}
     for b in blogs:  # RSS 로만 읽힌 그날 글 (글 관리에 없는 글)
         if b.name in names:
             for title, url in done.get((b.pk, day), {}).values():
-                if title not in titles:
+                if _norm(title) not in titles:
                     rows.append({"post": None, "title": title, "url": url, "state": "done", "placement": None, "site": b.name})
     rows.sort(key=lambda r: r["state"] != "planned")  # 예정이 위
     return _by_site(rows, blogs, lambda r: r["site"])
+
+
+def _place_defaults(posts):
+    """카테고리가 빈 예정 글은 원고의 '넣을 카테고리'로 넣어 둔다 (2026-10-23 사용자: 모니터링에서 변환을 누르면
+    카테고리가 이미 정해진 글은 고르는 화면 없이 바로 변환). 넣은 글은 placements 를 다시 읽는다."""
+    from apps.blog_types import sites
+    empty = [p for p in posts if not p.placements.all()]
+    if empty and sites.place_defaults(empty):
+        for p in empty:
+            p._prefetched_objects_cache.pop("placements", None)
+
+
+def ready_ids(groups):
+    """'전체 변환'에 넣을 매핑 번호: 그날 예정 글 중 카테고리에 넣었고 아직 변환 안 한 것."""
+    return [x["placement"].pk for _, items in groups for x in items
+            if x["state"] == "planned" and x["placement"] and x["placement"].convert_status == "none"]
 
 
 def new_posts(blogs, day):
