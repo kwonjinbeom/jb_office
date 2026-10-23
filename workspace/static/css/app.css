@@ -1519,7 +1519,8 @@ a.od-item:hover { background: var(--hover); text-decoration: none; }
 .rt-sub-site td { padding-top: 7px; padding-bottom: 3px; }
 .rt-sub-item { padding-left: 30px; }
 .tp-form textarea { grid-column: 1 / -1; width: 100%; }
-.tp-form-foot { grid-column: 1 / -1; display: flex; gap: 6px; }
+.tp-form-foot { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; }
+.tp-daily { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-size: 13px; color: var(--text-2); }
 .rt-panel.rt-history { margin-top: 14px; height: auto; max-height: 640px; min-height: 240px; }
 .rt-panel { display: flex; flex-direction: column; min-width: 0; height: max(560px, calc(100vh - 140px)); overflow: hidden; }
 .rt-launch { display: inline; margin: 0; }

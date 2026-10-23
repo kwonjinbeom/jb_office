@@ -395,6 +395,7 @@ REPORT = """
 REPORT_PC = 'workspace/.venv/Scripts/python workspace/manage.py routine_report {key} <상태> "<한 줄>" --date {day}'
 REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --data-urlencode "step=<한 줄>"'
 EXTRA_TITLE = "이번에 할 것 (추가 실행)"
+DAILY_TOPICS_TITLE = "매일 쓰는 고정 주제 (전체 실행)"
 ALL_ORDER = ("prompt_update", "writing", "daily_ideas")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
 
 
@@ -444,7 +445,23 @@ def launcher(routine, day, report=None, extra="", tree=False):
                 lines += ["", f"### {DATA_TITLES.get(k, k)}", data_text(routine, k, day)]
     if extra and "picks" not in keys:
         lines += ["", f"### {EXTRA_TITLE}", extra]
+    if not extra and routine.key == "writing":
+        lines += _daily_topics(day)
     return "\n".join(lines).rstrip() + "\n" + _report(routine, day, report)
+
+
+def _daily_topics(day):
+    """전체 실행(글쓰기)에 매일 1편씩 붙는 고정 주제 (FixedTopic.daily, 2026-10-23 사용자: AI 소식). 기획 없이 작가에게 바로."""
+    from .models import FixedTopic
+    from .topics import topic_text
+    topics = list(FixedTopic.objects.filter(daily=True).select_related("category__section"))
+    if not topics:
+        return []
+    lines = ["", f"### {DAILY_TOPICS_TITLE}",
+             "일일 분량과 함께 쓴다. 기획자에게 넘기지 않고 작가에게 바로 맡긴다 (T번호는 일일 원고 다음). 글감이 없으면 원고 없이 보고만."]
+    for i, t in enumerate(topics, start=1):
+        lines += ["", f"#### {i}. {t.name}", topic_text(t, day, 1)]
+    return lines
 
 
 def restore_prompt(version, day, report=None):
