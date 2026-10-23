@@ -42,9 +42,12 @@ S = {
     "td": "border:1px solid #cfe9e5;padding:11px 16px;text-align:center",
     "strong": f"font-weight:700;color:{TEAL}",
     "mark": f"{HILITE};font-weight:700",
-    "photos": "width:100%;border-collapse:separate;border-spacing:6px;margin:26px 0",
+    # 사진 크기 고정 (2026-10-23 사용자: 일상 글 사진이 너무 크다 — 세로 사진이 콜라주에서 본문 폭의 반을 다 쓰며 길어졌다).
+    # 콜라주는 가운데 620 폭 · 칸마다 높이 240, 한 장은 620 × 400. 넘치는 부분은 가운데를 남기고 잘린다 (object-fit).
+    "photos": "width:620px;max-width:100%;border-collapse:separate;border-spacing:6px;margin:26px auto",
     "photo_td": "padding:0;vertical-align:top",
-    "photo_img": "display:block;width:100%;height:auto;border-radius:12px",
+    "photo_img": "display:block;width:100%;height:240px;object-fit:cover;border-radius:12px",
+    "photo_one": "display:block;width:620px;max-width:100%;height:400px;object-fit:cover;border-radius:12px;margin:0 auto",
     "caption": "text-align:center;color:#999999;font-size:13px;margin:6px 0 26px",
     "a": f"color:{TEAL};font-weight:700",
 }
@@ -86,11 +89,20 @@ def _photos(m):
         if len(pair) == 2:
             rows.append("<tr>" + "".join(f'<td style="{S["photo_td"]};width:50%">{x}</td>' for x in pair) + "</tr>")
         else:
-            rows.append(f'<tr><td colspan="2" style="{S["photo_td"]}">{pair[0]}</td></tr>')
+            rows.append(f'<tr><td colspan="2" style="{S["photo_td"]}">{pair[0].replace(S["photo_img"], S["photo_one"])}</td></tr>')
     out = f'<table style="{S["photos"]}"><tbody>{"".join(rows)}</tbody></table>'
     if caps:
         out += f'<p style="{S["caption"]}">{" · ".join(caps)}</p>'
     return out
+
+
+def _one_photo(m):
+    """콜라주에 안 든 사진 한 장: width·style 을 떼고 620 × 400 고정. 콜라주 사진·포스터는 그대로."""
+    tag = m.group(0)
+    if S["photo_img"] in tag or S["photo_one"] in tag or 'alt="포스터' in tag:
+        return tag
+    tag = re.sub(r'\s(?:width="\d+"|style="[^"]*")', "", tag)
+    return tag.replace("<img ", f'<img style="{S["photo_one"]}" ', 1)
 
 
 def _table(m):
@@ -110,7 +122,8 @@ def yudi_html(body_html):
     out = body_html.replace(GAP, "")
     out = CARD.sub(_memo, out)
     out = PHOTO_RUN.sub(_photos, out)
-    out = re.sub(r"<img (?![^>]*\bstyle=)", '<img style="border-radius:12px" ', out)  # 한 장짜리 사진도 둥근 모서리
+    # 한 장짜리 사진: 620 × 400 고정 (포스터는 그대로)
+    out = re.sub(r"<img [^>]*>", _one_photo, out)
     out = re.sub(r"<table(?! style=\"(?:" + re.escape(S["photos"]) + r"))[^>]*>.*?</table>", _table, out, flags=re.S)
     out = re.sub(r"<blockquote[^>]*>(.*?)</blockquote>",
                  lambda m: f'<div style="{S["lead"]}">' + re.sub(r"<p[^>]*>", f'<p style="{S["lead_p"]}">', m.group(1)) + "</div>",
