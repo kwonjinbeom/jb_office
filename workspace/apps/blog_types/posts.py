@@ -427,11 +427,13 @@ def plan(request):
 
 @require_POST
 def promote(request):
-    """임시글·검토글을 한 번에 발행예정글로 (모니터링 › 오늘의 글, 2026-10-23 사용자: 바로 발행예정글로 갈 수 있게)."""
+    """임시글·검토글을 한 번에 발행예정글로 (모니터링 › 오늘의 글, 2026-10-23 사용자: 바로 발행예정글로 갈 수 있게).
+    예정일이 없으면 오늘로 — 옮긴 글이 모니터링 '오늘 발행'에 바로 보인다."""
     posts = [p for p in _picked(request) if p.stage in ("temp", "review")]
     for post in posts:
         post.stage = "post"
-        post.save(update_fields=["stage", "updated_at"])
+        post.planned_on = post.planned_on or timezone.localdate()
+        post.save(update_fields=["stage", "planned_on", "updated_at"])
     if posts:
         messages.success(request, f"{len(posts)}건을 발행예정글로 옮겼습니다.")
     return _back(request)
