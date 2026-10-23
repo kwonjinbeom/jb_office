@@ -177,6 +177,9 @@ class DashboardTests(TestCase):
         self.assertContains(res, 'name="publish" value="done"')  # 발행 완료
         new = dict(res.context["new_groups"])
         self.assertIn("오늘 쓴 임시글", [p.title for p in new["밤밤"]])
+        # 오늘의 글: 발행예정은 파랑, 발행 완료는 초록 (2026-10-23 사용자)
+        self.assertContains(res, '<span class="badge blue od-state">발행예정</span>', html=False)
+        self.assertContains(res, '<span class="badge green od-state">발행 완료</span>', html=False)
         self.assertContains(res, reverse("posts:promote"))
         self.assertEqual(res.context["wr"]["routine"].key, "writing")
         self.assertContains(res, "글쓰기 실행")
