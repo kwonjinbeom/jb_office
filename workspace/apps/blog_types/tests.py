@@ -1279,3 +1279,15 @@ class NunipJapanConceptTests(TestCase):
         self.assertIn("오사카 3박 4일", post.title)
         self.assertIn("## 한눈에 보는 일정", post.body)
         self.assertEqual(pl.convert_status, "none")
+
+
+class BambamOtherProductTests(TestCase):
+    """0027: 밤밤 › 그 외 = 제품소개 (2026-10-24 사용자: 글감이 없을 수 없다). 다른 사이트의 '그 외'는 그대로."""
+
+    def test_direction_and_custom_prompt_line(self):
+        from apps.routines.views import _picks_lines
+        other = Category.objects.get(section__name="밤밤", name="그 외")
+        self.assertTrue(other.direction.startswith("제품소개"))
+        self.assertIn("강한 소재", Category.objects.get(section__name="눈잎", name="그 외").direction)
+        text = _picks_lines({other.sel: 2}, "사용자가 고른 분류")
+        self.assertIn("밤밤 > 그 외 — 2편 (컨셉: 제품소개", text)  # 커스텀 글쓰기 안내문에 이 줄로 간다
