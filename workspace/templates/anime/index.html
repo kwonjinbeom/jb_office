@@ -46,7 +46,8 @@
   </nav>
 
   <nav class="bt-tree pl-list" aria-label="작품 목록">
-    <div class="bt-tree-head"><span class="bt-tree-title">작업 순서 · 작품</span></div>
+    <div class="bt-tree-head"><span class="bt-tree-title">작업 순서 · 작품</span>
+      <button type="button" class="btn sm primary" data-an-write="{% url 'anime:write_run' %}" data-count="{{ to_write|length }}"{% if not to_write %} disabled title="원고 없는 담은 작품이 없습니다"{% else %} title="원고 없는 담은 작품 {{ to_write|length }}편: {% for a in to_write %}{{ a.title }}{% if not forloop.last %}, {% endif %}{% endfor %} — PC 터미널 claude 가 글쓰기부터 변환까지 작품마다 차례로"{% endif %}>{% include "includes/ic.html" with name="server" %}글쓰기·변환{% if to_write %} {{ to_write|length }}{% endif %}</button></div>
     <div class="pl-items">
       {% for w in works %}
       <div class="an-work">
@@ -82,6 +83,22 @@
   box.addEventListener("input", function () {
     var q = box.value.trim().toLowerCase();
     document.querySelectorAll(".an-row").forEach(function (r) { r.hidden = q && r.dataset.find.indexOf(q) < 0; });
+  });
+  // 글쓰기·변환: 서버가 안내문을 주면 복사해 jbroutine:anime 로 PC 터미널을 연다 (apps/anime/run.py, routines/local_run.py)
+  var go = document.querySelector("[data-an-write]");
+  if (go) go.addEventListener("click", function () {
+    var n = Number(go.dataset.count || 0);
+    if (!n || !confirm(n + "작품의 회차정리 글을 쓰고 변환까지 합니다. PC 터미널에서 작품마다 차례로 돕니다 (오래 걸려요).")) return;
+    var data = new FormData();
+    data.set("csrfmiddlewaretoken", (window.APP || {}).csrfToken || "");
+    go.disabled = true;
+    fetch(go.dataset.anWrite, { method: "POST", body: data, credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { window.App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); go.disabled = false; return; }
+        window.App.rtLaunch(res.j.prompt, { kind: "anime", key: res.j.key, day: res.j.day, name: "애니 글쓰기·변환" }, true);
+      })
+      .catch(function () { window.App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); go.disabled = false; });
   });
 })();
 </script>

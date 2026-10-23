@@ -7,6 +7,8 @@ claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineR
 링크: jbroutine:<run|update|all|convert|feeds>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
 convert: 글 관리의 '변환'·'전체 변환'·'재변환'. 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
 루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
+anime: 애니 총정리의 '글쓰기·변환' (2026-10-23 사용자). 일일루틴과 따로, 작품마다 새 터미널을 차례로 (전체 실행과 같은 차례 창).
+안내문은 '# 애니 총정리' 로 시작하고 (apps/anime/run.py), 루틴 현황은 남기지 않는다.
 feeds: 모니터링의 '발행 확인' (2026-10-22 사용자). claude 없이 PC 가 사이트마다 RSS 를 읽어 서버로 보낸다 (check_feeds).
 서버(PythonAnywhere 무료)는 티스토리·네이버에 못 나가서다. '전체 실행' 안내문에도 같은 것이 숨어 있어(FEEDS_MARK) 매일 같이 한다.
 """
@@ -29,10 +31,12 @@ from .models import Routine, RoutineRun
 
 WINDOWS = os.name == "nt"
 SCHEME = "jbroutine"
-KINDS = ("run", "update", "all", "convert", "feeds")
+KINDS = ("run", "update", "all", "convert", "feeds", "anime")
 KEY = re.compile(r"[a-z0-9_-]{1,30}")
 PROMPT_HEAD = "# 일일루틴"  # launcher · all_prompt · restore_prompt 가 모두 이렇게 시작한다
 CONVERT_HEAD = "# 사이트 변환"  # apps/site_templates/prompt.LAUNCH_HEAD
+ANIME_HEAD = "# 애니 총정리"  # apps/anime/run.HEAD
+ANIME_PART = re.compile(r"^<!-- 애니 총정리 작품: (a[0-9]{1,8}) -->\n", re.M)  # apps/anime/run.PART
 FEEDS_HEAD = "# 발행 확인"  # apps/blog_ops/views.CHECK_HEAD
 FEEDS_MARK = re.compile(r"^<!-- 발행 확인 (\{.*\}) -->$", re.M)  # 전체 실행 안내문에 숨긴 발행 확인 (routines.views.index)
 
@@ -51,6 +55,8 @@ ROUTINE_ALLOW = [
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
 ]
 ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome"]
+# 애니 글쓰기·변환은 회차 데이터·환산기 빌드·가공이미지를 파이썬으로 돌린다 (애니환산기/build.py · 그림.py, 자동완성 조사)
+ANIME_ALLOW = ["Bash(python *)", "Bash(py *)", "Bash(workspace/.venv/Scripts/python.exe *)"]
 # 루틴은 Sonnet 으로 (2026-10-19 사용자: Opus 는 한 번에 5시간 한도를 많이 쓴다). 보조 claude(서브에이전트)도 같은 모델.
 ROUTINE_MODEL = "sonnet"
 KOREAN = ("모든 말과 진행 보고는 한국어로 한다. 루틴은 스스로 판단해 끝까지 진행하고, 방법·선택·확인을 사용자에게 묻지 않는다. "
@@ -170,13 +176,15 @@ def terminal_command(title, claude, args):
     return ["powershell.exe", "-NoLogo", "-NoProfile", "-NoExit", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded]
 
 
-def _claude_args(name):
-    """claude 에 넘길 인자 (미리 허용한 것 + 브라우저 + 한국어). 설정 파일을 .routine 에 쓴다."""
+def _claude_args(name, allow=()):
+    """claude 에 넘길 인자 (미리 허용한 것 + 브라우저 + 한국어). 설정 파일을 .routine 에 쓴다.
+    allow: 이 실행만 더 허용할 것 (애니 글쓰기·변환의 파이썬). 다른 루틴과 섞이지 않게 설정 파일을 따로 쓴다."""
     folder = settings.BASE_DIR / ".routine"
     folder.mkdir(exist_ok=True)
-    conf, mcp = folder / "settings.json", folder / "mcp.json"
+    conf, mcp = folder / ("settings-extra.json" if allow else "settings.json"), folder / "mcp.json"
     conf.write_text(json.dumps({"model": ROUTINE_MODEL, "env": {"CLAUDE_CODE_SUBAGENT_MODEL": ROUTINE_MODEL},
-                                "permissions": {"allow": ROUTINE_ALLOW, "deny": ROUTINE_DENY}}, ensure_ascii=False, indent=2), encoding="utf-8")
+                                "permissions": {"allow": ROUTINE_ALLOW + list(allow), "deny": ROUTINE_DENY}},
+                               ensure_ascii=False, indent=2), encoding="utf-8")
     mcp.write_text(json.dumps({"mcpServers": MCP_SERVERS}, indent=2), encoding="utf-8")
     ask = f"workspace/.routine/{name} 파일을 읽고 그대로 진행해."
     return [ask, "--model", ROUTINE_MODEL, "--settings", str(conf), "--mcp-config", str(mcp), "--append-system-prompt", KOREAN]
@@ -231,13 +239,13 @@ DONE_TAIL = """
 """
 
 
-def split_all(text):
-    """전체 실행 안내문 → [(루틴 키, 그 루틴의 안내문)]."""
-    pieces = ALL_PART.split(text)
+def split_all(text, part=ALL_PART):
+    """전체 실행 안내문 → [(루틴 키, 그 루틴의 안내문)]. 애니 글쓰기·변환은 part=ANIME_PART (작품마다)."""
+    pieces = part.split(text)
     return [(pieces[i], pieces[i + 1].strip() + "\n") for i in range(1, len(pieces) - 1, 2)]
 
 
-def open_chain(steps, title, claude="claude"):
+def open_chain(steps, title, claude="claude", allow=()):
     """steps: [(안내문 파일 이름, 창 제목)]. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다.
     끝난 루틴 창은 CLOSE_AFTER 초 뒤 닫고(마지막 답·Stop 훅의 git 동기화가 끝나게), 다 끝나면 차례 창도 닫힌다
     (2026-10-20 사용자: 끝났으면 창을 닫았으면). 끝 표시 없이 사람이 창을 닫은 루틴은 그대로 다음으로 간다."""
@@ -256,7 +264,7 @@ def open_chain(steps, title, claude="claude"):
     for name, step_title in steps:
         (done / name).unlink(missing_ok=True)  # 같은 날 다시 누르면 처음부터
         flag = _ps(done / name)
-        argv = terminal_command(step_title, claude, _claude_args(name))
+        argv = terminal_command(step_title, claude, _claude_args(name, allow))
         lines += [
             f"Write-Host {_ps(f'{step_title} 시작 (새 터미널)')}",
             f"$p = Start-Process -FilePath {_ps(argv[0])} -ArgumentList {','.join(_ps(a) for a in argv[1:])} -PassThru",
@@ -302,6 +310,10 @@ def start(link, text):
         if not text.startswith(FEEDS_HEAD):
             raise ValueError("클립보드에 발행 확인 안내가 없습니다. 모니터링에서 '발행 확인'을 다시 누르세요.")
         return "발행 확인을 마쳤습니다. 모니터링 화면이 곧 새로고침됩니다.\n" + check_feeds(json.loads(text[len(FEEDS_HEAD):].strip()))
+    if kind == "anime":
+        if not text.startswith(ANIME_HEAD):
+            raise ValueError("클립보드에 애니 총정리 안내문이 없습니다. 애니 총정리에서 '글쓰기·변환'을 다시 누르세요.")
+        return _start_anime(text, day, find_claude() if WINDOWS else "claude")
     if kind == "convert":
         if not text.startswith(CONVERT_HEAD):
             raise ValueError("클립보드에 사이트 변환 안내문이 없습니다. 글 관리에서 '변환'을 다시 누르세요.")
@@ -345,3 +357,21 @@ def start(link, text):
     (folder / name).write_text(text, encoding="utf-8")
     manual = open_terminal(name, title, claude)
     return f"저장소 폴더에서 실행하세요: {manual}" if manual else done
+
+
+def _start_anime(text, day, claude):
+    """애니 글쓰기·변환: 작품마다 안내문 파일 → 차례 창이 작품마다 새 터미널을 연다 (끝 표시는 전체 실행과 같다)."""
+    parts = split_all(text, ANIME_PART)
+    if not parts:
+        raise ValueError("안내문에 작품이 없습니다. 애니 총정리에서 '글쓰기·변환'을 다시 누르세요.")
+    folder = settings.BASE_DIR / ".routine"
+    folder.mkdir(exist_ok=True)
+    steps = []
+    for i, (k, body) in enumerate(parts, start=1):
+        name = f"anime-{day}-{i}-{k}.md"
+        (folder / name).write_text(body + DONE_TAIL.format(name=name), encoding="utf-8")
+        title = re.search(r"^## (.+?) —", body, re.M)
+        steps.append((name, f"애니 글쓰기·변환 {i}/{len(parts)} {title.group(1) if title else k}"))
+    manual = open_chain(steps, "애니 글쓰기·변환 (차례 창)", claude, ANIME_ALLOW)
+    return (f"저장소 폴더에서 차례로 실행하세요: {manual}" if manual else
+            f"PC 에서 애니 글쓰기·변환을 시작했습니다 ({len(parts)}작품, 작품마다 새 터미널로 차례로).")

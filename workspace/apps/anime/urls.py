@@ -10,4 +10,6 @@ urlpatterns = [
     path("titles/<int:pk>/pick/", views.pick, name="pick"),
     path("titles/<int:pk>/status/", views.status, name="status"),
     path("titles/<int:pk>/delete/", views.delete, name="delete"),
+    path("write/", views.write_run, name="write_run"),
+    path("api/place/<int:pk>/", views.api_place, name="api_place"),
 ]
