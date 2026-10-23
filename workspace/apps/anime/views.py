@@ -7,23 +7,36 @@ md 는 Claude 가 저장소에서 고치고 main 에 올린다 — 서버는 git
 2026-10-23 사용자: 맨 왼쪽에 전체 애니 목록(AnimeTitle, 유명한 순)을 두고 담기·빼기·삭제·상태를 고친다.
 가운데 '작업 순서 · 작품'에는 공통 md + 담은 작품만 나온다 (md 가 있으면 doc_key 로 잇는다).
 주소: ?d=<md 이름> (md 보기) · a=<번호> (md 가 아직 없는 담은 작품).
+
+2026-10-23 사용자: '글쓰기·변환' — 원고 없는 담은 작품(대기·작업 중)을 PC 터미널 claude 가 글쓰기부터 변환까지 (run.py).
 """
+import hmac
 import re
 from pathlib import Path
 
 import markdown
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_not_required
 from django.db.models import Max
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+
+from . import run as anime_run
 from .models import AnimeTitle
 
 MD_EXTENSIONS = ["tables", "fenced_code", "sane_lists"]
 STATUS_KEYS = {key for key, _ in AnimeTitle.STATUS}
+TO_WRITE = ("todo", "doing")  # '글쓰기·변환' 대상: 담은 작품 중 원고가 아직 없는 것
+FOLDER = re.compile(r"T\d+_[^/\\.]+")  # 원고 폴더 (경로 문자·점 없이)
+DOC = re.compile(r"\d{2}_[^/\\.]+")  # 애니총정리 작품 md 이름
 
 
 def _docs():
@@ -65,6 +78,7 @@ def index(request):
     return render(request, "anime/index.html", {
         "page_title": "애니 총정리", "titles": titles, "works": works, "current": current, "html": html,
         "work_count": sum(1 for w in works if w["anime"] or not w["doc"]["guide"]),
+        "to_write": [w["anime"] for w in works if w["anime"] and w["anime"].status in TO_WRITE],
         "statuses": AnimeTitle.STATUS, "here": request.get_full_path(),
     })
 
@@ -113,3 +127,50 @@ def delete(request, pk):
     anime.delete()  # 휴지통으로 (7일간 복원)
     messages.success(request, f"{anime.title} 을(를) 휴지통으로 옮겼습니다.")
     return redirect(_back(request))
+
+
+@require_POST
+def write_run(request):
+    """'글쓰기·변환': 원고 없는 담은 작품의 안내문을 돌려준다 (JSON). 화면이 복사해 jbroutine:anime 링크로 PC 터미널을 연다."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token:
+        return JsonResponse({"error": "설정 화면에서 보고 토큰을 먼저 만드세요. claude 가 글을 서버로 넣을 때 씁니다."}, status=400)
+    works = _works(_docs(), list(AnimeTitle.objects.all()))
+    titles = [w["anime"] for w in works if w["anime"] and w["anime"].status in TO_WRITE]
+    if not titles:
+        return JsonResponse({"error": "원고 없는 담은 작품이 없습니다. 왼쪽 목록에서 담으세요."}, status=400)
+    for a in titles:
+        if a.status != "doing":
+            a.status = "doing"
+            a.save(update_fields=["status", "updated_at"])
+    now = timezone.localtime()
+    return JsonResponse({"prompt": anime_run.launcher(request, titles, token), "key": f"an-{now:%H%M%S}",
+                         "day": now.date().isoformat(), "count": len(titles)})
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def api_place(request, pk):
+    """PC 터미널 claude 가 원고를 main 에 올린 뒤 부른다: folder(원고 폴더) · doc(작품 md 이름).
+    서버에 받은 원고를 발행예정글 + memorily › 애니 매핑 + 변환 완료로 넣고, 애니를 '원고 완료'로 바꿔 md 와 잇는다."""
+    from apps.site_templates.views import _form_fields  # Windows curl 의 한글(cp949) 칸도 읽는다
+    from apps.writing.place_drafts import place
+    from django.apps import apps
+
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    anime = get_object_or_404(AnimeTitle, pk=pk)
+    data = _form_fields(request)
+    folder, doc = data.get("folder", "").strip(), data.get("doc", "").strip().removesuffix(".md")
+    if not FOLDER.fullmatch(folder) or (doc and not DOC.fullmatch(doc)):
+        return HttpResponseBadRequest("folder 는 T번호_이름, doc 은 두자리번호_이름 이어야 합니다")
+    if not place(apps, folder):
+        return HttpResponse("원고 없음 (서버가 아직 push 를 받기 전이거나 폴더 이름이 다릅니다)", status=404)
+    anime.status = "written"
+    if doc:
+        anime.doc_key = doc
+    anime.picked = True
+    anime.save(update_fields=["status", "doc_key", "picked", "updated_at"])
+    return HttpResponse(f"ok {anime.title} → 발행예정글 · memorily › 애니 변환 완료")

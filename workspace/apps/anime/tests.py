@@ -1,6 +1,8 @@
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -74,3 +76,77 @@ class AnimeTests(TestCase):
         self.assertEqual([g["menu"].key for g in group["children"]], ["series", "anime", "anime_seasons"])
         res = self.client.get(reverse("series:index"))
         self.assertContains(res, 'class="nav-sub-label active"')
+
+
+class AnimeWriteRunTests(TestCase):
+    """'글쓰기·변환' (2026-10-23 사용자): 원고 없는 담은 작품 → PC 터미널 claude 가 글쓰기부터 변환까지, 서버 넣기는 api_place."""
+
+    def setUp(self):
+        from apps.blog_rules.models import Blog
+        from apps.blog_types.models import SiteCategory
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        blog = Blog.objects.get(name="memorily")
+        self.cat = (SiteCategory.objects.filter(blog=blog, name__startswith="애니").first()
+                    or SiteCategory.objects.create(blog=blog, name="애니"))
+        self.cat.concept = "애니 회차정리 글 — 작품 하나에 글 하나 (시험)"
+        self.cat.save()
+        self.aot = AnimeTitle.objects.get(title="진격의 거인")
+        self.aot.picked = True
+        self.aot.save()
+
+    def test_write_run_prompt_for_titles_without_draft(self):
+        res = self.client.get(reverse("anime:index"))
+        self.assertEqual(res.context["to_write"], [self.aot])  # 원고 완료 작품은 빠진다
+        self.assertContains(res, "글쓰기·변환 1")
+        j = self.client.post(reverse("anime:write_run")).json()
+        self.assertTrue(j["prompt"].startswith("# 애니 총정리"))
+        self.assertIn(f"<!-- 애니 총정리 작품: a{self.aot.pk} -->", j["prompt"])
+        self.assertIn("진격의 거인 회차정리 애니만화 환산기 명장면 등 모음", j["prompt"])
+        self.assertIn("(시험)", j["prompt"])  # 카테고리 컨셉이 들어간다
+        self.assertIn(reverse("anime:api_place", args=[self.aot.pk]) + "?token=tok", j["prompt"])
+        self.assertEqual(j["count"], 1)
+        self.aot.refresh_from_db()
+        self.assertEqual(self.aot.status, "doing")
+
+    def test_api_place_puts_draft_and_marks_written(self):
+        from apps.blog_types.models import Placement
+
+        url = reverse("anime:api_place", args=[self.aot.pk])
+        self.assertEqual(self.client.post(url + "?token=x", {"folder": "T1_a"}).status_code, 403)
+        self.assertEqual(self.client.post(url + "?token=tok", {"folder": "../x"}).status_code, 400)
+        draft = (Path(settings.REPO_ROOT) / "콘텐츠/블로그_카페/포스팅자동화/원고/T111_히로아카환산기/원고.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp, override_settings(REPO_ROOT=Path(tmp)):
+            self.assertEqual(self.client.post(url + "?token=tok", {"folder": "T999_진격환산기"}).status_code, 404)
+            folder = Path(tmp, "콘텐츠", "블로그_카페", "포스팅자동화", "원고", "T999_진격환산기")
+            folder.mkdir(parents=True)
+            (folder / "원고.md").write_text(draft.replace("나의 히어로 아카데미아 회차정리", "진격의 거인 회차정리"), encoding="utf-8")
+            res = self.client.post(url + "?token=tok", {"folder": "T999_진격환산기", "doc": "07_진격의거인.md"})
+        self.assertContains(res, "ok 진격의 거인")
+        pl = Placement.objects.get(site_category=self.cat, tistory_post__title="진격의 거인 회차정리 애니만화 환산기 명장면 등 모음")
+        self.assertEqual(pl.convert_status, "done")
+        self.aot.refresh_from_db()
+        self.assertEqual((self.aot.status, self.aot.doc_key), ("written", "07_진격의거인"))
+
+    def test_local_run_opens_one_terminal_per_title(self):
+        from apps.routines.local_run import start
+
+        text = self.client.post(reverse("anime:write_run")).json()["prompt"]
+        link = "jbroutine:anime?key=an-1&day=2026-10-23"
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), \
+                patch("apps.routines.local_run.WINDOWS", True), patch("apps.routines.local_run.find_claude", return_value="claude"), \
+                patch("apps.routines.local_run.subprocess.Popen") as popen:
+            with self.assertRaises(ValueError):
+                start(link, "# 사이트 변환 · x")
+            self.assertIn("1작품", start(link, text.replace("\n", "\r\n")))
+            folder = Path(tmp) / ".routine"
+            body = (folder / f"anime-2026-10-23-1-a{self.aot.pk}.md").read_text(encoding="utf-8")
+            self.assertTrue(body.startswith("## 진격의 거인 — 회차정리 글쓰기·변환"))
+            self.assertIn("workspace/.routine/done/", body)
+            chain = (folder / "all-chain.ps1").read_text(encoding="utf-8-sig")
+            self.assertEqual(chain.count("Start-Process"), 1)
+            self.assertIn("애니 글쓰기·변환 1/1 진격의 거인", chain)
+            self.assertIn("Bash(python *)", (folder / "settings-extra.json").read_text(encoding="utf-8"))
+            popen.assert_called_once()
