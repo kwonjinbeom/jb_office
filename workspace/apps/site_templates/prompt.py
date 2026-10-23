@@ -7,7 +7,7 @@
 from django.urls import reverse
 from django.utils import timezone
 
-from . import paste
+from . import looks, paste
 from .models import PlatformFormat, SiteTemplate
 
 LAUNCH_HEAD = "# 사이트 변환"  # local_run 이 이걸로 변환 안내문인지 본다
@@ -87,6 +87,8 @@ def build(placement):
     ]
     if blog.platform in PHOTO_PLATFORMS:
         parts.append(PHOTOS)
+    if (cat.look or (cat.parent.look if cat.parent_id else "")) == "yudi":
+        parts.append(looks.PROMPT)
     if blog.platform == "blogger":
         parts.append(BLOGGER_TAGS)
     if placement.convert_note:

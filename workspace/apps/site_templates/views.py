@@ -28,7 +28,7 @@ from apps.blog_rules.models import Blog
 from apps.blog_types.models import Placement, SiteCategory
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from . import paste, prompt
+from . import looks, paste, prompt
 
 
 class _Styled(forms.ModelForm):
@@ -252,9 +252,12 @@ def _render_for(placement, text):
     if platform == Blog.Platform.WORDPRESS:
         html = paste.clean_html(text)
         return html, html, plain_text(html), html
-    html = render_body(text)
+    look = _look(placement.site_category)
+    html = render_body(looks.yudi_source(text) if look == "yudi" else text)
     out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
-    if _heading_bar(placement.site_category):
+    if look == "yudi":  # 유디 메모지 (2026-10-23 사용자, 눈잎 › 일본 여행)
+        out = looks.yudi_html(out)
+    elif _heading_bar(placement.site_category):
         out = re.sub(r"<h2(?![^>]*\bstyle=)", f'<h2 style="{HEADING_BAR}"', out)
     return out, out, plain_text(html), out
 
@@ -265,6 +268,10 @@ HEADING_BAR = "border-left:5px solid #e03131;padding-left:12px"
 
 def _heading_bar(cat):
     return cat.heading_bar or bool(cat.parent_id and cat.parent.heading_bar)
+
+
+def _look(cat):
+    return cat.look or (cat.parent.look if cat.parent_id else "")
 
 
 def _tags_for(placement):
