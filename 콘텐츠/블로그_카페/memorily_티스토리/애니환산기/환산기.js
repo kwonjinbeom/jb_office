@@ -1,18 +1,23 @@
-/* memorily 애니 ↔ 만화 환산기. build.py 가 data/*.json 을 아래 __DATA__ 자리에 넣어 스킨에_붙일것.html 을 만든다.
-   글 본문에 [환산기: naruto] 한 줄이 있으면 그 문단을 환산기로 바꾼다. 없으면 아무것도 하지 않는다.
+/* memorily 애니 ↔ 만화 환산기. build.py 가 아래 __DATA_URL__ 자리에 작품 데이터 주소를 넣어 스킨에_붙일것.html 을 만든다.
+   글 본문에 [환산기: naruto] 한 줄이 있으면 데이터를 불러와 그 문단을 환산기로 바꾼다. 없으면 아무것도 하지 않는다.
+   데이터는 스킨에 넣지 않고 저장소의 환산기데이터.json 을 읽는다 (2026-10-24: 작품을 더하고 스킨을 다시 안 붙여 강연금·히로아카·진격·귀멸이
+   안 떴다). 그래서 작품을 더해도 main 에 push 만 하면 된다. 못 불러오면 [환산기: …] 줄을 그대로 둔다.
    회차 한 칸 = [만화 첫 화, 만화 끝 화, 종류]  종류 1 원작 · 2 원작 + 애니 장면 · 0 오리지널(만화 0)
    칸은 화수 하나만 (2026-10-21 사용자: 기·권 칸까지 있으니 쓰기 어렵다). 작품이 둘 이상이면 작품 칩을 더한다. */
 (function () {
-  var DATA = __DATA__;
-  // 글에 적힌 작품 이름을 넓게 받는다 (2026-10-22: 원피스 글이 [환산기: onpiece] 로 안 바뀌었다). 대소문자·빈칸 무시, 한글 이름·흔한 오타도
-  var ALIAS = {"onpiece": "onepiece", "one-piece": "onepiece", "원피스": "onepiece", "나루토": "naruto", "블리치": "bleach",
-               "헌터헌터": "hunterxhunter", "헌터x헌터": "hunterxhunter", "헌터×헌터": "hunterxhunter", "hxh": "hunterxhunter",
-               "강철의연금술사": "fma", "강연금": "fma", "나히아": "mha", "히로아카": "mha", "나의히어로아카데미아": "mha",
-               "진격의거인": "aot", "진격": "aot", "귀멸의칼날": "kny", "귀멸": "kny"};
+  var DATA_URL = "__DATA_URL__";
+  var DATA = {};
+  // 글에 적힌 작품 이름을 넓게 받는다 (2026-10-22: 원피스 글이 [환산기: onpiece] 로 안 바뀌었다). 대소문자·빈칸 무시.
+  // 키 · 작품 이름(빈칸 빼고) · 작품 data 의 alias(줄임말 · 흔한 오타) 어느 것이든
+  function norm(s) { return String(s).toLowerCase().replace(/\s+/g, ""); }
   function keyOf(raw) {
-    var k = String(raw).toLowerCase().replace(/\s+/g, "");
-    k = ALIAS[k] || k;
-    return DATA[k] ? k : "";
+    var k = norm(raw);
+    if (DATA[k]) return k;
+    for (var key in DATA) {
+      var w = DATA[key];
+      if (norm(w.name) === k || (w.alias || []).map(norm).indexOf(k) >= 0) return key;
+    }
+    return "";
   }
 
   function el(tag, attrs, html) {
@@ -192,12 +197,19 @@
   }
 
   function init() {
-    var ps = document.querySelectorAll("p, div");
+    var ps = document.querySelectorAll("p, div"), found = [];
     for (var i = 0; i < ps.length; i++) {
       var m = /^\s*\[\s*환산기\s*[:：]\s*([^\]]+?)\s*\]\s*$/.exec(ps[i].textContent);
-      var key = m && keyOf(m[1]);
-      if (key && !ps[i].querySelector("p, div")) build(ps[i], DATA[key]);
+      if (m && !ps[i].querySelector("p, div")) found.push([ps[i], m[1]]);
     }
+    if (!found.length || !window.fetch) return;
+    fetch(DATA_URL).then(function (r) { return r.json(); }).then(function (d) {
+      DATA = d;
+      found.forEach(function (f) {
+        var key = keyOf(f[1]);
+        if (key) build(f[0], DATA[key]);
+      });
+    })["catch"](function () {});
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
