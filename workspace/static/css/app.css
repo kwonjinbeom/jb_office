@@ -2007,3 +2007,5 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
   .site-links { order: 3; flex-basis: 100%; justify-content: flex-start; }
   .sl-row, .sl-row.sl-new { grid-template-columns: 1fr; }
 }
+/* 변환본 창의 발행 완료 (2026-10-23 사용자) */
+.cv-publish { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 auto; }
