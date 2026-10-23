@@ -436,6 +436,10 @@ class YudiLookTests(TestCase):
         cat = SiteCategory.objects.get(blog__name="눈잎", name="일본 여행")
         self.assertEqual(cat.look, "yudi")  # 0023
         self.assertIn("화면 모양", cat.concept)
+        # 0024: 컨셉은 앞으로 쓸 글의 공통 규칙 — 지금 있는 글(오사카 3박 4일)의 값이 예로 박혀 있지 않다 (2026-10-23 사용자)
+        for word in ("난바", "라피트", "히가시야마", "860원"):
+            self.assertNotIn(word, cat.concept)
+        self.assertIn("지난 글의 일수·거점·순서를 옮겨 오지 않는다", cat.concept)
         self.assertNotEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").look, "yudi")  # 다른 카테고리는 그대로
 
     def test_render_and_prompt(self):
@@ -445,16 +449,19 @@ class YudiLookTests(TestCase):
         out = _render_for(pl, self.BODY)[1]
         self.assertTrue(out.startswith("<div style=\"font-family:'NanumSquare'"))
         self.assertIn("text-align:center;line-height:2", out)  # 가운데 정렬 문단
-        self.assertIn('“</p><h2 style="font-family:\'Nanum Myeongjo\'', out)  # 큰따옴표 + 명조 소제목
-        self.assertIn('<strong style="font-weight:400;color:#009d91">40분</strong>', out)  # 굵게 → 청록
-        self.assertIn('<span style="background-color:#e3fdc8">표는 미리 사 두세요</span>', out)  # 형광펜
-        self.assertIn("border:4px solid #d9d9d9", out)  # 메모지 상자
+        # 2026-10-23 사용자: 짜임새는 그대로, 꾸밈에 비해 정적이던 글씨·색을 살린다 — 둥근 굵은 소제목 + 형광펜 밑칠, 코랄 포인트
+        self.assertIn('“</p><h2 style="font-family:\'NanumSquareRound\'', out)  # 큰따옴표 + 둥근 굵은 소제목
+        self.assertIn('<span style="background:linear-gradient(transparent 58%,#d9f99d 58%);padding:0 4px">1.', out)  # 소제목 형광펜 밑칠
+        self.assertIn("color:#ff7a59", out)  # 따옴표·나눔표는 코랄
+        self.assertIn('<strong style="font-weight:700;color:#009d91">40분</strong>', out)  # 굵게 → 청록 굵게
+        self.assertIn('<span style="background:linear-gradient(transparent 58%,#d9f99d 58%);font-weight:700">표는 미리 사 두세요</span>', out)  # 형광펜
+        self.assertIn("border:3px solid #bfe9e3", out)  # 메모지 상자
         self.assertIn("⏰ 운영 시간 : 9:00~18:00", out)
-        self.assertIn("background-color:#e3fdc8;padding:11px 16px", out)  # 목차 머리 칸 연두
+        self.assertIn("background-color:#d9f99d;color:#00756c;padding:11px 16px", out)  # 목차 머리 칸 연두
         self.assertEqual(out.count("width:50%"), 2)  # 사진 두 장 → 콜라주 한 줄
-        self.assertIn("／", out)  # --- → 사선
+        self.assertIn("• • •", out)  # --- → 나눔표
         self.assertNotIn('data-ke-size="size16">&nbsp;', out)
         self.assertIn("유디 메모지", prompt.build(pl))
         pl.site_category = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
-        self.assertNotIn("border:4px solid #d9d9d9", _render_for(pl, self.BODY)[1])
+        self.assertNotIn("border:3px solid #bfe9e3", _render_for(pl, self.BODY)[1])
         self.assertNotIn("유디 메모지", prompt.build(pl))
