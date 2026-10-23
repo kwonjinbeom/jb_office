@@ -1826,6 +1826,62 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 }
 
 
+/* 분기별 애니 추천 및 후기 (apps/anime_seasons): 방영작 · 본 애니 · 감상 세 칸, 화면 높이에 맞춘다 (2026-10-23 사용자) */
+.as-year { min-width: 56px; text-align: center; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
+.as { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.15fr); gap: 12px; padding: 14px var(--gutter); }
+.as-col { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.as-col.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.as-search { margin-left: auto; width: 160px; }
+.as-list { flex: 1; min-height: 0; overflow-y: auto; }
+.as-list:empty { display: none; }
+.as-row { display: flex; align-items: center; gap: 8px; height: 52px; padding: 0 8px 0 16px; border-top: 1px solid var(--border); }
+.as-row:first-child { border-top: 0; }
+.as-row:hover { background: #fafbfc; }
+.as-row.on { background: var(--accent-weak); }
+.as-row[hidden] { display: none; }
+.as-main { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; color: var(--text); }
+.as-main:hover { text-decoration: none; }
+.as-title { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.as-meta { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.as-pick-mark { margin-right: 6px; padding: 0 5px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--accent-weak); color: var(--accent); }
+.as-score { flex: none; font-size: 12px; font-weight: 600; color: #b7791f; font-variant-numeric: tabular-nums; }
+.as-score.muted { color: var(--text-3); font-weight: 500; }
+.as-mv { flex: none; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text-2); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.as-mv:hover { color: var(--accent); border-color: var(--accent); }
+[data-list=todo] .as-to-todo, [data-list=done] .as-to-done { display: none; }
+.as-to-todo, .as-to-done { display: grid; }
+.as-empty { flex: 1; }
+.as-name { min-width: 0; }
+.as-name span { overflow: hidden; text-overflow: ellipsis; }
+.as-detail .card-head .badge { margin-left: auto; flex: none; }
+.as-info { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 4px 10px; margin: 0; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.as-info dt { color: var(--text-3); }
+.as-info dd { margin: 0; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.as-form { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px 0; }
+.as-form .field { margin: 0; }
+.as-rate { display: flex; align-items: center; gap: 10px; }
+.as-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.as-stars { position: relative; font-size: 22px; line-height: 1; letter-spacing: 2px; cursor: pointer; user-select: none; }
+.as-stars-bg { color: #dfe3e8; }
+.as-stars-fg { position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: #f2a516; }
+.as-stars:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.as-stars-val { min-width: 26px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.as-pick { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-2); }
+.as-review { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.as-review textarea { flex: 1; min-height: 80px; resize: none; line-height: 1.7; }
+.as-form .form-foot { margin: 0 -16px; padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+.as-dialog { max-width: 520px; }
+.as-add-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin: 12px 0 6px; }
+.as-add-fields .field { margin: 0; }
+.as-add-fields .as-wide { grid-column: 1 / -1; }
+.as-dialog .form-foot { display: flex; padding-top: 10px; }
+@media (max-width: 900px) {
+  .as { display: flex; flex-direction: column; overflow-y: auto; }
+  .as-col { flex: none; max-height: 420px; }
+  .as-detail { max-height: none; min-height: 420px; }
+}
+
+
 /* 일정 알림 (static/js/alarm.js): 우측 상단, 오른쪽에서 들어오고 누르면 오른쪽으로 들어간다 (2026-10-22 사용자) */
 .alarm-root { position: fixed; top: 60px; right: 16px; z-index: 90; width: 300px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .alarm { pointer-events: auto; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; text-align: left; font: inherit; cursor: pointer;

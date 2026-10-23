@@ -1,0 +1,10 @@
+{# 작품 한 줄: 제목 · (방영일 · 장르 · 화수) · 평점 · 옮기기 버튼. 컨텍스트: a, picked, back #}
+<div class="as-row{% if a == picked %} on{% endif %}" draggable="true" data-id="{{ a.pk }}" data-move="{% url 'anime_seasons:move' a.pk %}"
+     data-aired="{{ a.aired|date:'Y-m-d' }}" data-title="{{ a.title }}" data-rating="{{ a.rating|default:0 }}" data-find="{{ a.title|lower }} {{ a.original_title|lower }}">
+  <a class="as-main" href="{{ back }}&amp;a={{ a.pk }}">
+    <span class="as-title">{% if a.pick %}<b class="as-pick-mark" title="추천">추천</b>{% endif %}{{ a.title }}</span>
+    <span class="as-meta">{% if a.aired %}{{ a.aired|date:"n/j" }}{% endif %}{% if a.genre %} · {{ a.genre }}{% endif %}{% if a.episodes %} · {{ a.episodes }}화{% endif %}</span>
+  </a>
+  {% if a.rating %}<span class="as-score">★ {{ a.stars|floatformat:1 }}</span>{% elif a.review or a.one_line %}<span class="as-score muted">메모</span>{% endif %}
+  <button class="as-mv" type="button" title="옮기기" aria-label="옮기기"><span class="as-to-done">{% include "includes/ic.html" with name="chevron-right" %}</span><span class="as-to-todo">{% include "includes/ic.html" with name="chevron-left" %}</span></button>
+</div>

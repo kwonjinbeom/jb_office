@@ -73,10 +73,12 @@ MENUS: list[Menu] = [
                 Menu("blog_types", "카테고리 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),
                 Menu("site_templates", "사이트별 템플릿", "사이트·카테고리마다 글쓰기·변환 컨셉과 규칙", "site_templates:index", "layers"),
             )),
-            # memorily 티스토리 (2026-10-21 사용자): 중메뉴 아래 소메뉴 둘 — 블로그 자동화(예전 'memorily 연재') · 애니 총정리
+            # memorily 티스토리 (2026-10-21 사용자): 중메뉴 아래 소메뉴 — 블로그 자동화(예전 'memorily 연재') · 애니 총정리
+            # · 분기별 애니 추천 및 후기 (2026-10-23 사용자: 분기 방영작에서 본 것을 골라 평점·감상을 적는 글감 화면)
             Menu("memorily_tistory", "memorily 티스토리", "memorily 티스토리에 쓰는 연재와 애니 정리 글", "series:index", "book", children=(
                 Menu("series", "블로그 자동화", "AI 와 블로그 자동화를 만든 과정을 회차로 나눠 쓰는 곳", "series:index", "book"),
                 Menu("anime", "애니 총정리", "애니↔만화 환산기 글을 작품마다 쓰는 곳 (나루토부터)", "anime:index", "book"),
+                Menu("anime_seasons", "분기별 애니 추천 및 후기", "분기 방영작에서 본 애니를 골라 평점·감상을 적어 두는 곳", "anime_seasons:index", "film"),
             )),
         ),
     ),

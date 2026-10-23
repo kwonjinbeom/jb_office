@@ -36,6 +36,6 @@ class AnimeTests(TestCase):
         blog = next(n for n in build_nav("anime") if n["menu"].key == "blog")
         group = next(c for c in blog["children"] if c["menu"].key == "memorily_tistory")
         self.assertTrue(blog["open"] and group["active"])
-        self.assertEqual([g["menu"].key for g in group["children"]], ["series", "anime"])
+        self.assertEqual([g["menu"].key for g in group["children"]], ["series", "anime", "anime_seasons"])
         res = self.client.get(reverse("series:index"))
         self.assertContains(res, 'class="nav-sub-label active"')

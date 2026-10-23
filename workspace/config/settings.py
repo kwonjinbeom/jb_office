@@ -129,6 +129,7 @@ INSTALLED_APPS = [
     "apps.routines",
     "apps.series",
     "apps.anime",
+    "apps.anime_seasons",
     "apps.schedule",
     "apps.studio",
 ]
