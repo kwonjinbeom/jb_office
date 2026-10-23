@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% comment %}모니터링 (blog_ops.views.index): 위 달력 띠(← → 한 주씩 · 날짜를 고르면 그 주 · 요일마다 전체 발행 수),
-사이트 × 요일 표(발행 / 하루 편수, 누르면 아래에 그날 글), 그날 발행한 글. '발행 확인'은 PC 가 RSS 를 읽는다.{% endcomment %}
+{% comment %}모니터링 (blog_ops.views.index · dash.py): 운영 대시보드 (2026-10-23 사용자: 맨 위 메뉴, 큼지막하게).
+위 달력 띠는 발행 실적 표의 주 (← → 한 주씩). 숫자 칸 6 · 발행 실적(사이트 × 요일) · 확인할 것 / 그날 발행한 글 ·
+파이프라인(사이트 × 단계 + 다음 7일 예정) · 일일루틴(지난 7일). 한 화면에 맞추고 긴 칸만 안에서 스크롤 (fill).{% endcomment %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
 {% block heading %}모니터링{% endblock %}
+
+{% block body_class %}fill{% endblock %}
 
 {% block actions %}
 <span class="muted small op-checked">{% if checked_at %}마지막 확인 {{ checked_at|date:"m-d H:i" }}{% else %}아직 확인하지 않았어요{% endif %}</span>
@@ -36,49 +39,158 @@
 {% endblock %}
 
 {% block content %}
-<div class="op-page">
-  <section class="card">
-    <table class="grid op-week">
-      <colgroup><col style="width:260px">{% for d in days %}<col>{% endfor %}<col style="width:90px"></colgroup>
-      <thead>
-        <tr><th>사이트</th>{% for d, name, is_today in days %}<th class="c{% if is_today %} is-today{% endif %}">{{ name }} {{ d|date:"j" }}</th>{% endfor %}<th class="c">합계</th></tr>
-      </thead>
-      <tbody>
-        {% for r in rows %}
-        <tr>
-          <td>
-            <div class="op-blog"><span class="br-plat">{{ r.blog.get_platform_display }}</span><span class="op-name">{{ r.blog.name }}</span>{% if r.blog.address %}<a class="op-link" href="{{ r.blog.address }}" target="_blank" rel="noopener" title="{{ r.blog.address }} 열기" aria-label="{{ r.blog.name }} 사이트 열기">{% include "includes/ic.html" with name="external" %}</a>{% endif %}</div>
-            {% if r.blog.content %}<div class="op-concept" title="{{ r.blog.content }}">{{ r.blog.content }}</div>{% endif %}
-            <div class="op-feed{% if r.state and not r.state.ok %} is-bad{% endif %}" title="{% if r.state %}{{ r.state.checked_at|date:'m-d H:i' }} · {{ r.state.message }}{% else %}아직 RSS 를 읽지 않았어요{% endif %}">{% if r.state %}{% if r.state.ok %}RSS {{ r.state.checked_at|date:"m-d H:i" }}{% else %}{{ r.state.message }}{% endif %}{% else %}RSS 확인 전{% endif %}</div>
-          </td>
-          {% for c in r.cells %}
-          <td class="c op-cell{% if c.today %} is-today{% endif %}{% if c.on %} is-on{% endif %}{% if c.future %} is-future{% elif c.count >= c.target %} is-met{% endif %}">{% if c.future and not c.count %}·{% else %}<a href="?date={{ c.day|date:'Y-m-d' }}&amp;site={{ r.blog.pk }}" title="{{ r.blog.name }} {{ c.day|date:'n월 j일' }} 발행한 글">{{ c.count }}<small>/{{ c.target }}</small></a>{% endif %}</td>
+<div class="od">
+  {% with k=kpis %}
+  <div class="od-kpis">
+    <a class="od-kpi" href="{% url 'posts:planned' %}" title="오늘 발행한 글 / 사이트 하루 편수 합">
+      <span class="od-k">오늘 발행</span>
+      <strong class="od-v">{{ k.today.0 }}<small>/{{ k.today.1 }}편</small></strong>
+      <span class="od-s{% if k.today.2 %} is-warn{% endif %}">{% if k.today.2 %}{{ k.today.2 }}편 남음{% else %}오늘 몫 끝{% endif %}</span>
+    </a>
+    <div class="od-kpi" title="이번 주(월~일) 발행 / 하루 편수 × 7">
+      <span class="od-k">이번 주 발행</span>
+      <strong class="od-v">{{ k.week.0 }}<small>/{{ k.week.1 }}편</small></strong>
+      <span class="od-s">{{ k.week.2 }}%</span>
+    </div>
+    <a class="od-kpi" href="{% url 'posts:planned' %}" title="발행예정글 가운데 아직 발행하지 않은 글 (사이트 하루 편수 합으로 나눈 날 수)">
+      <span class="od-k">발행 대기</span>
+      <strong class="od-v">{{ k.waiting.0 }}<small>편</small></strong>
+      <span class="od-s{% if k.waiting.1 < 2 %} is-warn{% endif %}">{{ k.waiting.1 }}일치</span>
+    </a>
+    <a class="od-kpi" href="{% url 'posts:view' %}?stage=review" title="검토글 (임시글)">
+      <span class="od-k">검토 대기</span>
+      <strong class="od-v">{{ k.review.0 }}<small>편</small></strong>
+      <span class="od-s">임시글 {{ k.review.1 }}편</span>
+    </a>
+    <a class="od-kpi" href="{% url 'routines:index' %}" title="하루 양을 채운 루틴 / 하루 양이 있는 루틴">
+      <span class="od-k">일일루틴 오늘</span>
+      <strong class="od-v">{{ k.routines.0 }}<small>/{{ k.routines.1 }}</small></strong>
+      <span class="od-s">{% if k.routines.2 %}{{ k.routines.2.routine.name }} {{ k.routines.2.get_status_display }}{% else %}하루 양 채움{% endif %}</span>
+    </a>
+    <div class="od-kpi" title="PC 가 RSS 를 읽은 마지막 때 ('발행 확인')">
+      <span class="od-k">발행 확인</span>
+      <strong class="od-v">{% if checked_at %}{{ checked_at|date:"H:i" }}<small>{{ checked_at|date:"m-d" }}</small>{% else %}—{% endif %}</strong>
+      <span class="od-s{% if k.feeds_bad %} is-bad{% endif %}">{% if k.feeds_bad %}RSS 실패 {{ k.feeds_bad }}곳{% elif checked_at %}RSS 정상{% else %}확인 전{% endif %}</span>
+    </div>
+  </div>
+  {% endwith %}
+
+  <section class="card od-card od-week">
+    <div class="card-head"><h3 class="card-title">발행 실적</h3><span class="hint">칸을 누르면 그날 글</span></div>
+    <div class="od-scroll">
+      <table class="grid op-week">
+        <colgroup><col style="width:30%">{% for d in days %}<col>{% endfor %}<col style="width:11%"></colgroup>
+        <thead>
+          <tr><th>사이트</th>{% for d, name, is_today in days %}<th class="c{% if is_today %} is-today{% endif %}">{{ name }} {{ d|date:"j" }}</th>{% endfor %}<th class="c">합계</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td title="{{ r.blog.content }}">
+              <div class="op-blog"><span class="br-plat">{{ r.blog.get_platform_display }}</span><span class="op-name">{{ r.blog.name }}</span>{% if r.blog.address %}<a class="op-link" href="{{ r.blog.address }}" target="_blank" rel="noopener" title="{{ r.blog.address }} 열기" aria-label="{{ r.blog.name }} 사이트 열기">{% include "includes/ic.html" with name="external" %}</a>{% endif %}{% if r.state and not r.state.ok %}<span class="mk bad" title="RSS 읽기 실패: {{ r.state.message }}"></span>{% endif %}</div>
+            </td>
+            {% for c in r.cells %}
+            <td class="c op-cell{% if c.today %} is-today{% endif %}{% if c.on %} is-on{% endif %}{% if c.future %} is-future{% elif c.count >= c.target %} is-met{% endif %}">{% if c.future and not c.count %}·{% else %}<a href="?date={{ c.day|date:'Y-m-d' }}&amp;site={{ r.blog.pk }}" title="{{ r.blog.name }} {{ c.day|date:'n월 j일' }} 발행한 글">{{ c.count }}<small>/{{ c.target }}</small></a>{% endif %}</td>
+            {% endfor %}
+            <td class="c op-sum">{{ r.sum }}<small>/{{ r.target }}</small></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="grid-empty">운영 중인 사이트가 없습니다.</td></tr>
           {% endfor %}
-          <td class="c op-sum">{{ r.sum }}<small>/{{ r.target }}</small></td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="9" class="grid-empty">운영 중인 사이트가 없습니다.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </section>
 
-  <section class="card">
+  <section class="card od-card od-side" data-od-tabs>
     <div class="card-head">
-      <h3 class="card-title">{{ sel|date:"n월 j일" }} ({{ sel|date:"D" }}) 발행한 글{% if picked_site %} · {{ picked_site.name }}{% endif %}</h3>
-      <span class="cnt">{{ picked|length }}</span>
-      {% if picked_site %}<a class="hint" href="?date={{ sel|date:'Y-m-d' }}">모든 사이트</a>{% endif %}
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" data-od-tab="items"{% if tab == "items" %} class="on"{% endif %}>확인할 것 <span class="cnt">{{ items|length }}</span></button>
+        <button type="button" role="tab" data-od-tab="picked"{% if tab == "picked" %} class="on"{% endif %}>{{ sel|date:"n/j" }}{% if picked_site %} {{ picked_site.name }}{% endif %} 발행 <span class="cnt">{{ picked|length }}</span></button>
+      </div>
+      {% if picked_site %}<a class="hint od-all" href="?date={{ sel|date:'Y-m-d' }}" data-od-pane="picked"{% if tab != "picked" %} hidden{% endif %}>모든 사이트</a>{% endif %}
     </div>
-    <table class="grid op-list">
-      <colgroup><col style="width:180px"><col></colgroup>
-      <tbody>
-        {% for b, title, url in picked %}
-        <tr><td class="op-name small">{{ b.name }}</td><td class="op-title">{% if url %}<a href="{{ url }}" target="_blank" rel="noopener" title="{{ title }}">{{ title }}</a>{% else %}<span title="{{ title }} (글 관리에서 발행 완료)">{{ title }}</span>{% endif %}</td></tr>
-        {% empty %}
-        <tr><td colspan="2" class="grid-empty">이날 발행한 글이 없습니다.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="od-scroll" data-od-pane="items"{% if tab != "items" %} hidden{% endif %}>
+      {% for level, text, sub, url in items %}
+      {% if url %}<a class="od-item" href="{{ url }}"{% if url|slice:":4" == "http" %} target="_blank" rel="noopener"{% endif %}>{% else %}<div class="od-item">{% endif %}
+        <span class="mk{% if level %} {{ level }}{% endif %}"></span><span class="t">{{ text }}</span><span class="s">{{ sub }}</span>
+      {% if url %}</a>{% else %}</div>{% endif %}
+      {% empty %}
+      <div class="od-empty">확인할 것이 없습니다.</div>
+      {% endfor %}
+    </div>
+    <div class="od-scroll" data-od-pane="picked"{% if tab != "picked" %} hidden{% endif %}>
+      {% for b, title, url in picked %}
+      {% if url %}<a class="od-item" href="{{ url }}" target="_blank" rel="noopener" title="{{ title }}">{% else %}<div class="od-item" title="{{ title }} (글 관리에서 발행 완료)">{% endif %}
+        <span class="s od-site">{{ b.name }}</span><span class="t">{{ title }}</span>
+      {% if url %}</a>{% else %}</div>{% endif %}
+      {% empty %}
+      <div class="od-empty">{{ sel|date:"n월 j일" }} 발행한 글이 없습니다.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card od-card od-pipe">
+    <div class="card-head"><h3 class="card-title">파이프라인</h3><span class="hint">임시 → 검토 → 발행예정 · 숫자를 누르면 그 글</span></div>
+    <div class="od-scroll">
+      <table class="grid od-table">
+        <colgroup><col style="width:18%">{% for i in "12345" %}<col>{% endfor %}{% for d, name in ahead %}<col>{% endfor %}</colgroup>
+        <thead>
+          <tr class="od-band"><th></th><th class="c" colspan="5">단계</th><th class="c" colspan="7">다음 7일 발행 예정</th></tr>
+          <tr><th>사이트</th><th class="c">임시</th><th class="c">검토</th><th class="c">예정</th><th class="c" title="발행 예정일을 아직 안 정한 글">미정</th><th class="c" title="발행 대기 ÷ 하루 편수">일치</th>
+            {% for d, name in ahead %}<th class="c{% if forloop.first %} is-today{% endif %}" title="{{ d|date:'n월 j일' }}">{% if forloop.first %}오늘{% else %}{{ name }} {{ d|date:"j" }}{% endif %}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for r in pipe %}
+          <tr>
+            <td><div class="op-blog"><span class="op-name">{{ r.blog.name }}</span><span class="od-daily">하루 {{ r.blog.daily }}</span></div></td>
+            <td class="c od-n"><a href="{{ r.links.temp }}">{{ r.temp }}</a></td>
+            <td class="c od-n"><a href="{{ r.links.review }}">{{ r.review }}</a></td>
+            <td class="c od-n"><a href="{{ r.links.post }}">{{ r.post }}</a></td>
+            <td class="c od-n{% if r.undated %} is-warn{% endif %}">{{ r.undated }}</td>
+            <td class="c od-n{% if r.stock is not None and r.stock < 2 %} is-warn{% endif %}">{% if r.stock is None %}—{% else %}{{ r.stock|floatformat:"-1" }}{% endif %}</td>
+            {% for c in r.cells %}<td class="c od-n{% if forloop.first %} is-today{% endif %}{% if not c.count %} is-zero{% elif c.gap %} is-gap{% else %} is-met{% endif %}" title="{{ c.day|date:'n월 j일' }} 예정 {{ c.count }}편 / 하루 {{ r.blog.daily }}편">{% if c.count %}{{ c.count }}{% else %}·{% endif %}</td>{% endfor %}
+          </tr>
+          {% empty %}
+          <tr><td colspan="13" class="grid-empty">운영 중인 사이트가 없습니다.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card od-card od-rt">
+    <div class="card-head"><h3 class="card-title">일일루틴</h3><a class="hint" href="{% url 'routines:index' %}">지난 7일 결과</a></div>
+    <div class="od-scroll">
+      <table class="grid od-table">
+        <colgroup><col style="width:30%">{% for d, name in routine_week %}<col>{% endfor %}<col style="width:19%"></colgroup>
+        <thead><tr><th>루틴</th>{% for d, name in routine_week %}<th class="c{% if forloop.last %} is-today{% endif %}" title="{{ d|date:'n월 j일' }}">{{ name }}</th>{% endfor %}<th class="c">오늘</th></tr></thead>
+        <tbody>
+          {% for x in routine_rows %}
+          <tr>
+            <td><a class="op-name od-rname" href="{% url 'routines:index' %}" title="{{ x.routine.task }}">{{ x.routine.name }}</a></td>
+            {% for c in x.cells %}<td class="c od-n{% if c.today %} is-today{% endif %}{% if c.met %} is-met{% endif %}" title="{{ c.day|date:'n월 j일' }} {{ c.count }}{{ x.routine.unit }} / 하루 {{ x.routine.daily }}">{{ c.count }}</td>{% endfor %}
+            <td class="c">{% if x.run %}<span class="badge {{ x.run.badge }}" title="{{ x.run.updated_at|date:'H:i' }} {{ x.run.step }}">{{ x.run.get_status_display }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="grid-empty">루틴이 없습니다.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // 확인할 것 / 그날 발행한 글 탭 (칸을 눌러 들어오면 서버가 '발행' 탭을 먼저 연다)
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-od-tab]");
+    if (!b) return;
+    var box = b.closest("[data-od-tabs]"), key = b.getAttribute("data-od-tab");
+    box.querySelectorAll("[data-od-tab]").forEach(function (x) { x.classList.toggle("on", x === b); });
+    box.querySelectorAll("[data-od-pane]").forEach(function (p) { p.hidden = p.getAttribute("data-od-pane") !== key; });
+  });
+</script>
 {% endblock %}

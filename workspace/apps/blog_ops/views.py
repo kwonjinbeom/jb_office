@@ -1,4 +1,5 @@
-"""블로그·카페 › 모니터링 (2026-10-22 사용자: 전처럼 말고 쓸모 있는 것만).
+"""블로그·카페 › 모니터링 (2026-10-22 사용자: 전처럼 말고 쓸모 있는 것만). 2026-10-23 사용자: 맨 위 메뉴, 운영 대시보드로 크게 —
+숫자 칸 · 확인할 것 · 사이트별 파이프라인 · 일일루틴은 dash.py. 아래는 그 가운데 발행 실적(한 주) 표.
 
 - 사이트 × 요일 한 주: 그날 발행한 글 수 / 하루 편수. 위 달력 띠는 일일루틴처럼 ← → 로 한 주씩, 날짜를 고르면 그 주.
   칸을 누르면 아래에 그날(그 사이트) 발행한 글.
@@ -22,7 +23,7 @@ from django.views.decorators.http import require_POST
 from apps.blog_rules.models import Blog
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from . import feeds
+from . import dash, feeds
 from .models import FeedEntry, FeedState, Plan
 
 DAY_NAMES = "월화수목금토일"
@@ -106,8 +107,9 @@ def index(request):
     for r in rows:
         r["state"] = states.get(r["blog"].pk)
     week_no = start.isocalendar()[1]
-    return render(request, "blog_ops/index.html", {
-        "page_title": "모니터링",
+    return render(request, "blog_ops/index.html", dash.build(blogs, today, published, states) | {
+        "page_title": "모니터링", "today": today,
+        "tab": "picked" if site or request.GET.get("date") else "items",
         "sel": sel, "site": site, "start": start, "end": days[-1], "week_no": week_no,
         "is_this_week": start <= today <= days[-1],
         "prev": (sel - timedelta(days=7)).isoformat(), "next": (sel + timedelta(days=7)).isoformat(),

@@ -38,11 +38,19 @@
         <div class="nav-sub">
           {% for c in n.children %}
           {% if c.children %}
-          {% if c.link %}<a class="nav-item sub{% if c.self_active %} active{% endif %}" href="{{ c.menu.url }}"><span>{{ c.menu.title }}</span></a>
-          {% else %}<div class="nav-sub-label{% if c.active %} active{% endif %}">{{ c.menu.title }}</div>{% endif %}
-          {% for g in c.children %}
-          <a class="nav-item sub sub2{% if g.active %} active{% endif %}" href="{{ g.menu.url }}"><span>{{ g.menu.title }}</span></a>
-          {% endfor %}
+          {# 3단 트리의 중메뉴: 오른쪽 화살표로 소메뉴를 접는다 (기본은 펼침, 접은 것은 이 브라우저에 기억 — app.js) #}
+          <div class="nav-mid{% if c.active %} has-active{% endif %}" data-nav-mid="{{ c.menu.key }}">
+            <div class="nav-row">
+              {% if c.link %}<a class="nav-item sub{% if c.self_active %} active{% endif %}" href="{{ c.menu.url }}"><span>{{ c.menu.title }}</span></a>
+              {% else %}<button type="button" class="nav-sub-label{% if c.active %} active{% endif %}" data-nav-mid-toggle>{{ c.menu.title }}</button>{% endif %}
+              <button type="button" class="nav-caret" data-nav-mid-toggle aria-expanded="true" title="접기·펼치기" aria-label="{{ c.menu.title }} 접기·펼치기"><svg class="ic"><use href="#i-chevron-down"/></svg></button>
+            </div>
+            <div class="nav-sub2">
+              {% for g in c.children %}
+              <a class="nav-item sub sub2{% if g.active %} active{% endif %}" href="{{ g.menu.url }}"><span>{{ g.menu.title }}</span></a>
+              {% endfor %}
+            </div>
+          </div>
           {% else %}
           <a class="nav-item sub{% if c.active %} active{% endif %}" href="{{ c.menu.url }}"><span>{{ c.menu.title }}</span></a>
           {% endif %}

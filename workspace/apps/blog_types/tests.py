@@ -467,15 +467,20 @@ class PostHubTests(TestCase):
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, f'href="{reverse("posts:view")}"')
         blog = next(m for m in res.context["MENUS"] if m.key == "blog")
-        # 2026-10-23 사용자: 논의 현황은 빼고, 발행예정글·게시글 관리는 글 관리 아래, 모니터링이 memorily 티스토리 앞
-        self.assertEqual([c.title for c in blog.children], ["글 관리", "카테고리 관리", "사이트별 템플릿", "모니터링", "memorily 티스토리"])
-        self.assertEqual([c.title for c in blog.children[0].children], ["발행예정글", "게시글 관리"])
-        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")["children"][0]
+        # 2026-10-23 사용자: 모니터링이 맨 위, 글 관리 아래에 발행예정글 · 게시글 관리 · 카테고리 관리 · 사이트별 템플릿
+        self.assertEqual([c.title for c in blog.children], ["모니터링", "글 관리", "memorily 티스토리"])
+        self.assertEqual([c.title for c in blog.children[1].children], ["발행예정글", "게시글 관리", "카테고리 관리", "사이트별 템플릿"])
+        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")["children"][1]
         self.assertTrue(group["link"] and group["self_active"])  # 글 관리 이름 줄이 곧 글 관리 화면 링크
         self.assertContains(res, f'<a class="nav-item sub active" href="{reverse("posts:view")}">', html=False)
+        self.assertContains(res, 'data-nav-mid="posts_view"')  # 중메뉴 접기 버튼 (기본은 펼침)
+        self.assertContains(res, 'data-nav-mid-toggle aria-expanded="true"')
         planned = self.client.get(reverse("posts:planned"))
-        group = next(n for n in planned.context["NAV"] if n["menu"].key == "blog")["children"][0]
-        self.assertEqual((group["self_active"], [s["active"] for s in group["children"]]), (False, [True, False]))
+        group = next(n for n in planned.context["NAV"] if n["menu"].key == "blog")["children"][1]
+        self.assertEqual((group["self_active"], [s["active"] for s in group["children"]]), (False, [True, False, False, False]))
+        cats = self.client.get(reverse("blog_types:index"))
+        group = next(n for n in cats.context["NAV"] if n["menu"].key == "blog")["children"][1]
+        self.assertEqual([s["active"] for s in group["children"]], [False, False, True, False])
 
     def test_today_filter(self):
         from datetime import timedelta
