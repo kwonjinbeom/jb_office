@@ -192,6 +192,8 @@ class FixedTopic(TrashableModel):
                                  related_name="fixed_topics", help_text="글 분류의 소재. 커스텀 글쓰기에서 그 소재 아래에 보이고 원고 분류가 된다")
     note = models.TextField("지침", blank=True, help_text="이 주제를 쓸 때 따로 지킬 것 (다룰 범위·출처·구성 등)")
     per_week = models.PositiveSmallIntegerField("주당 편수", default=1)
+    daily = models.BooleanField("매일 전체 실행", default=False,
+                                help_text="일일루틴 전체 실행(글쓰기)에서 매일 1편 쓴다 (2026-10-23 사용자: AI 소식)")
     order = models.PositiveSmallIntegerField("순서", default=0)
     created_at = models.DateTimeField("만든 때", auto_now_add=True)
 

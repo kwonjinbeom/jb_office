@@ -848,8 +848,9 @@ class WritingResultTests(Login):
         res = self.client.get(INDEX, {"date": "2026-10-23"})
         states = {r["label"]: r["word"] for r in res.context["results"]}
         self.assertEqual(states, {"눈잎 > 일본": "씀", "black_lukey > 축제·행사": "못 씀",
-                                  "밤밤 > 코스피": "예정", "밤밤 > 상품 추천": "없음", "밤밤 > 해외 여행": "씀"})
-        self.assertEqual([r["word"] for r in res.context["results"]], ["씀", "씀", "예정", "못 씀", "없음"])
+                                  "밤밤 > 코스피": "예정", "밤밤 > 상품 추천": "없음", "밤밤 > 해외 여행": "씀",
+                                  "memorily > AI 소식": "못 씀"})  # 매일 쓰는 고정 주제 (2026-10-23)
+        self.assertEqual([r["word"] for r in res.context["results"]], ["씀", "씀", "예정", "못 씀", "못 씀", "없음"])
         self.assertContains(res, "11월 교토 단풍 언제 갈까")
         self.assertContains(res, "예정 1")
         kospi = Category.objects.get(section__name="밤밤", name="코스피")
@@ -866,3 +867,35 @@ class WritingResultTests(Login):
         res = self.client.get(INDEX, {"date": "2026-10-20"})
         self.assertEqual(res.context["results"], [])
         self.assertContains(res, "이 날 글쓰기 기획표와 쓴 글이 없습니다")
+
+
+class DailyTopicTests(Login):
+    """AI 소식을 전체 실행(글쓰기)에 매일 1편, 글쓰기 결과에 'memorily > AI 소식' (2026-10-23 사용자)."""
+
+    def test_launcher_includes_daily_topic_and_results_label(self):
+        from .models import FixedTopic
+        from .results import writing_results
+        ai = FixedTopic.objects.get(name="AI 소식")
+        self.assertTrue(ai.daily)  # 0021
+        writing = Routine.objects.get(key="writing")
+        day = date(2026, 10, 23)
+        text = launcher(writing, day)
+        self.assertIn("### 매일 쓰는 고정 주제 (전체 실행)", text)
+        self.assertIn("고정 주제: AI 소식 — 1편.", text)
+        self.assertNotIn("매일 쓰는 고정 주제", launcher(writing, day, extra="코멘트"))  # 추가 실행에는 안 붙는다
+        with tempfile.TemporaryDirectory() as tmp, override_settings(WRITING_DRAFTS_DIR=Path(tmp) / "원고"):
+            plans = Path(tmp) / "주제기획"
+            plans.mkdir()
+            (plans / "2026-10-23.md").write_text("## 소재 판정\n| 사이트 > 소재 | 있음/없음 | 근거 |\n|---|---|---|\n"
+                                                 "| 밤밤 > 코스피 | 없음 | 휴장 |\n", encoding="utf-8")
+            rows = {r["label"]: r for r in writing_results(day)}
+            self.assertEqual(rows["memorily > AI 소식"]["word"], "못 씀")  # 매일 주제인데 아직 원고 없음
+            folder = Path(tmp) / "원고" / "T120_AI소식"
+            folder.mkdir(parents=True)
+            (folder / "원고.md").write_text("사이트: memorily\n고정주제: AI 소식\n<!-- 본문 시작 -->\n# 오늘의 AI 소식\n본문\n<!-- 본문 끝 -->\n", encoding="utf-8")
+            post = TistoryPost.objects.create(title="오늘의 AI 소식", target="memorily", custom=True)
+            TistoryPost.objects.filter(pk=post.pk).update(created_at=timezone.make_aware(timezone.datetime(2026, 10, 23, 10)))
+            rows = {r["label"]: r for r in writing_results(day)}
+            self.assertEqual((rows["memorily > AI 소식"]["word"], rows["memorily > AI 소식"]["posts"][0][0]), ("씀", "오늘의 AI 소식"))
+        res = self.client.get(reverse("routines:topics"))
+        self.assertContains(res, 'name="daily" checked')

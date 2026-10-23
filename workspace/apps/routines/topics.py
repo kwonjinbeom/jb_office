@@ -176,6 +176,7 @@ def save(request, pk):
     topic.site = request.POST.get("site", "").strip()[:60]
     _set_category(topic, request.POST.get("category", ""))
     topic.note = request.POST.get("note", "").strip()
+    topic.daily = bool(request.POST.get("daily"))
     topic.save()
     messages.success(request, f"'{topic.name}'을(를) 저장했습니다.")
     return _back(request)

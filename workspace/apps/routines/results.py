@@ -52,22 +52,44 @@ def verdicts(day: date):
 
 
 def _posts(day):
-    """그날 만든 글 (티스토리·네이버 표) → {'사이트 > 소재': [(제목, 주소)]}. 분류가 없으면 사이트 이름."""
+    """그날 만든 글 (티스토리·네이버 표) → {'사이트 > 소재': [(제목, 주소)]}. 분류가 없으면 '사이트 > 고정 주제'
+    (원고의 `고정주제:` 줄, 예: memorily > AI 소식), 그것도 없으면 사이트 이름."""
     from apps.naver_writing.models import Post as NaverPost
+    from apps.writing import drafts
     from apps.writing.models import Post
+    topics = {d.title: d.topic for d in drafts.list_drafts() if d.topic}
     out = {}
     for model, ns in ((Post, "writing"), (NaverPost, "naver_writing")):
         for p in model.objects.filter(created_at__date=day).select_related("bt_category__section").order_by("created_at", "pk"):
             cat = p.bt_category
-            label = f"{cat.section.name} > {cat.name}" if cat else (p.target or "분류 없음")
+            if cat:
+                label = f"{cat.section.name} > {cat.name}"
+            elif p.title in topics:
+                label = f"{p.target or '사이트 미정'} > {topics[p.title]}"
+            else:
+                label = p.target or "분류 없음"
             out.setdefault(label, []).append((p.title, reverse(f"{ns}:detail", args=[p.pk])))
     return out
 
 
+def _daily_topics():
+    """전체 실행에 매일 붙는 고정 주제 (FixedTopic.daily) → {'사이트 > 주제' 또는 '사이트 > 소재': 주제 이름}"""
+    from .models import FixedTopic
+    out = {}
+    for t in FixedTopic.objects.filter(daily=True).select_related("category__section"):
+        label = f"{t.category.section.name} > {t.category.name}" if t.category_id else f"{t.site or '사이트 미정'} > {t.name}"
+        out[label] = t.name
+    return out
+
+
 def writing_results(day: date):
-    """[{label, sel, state, word, color, posts, reason}] — 글 분류 순서로, 씀 → 예정 → 못 씀 → 없음."""
+    """[{label, sel, state, word, color, posts, reason}] — 글 분류 순서로, 씀 → 예정 → 못 씀 → 없음.
+    매일 쓰는 고정 주제(AI 소식)는 기획표 판정이 없어도 '있음'으로 본다 — 원고가 없으면 '못 씀'."""
     from apps.blog_types.models import Category
     plans, posts = verdicts(day), _posts(day)
+    if plans:
+        for label, name in _daily_topics().items():
+            plans.setdefault(label, ("있음", f"매일 쓰는 고정 주제 ({name})"))
     if not plans and not posts:
         return []
     cats = {_bare(f"{c.section.name} > {c.name}"): (f"{c.section.name} > {c.name}", c.sel)
@@ -89,7 +111,10 @@ def writing_results(day: date):
         elif verdict == "예정":
             state = "planned"
         elif verdict == "있음":
-            state, reason = "missed", "기획은 '있음'인데 원고가 없음 — 실행 이력의 막힘을 보세요"
+            daily = reason.startswith("매일 쓰는")
+            state = "missed"
+            reason = (f"{reason} — 원고가 없음, 글감 없음이면 실행 이력에" if daily
+                      else "기획은 '있음'인데 원고가 없음 — 실행 이력의 막힘을 보세요")
         else:
             state = "none"
         word, color = STATES[state]
