@@ -1,30 +1,88 @@
 {% extends "base.html" %}
-{# 블로그·카페 › memorily 티스토리 › 애니 총정리: 왼쪽 작업 순서·작품 목록 · 오른쪽 고른 md (2026-10-21 사용자) #}
+{# 블로그·카페 › memorily 티스토리 › 애니 총정리: 왼쪽 전체 애니 목록(담기·상태·삭제) · 가운데 작업 순서·담은 작품 · 오른쪽 고른 md (2026-10-21, 10-23 사용자) #}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a> › memorily 티스토리</div>{% endblock %}
 
-{% block heading %}애니 총정리 <span class="cnt">{{ works }}작품</span>{% endblock %}
+{% block heading %}애니 총정리 <span class="cnt">{{ work_count }}작품</span>{% endblock %}
 
 {% block body_class %}fill{% endblock %}
 
 {% block content %}
-<div class="bt-layout">
+<div class="bt-layout an-layout">
+  <nav class="bt-tree an-all" aria-label="전체 애니">
+    <div class="bt-tree-head"><span class="bt-tree-title">전체 애니 <span class="cnt">{{ titles|length }}</span></span></div>
+    <div class="an-tools">
+      <input class="input sm" type="search" placeholder="제목 찾기" aria-label="제목 찾기" data-an-search>
+      <form method="post" action="{% url 'anime:add' %}" class="an-add">{% csrf_token %}<input type="hidden" name="next" value="{{ here }}">
+        <input class="input sm" name="title" maxlength="120" placeholder="작품 추가" aria-label="추가할 작품 제목" required>
+        <button class="btn sm icon" title="목록에 추가" aria-label="목록에 추가">{% include "includes/ic.html" with name="plus" %}</button>
+      </form>
+    </div>
+    <div class="an-rows">
+      {% for t in titles %}
+      <div class="an-row{% if t.picked %} picked{% endif %}" data-find="{{ t.title|lower }}">
+        <div class="an-main">
+          <span class="an-title" title="{{ t.title }}">{{ t.title }}</span>
+          <span class="an-sub">
+            <form method="post" action="{% url 'anime:status' t.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ here }}">
+              <select class="an-status st-{{ t.status }}" name="status" data-autosubmit aria-label="{{ t.title }} 상태">{% for key, label in statuses %}<option value="{{ key }}"{% if key == t.status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+            </form>
+            {% if t.note %}<span class="pl-meta">{{ t.note }}</span>{% endif %}
+          </span>
+        </div>
+        <form method="post" action="{% url 'anime:pick' t.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ here }}">
+          <input type="hidden" name="picked" value="{% if t.picked %}0{% else %}1{% endif %}">
+          {% if t.picked %}<button class="btn sm an-pick on" title="담은 작품에서 빼기">{% include "includes/ic.html" with name="check" %}담음</button>
+          {% else %}<button class="btn sm an-pick" title="작업 작품에 담기">{% include "includes/ic.html" with name="plus" %}담기</button>{% endif %}
+        </form>
+        <form method="post" action="{% url 'anime:delete' t.pk %}" onsubmit="return confirm('{{ t.title|escapejs }} 을(를) 목록에서 지울까요? (휴지통에서 7일간 복원)')">{% csrf_token %}<input type="hidden" name="next" value="{{ here }}">
+          <button class="an-del" title="목록에서 삭제" aria-label="{{ t.title }} 삭제">{% include "includes/ic.html" with name="trash" %}</button>
+        </form>
+      </div>
+      {% empty %}
+      <div class="bt-empty-line">목록이 비었습니다.</div>
+      {% endfor %}
+    </div>
+  </nav>
+
   <nav class="bt-tree pl-list" aria-label="작품 목록">
     <div class="bt-tree-head"><span class="bt-tree-title">작업 순서 · 작품</span></div>
     <div class="pl-items">
-      {% for d in docs %}
-      <a class="pl-item{% if d == current %} on{% endif %}" href="?d={{ d.key|urlencode }}"{% if d == current %} aria-current="page"{% endif %}>
-        <span class="pl-path">{% if d.guide %}모든 작품 공통{% else %}작품{% endif %}</span>
-        <span class="pl-title">{{ d.title }}</span>
-        {% if d.status %}<span class="pl-meta">{{ d.status }}</span>{% endif %}
-      </a>
+      {% for w in works %}
+      <div class="an-work">
+        <a class="pl-item{% if w == current %} on{% endif %}" href="?{% if w.doc %}d={{ w.key|urlencode }}{% else %}a={{ w.anime.pk }}{% endif %}"{% if w == current %} aria-current="page"{% endif %}>
+          <span class="pl-path">{% if w.doc.guide %}모든 작품 공통{% elif w.anime %}{{ w.anime.get_status_display }}{% else %}작품{% endif %}</span>
+          <span class="pl-title">{% if w.anime %}{{ w.anime.title }}{% else %}{{ w.doc.title }}{% endif %}</span>
+          {% if w.doc.status and not w.doc.guide %}<span class="pl-meta">{{ w.doc.status }}</span>{% elif w.anime and not w.doc %}<span class="pl-meta">md 없음</span>{% endif %}
+        </a>
+        {% if w.anime %}
+        <form method="post" action="{% url 'anime:pick' w.anime.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'anime:index' %}"><input type="hidden" name="picked" value="0">
+          <button class="an-unpick" title="담은 작품에서 빼기" aria-label="{{ w.anime.title }} 빼기">{% include "includes/ic.html" with name="x" %}</button>
+        </form>
+        {% endif %}
+      </div>
       {% empty %}
       <div class="bt-empty-line">아직 문서가 없습니다.</div>
       {% endfor %}
     </div>
   </nav>
+
   <section class="an-pane">
-    {% if current %}<article class="card doc">{{ html|safe }}</article>{% else %}<div class="empty"><p>문서를 고르세요.</p></div>{% endif %}
+    {% if current.doc %}<article class="card doc">{{ html|safe }}</article>
+    {% elif current %}<div class="empty"><p class="empty-title">{{ current.anime.title }}</p><p>아직 작품 md 가 없습니다. 작업 순서대로 조사를 시작하면 생깁니다.</p></div>
+    {% else %}<div class="empty"><p>문서를 고르세요.</p></div>{% endif %}
   </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var box = document.querySelector("[data-an-search]");
+  box.addEventListener("input", function () {
+    var q = box.value.trim().toLowerCase();
+    document.querySelectorAll(".an-row").forEach(function (r) { r.hidden = q && r.dataset.find.indexOf(q) < 0; });
+  });
+})();
+</script>
 {% endblock %}

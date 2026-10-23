@@ -13,7 +13,7 @@ MODEL_SECTIONS = {
     "ideas.idea": "내 아이디어", "ideas.stage": "내 아이디어 · 단계",
     "ideas.idealog": "내 아이디어 · 작업 로그", "tasks.task": "할 일",
     "evidence.evidence": "증거", "memos.memo": "메모", "schedule.event": "일정",
-    "anime_seasons.seasonanime": "분기별 애니",
+    "anime_seasons.seasonanime": "분기별 애니", "anime.animetitle": "애니 총정리 · 작품",
     "content.folder": "폴더", "content.content": "콘텐츠", "content.publication": "게시 기록",
     "discussions.discussion": "진행현황", "discussions.discussionhistory": "논의 이력",
     "daily_ideas.searchstandard": "검색 표준", "writing.post": "티스토리 글쓰기",
