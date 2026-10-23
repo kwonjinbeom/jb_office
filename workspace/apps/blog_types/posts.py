@@ -426,6 +426,18 @@ def plan(request):
 
 
 @require_POST
+def promote(request):
+    """임시글·검토글을 한 번에 발행예정글로 (모니터링 › 오늘의 글, 2026-10-23 사용자: 바로 발행예정글로 갈 수 있게)."""
+    posts = [p for p in _picked(request) if p.stage in ("temp", "review")]
+    for post in posts:
+        post.stage = "post"
+        post.save(update_fields=["stage", "updated_at"])
+    if posts:
+        messages.success(request, f"{len(posts)}건을 발행예정글로 옮겼습니다.")
+    return _back(request)
+
+
+@require_POST
 def bulk(request):
     """체크한 글을 이웃 단계로 옮기거나(to), 상대 글쓰기로 보내거나(send), 발행 상태를 바꾼다(publish=done|todo).
     두 글쓰기 글이 섞여 있어도 된다."""

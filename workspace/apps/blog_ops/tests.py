@@ -84,7 +84,8 @@ class BlogOpsTests(TestCase):
         self.assertEqual(res.status_code, 200)
         row = next(r for r in res.context["rows"] if r["blog"] == self.nunip)
         self.assertEqual(row["sum"], 3)
-        self.assertEqual(sorted(t for _, t, _ in res.context["picked"]), ["RSS 에 없는 글", "예전 계획 글", "오늘 글"])
+        day = dict(res.context["day_groups"])["눈잎"]  # 왼쪽 아래 '오늘 발행' (2026-10-23)
+        self.assertEqual(sorted(x["title"] for x in day), ["RSS 에 없는 글", "예전 계획 글", "오늘 글"])
         self.assertContains(res, f'?date={self.today.isoformat()}&amp;site={self.nunip.pk}')  # 칸을 누르면 그날 그 사이트 글
         # 날짜를 고르면 그 주, ← → 는 한 주씩
         res = self.client.get(INDEX, {"date": "2026-10-15"})
@@ -153,37 +154,44 @@ class SiteLinksTests(TestCase):
 
 
 class DashboardTests(TestCase):
-    """모니터링 대시보드 (2026-10-23 사용자): 숫자 칸 · 확인할 것 · 파이프라인 · 일일루틴"""
+    """모니터링 네 칸 (2026-10-23 사용자): 발행 실적 · 일일루틴 글쓰기 / 그날 발행(변환·발행 완료) · 오늘의 글(발행예정으로)"""
 
     def setUp(self):
         self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
         self.nunip = Blog.objects.get(name="눈잎")
         self.today = timezone.localdate()
 
-    def test_pipeline_counts_and_attention(self):
+    def test_four_panels(self):
+        from apps.blog_types.models import Placement, SiteCategory
         from apps.writing.models import Post
-        Post.objects.create(title="임시", stage="temp", target="눈잎")
-        Post.objects.create(title="검토", stage="review", target="눈잎")
-        Post.objects.create(title="오늘 예정", stage="post", target="눈잎", planned_on=self.today)
-        Post.objects.create(title="지난 예정", stage="post", target="눈잎", planned_on=self.today - timedelta(days=2))
-        Post.objects.create(title="날짜 미정", stage="post", target="눈잎")
-        Post.objects.create(title="발행함", stage="post", target="눈잎", publish_status="done", published_on=self.today)
-        Post.objects.create(title="사이트 없음", stage="review")
+        planned = Post.objects.create(title="오늘 예정", stage="post", target="눈잎", planned_on=self.today)
+        Placement.objects.create(site_category=SiteCategory.objects.get(blog__name="눈잎", name="공모주"), tistory_post=planned)
+        Post.objects.create(title="오늘 발행함", stage="post", target="눈잎", publish_status="done", published_on=self.today)
+        Post.objects.create(title="내일 예정", stage="post", target="눈잎", planned_on=self.today + timedelta(days=1))
+        temp = Post.objects.create(title="오늘 쓴 임시글", stage="temp", target="밤밤")
         res = self.client.get(INDEX)
         self.assertEqual(res.status_code, 200)
-        row = next(r for r in res.context["pipe"] if r["blog"] == self.nunip)
-        self.assertEqual((row["temp"], row["review"], row["post"], row["undated"], row["overdue"]), (1, 1, 3, 1, 1))
-        self.assertEqual(row["cells"][0]["count"], 1)  # 오늘 예정
-        self.assertEqual(row["today"], 1)  # 오늘 발행 (글 관리의 발행 완료)
-        texts = [t for _, t, _, _ in res.context["items"]]
-        self.assertIn("눈잎 · 예정일 지난 글 1편", texts)
-        self.assertIn("눈잎 · 예정일 미정 1편", texts)
-        self.assertIn("사이트 미정 1편", texts)
-        self.assertEqual(res.context["items"][0][0], "bad")  # 급한 것이 위
-        for text in ["파이프라인", "확인할 것", "일일루틴", "발행 대기", 'class="page-body fill']:
+        groups = dict(res.context["day_groups"])
+        self.assertEqual([(x["title"], x["state"]) for x in groups["눈잎"]], [("오늘 예정", "planned"), ("오늘 발행함", "done")])
+        self.assertContains(res, 'data-st-run="')  # 변환
+        self.assertContains(res, 'name="publish" value="done"')  # 발행 완료
+        new = dict(res.context["new_groups"])
+        self.assertIn("오늘 쓴 임시글", [p.title for p in new["밤밤"]])
+        self.assertContains(res, reverse("posts:promote"))
+        self.assertEqual(res.context["wr"]["routine"].key, "writing")
+        self.assertContains(res, "글쓰기 실행")
+        for text in ["발행 실적", "일일루틴 글쓰기", "오늘 발행", "오늘의 글"]:
             self.assertContains(res, text)
+        self.assertNotContains(res, "이번 주 발행")  # 숫자 칸 줄은 뺐다
+        self.client.post(reverse("posts:promote"), {"ids": f"tistory:{temp.pk}", "next": INDEX})
+        temp.refresh_from_db()
+        self.assertEqual(temp.stage, "post")  # 임시글에서 바로 발행예정
 
-    def test_picked_tab_when_cell_clicked(self):
-        res = self.client.get(INDEX, {"date": self.today.isoformat(), "site": self.nunip.pk})
-        self.assertEqual(res.context["tab"], "picked")
-        self.assertEqual(self.client.get(INDEX).context["tab"], "items")
+    def test_cell_click_filters_day_panel(self):
+        from apps.writing.models import Post
+        day = self.today - timedelta(days=1)
+        Post.objects.create(title="어제 발행", stage="post", target="눈잎", publish_status="done", published_on=day)
+        Post.objects.create(title="어제 밤밤", stage="post", target="밤밤", publish_status="done", published_on=day)
+        res = self.client.get(INDEX, {"date": day.isoformat(), "site": self.nunip.pk})
+        self.assertEqual([n for n, _ in res.context["day_groups"]], ["눈잎"])
+        self.assertContains(res, "오늘 · 모든 사이트")
