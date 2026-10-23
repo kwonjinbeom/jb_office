@@ -104,6 +104,7 @@ def index(request):
     states = {s.blog_id: s for s in FeedState.objects.filter(blog__in=blogs)}
     for r in rows:
         r["state"] = states.get(r["blog"].pk)
+    day_groups = dash.day_posts(blogs, sel, done, site)
     week_no = start.isocalendar()[1]
     return render(request, "blog_ops/index.html", {
         "page_title": "모니터링", "today": today,
@@ -114,7 +115,8 @@ def index(request):
         "strip": strip, "rows": rows,
         "week_sum": sum(totals), "week_target": sum(r["target"] for r in rows),
         "picked_site": next((b for b in blogs if b.pk == site), None),
-        "day_groups": dash.day_posts(blogs, sel, done, site),  # 왼쪽 아래: 그날 발행 예정 · 발행
+        "day_groups": day_groups,  # 왼쪽 아래: 그날 발행 예정 · 발행
+        "ready_ids": dash.ready_ids(day_groups),  # 그 칸의 '전체 변환'
         "new_groups": dash.new_posts(blogs, today),  # 오른쪽 아래: 오늘의 글
         "wr": dash.writing(request, today),  # 오른쪽 위: 일일루틴 글쓰기
         "checked_at": FeedState.objects.aggregate(m=Max("checked_at"))["m"],
