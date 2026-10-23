@@ -140,11 +140,16 @@ HR_STYLES = [
 KNOWN_STYLES |= {s.replace(" ", "") for s in QUOTE_STYLES + HR_STYLES}
 
 # 영화·OTT 작품 소제목 (2026-10-23 사용자: 영화명 왼쪽에 세로 막대 — 작품 이름이 더 잘 보이게).
-# '## 작품 이름 · 공개일' 아래(다음 소제목 전)에 '::: 작품' 카드가 있으면 그 소제목을 세로줄 인용(네이버 '버티컬 라인')으로 —
-# 작품 이름은 크게, 마지막 '·' 뒤(공개일)는 아래 작은 회색 줄. 원고·변환본은 그대로 두고 그릴 때 바꾸니 지난 글에도 같다.
-WORK_QUOTE = QUOTE_STYLES[1]
-WORK_NAME_STYLE = "font-size:19px;color:#333333;font-weight:bold"
+# '## 작품 이름 · 공개일' 아래(다음 소제목 전)에 '::: 작품' 카드가 있으면 그 소제목을 왼쪽 회색 막대 + 작품 이름 + 아래 작은 회색 줄
+# (마지막 '·' 뒤, 공개일)로. 인용(blockquote)으로 그리면 네이버가 붙여넣을 때 '따옴표' 인용구로 바꿔 따옴표가 생긴다 →
+# 칸 두 개짜리 표로 그린다 (왼쪽 좁은 칸 바탕색이 막대, 칸 바탕색은 붙여도 남는다 — 정보 카드와 같다).
+# 원고·변환본은 그대로 두고 그릴 때 바꾸니 지난 글에도 같다.
+WORK_TABLE = "border-collapse:collapse;width:100%;margin:30px 0"
+WORK_BAR = "border:1px solid #ffffff;background-color:#555555;width:5px;padding:0"
+WORK_CELL = "border:1px solid #ffffff;background-color:#ffffff;padding:6px 16px;text-align:left"
+WORK_NAME_STYLE = "font-size:19px;color:#555555"
 WORK_SUB_STYLE = "font-size:13px;color:#888888"
+KNOWN_STYLES |= {s.replace(" ", "") for s in (WORK_TABLE, WORK_BAR, WORK_CELL)}
 _H2_LINE = re.compile(r"^##[ \t]+(?P<title>.+?)[ \t]*#*[ \t]*$")
 _WORK_CARD = re.compile(r"^:::[ \t]*작품[ \t]*\|")
 
@@ -158,10 +163,11 @@ def work_titles(text: str) -> str:
             continue
         name, sep, sub = _H2_LINE.match(lines[i])["title"].rpartition(" · ")
         name, sub = (name, sub) if sep else (sub, "")
-        block = f'<blockquote style="{WORK_QUOTE}"><p style="{WORK_NAME_STYLE}">{html.escape(name.strip(), quote=False)}</p>'
+        cell = f'<p style="{WORK_NAME_STYLE}">{html.escape(name.strip(), quote=False)}</p>'
         if sub.strip():
-            block += f'<p style="{WORK_SUB_STYLE}">{html.escape(sub.strip(), quote=False)}</p>'
-        lines[i] = f"\n{block}</blockquote>\n"
+            cell += f'<p style="{WORK_SUB_STYLE}">{html.escape(sub.strip(), quote=False)}</p>'
+        lines[i] = (f'\n<table style="{WORK_TABLE}"><tbody><tr><td style="{WORK_BAR}">&nbsp;</td>'
+                    f'<td style="{WORK_CELL}">{cell}</td></tr></tbody></table>\n')
     return "\n".join(lines)
 
 
@@ -353,7 +359,7 @@ class _PasteStyles(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if self.depth == 0 and tag in BLOCKS:
             if self.gaps and self.seen_block:  # 글 덩어리(소제목 · 작품 이름 세로줄) 앞은 빈 줄 셋
-                section = tag == "h2" or (tag == "blockquote" and dict(attrs).get("style", "").startswith(WORK_QUOTE))
+                section = tag == "h2" or (tag == "table" and dict(attrs).get("style", "") == WORK_TABLE)
                 self.out.append(self._gap() * (SECTION_GAPS if section else 1))
             self.seen_block = True
         if tag not in VOID:
