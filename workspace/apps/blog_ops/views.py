@@ -1,8 +1,8 @@
-"""블로그·카페 › 모니터링 (2026-10-22 사용자: 전처럼 말고 쓸모 있는 것만). 2026-10-23 사용자: 맨 위 메뉴, 운영 대시보드로 크게 —
-숫자 칸 · 확인할 것 · 사이트별 파이프라인 · 일일루틴은 dash.py. 아래는 그 가운데 발행 실적(한 주) 표.
+"""블로그·카페 › 모니터링 (2026-10-22 사용자: 전처럼 말고 쓸모 있는 것만). 2026-10-23 사용자: 맨 위 메뉴, 네 칸 대시보드 —
+발행 실적 · 일일루틴 글쓰기 / 그날 발행 · 오늘의 글 (dash.py). 아래는 그 가운데 발행 실적(한 주) 표.
 
 - 사이트 × 요일 한 주: 그날 발행한 글 수 / 하루 편수. 위 달력 띠는 일일루틴처럼 ← → 로 한 주씩, 날짜를 고르면 그 주.
-  칸을 누르면 아래에 그날(그 사이트) 발행한 글.
+  칸을 누르면 왼쪽 아래가 그날(그 사이트)의 발행 예정 · 발행한 글.
 - 센 글: RSS 로 읽은 글 + 글 관리에서 발행 완료한 글(넣은 곳 · 사이트만 정한 글) + 예전 발행 계획. 같은 제목은 한 번만.
 - 발행 확인: 서버는 티스토리·네이버에 못 나가서(feeds 머리말) PC 가 RSS 를 읽어 api_feeds 로 보낸다
   ('발행 확인' 버튼 → jbroutine:feeds, 일일루틴 '전체 실행' 때도 같이). 읽은 글과 제목이 같은 미발행 글은 발행 완료로 바뀐다.
@@ -101,22 +101,22 @@ def index(request):
     totals = [sum(r["cells"][i]["count"] for r in rows) for i in range(7)]
     strip = [{"day": d, "name": DAY_NAMES[i], "count": totals[i], "on": d == sel, "today": d == today,
               "future": d > today, "weekend": i >= 5} for i, d in enumerate(days)]
-    picked = sorted(((b, title, url) for b in blogs if site in (None, b.pk)
-                     for title, url in done.get((b.pk, sel), {}).values()), key=lambda x: (x[0].order, x[1]))
     states = {s.blog_id: s for s in FeedState.objects.filter(blog__in=blogs)}
     for r in rows:
         r["state"] = states.get(r["blog"].pk)
     week_no = start.isocalendar()[1]
-    return render(request, "blog_ops/index.html", dash.build(blogs, today, published, states) | {
+    return render(request, "blog_ops/index.html", {
         "page_title": "모니터링", "today": today,
-        "tab": "picked" if site or request.GET.get("date") else "items",
         "sel": sel, "site": site, "start": start, "end": days[-1], "week_no": week_no,
         "is_this_week": start <= today <= days[-1],
         "prev": (sel - timedelta(days=7)).isoformat(), "next": (sel + timedelta(days=7)).isoformat(),
         "days": [(d, DAY_NAMES[i], d == today) for i, d in enumerate(days)],
         "strip": strip, "rows": rows,
         "week_sum": sum(totals), "week_target": sum(r["target"] for r in rows),
-        "picked": picked, "picked_site": next((b for b in blogs if b.pk == site), None),
+        "picked_site": next((b for b in blogs if b.pk == site), None),
+        "day_groups": dash.day_posts(blogs, sel, done, site),  # 왼쪽 아래: 그날 발행 예정 · 발행
+        "new_groups": dash.new_posts(blogs, today),  # 오른쪽 아래: 오늘의 글
+        "wr": dash.writing(request, today),  # 오른쪽 위: 일일루틴 글쓰기
         "checked_at": FeedState.objects.aggregate(m=Max("checked_at"))["m"],
     })
 

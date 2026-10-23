@@ -1399,58 +1399,56 @@ a.br-addr:hover { color: var(--accent); }
 .op-total { color: var(--text); font-variant-numeric: tabular-nums; }
 .op-checked { white-space: nowrap; }
 
-/* 모니터링 대시보드 (2026-10-23 사용자): 숫자 칸 6 · 발행 실적 | 확인할 것 · 파이프라인 | 일일루틴. 한 화면에 (fill), 긴 칸만 안에서 스크롤 */
-.od { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); gap: 12px; padding: 14px var(--gutter); }
-.od-kpis { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.od-kpi { display: flex; flex-direction: column; gap: 2px; height: 86px; padding: 11px 16px; background: var(--panel); border: 1px solid var(--border);
-          border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); color: var(--text); min-width: 0; }
-a.od-kpi:hover { text-decoration: none; border-color: var(--accent-line); box-shadow: var(--shadow); }
-.od-k { font-size: 12px; font-weight: 600; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.od-v { font-size: 24px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.od-v small { margin-left: 3px; font-size: 13px; font-weight: 500; color: var(--text-3); }
-.od-s { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.od-s.is-warn { color: var(--warn); } .od-s.is-bad { color: var(--danger); }
+/* 모니터링 대시보드 (2026-10-23 사용자): 네 칸 2×2, 좌우 5:5. 넉넉하면 한 화면, 작으면 칸 높이를 지키고 화면이 스크롤 */
+.page-body.fill:has(.od) { overflow: auto; }
+.od { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: minmax(380px, 1fr) minmax(380px, 1fr); gap: 14px; padding: 14px var(--gutter) 18px; }
 .od-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-.od-card .card-head { flex: none; }
+.od-card .card-head { flex: none; gap: 10px; min-height: 52px; }
+.od-card .card-title { font-size: 15px; }
+.od-head-r { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.od-head-r .rt-launch { margin: 0; }
 .od-scroll { flex: 1; min-height: 0; overflow: auto; }
-.od-scroll[hidden] { display: none; }
-.page-body.fill .od .grid th:first-child, .page-body.fill .od .grid td:first-child { padding-left: 16px; }
-.page-body.fill .od .grid th:last-child, .page-body.fill .od .grid td:last-child { padding-right: 16px; }
-.od .op-week td { height: 40px; }
-.od .op-cell a { height: 40px; }
-.od-table td { height: 38px; padding: 0 4px; }
-.od-table th { padding: 0 4px; }
-.od-table .od-band th { height: 26px; font-size: 11px; color: var(--text-3); font-weight: 600; border-bottom: 1px solid var(--line-soft); }
-.od-table .od-band + tr th { top: 26px; }
-.od-table th.is-today, .od-table td.is-today { background: var(--panel-2); }
-.od-n { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
-.od-n a { display: block; color: inherit; border-radius: 5px; line-height: 28px; }
-.od-n a:hover { background: var(--hover); color: var(--accent); text-decoration: none; }
-.od-n.is-met { color: var(--ok); }
-.od-n.is-gap, .od-n.is-warn { color: var(--warn); }
-.od-n.is-zero { color: var(--text-3); font-weight: 400; }
-.od-daily { font-size: 11px; color: var(--text-3); flex: none; }
-.od-rname { display: block; color: var(--text); }
-.od-rname:hover { color: var(--accent); text-decoration: none; }
-.od-side .card-head { gap: 10px; }
-.od-side .seg button .cnt { margin-left: 3px; }
-.od-all { margin-left: auto; }
-.od-all[hidden] { display: none; }
-.od-item { display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 16px; border-bottom: 1px solid var(--line-soft); color: var(--text); min-width: 0; }
-a.od-item:hover { background: var(--hover); text-decoration: none; }
-.od-item .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.od-item .s { flex: none; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-3); }
-.od-item .od-site { order: -1; width: 74px; }
-.od-empty { padding: 36px 16px; text-align: center; color: var(--text-3); }
-@media (max-width: 1100px) { .od-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 900px) {
-  .page-body.fill:has(.od) { overflow: auto; }
+/* 발행 실적: 글자를 크게 */
+.od-week { font-size: 15px; }
+.od-week thead th { font-size: 13.5px; height: 48px; line-height: 1.25; }
+.od-week thead th.c { padding: 4px 2px; }
+.od-wd, .od-dd { display: block; }
+.od-dd { font-size: 12px; font-weight: 500; color: var(--text-3); }
+.od-week th.is-today .od-dd { color: var(--accent); }
+.od-week td { height: 64px; }
+.od-week .op-name { font-size: 15px; }
+.od-week .op-cell a { height: 64px; font-size: 18px; }
+.od-week .op-cell small, .od-week .op-sum small { font-size: 13px; }
+.od-week .op-sum { font-size: 16px; font-weight: 700; }
+.od-plat { margin-top: 3px; font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.page-body.fill .od .grid th:first-child, .page-body.fill .od .grid td:first-child { padding-left: 18px; }
+.page-body.fill .od .grid th:last-child, .page-body.fill .od .grid td:last-child { padding-right: 18px; }
+/* 목록 칸 (글쓰기 결과 · 그날 발행 · 오늘의 글): 사이트 머리 + 한 줄에 상태 · 제목 · 버튼 */
+.od-step { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--text-2); }
+.od-counts { display: flex; gap: 6px; padding: 12px 18px 4px; }
+.od-group { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 8px 18px;
+            background: var(--muted-weak); border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; color: var(--text); }
+.od-row { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 18px; border-bottom: 1px solid var(--line-soft); min-width: 0; }
+.od-state { flex: none; min-width: 58px; justify-content: center; }
+.od-label { flex: none; width: 170px; font-weight: 600; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.od-label.od-title { flex: 1; width: auto; min-width: 0; font-weight: 500; }
+a.od-label:hover { color: var(--accent); text-decoration: none; }
+.od-detail { flex: 1; min-width: 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+.od-detail a { color: var(--text); }
+.od-acts { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.od-acts form { margin: 0; }
+.od-empty { padding: 40px 18px; text-align: center; color: var(--text-3); }
+@media (max-width: 1440px) {
+  .od-week .op-cell a { font-size: 16px; }
+  .od-week .op-cell small, .od-week .op-sum small { font-size: 11.5px; }
+  .od-week .op-name { font-size: 14px; }
+  .od-week td.op-cell, .od-week td.op-sum { padding-left: 2px; padding-right: 2px; }
+}
+@media (max-width: 1100px) {
   .od { display: flex; flex-direction: column; flex: none; }
-  .od-card { max-height: none; }
-  .od-scroll { overflow-x: auto; }
-  .od-pipe .od-table, .od .op-week { min-width: 640px; }
-  .od-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .od-card { min-height: 360px; }
+  .od-week { min-width: 640px; }
 }
 @media (max-width: 900px) {
   .op-week { min-width: 760px; }
