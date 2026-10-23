@@ -142,7 +142,7 @@
       <div class="od-group"><span>{{ site_name }}</span><span class="cnt">{{ items|length }}</span></div>
       {% for p in items %}
       <div class="od-row">
-        <span class="badge {% if p.stage == 'post' %}blue{% else %}gray{% endif %} od-state">{{ p.stage_label }}</span>
+        <span class="badge {% if p.publish_status == 'done' %}green{% elif p.stage == 'post' %}blue{% else %}gray{% endif %} od-state">{{ p.stage_label }}</span>
         <a class="od-label od-title" href="{% url 'posts:view' %}?p={{ p.ref }}" title="{{ p.title }}">{{ p.title }}</a>
         <span class="od-acts">{% if p.stage == 'temp' or p.stage == 'review' %}<form method="post" action="{% url 'posts:promote' %}">{% csrf_token %}<input type="hidden" name="ids" value="{{ p.ref }}"><input type="hidden" name="next" value="{{ here }}"><button class="btn sm" title="임시·검토를 건너뛰고 발행예정글로">발행예정으로</button></form>{% elif p.stage == 'post' and p.publish_status != 'done' %}<a class="btn sm ghost" href="{% url 'posts:planned' %}">발행예정글{% include "includes/ic.html" with name="chevron-right" %}</a>{% endif %}</span>
       </div>
