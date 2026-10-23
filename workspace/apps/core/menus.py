@@ -152,8 +152,18 @@ def _apply(menus, saved, keep_hidden=False, user=None):
             continue
         menu = replace(menu, title=(s.title if s and s.title else menu.title),
                        children=tuple(_apply(menu.children, saved, keep_hidden, user)))
-        out.append(((s.order if s else 1000 + i), i, menu))  # 화면에서 아직 안 정한 메뉴(새 메뉴)는 뒤로
+        out.append((s.order if s else _new_order(menus, i, saved), i, menu))
     return [m for _, _, m in sorted(out, key=lambda t: (t[0], t[1]))]
+
+
+def _new_order(menus, i, saved):
+    """화면(메뉴 권한)에서 아직 순서를 정하지 않은 새 메뉴의 자리: 코드에서 놓인 자리 그대로 —
+    바로 뒤에서 순서가 정해진 메뉴와 같은 순서를 받아 그 앞에 온다 (같은 순서면 코드 순서). 뒤에 없으면 맨 뒤.
+    2026-10-23: 새 '통계현황'(모니터링 위)이 서버에서는 순서가 저장된 메뉴들 뒤, 맨 아래로 갔다."""
+    for later in menus[i + 1:]:
+        if later.key in saved:
+            return saved[later.key].order
+    return 1000 + i
 
 
 def get_menus(user=None) -> list[Menu]:
