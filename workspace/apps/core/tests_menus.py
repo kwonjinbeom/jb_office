@@ -23,6 +23,16 @@ class MenuPermissionPageTests(TestCase):
         self.assertNotIn("블로그·카페 리스트", [c["menu"].title for c in blog["children"]])
         self.assertEqual([c["menu"].key for c in blog["children"][:2]], ["blog_stats", "blog_ops"])  # 통계현황 · 모니터링이 맨 위 (2026-10-23)
 
+    def test_new_menu_keeps_code_place_when_orders_saved(self):
+        """메뉴 권한에서 순서를 저장해 둔 서버: 순서가 없는 새 메뉴(통계현황)도 맨 뒤가 아니라 코드 자리(모니터링 위)에 (2026-10-23)"""
+        for n, key in enumerate(["blog_ops", "posts_hub", "memorily_tistory"], start=1):
+            MenuSetting.objects.create(key=key, order=n)
+        blog = next(m for m in get_menus() if m.key == "blog")
+        self.assertEqual([c.key for c in blog.children], ["blog_stats", "blog_ops", "posts_hub", "memorily_tistory"])
+        MenuSetting.objects.filter(key="blog_ops").update(order=9)  # 사용자가 모니터링을 맨 뒤로 옮기면 새 메뉴도 그 앞에 붙어 간다
+        blog = next(m for m in get_menus() if m.key == "blog")
+        self.assertEqual([c.key for c in blog.children], ["posts_hub", "memorily_tistory", "blog_stats", "blog_ops"])
+
     def test_admin_index_has_only_auth_and_menu(self):
         res = self.client.get(reverse("admin:index"))
         self.assertContains(res, "메뉴 권한")
