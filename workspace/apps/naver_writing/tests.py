@@ -173,16 +173,22 @@ class NaverFormattingTests(TestCase):
         self.assertEqual(out.split("<h2")[1].count("&nbsp;"), 1)
 
     def test_work_title_vertical_bar(self):
-        """영화·OTT: '::: 작품' 카드가 있는 소제목은 세로줄 인용 — 작품 이름 크게, 공개일은 아래 작은 줄 (2026-10-23 사용자)"""
+        """영화·OTT: '::: 작품' 카드가 있는 소제목은 왼쪽 회색 막대 + 작품 이름 + 아래 작은 공개일 (2026-10-23 사용자).
+        인용으로 그리면 네이버가 '따옴표' 인용구로 바꿔서 표(왼쪽 칸 바탕색이 막대)로 그린다."""
+        from .render import WORK_BAR, WORK_CELL, WORK_TABLE
         body = ("> 요약.\n\n## 한눈에 보기\n\n| 공개일 | 작품 |\n|---|---|\n| 11월 6일 | 가능한 사랑 |\n\n"
                 "## 데블스 플랜: 데드 어게인 · 11월 10일\n\n두뇌 서바이벌이에요.\n\n::: 작품 | 데블스 플랜\n📅 공개 | 11월 10일\n:::\n")
         out = render_body(body)
         self.assertIn("<h2>한눈에 보기</h2>", out)  # 카드 없는 소제목은 그대로
-        self.assertIn(f'<blockquote style="{QUOTE_STYLES[1]}"><p style="font-size:19px;color:#333333;font-weight:bold">'
-                      '데블스 플랜: 데드 어게인</p><p style="font-size:13px;color:#888888">11월 10일</p></blockquote>', out)
+        self.assertIn(f'<table style="{WORK_TABLE}"><tbody><tr><td style="{WORK_BAR}">\xa0</td><td style="{WORK_CELL}">'
+                      '<p style="font-size:19px;color:#555555">데블스 플랜: 데드 어게인</p>'
+                      '<p style="font-size:13px;color:#888888">11월 10일</p></td></tr></tbody></table>', out)
         self.assertNotIn("<h2>데블스", out)
+        self.assertNotIn("<blockquote", out.split("한눈에 보기")[1])  # 네이버가 따옴표 인용구로 바꾸지 않게
         pasted = paste_html(out, gaps=True)
-        self.assertEqual(pasted.split("데블스 플랜: 데드")[0].rsplit("</table>", 1)[1].count("&nbsp;"), 3)  # 글 덩어리처럼 빈 줄 셋
+        self.assertIn("background-color:#555555", pasted)
+        before = pasted.split("데블스 플랜: 데드")[0]
+        self.assertEqual(before[before.rindex("</table>", 0, before.rindex("<table")):].count("&nbsp;"), 3)  # 글 덩어리처럼 빈 줄 셋
 
     def test_first_summary_one_sentence_per_line(self):
         """맨 위 인용 상자(첫 요약)는 문장마다 줄바꿈. 뒤의 인용은 그대로 (2026-10-23 사용자)"""
