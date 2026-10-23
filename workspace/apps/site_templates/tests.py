@@ -459,6 +459,12 @@ class YudiLookTests(TestCase):
         self.assertIn("⏰ 운영 시간 : 9:00~18:00", out)
         self.assertIn("background-color:#d9f99d;color:#00756c;padding:11px 16px", out)  # 목차 머리 칸 연두
         self.assertEqual(out.count("width:50%"), 2)  # 사진 두 장 → 콜라주 한 줄
+        # 사진 크기 고정 (2026-10-23 사용자: 일상 사진이 너무 크다) — 콜라주 620 폭 · 칸 높이 240
+        self.assertIn("width:620px;max-width:100%;border-collapse:separate", out)
+        self.assertEqual(out.count("height:240px;object-fit:cover"), 2)
+        one = _render_for(pl, "![성](https://a.com/1.jpg)")[1]  # 한 장은 620 × 400 (스킨 기본 style·width 를 덮는다)
+        self.assertIn('<img style="display:block;width:620px;max-width:100%;height:400px;object-fit:cover', one)
+        self.assertNotIn('width="620"', one)
         self.assertIn("• • •", out)  # --- → 나눔표
         self.assertNotIn('data-ke-size="size16">&nbsp;', out)
         self.assertIn("유디 메모지", prompt.build(pl))
