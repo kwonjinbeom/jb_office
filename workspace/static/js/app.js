@@ -282,6 +282,19 @@
     // 현재 화면이 속한 가지는 서버가 이미 펴 두었다. 그 밖에는 기억해 둔 대로.
     if (!group.classList.contains("open") && saved[group.getAttribute("data-nav-group")]) setNavOpen(group, true);
   });
+  // 3단 트리의 중메뉴(글 관리 등): 기본은 펼침, 접은 것만 기억한다. 지금 화면이 그 아래면 펴 둔다.
+  var MID_STORE = "nav.closed";
+  function midState() {
+    try { return JSON.parse(localStorage.getItem(MID_STORE) || "{}") || {}; } catch (err) { return {}; }
+  }
+  function setMidClosed(mid, closed) {
+    mid.classList.toggle("closed", closed);
+    mid.querySelectorAll(".nav-caret[data-nav-mid-toggle]").forEach(function (b) { b.setAttribute("aria-expanded", closed ? "false" : "true"); });
+  }
+  var midSaved = midState();
+  all("[data-nav-mid]").forEach(function (mid) {
+    if (midSaved[mid.getAttribute("data-nav-mid")] && !mid.classList.contains("has-active")) setMidClosed(mid, true);
+  });
   // 왼쪽 메뉴 접기: 아이콘만 남긴다. 처음 그릴 때의 접힘은 <head> 의 짧은 스크립트가 먼저 붙인다.
   var root = document.documentElement;
   function setMini(mini) {
@@ -307,6 +320,16 @@
       // 접힌 메뉴에서 하위 메뉴가 있는 항목을 누르면 메뉴를 펴고 그 가지를 연다
       setMini(false);
       if (!caret.closest("[data-nav-group]").classList.contains("open")) caret.click();
+      return;
+    }
+    var midBtn = e.target.closest && e.target.closest("[data-nav-mid-toggle]");
+    if (midBtn) {
+      var mid = midBtn.closest("[data-nav-mid]");
+      var closed = !mid.classList.contains("closed");
+      setMidClosed(mid, closed);
+      var ms = midState();
+      if (closed) ms[mid.getAttribute("data-nav-mid")] = true; else delete ms[mid.getAttribute("data-nav-mid")];
+      try { localStorage.setItem(MID_STORE, JSON.stringify(ms)); } catch (err) { /* 저장 못 해도 동작은 한다 */ }
       return;
     }
     if (caret) {

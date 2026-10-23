@@ -150,3 +150,40 @@ class SiteLinksTests(TestCase):
         self.assertIn("밤밤 https://bambam2222.blogspot.com/", home.context["sites_text"])
         self.assertEqual(len(home.context["sites_text"].splitlines()), len(home.context["sites"]))
         self.assertContains(home, 'data-copy-text="https://nunip.tistory.com/"')
+
+
+class DashboardTests(TestCase):
+    """모니터링 대시보드 (2026-10-23 사용자): 숫자 칸 · 확인할 것 · 파이프라인 · 일일루틴"""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        self.nunip = Blog.objects.get(name="눈잎")
+        self.today = timezone.localdate()
+
+    def test_pipeline_counts_and_attention(self):
+        from apps.writing.models import Post
+        Post.objects.create(title="임시", stage="temp", target="눈잎")
+        Post.objects.create(title="검토", stage="review", target="눈잎")
+        Post.objects.create(title="오늘 예정", stage="post", target="눈잎", planned_on=self.today)
+        Post.objects.create(title="지난 예정", stage="post", target="눈잎", planned_on=self.today - timedelta(days=2))
+        Post.objects.create(title="날짜 미정", stage="post", target="눈잎")
+        Post.objects.create(title="발행함", stage="post", target="눈잎", publish_status="done", published_on=self.today)
+        Post.objects.create(title="사이트 없음", stage="review")
+        res = self.client.get(INDEX)
+        self.assertEqual(res.status_code, 200)
+        row = next(r for r in res.context["pipe"] if r["blog"] == self.nunip)
+        self.assertEqual((row["temp"], row["review"], row["post"], row["undated"], row["overdue"]), (1, 1, 3, 1, 1))
+        self.assertEqual(row["cells"][0]["count"], 1)  # 오늘 예정
+        self.assertEqual(row["today"], 1)  # 오늘 발행 (글 관리의 발행 완료)
+        texts = [t for _, t, _, _ in res.context["items"]]
+        self.assertIn("눈잎 · 예정일 지난 글 1편", texts)
+        self.assertIn("눈잎 · 예정일 미정 1편", texts)
+        self.assertIn("사이트 미정 1편", texts)
+        self.assertEqual(res.context["items"][0][0], "bad")  # 급한 것이 위
+        for text in ["파이프라인", "확인할 것", "일일루틴", "발행 대기", 'class="page-body fill']:
+            self.assertContains(res, text)
+
+    def test_picked_tab_when_cell_clicked(self):
+        res = self.client.get(INDEX, {"date": self.today.isoformat(), "site": self.nunip.pk})
+        self.assertEqual(res.context["tab"], "picked")
+        self.assertEqual(self.client.get(INDEX).context["tab"], "items")
