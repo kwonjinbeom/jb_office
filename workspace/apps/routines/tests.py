@@ -805,3 +805,64 @@ class FixedTopicTests(Login):
         self.assertTrue(note.startswith("내가 쓴 지침\n\n추가 지침 (2026-10-22):"))
         self.assertIn("원고를 만들지 않는다 (글감 없음)", note)
         self.assertEqual(mig.update(note, mig.HOUSING_REPLACE, mig.HOUSING_ADD), note)
+
+
+class WritingResultTests(Login):
+    """실행 이력 아래 '글쓰기 결과': 그날 기획표의 소재 판정 + 쓴 글 (2026-10-23 사용자). 코스피 15:30 전이면 예정 뱃지."""
+
+    PLAN = """# 주제 기획 · 2026-10-23
+
+## 소재 판정
+| 사이트 > 소재 | 있음/없음 | 근거 (출처 · 날짜) |
+|---|---|---|
+| 눈잎 > 일본 | 있음 | 교토 단풍 시즌 |
+| black_lukey>축제·행사 | 있음 | 지스타 |
+| 밤밤 > 코스피 | 예정 | 15:30 장 마감 뒤 커스텀 글쓰기로 실행 |
+| 밤밤 > 상품 추천 | 없음 | 이번 주 이미 씀 |
+| 밤밤 > 해외여행 | 없음 | 하루 2편 한도 |
+
+## 오늘의 신호
+| 말 | 갈래 | 출처 | 날짜 | 맞는 분류 |
+| 엔화 | 있음 | 기존 | 10/22 | 눈잎 > 일본 |
+"""
+
+    def setUp(self):
+        super().setUp()
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        root = Path(tmp.name)
+        (root / "원고").mkdir()
+        (root / "주제기획").mkdir()
+        (root / "주제기획" / "2026-10-23.md").write_text(self.PLAN, encoding="utf-8")
+        paths = override_settings(WRITING_DRAFTS_DIR=root / "원고")
+        paths.enable()
+        self.addCleanup(paths.disable)
+
+    def test_results_and_planned_badge(self):
+        from apps.blog_types.models import Category
+        japan = Category.objects.get(section__name="눈잎", name="일본")
+        post = TistoryPost.objects.create(title="11월 교토 단풍 언제 갈까", bt_category=japan)
+        trip = Category.objects.get(section__name="밤밤", name="해외 여행")  # 기획표·원고는 '해외여행' (띄어쓰기만 다름)
+        other = TistoryPost.objects.create(title="11월 타이베이 3박 4일", bt_category=trip)
+        TistoryPost.objects.filter(pk__in=[post.pk, other.pk]).update(created_at=timezone.make_aware(timezone.datetime(2026, 10, 23, 9, 15)))
+        res = self.client.get(INDEX, {"date": "2026-10-23"})
+        states = {r["label"]: r["word"] for r in res.context["results"]}
+        self.assertEqual(states, {"눈잎 > 일본": "씀", "black_lukey > 축제·행사": "못 씀",
+                                  "밤밤 > 코스피": "예정", "밤밤 > 상품 추천": "없음", "밤밤 > 해외 여행": "씀"})
+        self.assertEqual([r["word"] for r in res.context["results"]], ["씀", "씀", "예정", "못 씀", "없음"])
+        self.assertContains(res, "11월 교토 단풍 언제 갈까")
+        self.assertContains(res, "예정 1")
+        kospi = Category.objects.get(section__name="밤밤", name="코스피")
+        cats = {c.pk: c for g in res.context["topic_groups"] for c in g["cats"]}
+        self.assertEqual(cats[kospi.pk].planned, "15:30 장 마감 뒤 커스텀 글쓰기로 실행")
+        self.assertIsNone(cats[japan.pk].planned)
+
+    def test_space_insensitive_class(self):
+        """원고 '분류: 밤밤 > 해외여행' 이 분류 '해외 여행' 에 붙는다 (2026-10-23: 띄어쓰기 차이로 비어 있었다)"""
+        from apps.blog_types.changes import resolve
+        self.assertEqual(resolve("밤밤 > 해외여행").name, "해외 여행")
+
+    def test_no_plan(self):
+        res = self.client.get(INDEX, {"date": "2026-10-20"})
+        self.assertEqual(res.context["results"], [])
+        self.assertContains(res, "이 날 글쓰기 기획표와 쓴 글이 없습니다")

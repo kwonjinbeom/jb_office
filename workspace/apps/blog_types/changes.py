@@ -31,8 +31,13 @@ def folder() -> Path:
 
 def _match(qs, name, field="name"):
     name = name.strip()
-    for obj in qs:
+    objs = list(qs)
+    for obj in objs:
         if getattr(obj, field) == name:
+            return obj
+    bare = re.sub(r"\s+", "", name)  # 띄어쓰기만 다르면 같은 것 (2026-10-23: 원고 '해외여행' ↔ 분류 '해외 여행')
+    for obj in objs:
+        if re.sub(r"\s+", "", getattr(obj, field)) == bare:
             return obj
     return None
 

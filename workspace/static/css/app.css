@@ -1536,6 +1536,11 @@ a.od-item:hover { background: var(--hover); text-decoration: none; }
 .rt-run-time { color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; }
 .rt-log { margin: 0; padding: 8px 12px 12px; font: inherit; font-size: 12px; line-height: 1.6; color: var(--text-2); white-space: pre-wrap; background: var(--panel-2); }
 .rt-empty { padding: 28px 16px; text-align: center; color: var(--text-3); font-size: 12.5px; line-height: 1.7; }
+/* 일일루틴 › 글쓰기 결과: 분류마다 한 줄 (판정 · 글 제목 · 근거), 칸은 한 줄로 자른다 */
+.rt-counts { display: inline-flex; gap: 4px; }
+.rt-res-table td { height: 38px; font-size: 12.5px; }
+.rt-cell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rt-plan { margin-left: 6px; }
 @media (max-width: 1000px) { .rt-bottom { grid-template-columns: minmax(0, 1fr); } }
 
 /* 일일루틴 › 프롬프트 관리: 루틴 탭 · 왼쪽 보는 md·자료(줄을 누르면 아래에 내용) · 오른쪽 평가·갱신·이력 */

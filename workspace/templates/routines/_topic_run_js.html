@@ -1,5 +1,5 @@
-{# 커스텀 글쓰기 실행 (topics.run): 고른 줄의 편수를 보내 안내문을 받고, 복사해 PC 터미널 claude 를 연다.
-   [data-tp-run] = 이 화면에서 체크한 줄 전부 (줄마다 [data-tp-pick] 체크 + [data-tp-n] 편수), [data-tp-one="c12"] = 그 한 줄 1편. #}
+{% comment %}커스텀 글쓰기 실행 (topics.run): 고른 줄의 편수를 보내 안내문을 받고, 복사해 PC 터미널 claude 를 연다.
+   [data-tp-run] = 이 화면에서 체크한 줄 전부 (줄마다 [data-tp-pick] 체크 + [data-tp-n] 편수), [data-tp-one="c12"] = 그 한 줄 1편.{% endcomment %}
 <script>
 (function () {
   var URL = "{% url 'routines:topic_run' %}", CSRF = "{{ csrf_token }}";

@@ -118,6 +118,21 @@ def fill_custom(drafts):
             model.all_objects.filter(custom=False, title__in=titles).update(custom=True)
 
 
+def fill_classes(drafts):
+    """루틴 원고(T88~)로 들어온 글 중 분류가 비어 있는 것을 같은 제목 원고의 `분류:` 줄로 다시 붙인다
+    (2026-10-23: '밤밤 > 해외여행' 이 분류 '해외 여행' 과 띄어쓰기가 달라 비어 있었다)."""
+    from apps.naver_writing.models import Post as NaverPost
+
+    by_title = {d.title: d for d in drafts if d.classification and d.code[1:].isdigit() and int(d.code[1:]) >= AUTO_IMPORT_FROM}
+    if not by_title:
+        return
+    for model in (Post, NaverPost):
+        for post in model.all_objects.filter(bt_category__isnull=True, title__in=list(by_title)):
+            _classify_draft(post, by_title[post.title])
+            if post.bt_category_id:
+                post.save(update_fields=["bt_category", "bt_type", "bt_sub"])
+
+
 def auto_import_drafts():
     """T88 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
 
@@ -129,6 +144,7 @@ def auto_import_drafts():
     drafts = drafts_mod.list_drafts()
     fill_targets(drafts)
     fill_custom(drafts)
+    fill_classes(drafts)
     added = 0
     for d in drafts:
         number = d.code[1:]
