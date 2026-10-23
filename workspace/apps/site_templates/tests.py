@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
 from apps.blog_rules.models import Blog
@@ -463,5 +463,33 @@ class YudiLookTests(TestCase):
         self.assertNotIn('data-ke-size="size16">&nbsp;', out)
         self.assertIn("유디 메모지", prompt.build(pl))
         pl.site_category = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
-        self.assertNotIn("border:3px solid #bfe9e3", _render_for(pl, self.BODY)[1])
+        self.assertNotIn("border:3px solid #bfe9e3", _render_for(pl, self.BODY)[1])  # 공모주·정책은 그대로
         self.assertNotIn("유디 메모지", prompt.build(pl))
+
+    def test_daily_uses_same_look_for_products(self):
+        """눈잎 › 일상도 같은 유디 메모지 (0025, 2026-10-23 사용자: 일상은 대부분 제품 소개 — 여행지 형태가 아니라 테마·구조·CSS 그대로)"""
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from .views import _render_for
+        daily = SiteCategory.objects.get(blog__name="눈잎", name="일상")
+        self.assertEqual(daily.look, "yudi")
+        self.assertIn("제품 소개 글 모양", daily.concept)
+        self.assertIn("화면 모양", daily.concept)
+        body = "## 1. 어떤 가습기가 좋을까요?\n\n### 가습기 A\n\n::: 제품 | 가습기 A\n💰 가격 | 59,000원\n:::\n"
+        post = Post.objects.create(title="가습기", body="원문", stage="post")
+        pl = Placement.objects.create(site_category=daily, tistory_post=post, converted_body=body, convert_status="done")
+        out = _render_for(pl, body)[1]
+        self.assertIn("NanumSquareRound", out)
+        self.assertIn("border:3px solid #bfe9e3", out)  # 제품 카드 → 메모지 상자
+        self.assertIn("💰 가격 : 59,000원", out)
+        self.assertIn("유디 메모지", prompt.build(pl))
+        # 지금 발행예정인 일상 글은 변환 요청 + '이 글만' 으로 → '다시' 한 번이면 지난 변환본을 새 모양으로 고친다
+        import_module("apps.blog_types.migrations.0025_nunip_daily_yudi").forward(django_apps, None)
+        pl.refresh_from_db()
+        self.assertEqual(pl.convert_status, "requested")
+        self.assertIn("유디 메모지", pl.convert_note)
+        launch = prompt.launcher(RequestFactory().get("/"), [pl], "tok")
+        self.assertIn("## 지난 변환본 (사진·사실 점검은 살리고", launch)
+        self.assertIn("::: 제품 | 가습기 A", launch)
