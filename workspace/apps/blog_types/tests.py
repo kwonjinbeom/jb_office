@@ -1238,3 +1238,25 @@ class MemorilyAiPickTests(TestCase):
         self.assertNotIn(ai.sel, picks)
         self.assertIn(Category.objects.get(section__name="밤밤", name="코스피").sel, picks)
         self.assertEqual(FixedTopic.objects.get(name="AI 소식").category, ai)  # 고정 주제의 소재 → 원고 '분류: memorily > AI'
+
+
+class NunipJapanConceptTests(TestCase):
+    """눈잎 › 일본 여행 컨셉 (2026-10-23 사용자) · 교토 단풍 글을 새 원고로 바꾸기."""
+
+    def test_concept_and_rewrite(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.writing.models import Post
+        cat = SiteCategory.objects.get(blog__name="눈잎", name="일본 여행")
+        self.assertIn("권역", cat.concept)
+        self.assertIn("공항에서 도심", cat.concept)
+        mig = import_module("apps.writing.migrations.0022_rewrite_t112")
+        post = Post.objects.create(title=mig.OLD_TITLE, body="옛 본문", stage="temp", target="눈잎")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post, convert_status="done")
+        mig.forward(django_apps, None)
+        post.refresh_from_db(), pl.refresh_from_db()
+        self.assertIn("오사카 3박 4일", post.title)
+        self.assertIn("## 한눈에 보는 일정", post.body)
+        self.assertEqual(pl.convert_status, "none")

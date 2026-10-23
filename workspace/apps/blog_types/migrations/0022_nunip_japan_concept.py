@@ -45,9 +45,9 @@ def forward(apps, schema_editor):
     Category = apps.get_model("blog_types", "Category")
     SiteCategory.objects.filter(blog__name="눈잎", name="일본 여행", deleted_at__isnull=True).update(concept=CONCEPT)
     Category.objects.filter(section__name="눈잎", name="일본", deleted_at__isnull=True).update(
-        direction="일본을 권역(거점 도시 + 묶어 가는 곳)·도시별로 소개 — 일차별 동선·공항 교통·패스 계산·엔+원. 엔화·여행 제도 소식도")
+        direction="일본을 권역(거점 도시 + 묶어 가는 곳)·도시별로 소개 — 일차별 동선·공항 교통·패스 계산·엔+원. 엔화·환율·여행 제도 소식도")
 
 
 class Migration(migrations.Migration):
-    dependencies = [("blog_types", "0020_site_links")]
+    dependencies = [("blog_types", "0021_memorily_ai")]
     operations = [migrations.RunPython(forward, migrations.RunPython.noop)]
