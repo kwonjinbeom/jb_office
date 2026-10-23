@@ -1152,3 +1152,45 @@ class PostMenusTests(TestCase):
         self.assertEqual((link.name, link.url), ("글쓰기", "https://a.tistory.com/manage"))
         self.client.post(reverse("blog_types:link_delete", args=[link.pk]), {"next": back})
         self.assertFalse(SiteLink.objects.filter(pk=link.pk).exists())
+
+
+class DefaultPlacementTests(TestCase):
+    """발행예정글로 옮기면 원고의 '넣을 카테고리'(처음 겨냥한 사이트 › 카테고리)에 넣는다 (2026-10-23 사용자)"""
+
+    DRAFT = ("# [원고] T200 · 시험\n\n사이트: black_lukey\n\n| 항목 | 내용 |\n|---|---|\n| 넣을 카테고리 | black_lukey › 지역놀거리 (신설) |\n\n"
+             "<!-- 본문 시작 -->\n# 공주 당일치기\n본문\n<!-- 본문 끝 -->\n")
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        folder = Path(tmp.name) / "T200_시험"
+        folder.mkdir()
+        (folder / "원고.md").write_text(self.DRAFT, encoding="utf-8")
+        paths = override_settings(WRITING_DRAFTS_DIR=Path(tmp.name), REPO_ROOT=Path(tmp.name))
+        paths.enable()
+        self.addCleanup(paths.disable)
+        blog = Blog.objects.get(name="black_lukey")
+        self.cat = SiteCategory.objects.create(blog=blog, name="지역 놀거리 ", order=90)
+
+    def test_move_to_post_places_draft_category(self):
+        from apps.writing.drafts import list_drafts
+        from apps.writing.models import Post
+        self.assertEqual(list_drafts()[0].place, "black_lukey › 지역놀거리")
+        post = Post.objects.create(title="공주 당일치기", stage="review")
+        self.client.post(reverse("writing:move"), {"pk": post.pk, "to": "post"})
+        self.assertEqual([pl.site_category for pl in post.placements.all()], [self.cat])
+        # 사용자가 뺀(휴지통) 뒤에는 목록을 열어도 다시 넣지 않는다
+        post.placements.first().delete()
+        self.client.get(reverse("posts:planned"))
+        self.assertFalse(post.placements.exists())
+
+    def test_planned_list_fills_never_placed(self):
+        from apps.writing.models import Post
+        post = Post.objects.create(title="공주 당일치기", stage="post")
+        other = Post.objects.create(title="원고 없는 글", stage="post")
+        self.client.get(reverse("posts:planned"))
+        self.assertEqual(post.placements.count(), 1)
+        self.assertEqual(other.placements.count(), 0)

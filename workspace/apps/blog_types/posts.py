@@ -186,6 +186,9 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
     """글 관리 목록 (분류 트리 없이 표만): 발행예정글, 또는 목록 보기로 바꾼 임시글·검토글.
     중메뉴 발행예정글(planned)도 같은 내용을 다른 화면(template)으로 쓴다. base: 조건 지우기가 갈 주소."""
     sel, kind, obj, q, today, stage = p["sel"], p["kind"], p["obj"], p["q"], p["today"], p["stage"]
+    if stage == "post":  # 전에 담아 카테고리가 빈 발행예정글도 원고의 '넣을 카테고리'로 (한 번도 넣은 적 없는 글만)
+        for writer in ("tistory", "naver"):
+            sites.place_defaults(classify.post_model(writer).objects.filter(stage="post"))
     posts, counts = _collect(p, prefetch=stage in TABLE_STAGES)
     list_q = _query(p, view="")  # 제목을 누르면 한 건씩 보기로 (같은 조건의 목록과 함께)
     groups = _site_groups() if stage in TABLE_STAGES else []  # 카테고리 칸에서 바로 넣는다
@@ -460,12 +463,15 @@ def bulk(request):
         messages.success(request, f"{len(posts)}건을 상대 글쓰기 임시글으로 보냈습니다. (원래 글은 그대로)")
         return back
     to = request.POST.get("to", "")
-    moved = 0
+    moved = []
     for post in posts:
         if post.can_move_to(to):
             post.stage = to
             post.save(update_fields=["stage", "updated_at"])
-            moved += 1
+            moved.append(post)
+    if to == "post":  # 발행예정글: 카테고리가 비면 원고의 '넣을 카테고리'로 (2026-10-23 사용자)
+        sites.place_defaults(moved)
+    moved = len(moved)
     if moved:
         messages.success(request, f"{moved}건을 {dict(STAGES)[to]}(으)로 옮겼습니다.")
     if moved < len(posts):

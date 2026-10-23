@@ -7,6 +7,7 @@ T88 부터(일일루틴 글쓰기, 2026-10-22 임시글 정리 뒤)는 글 관�
 원고.md 형식 (원고/README.md):
   위쪽 제작 정보 → <!-- 본문 시작 --> → # 제목 → 본문 → <!-- 본문 끝 --> → 태그: … → 소개: …
   제작 정보의 `사이트: …` · `분류: 대 > 중 > 소` 줄(일일루틴 글쓰기)은 가져올 때 사이트·글 분류로 쓴다.
+  제작 정보 표의 `| 넣을 카테고리 | 사이트 › 카테고리 |` 는 발행예정글로 옮길 때 기본으로 넣는 곳 (blog_types.sites.place_defaults).
   `고정주제: …` · `커스텀: …` 줄이 있으면 커스텀 글 (일일루틴 하루 분량이 아닌 글, 글 관리의 '커스텀'으로 따로 본다).
 """
 import re
@@ -36,6 +37,7 @@ class Draft:
     site: str = ""
     classification: str = ""
     custom: bool = False
+    place: str = ""  # 넣을 카테고리 '사이트 › 카테고리' (처음 겨냥한 곳)
 
     @property
     def code(self) -> str:
@@ -64,6 +66,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     tags = re.search(r"^태그:\s*(.+)$", tail, re.M)
     summary = re.search(r"^소개:\s*(.+)$", tail, re.M)
     custom = re.search(r"^[-*\s]*`?(?:고정주제|커스텀):", head, re.M)
+    place = re.search(r"^\|\s*넣을 카테고리\s*\|\s*([^|\n]+?)\s*\|", head, re.M)
     return Draft(
         key=key,
         title=title[:200],
@@ -74,6 +77,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
         site=site.group(1).strip()[:60] if site else "",
         classification=classification.group(1).strip()[:200] if classification else "",
         custom=bool(custom),
+        place=re.sub(r"\s*\([^)]*\)\s*$", "", place.group(1)).strip()[:120] if place else "",  # '(신설 제안)' 같은 꼬리는 뺀다
     )
 
 
