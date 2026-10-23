@@ -105,7 +105,7 @@
       {% if picked_site or sel != today %}<a class="hint" href="{% url 'blog_ops:index' %}">오늘 · 모든 사이트</a>{% endif %}
       <a class="btn sm ghost od-head-r" href="{% url 'posts:planned' %}">발행예정글{% include "includes/ic.html" with name="chevron-right" %}</a>
     </div>
-    <div class="od-scroll">
+    <div class="od-scroll od-list">
       {% for site_name, items in day_groups %}
       <div class="od-group"><span>{{ site_name }}</span><span class="cnt">{{ items|length }}</span></div>
       {% for x in items %}
@@ -137,7 +137,7 @@
       <span class="muted small">{{ today|date:"n월 j일" }} 만든 글</span>
       <a class="btn sm ghost od-head-r" href="{% url 'posts:view' %}?stage=temp&amp;today=1">글 관리{% include "includes/ic.html" with name="chevron-right" %}</a>
     </div>
-    <div class="od-scroll">
+    <div class="od-scroll od-list">
       {% for site_name, items in new_groups %}
       <div class="od-group"><span>{{ site_name }}</span><span class="cnt">{{ items|length }}</span></div>
       {% for p in items %}

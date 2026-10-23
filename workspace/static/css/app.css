@@ -1402,13 +1402,14 @@ a.br-addr:hover { color: var(--accent); }
 /* 모니터링 대시보드 (2026-10-23 사용자): 네 칸 2×2, 좌우 5:5. 넉넉하면 한 화면, 작으면 칸 높이를 지키고 화면이 스크롤 */
 .page-body.fill:has(.od) { overflow: auto; }
 .od { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      grid-template-rows: minmax(420px, 46vh) minmax(620px, 72vh); gap: 14px; padding: 14px var(--gutter) 28px; }
+      grid-template-rows: minmax(420px, 46vh) minmax(620px, 72vh); gap: 14px; padding: 14px var(--gutter) 48px; }
 .od-card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .od-card .card-head { flex: none; gap: 10px; min-height: 52px; }
 .od-card .card-title { font-size: 15px; }
 .od-head-r { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
 .od-head-r .rt-launch { margin: 0; }
 .od-scroll { flex: 1; min-height: 0; overflow: auto; }
+.od-list { padding-bottom: 28px; }  /* 아래 두 목록 (오늘 발행 · 오늘의 글): 마지막 줄이 칸 끝에 붙지 않게 (2026-10-23 사용자) */
 /* 발행 실적: 글자를 크게 */
 .od-week { font-size: 15px; }
 .od-week thead th { font-size: 13.5px; height: 48px; line-height: 1.25; }
