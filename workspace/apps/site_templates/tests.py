@@ -418,3 +418,43 @@ class PanelPublishTests(TestCase):
         back = "/blog/posts/view/?stage=post&site=%EB%88%88%EC%9E%8E"
         res = self.client.get(reverse("site_templates:post"), {"p": f"tistory:{post.pk}", "back": back})
         self.assertContains(res, f'<input type="hidden" name="next" value="{back.replace("&", "&amp;")}">', html=False)
+
+
+class YudiLookTests(TestCase):
+    """눈잎 › 일본 여행 '유디 메모지' 글 모양 (2026-10-23 사용자: 내용이 아니라 글꼴·색·배치 같은 화면 짜임을 유디 블로그처럼)."""
+
+    BODY = "\n".join([
+        "> 11월에 처음 간사이를 가는 사람에게",
+        "", "## 1. 공항에서 난바까지는 어떻게 가요?", "",
+        "난카이 라피트를 타면", "**40분**이면 닿아요.", "", "==표는 미리 사 두세요==", "",
+        "| 목차 |", "| --- |", "| 1. 공항 |", "",
+        "::: 장소 | 오사카성 천수각", "⏰ 운영 시간 | 9:00~18:00", "💴 입장료 | 1,200엔", ":::", "",
+        "![성](https://a.com/1.jpg)", "", "![정원](https://a.com/2.jpg)", "", "---", "", "끝",
+    ])
+
+    def test_japan_category_has_yudi_look(self):
+        cat = SiteCategory.objects.get(blog__name="눈잎", name="일본 여행")
+        self.assertEqual(cat.look, "yudi")  # 0023
+        self.assertIn("화면 모양", cat.concept)
+        self.assertNotEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").look, "yudi")  # 다른 카테고리는 그대로
+
+    def test_render_and_prompt(self):
+        from .views import _render_for
+        cat = SiteCategory.objects.get(blog__name="눈잎", name="일본 여행")
+        pl = Placement.objects.create(site_category=cat, tistory_post=Post.objects.create(title="오사카", body="본문"))
+        out = _render_for(pl, self.BODY)[1]
+        self.assertTrue(out.startswith("<div style=\"font-family:'NanumSquare'"))
+        self.assertIn("text-align:center;line-height:2", out)  # 가운데 정렬 문단
+        self.assertIn('“</p><h2 style="font-family:\'Nanum Myeongjo\'', out)  # 큰따옴표 + 명조 소제목
+        self.assertIn('<strong style="font-weight:400;color:#009d91">40분</strong>', out)  # 굵게 → 청록
+        self.assertIn('<span style="background-color:#e3fdc8">표는 미리 사 두세요</span>', out)  # 형광펜
+        self.assertIn("border:4px solid #d9d9d9", out)  # 메모지 상자
+        self.assertIn("⏰ 운영 시간 : 9:00~18:00", out)
+        self.assertIn("background-color:#e3fdc8;padding:11px 16px", out)  # 목차 머리 칸 연두
+        self.assertEqual(out.count("width:50%"), 2)  # 사진 두 장 → 콜라주 한 줄
+        self.assertIn("／", out)  # --- → 사선
+        self.assertNotIn('data-ke-size="size16">&nbsp;', out)
+        self.assertIn("유디 메모지", prompt.build(pl))
+        pl.site_category = SiteCategory.objects.get(blog__name="눈잎", name="공모주")
+        self.assertNotIn("border:4px solid #d9d9d9", _render_for(pl, self.BODY)[1])
+        self.assertNotIn("유디 메모지", prompt.build(pl))

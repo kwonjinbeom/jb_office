@@ -1,0 +1,6 @@
+/* 눈잎 › 일본 여행 '유디 메모지' 글꼴 (2026-10-23).
+   모양(가운데 정렬·색·메모지 상자·사선)은 붙여 넣는 HTML 의 인라인 style 이 그린다. 여기서는 그 글꼴만 불러 둔다.
+   붙이는 곳: 티스토리 관리 → 꾸미기 → 스킨 편집 → html 편집 → CSS 탭 맨 위. 한 번만 붙이면 된다.
+   (붙이지 않으면 나눔스퀘어 대신 기본 고딕, 나눔명조 대신 기본 명조로 보인다) */
+@import url("https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css");
+@import url("https://fonts.googleapis.com/css2?family=Nanum+Myeongjo&display=swap");
