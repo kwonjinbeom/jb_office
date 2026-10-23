@@ -72,12 +72,19 @@ def _classify_draft(post, draft):
     from apps.blog_types.changes import resolve
     from apps.blog_types.models import Section
 
-    parts, node = draft.classification.split(">"), None
+    parts, node = (draft.classification or _topic_class(draft.topic)).split(">"), None
     while parts and node is None:  # 없는 소분류까지 적혀 있으면 찾은 데까지 (2026-10-22: 글 분류를 대 > 키워드로 줄임)
         node = resolve(">".join(parts))
         parts = parts[:-1]
     if node is not None and not isinstance(node, Section):
         classify.assign(post, node.sel)
+
+
+def _topic_class(topic):
+    """'분류:' 줄이 없는 고정 주제 원고는 그 주제의 소재로 (2026-10-23 사용자: AI 소식 → memorily > AI). 없으면 ""."""
+    from apps.routines.models import FixedTopic
+    t = FixedTopic.objects.filter(name=topic).exclude(category=None).select_related("category__section").first() if topic else None
+    return f"{t.category.section.name} > {t.category.name}" if t else ""
 
 
 def _draft_post(d):
@@ -123,7 +130,7 @@ def fill_classes(drafts):
     (2026-10-23: '밤밤 > 해외여행' 이 분류 '해외 여행' 과 띄어쓰기가 달라 비어 있었다)."""
     from apps.naver_writing.models import Post as NaverPost
 
-    by_title = {d.title: d for d in drafts if d.classification and d.code[1:].isdigit() and int(d.code[1:]) >= AUTO_IMPORT_FROM}
+    by_title = {d.title: d for d in drafts if (d.classification or d.topic) and d.code[1:].isdigit() and int(d.code[1:]) >= AUTO_IMPORT_FROM}
     if not by_title:
         return
     for model in (Post, NaverPost):

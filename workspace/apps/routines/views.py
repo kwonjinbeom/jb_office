@@ -298,8 +298,10 @@ def _sections():
 
 def default_picks(day):
     """그날의 기본 분류: 글 분류의 모든 소재 한 편씩 = '소재가 있으면 쓸' 후보. 실제로 몇 편 쓸지는 주제 기획이 정한다.
-    (day 는 예전 날짜별 무작위의 자리. 지금은 날마다 같다)"""
-    return {c.sel: 1 for s in _sections() for c in s.categories.all()}
+    (day 는 예전 날짜별 무작위의 자리. 지금은 날마다 같다)
+    글쓰기 루틴을 끈 사이트(memorily)의 소재는 뺀다 — 그 사이트 글은 고정 주제(AI 소식)나 사용자가 쓴다 (2026-10-23)."""
+    off = set(Blog.objects.filter(routine=False).values_list("name", flat=True))
+    return {c.sel: 1 for s in _sections() if s.name not in off for c in s.categories.all()}
 
 
 def day_picks(routine, day):

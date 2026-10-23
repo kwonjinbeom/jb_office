@@ -39,10 +39,11 @@ from . import classify, sites, transfer
 from .views import _find, _path, _placements_qs, _site_groups
 
 # 게시글 관리 (2026-10-22 사용자): 발행 완료한 발행예정글 (글의 stage 는 그대로 post).
-# 2026-10-23 사용자: 글 관리의 탭에서 빼 중메뉴로 (posts:published). 글 관리 탭은 TAB_KEYS 셋.
+# 2026-10-23 사용자: 글 관리의 탭에서 빼 중메뉴로 (posts:published). 글 관리 탭은 TAB_KEYS.
+# 2026-10-23 사용자: 메뉴 '임시·검토글'에서는 발행예정글 탭도 뺀다 (메뉴에 발행예정글이 따로 있다). 발행예정글의 글을 볼 때만 그 탭이 남는다.
 STAGES = [("temp", "임시글"), ("review", "검토글"), ("post", "발행예정글"), ("done", "게시글 관리")]
 STAGE_KEYS = [k for k, _ in STAGES]
-TAB_KEYS = ("temp", "review", "post")
+TAB_KEYS = ("temp", "review")
 TABLE_STAGES = ("post", "done")  # 늘 표로 보는 탭 (분류 트리·한 건씩 보기 없음)
 CLASS_KINDS = {"section", "category", "type", "sub", "unclassified"}
 
@@ -207,7 +208,7 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
         "custom": p["custom"], "custom_url": "?" + _query(p, custom="" if p["custom"] else "1"),
         "tabs": [{"key": k, "label": label, "count": counts[k], "on": k == stage,
                   "url": f"{reverse('posts:view')}?{_query(p, stage=k, view=p['view'] if k not in TABLE_STAGES else '')}"}
-                 for k, label in STAGES if k in TAB_KEYS],
+                 for k, label in STAGES if k in TAB_KEYS or k == stage],
         "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p), "table_stage": stage in TABLE_STAGES,
         "plan_split": stage == "post",  # 예정일 없는 글 · 정한 글을 두 표로 (2026-10-22 사용자)
         "unplanned": [x for x in posts if not x.planned_on], "planned": planned,
@@ -322,7 +323,7 @@ def post_list_for(request, post):
         "pl_query": list_q,
         "pl_keep": keep,
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
-                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES if k in TAB_KEYS],
+                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES if k in TAB_KEYS or k == p["stage"]],
         "pl_next_url": f"{reverse('posts:view')}?{list_q}",  # 옮기기·휴지통 뒤: 목록의 다음 글 (없으면 이 단계 첫 글)
         "site_names": sites.names(),
         "post_placements": placements,
@@ -366,7 +367,7 @@ def view(request):
         "page_title": "글 관리",
         "pl_stage_label": dict(STAGES)[p["stage"]],
         "pl_tabs": [{"key": k, "label": label, "count": counts[k], "on": k == p["stage"],
-                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES if k in TAB_KEYS],
+                     "url": f"{reverse('posts:view')}?{_query(p, stage=k)}"} for k, label in STAGES if k in TAB_KEYS or k == p["stage"]],
         "pl_clear_url": f"{reverse('posts:view')}?{_query(p, sel='', q='', today='', custom='')}",
         "has_filter": bool(p["sel"] or p["q"] or p["today"] or p["custom"]),
     })

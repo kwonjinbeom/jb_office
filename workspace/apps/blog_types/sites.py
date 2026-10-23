@@ -59,6 +59,10 @@ def _site_category(place):
     return next((c for c in cats if _bare(c.name) == want[-1]), None)
 
 
+# 고정 주제마다 정해 둔 넣을 곳 (원고의 '넣을 카테고리'보다 먼저). 2026-10-23 사용자: AI 소식은 memorily › AI 로.
+TOPIC_PLACES = {"AI 소식": "memorily › AI"}
+
+
 def place_defaults(posts):
     """발행예정글로 온 글에 넣은 곳이 한 번도 없으면 원고의 '넣을 카테고리'(처음 겨냥한 사이트 › 카테고리)에 넣는다.
     2026-10-23 사용자: 담으면 카테고리가 비어 있었다 — 거의 처음 겨냥이 맞고, 바꾸는 건 사용자가 한다.
@@ -72,8 +76,9 @@ def place_defaults(posts):
     by_title = {}
     for folder in (drafts_mod.drafts_dir(), naver_drafts_dir()):
         for d in drafts_mod.list_drafts(folder):
-            if d.place:
-                by_title.setdefault(d.title, d.place)
+            place = TOPIC_PLACES.get(d.topic) or d.place
+            if place:
+                by_title.setdefault(d.title, place)
     added = 0
     for post in posts:
         cat = _site_category(by_title.get(post.title, ""))

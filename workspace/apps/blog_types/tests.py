@@ -14,7 +14,7 @@ def legacy_tree():
     """0017 이전 글 분류(판매 수익·광고 수익·IT/AI 와 그 아래)를 되살린다.
     아래 테스트들은 분류 화면·글 넣기 같은 동작을 옛 시드 이름으로 확인한다 (2026-10-22 새 분류는 SimpleClassesTests)."""
     from apps.core.models import TrashEntry
-    Section.all_objects.filter(name__in=["눈잎", "black_lukey", "밤밤"]).delete()
+    Section.all_objects.filter(name__in=["눈잎", "black_lukey", "밤밤", "memorily"]).delete()
     for model in (Section, Category, PostType, SubType):
         model.all_objects.update(deleted_at=None)
     TrashEntry.objects.filter(model_label="blog_types.section").delete()
@@ -168,7 +168,8 @@ class SiteCategoryTests(TestCase):
     def test_seed_real_categories(self):
         names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
         self.assertEqual(names, ["Vue.js, Node.js", "Java", "Database", "Android Studio", "Make",
-                                 "공모전 및 프로젝트", "자격증", "일상생활", "기타"])
+                                 "공모전 및 프로젝트", "자격증", "일상생활", "기타", "AI"])  # AI 는 0021 (2026-10-23)
+        self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
         self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 6)  # 0019 티스토리 화면 그대로
 
@@ -185,7 +186,7 @@ class SiteCategoryTests(TestCase):
     def test_add_edit_move_delete(self):
         self.add(self.memorily.sel, "AI 이야기")
         top = SiteCategory.objects.get(name="AI 이야기")
-        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 10))
+        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 11))
         self.add(top.sel, "Claude Code")
         sub = SiteCategory.objects.get(name="Claude Code")
         self.assertEqual(sub.parent, top)
@@ -195,7 +196,7 @@ class SiteCategoryTests(TestCase):
         top.refresh_from_db()
         self.assertEqual((top.name, top.note), ("AI 개발기", "새 축"))
         self.client.post(reverse("blog_types:move", args=["sitecat", top.pk]), {"dir": "up"})
-        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[8].name, "AI 개발기")
+        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[9].name, "AI 개발기")
         res = self.client.get(reverse("blog_types:delete", args=["sitecat", top.pk]))
         self.assertContains(res, "하위 카테고리 1개")
         self.client.post(reverse("blog_types:delete", args=["sitecat", top.pk]))
@@ -467,20 +468,31 @@ class PostHubTests(TestCase):
         res = self.client.get(reverse("posts:view"))
         self.assertContains(res, f'href="{reverse("posts:view")}"')
         blog = next(m for m in res.context["MENUS"] if m.key == "blog")
-        # 2026-10-23 사용자: 모니터링이 맨 위, 글 관리 아래에 발행예정글 · 게시글 관리 · 카테고리 관리 · 사이트별 템플릿
+        # 2026-10-23 사용자: 모니터링이 맨 위, 글 관리는 접고 펴기만 하고 그 아래 임시·검토글 · 발행예정글 · 게시글 관리 · 카테고리 관리 · 사이트별 템플릿
         self.assertEqual([c.title for c in blog.children], ["모니터링", "글 관리", "memorily 티스토리"])
-        self.assertEqual([c.title for c in blog.children[1].children], ["발행예정글", "게시글 관리", "카테고리 관리", "사이트별 템플릿"])
+        self.assertEqual([c.title for c in blog.children[1].children],
+                         ["임시·검토글", "발행예정글", "게시글 관리", "카테고리 관리", "사이트별 템플릿"])
         group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")["children"][1]
-        self.assertTrue(group["link"] and group["self_active"])  # 글 관리 이름 줄이 곧 글 관리 화면 링크
-        self.assertContains(res, f'<a class="nav-item sub active" href="{reverse("posts:view")}">', html=False)
-        self.assertContains(res, 'data-nav-mid="posts_view"')  # 중메뉴 접기 버튼 (기본은 펼침)
+        self.assertFalse(group["link"])  # 글 관리 이름 줄은 링크가 아니라 접기 (memorily 티스토리와 같다)
+        self.assertEqual([s["active"] for s in group["children"]], [True, False, False, False, False])
+        self.assertContains(res, '<button type="button" class="nav-sub-label active" data-nav-mid-toggle>글 관리</button>', html=False)
+        self.assertContains(res, f'<a class="nav-item sub sub2 active" href="{reverse("posts:view")}"><span>임시·검토글</span></a>', html=False)
+        self.assertContains(res, 'data-nav-mid="posts_hub"')  # 중메뉴 접기 버튼 (기본은 펼침)
         self.assertContains(res, 'data-nav-mid-toggle aria-expanded="true"')
         planned = self.client.get(reverse("posts:planned"))
         group = next(n for n in planned.context["NAV"] if n["menu"].key == "blog")["children"][1]
-        self.assertEqual((group["self_active"], [s["active"] for s in group["children"]]), (False, [True, False, False, False]))
+        self.assertEqual([s["active"] for s in group["children"]], [False, True, False, False, False])
         cats = self.client.get(reverse("blog_types:index"))
         group = next(n for n in cats.context["NAV"] if n["menu"].key == "blog")["children"][1]
-        self.assertEqual([s["active"] for s in group["children"]], [False, False, True, False])
+        self.assertEqual([s["active"] for s in group["children"]], [False, False, False, True, False])
+
+    def test_temp_review_has_no_planned_tab(self):
+        """임시·검토글에서는 발행예정글 탭을 뺀다 (2026-10-23 사용자: 메뉴에 따로 있다). 발행예정글의 글을 볼 때만 그 탭이 남는다."""
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "view": "list"})
+        self.assertEqual([t["key"] for t in res.context["tabs"]], ["temp", "review"])
+        self.assertNotContains(res, ">발행예정글<span")
+        res = self.client.get(reverse("posts:view"), {"stage": "post"})
+        self.assertEqual([t["key"] for t in res.context["tabs"]], ["temp", "review", "post"])
 
     def test_today_filter(self):
         from datetime import timedelta
@@ -526,7 +538,7 @@ class PostHubTests(TestCase):
         url = reverse("posts:view")
         res = self.client.get(url)
         self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 임시", "티 임시"])
-        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1, 0])  # … 발행예정글 (게시글 관리는 중메뉴로)
+        self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1])  # 임시글 · 검토글 (발행예정글·게시글 관리는 중메뉴로, 2026-10-23)
         res = self.client.get(url, {"sel": "u", "stage": "review"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["티 검토"])  # 미분류
         res = self.client.get(url, {"sel": self.season.category.sel})
@@ -796,10 +808,10 @@ class SimpleClassesTests(TestCase):
 
     def test_new_tree_and_old_in_trash(self):
         from apps.core.models import TrashEntry
-        self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤"])
+        self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤", "memorily"])  # memorily › AI 는 0021
         self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
                          ["코스피", "나스닥", "상품 추천", "해외 여행", "그 외"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020)
-        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.all()))  # 사이트마다 '그 외' 하나
+        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.exclude(name="memorily")))  # 루틴 사이트마다 '그 외' 하나
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
         self.assertTrue(Category.objects.get(name="코스피").direction)  # 방향 = 글쓰기 컨셉
         trashed = TrashEntry.objects.filter(model_label="blog_types.section")
@@ -1194,3 +1206,35 @@ class DefaultPlacementTests(TestCase):
         self.client.get(reverse("posts:planned"))
         self.assertEqual(post.placements.count(), 1)
         self.assertEqual(other.placements.count(), 0)
+
+    def test_ai_news_goes_to_memorily_ai(self):
+        """AI 소식은 원고의 넣을 카테고리(예: memorily › 기타)보다 memorily › AI 가 먼저 (2026-10-23 사용자: 발행 때 매핑)"""
+        from django.conf import settings as dj_settings
+
+        from apps.writing.models import Post
+        folder = dj_settings.WRITING_DRAFTS_DIR / "T201_AI소식"
+        folder.mkdir()
+        (folder / "원고.md").write_text(
+            "# [원고] T201 · 오늘의 AI 소식\n사이트: memorily\n고정주제: AI 소식\n\n| 항목 | 내용 |\n|---|---|\n"
+            "| 넣을 카테고리 | memorily › 기타 |\n\n<!-- 본문 시작 -->\n# 오늘의 AI 소식\n본문\n<!-- 본문 끝 -->\n", encoding="utf-8")
+        post = Post.objects.create(title="오늘의 AI 소식", stage="post", target="memorily")
+        self.client.get(reverse("posts:planned"))
+        self.assertEqual([str(pl.site_category) for pl in post.placements.all()], ["AI"])
+        ai = SiteCategory.objects.get(blog__name="memorily", name="AI")
+        self.assertTrue(ai.heading_bar)
+        self.assertEqual(Category.objects.get(section__name="memorily", name="AI").section.categories.count(), 1)
+
+
+class MemorilyAiPickTests(TestCase):
+    """글 분류의 memorily › AI 는 일일 분량(기본 소재)에 들지 않는다 — memorily 는 글쓰기 루틴을 끈 사이트 (2026-10-23)"""
+
+    def test_default_picks_skip_routine_off_site(self):
+        from datetime import date
+
+        from apps.routines.models import FixedTopic
+        from apps.routines.views import default_picks
+        ai = Category.objects.get(section__name="memorily", name="AI")
+        picks = default_picks(date(2026, 10, 23))
+        self.assertNotIn(ai.sel, picks)
+        self.assertIn(Category.objects.get(section__name="밤밤", name="코스피").sel, picks)
+        self.assertEqual(FixedTopic.objects.get(name="AI 소식").category, ai)  # 고정 주제의 소재 → 원고 '분류: memorily > AI'

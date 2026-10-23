@@ -308,6 +308,18 @@ class PasteFormatTests(TestCase):
         pl.save()
         self.assertNotIn("&nbsp;", self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"])
 
+    def test_memorily_ai_heading_bar_and_concept(self):
+        """memorily › AI (2026-10-23 사용자): 소제목 앞 빨간 세로 막대 (크기·말 그대로), 컨셉에 도구마다 사진 · 가공이미지"""
+        from .views import HEADING_BAR
+        pl = self.place("memorily", "AI")
+        html = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
+        self.assertIn(f'<h2 style="{HEADING_BAR}">소제목</h2>', html)
+        text = prompt.build(pl)
+        self.assertIn("도구(## 소제목)마다 1장씩", text)
+        self.assertIn("가공이미지", text)
+        other = self.place("memorily", "기타")  # 다른 카테고리는 막대 없이
+        self.assertIn("<h2>소제목</h2>", self.client.get(reverse("site_templates:convert", args=[other.pk])).context["paste_html"])
+
     def test_copy_buttons_follow_platform(self):
         res = self.client.get(reverse("site_templates:convert", args=[self.place("black_lukey", "낙서장").pk]))
         self.assertContains(res, 'data-copy-rich="#st-paste-')  # 네이버: 서식 그대로 (복사 칸 id 에 매핑 번호)

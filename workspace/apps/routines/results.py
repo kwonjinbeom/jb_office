@@ -57,7 +57,10 @@ def _posts(day):
     from apps.naver_writing.models import Post as NaverPost
     from apps.writing import drafts
     from apps.writing.models import Post
+    from .models import FixedTopic
     topics = {d.title: d.topic for d in drafts.list_drafts() if d.topic}
+    topic_cats = {t.name: f"{t.category.section.name} > {t.category.name}"  # 소재를 정한 고정 주제는 그 소재로 (AI 소식 → memorily > AI)
+                  for t in FixedTopic.objects.exclude(category=None).select_related("category__section")}
     out = {}
     for model, ns in ((Post, "writing"), (NaverPost, "naver_writing")):
         for p in model.objects.filter(created_at__date=day).select_related("bt_category__section").order_by("created_at", "pk"):
@@ -65,7 +68,7 @@ def _posts(day):
             if cat:
                 label = f"{cat.section.name} > {cat.name}"
             elif p.title in topics:
-                label = f"{p.target or '사이트 미정'} > {topics[p.title]}"
+                label = topic_cats.get(topics[p.title]) or f"{p.target or '사이트 미정'} > {topics[p.title]}"
             else:
                 label = p.target or "분류 없음"
             out.setdefault(label, []).append((p.title, reverse(f"{ns}:detail", args=[p.pk])))

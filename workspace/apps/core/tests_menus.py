@@ -40,7 +40,7 @@ class MenuPermissionPageTests(TestCase):
     def test_save_rename_reorder_hide_then_reset(self):
         default = self.keys()
         order = ["blog", "routines", *[k for k in default if k not in ("blog", "routines")]]
-        children = {"blog": ["memorily_tistory", "posts_view", "blog_ops"]}
+        children = {"blog": ["memorily_tistory", "posts_hub", "blog_ops"]}
         posted = []
         for key in order:
             posted.append(key)
@@ -51,7 +51,7 @@ class MenuPermissionPageTests(TestCase):
         self.assertEqual([m.key for m in menus][:2], ["blog", "routines"])
         self.assertEqual(menus[1].title, "루틴")
         self.assertNotIn("memos", [m.key for m in menus])  # 숨김
-        self.assertEqual([c.key for c in menus[0].children][:2], ["memorily_tistory", "posts_view"])
+        self.assertEqual([c.key for c in menus[0].children][:2], ["memorily_tistory", "posts_hub"])
         self.assertEqual(MenuSetting.objects.get(key="blog").title, "")  # 기본 이름이면 비워 둔다
         self.assertContains(self.client.get(reverse("core:home")), "루틴")
         self.assertContains(self.client.get(URL), 'name="show_memos"')  # 숨긴 것도 권한 화면엔 보인다

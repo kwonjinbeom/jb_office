@@ -254,7 +254,17 @@ def _render_for(placement, text):
         return html, html, plain_text(html), html
     html = render_body(text)
     out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
+    if _heading_bar(placement.site_category):
+        out = re.sub(r"<h2(?![^>]*\bstyle=)", f'<h2 style="{HEADING_BAR}"', out)
     return out, out, plain_text(html), out
+
+
+# 소제목 앞 빨간 세로 막대 (2026-10-23 사용자, memorily › AI): 크기·말은 그대로, 막대만. 카테고리의 '소제목 빨간 막대'를 켠 곳만.
+HEADING_BAR = "border-left:5px solid #e03131;padding-left:12px"
+
+
+def _heading_bar(cat):
+    return cat.heading_bar or bool(cat.parent_id and cat.parent.heading_bar)
 
 
 def _tags_for(placement):
