@@ -139,6 +139,52 @@ HR_STYLES = [
 ]
 KNOWN_STYLES |= {s.replace(" ", "") for s in QUOTE_STYLES + HR_STYLES}
 
+# 영화·OTT 작품 소제목 (2026-10-23 사용자: 영화명 왼쪽에 세로 막대 — 작품 이름이 더 잘 보이게).
+# '## 작품 이름 · 공개일' 아래(다음 소제목 전)에 '::: 작품' 카드가 있으면 그 소제목을 세로줄 인용(네이버 '버티컬 라인')으로 —
+# 작품 이름은 크게, 마지막 '·' 뒤(공개일)는 아래 작은 회색 줄. 원고·변환본은 그대로 두고 그릴 때 바꾸니 지난 글에도 같다.
+WORK_QUOTE = QUOTE_STYLES[1]
+WORK_NAME_STYLE = "font-size:19px;color:#333333;font-weight:bold"
+WORK_SUB_STYLE = "font-size:13px;color:#888888"
+_H2_LINE = re.compile(r"^##[ \t]+(?P<title>.+?)[ \t]*#*[ \t]*$")
+_WORK_CARD = re.compile(r"^:::[ \t]*작품[ \t]*\|")
+
+
+def work_titles(text: str) -> str:
+    lines = text.split("\n")
+    heads = [i for i, line in enumerate(lines) if _H2_LINE.match(line)]
+    for n, i in enumerate(heads):
+        end = heads[n + 1] if n + 1 < len(heads) else len(lines)
+        if not any(_WORK_CARD.match(line) for line in lines[i + 1:end]):
+            continue
+        name, sep, sub = _H2_LINE.match(lines[i])["title"].rpartition(" · ")
+        name, sub = (name, sub) if sep else (sub, "")
+        block = f'<blockquote style="{WORK_QUOTE}"><p style="{WORK_NAME_STYLE}">{html.escape(name.strip(), quote=False)}</p>'
+        if sub.strip():
+            block += f'<p style="{WORK_SUB_STYLE}">{html.escape(sub.strip(), quote=False)}</p>'
+        lines[i] = f"\n{block}</blockquote>\n"
+    return "\n".join(lines)
+
+
+# 맨 위 인용 상자(첫 요약)는 문장마다 줄을 바꾼다 (2026-10-23 사용자: 쉼표 상자 안 글이 줄바꿈 없이 너무 길게 이어진다).
+# 첫 소제목 전에 나오는 첫 인용만. 문단(빈 > 줄)은 그대로 두고 한 줄 안의 문장만 나눈다 (nl2br 로 줄바꿈이 된다).
+_SENTENCE_END = re.compile(r"(?<=[.!?])[ \t]+(?=\S)")
+
+
+def summary_lines(text: str) -> str:
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if _H2_LINE.match(line):
+            return text
+        if not line.lstrip().startswith(">"):
+            continue
+        j = i
+        while j < len(lines) and lines[j].lstrip().startswith(">"):
+            body = lines[j].lstrip()[1:].strip()
+            lines[j] = "\n".join(f"> {s}" for s in _SENTENCE_END.split(body)) if body else lines[j]
+            j += 1
+        return "\n".join(lines)
+    return text
+
 
 def safe_style(value: str) -> str:
     """Preserve editor typography, never CSS URLs, arbitrary positioning or executable values."""
@@ -279,7 +325,8 @@ def render_body(text: str) -> str:
     if is_html(text):  # 편집기 글·HTML 로 저장한 변환본도 확인 날짜는 같게
         return soft_check_dates(_decorate(clean_html(text)))
     text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
-    out = _decorate(markdown.markdown(fix_bold(_mark_lines(cards(text))), extensions=["tables", "sane_lists", "nl2br"]))
+    text = cards(work_titles(summary_lines(text)))
+    out = _decorate(markdown.markdown(fix_bold(_mark_lines(text)), extensions=["tables", "sane_lists", "nl2br"]))
     return soft_check_dates(clean_html(out))  # 마크다운 안에 섞인 날 HTML 도 같은 기준으로 거른다
 
 
@@ -305,8 +352,9 @@ class _PasteStyles(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         if self.depth == 0 and tag in BLOCKS:
-            if self.gaps and self.seen_block:
-                self.out.append(self._gap() * (SECTION_GAPS if tag == "h2" else 1))  # 글 덩어리 앞은 빈 줄 셋
+            if self.gaps and self.seen_block:  # 글 덩어리(소제목 · 작품 이름 세로줄) 앞은 빈 줄 셋
+                section = tag == "h2" or (tag == "blockquote" and dict(attrs).get("style", "").startswith(WORK_QUOTE))
+                self.out.append(self._gap() * (SECTION_GAPS if section else 1))
             self.seen_block = True
         if tag not in VOID:
             self.depth += 1
