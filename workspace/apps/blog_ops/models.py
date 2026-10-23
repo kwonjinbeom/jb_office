@@ -68,6 +68,7 @@ class SiteStat(models.Model):
     comments = models.PositiveIntegerField("댓글", null=True, blank=True)
     likes_total = models.PositiveIntegerField(null=True, blank=True)
     comments_total = models.PositiveIntegerField(null=True, blank=True)
+    visitors_total = models.PositiveIntegerField(null=True, blank=True)  # 그날 마지막 수집 때 누적 방문자 (다음 날 어제를 마저 채운다)
     hand = models.BooleanField("직접 넣음", default=False)
     updated_at = models.DateTimeField(auto_now=True)
 

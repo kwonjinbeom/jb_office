@@ -275,19 +275,63 @@ class SiteStatsTests(TestCase):
         from datetime import date as _date
 
         from . import stats
-        visit = b'<visitorcnts><visitorcnt id="20261022" cnt="31"/><visitorcnt id="20261023" cnt="12"/></visitorcnts>'
+        day = _date(2026, 10, 23)
+        # 네이버 (2026-10-24): 방문자 그래프는 빈 응답이라 모바일 블로그 정보의 오늘 방문자 · 누적
+        info = _json.dumps({"result": {"dayVisitorCount": 12, "totalVisitorCount": 321}}).encode()
         posts = _json.dumps({"result": {"items": [{"sympathyCnt": 3, "commentCnt": 1}, {"sympathyCnt": "2", "commentCnt": 0}]}}).encode()
-        pages = {stats.NAVER_VISIT.format(id="black_lukey"): visit, stats.NAVER_POSTS.format(id="black_lukey"): posts}
-        got = stats.collect(stats.target(self.naver), fetch=lambda url: pages[url], today=_date(2026, 10, 23))
-        self.assertEqual(got["visitors"], {"2026-10-22": 31, "2026-10-23": 12})
+        pages = {stats.NAVER_INFO.format(id="black_lukey"): info, stats.NAVER_POSTS.format(id="black_lukey"): posts}
+        got = stats.collect(stats.target(self.naver), fetch=lambda url: pages[url], today=day)
+        self.assertEqual((got["visitors"], got["visitors_total"]), ({"2026-10-23": 12}, 321))
         self.assertEqual((got["likes_total"], got["comments_total"]), (5, 1))
         self.assertTrue(got["ok"])
-        home = b'<html><div id="jb-stat" hidden data-today="1,204" data-yesterday="987" data-total="5"></div></html>'
-        got = stats.collect(stats.target(self.tistory), fetch=lambda url: home, today=_date(2026, 10, 23))
+        # 티스토리: 방문자는 스킨 조각, 공감·댓글은 RSS 의 최근 글마다 GET
+        addr = self.tistory.address.rstrip("/")
+        rss = (b"<rss><item><comments>https://x.tistory.com/entry/a#entry11comment</comments></item>"
+               b"<item><comments>https://x.tistory.com/entry/b#entry10comment</comments></item></rss>")
+        tpages = {
+            addr + "/": b'<html><div id="jb-stat" hidden data-today="1,204" data-yesterday="987" data-total="5"></div></html>',
+            addr + "/rss": rss,
+            stats.TISTORY_LIKES.format(addr=addr, id="11"): b'{"data":{"reactionCounter":{"sum":2,"like":2}}}',
+            stats.TISTORY_LIKES.format(addr=addr, id="10"): b'{"data":{"reactionCounter":{"sum":1}}}',
+            stats.TISTORY_COMMENTS.format(addr=addr, id="11"): b'{"data":{"items":[],"totalItems":3}}',
+            stats.TISTORY_COMMENTS.format(addr=addr, id="10"): b'{"data":{"items":[],"totalItems":0}}',
+        }
+        got = stats.collect(stats.target(self.tistory), fetch=lambda url: tpages[url], today=day)
         self.assertEqual(got["visitors"], {"2026-10-23": 1204, "2026-10-22": 987})
+        self.assertEqual((got["visitors_total"], got["likes_total"], got["comments_total"]), (5, 3, 3))
+        # 조각이 없으면 스킨 사이드바의 'Today : n · Yesterday : n'
+        tpages[addr + "/"] = (b'<div class="box-visit"><h3>Total</h3><p class="text-total">31</p>'
+                              b'<ul><li class="item-visit">Today : 1</li><li class="item-visit">Yesterday : 3</li></ul></div>')
+        got = stats.collect(stats.target(self.tistory), fetch=lambda url: tpages[url], today=day)
+        self.assertEqual((got["visitors"], got["visitors_total"]), ({"2026-10-23": 1, "2026-10-22": 3}, 31))
+        tpages[addr + "/"] = b"<html></html>"
+        got = stats.collect(stats.target(self.tistory), fetch=lambda url: tpages[url], today=day)
+        self.assertTrue(got["ok"])  # 방문자 칸이 없어도 공감·댓글은 읽는다
+        self.assertIn("스킨에 방문자 칸 없음", got["message"])
         got = stats.collect(stats.target(self.tistory), fetch=lambda url: b"<html></html>")
         self.assertFalse(got["ok"])
-        self.assertIn("스킨에 통계 칸이 없어요", got["message"])
+        self.assertIn("스킨에 방문자 칸이 없어요", got["message"])
+
+    def test_collect_blogger_comments(self):
+        import json as _json
+
+        from . import stats
+        blogger = Blog.objects.filter(platform="blogger").exclude(address="").first()
+        feed = _json.dumps({"feed": {"entry": [{"thr$total": {"$t": "2"}}, {"thr$total": {"$t": "1"}}, {}]}}).encode()
+        got = stats.collect(stats.target(blogger), fetch=lambda url: feed)
+        self.assertEqual((got["visitors"], got["likes_total"], got["comments_total"]), ({}, 0, 3))
+        self.assertTrue(got["ok"])
+        self.assertIn("방문자는 직접", got["message"])
+
+    def test_naver_yesterday_filled_from_total(self):
+        """네이버는 오늘 방문자만 준다: 다음 날 누적으로 어제를 마저 채운다 (어제 마지막 수집 뒤에 온 사람까지)"""
+        from . import stats
+        from .models import SiteStat
+        y = self.today - timedelta(days=1)
+        stats.record(self.naver, {"ok": True, "visitors": {y.isoformat(): 5}, "visitors_total": 105}, today=y)  # 어제 낮: 5명, 누적 105
+        stats.record(self.naver, {"ok": True, "visitors": {self.today.isoformat(): 2}, "visitors_total": 111})  # 오늘: 2명, 누적 111
+        self.assertEqual(SiteStat.objects.get(blog=self.naver, day=y).visitors, 9)  # 어제 시작 100 → 오늘 시작 109
+        self.assertEqual(SiteStat.objects.get(blog=self.naver, day=self.today).visitors, 2)
 
     def test_record_keeps_hand_and_counts_daily_likes(self):
         from . import stats
