@@ -255,7 +255,7 @@ def _ledger():
     drafted = {d.title for d in items}
     others = []
     for model in (Post, NaverPost):
-        others += list(model.all_objects.order_by("-created_at").values_list("title", flat=True)[:LEDGER_POSTS])
+        others += list(model.all_objects.order_by("-created_at", "-pk").values_list("title", flat=True)[:LEDGER_POSTS])
     others += list(FeedEntry.objects.order_by("-published_at").values_list("title", flat=True)[:LEDGER_POSTS])
     others = list(dict.fromkeys(t for t in others if t and t not in drafted))[:LEDGER_POSTS]
     if others:
