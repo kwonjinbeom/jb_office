@@ -195,3 +195,49 @@ class DashboardTests(TestCase):
         res = self.client.get(INDEX, {"date": day.isoformat(), "site": self.nunip.pk})
         self.assertEqual([n for n, _ in res.context["day_groups"]], ["눈잎"])
         self.assertContains(res, "오늘 · 모든 사이트")
+
+
+class FeedTitleTests(TestCase):
+    """티스토리 RSS 의 '&amp;middot;' (2026-10-23 사용자: 눈잎 어제 숫자가 안 맞았다)."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        self.nunip = Blog.objects.get(name="눈잎")
+
+    def test_double_escaped_title_matches_post_and_date_moves_back(self):
+        from datetime import datetime
+
+        from apps.writing.models import Post
+        yesterday = timezone.localdate() - timedelta(days=1)
+        rss = ("<rss><channel><item><title>청약&amp;middot;환불 정리</title><link>https://nunip.tistory.com/9</link>"
+               f"<pubDate>{yesterday:%a, %d %b %Y} 16:11:58 +0900</pubDate></item></channel></rss>")
+        items = feeds.parse(rss.encode())
+        self.assertEqual(items[0][0], "청약·환불 정리")
+        post = Post.objects.create(title="청약·환불 정리", stage="post", target="눈잎", publish_status="done",
+                                   published_on=timezone.localdate())  # 오늘 '발행 완료'를 눌렀다
+        feeds.record(self.nunip, True, "", items)
+        post.refresh_from_db()
+        self.assertEqual(post.published_on, yesterday)  # RSS 에 올라온 날로
+        res = self.client.get(INDEX, {"date": yesterday.isoformat()})
+        row = next(r for r in res.context["rows"] if r["blog"] == self.nunip)
+        self.assertEqual(sum(c["count"] for c in row["cells"]), 1)  # 두 번 세지 않는다
+
+
+class DashboardRunTests(TestCase):
+    """모니터링 (2026-10-23 사용자): 글쓰기 결과 줄마다 실행 · 오늘의 글에서 옮긴 글은 오늘 발행에."""
+
+    def setUp(self):
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+
+    def test_promote_shows_in_today_and_rows_have_run(self):
+        from apps.writing.models import Post
+        post = Post.objects.create(title="오늘의 AI 글", stage="temp", target="memorily")
+        self.client.post(reverse("posts:promote"), {"ids": f"tistory:{post.pk}", "next": INDEX})
+        post.refresh_from_db()
+        self.assertEqual((post.stage, post.planned_on), ("post", timezone.localdate()))
+        undated = Post.objects.create(title="예정일 없는 오늘 글", stage="post", target="memorily")
+        res = self.client.get(INDEX)
+        titles = [x["title"] for _, items in res.context["day_groups"] for x in items]
+        self.assertIn("오늘의 AI 글", titles)
+        self.assertIn(undated.title, titles)
+        self.assertContains(res, reverse("routines:topic_run"))  # 줄 실행 스크립트
