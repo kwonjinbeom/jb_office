@@ -21,7 +21,7 @@ class MenuPermissionPageTests(TestCase):
     def test_blog_has_no_listing_child(self):
         blog = next(n for n in build_nav("") if n["menu"].key == "blog")
         self.assertNotIn("블로그·카페 리스트", [c["menu"].title for c in blog["children"]])
-        self.assertEqual(blog["children"][0]["menu"].key, "blog_ops")  # 모니터링이 맨 위 (2026-10-23)
+        self.assertEqual([c["menu"].key for c in blog["children"][:2]], ["blog_stats", "blog_ops"])  # 통계현황 · 모니터링이 맨 위 (2026-10-23)
 
     def test_admin_index_has_only_auth_and_menu(self):
         res = self.client.get(reverse("admin:index"))

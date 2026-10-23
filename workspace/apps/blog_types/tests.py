@@ -469,10 +469,10 @@ class PostHubTests(TestCase):
         self.assertContains(res, f'href="{reverse("posts:view")}"')
         blog = next(m for m in res.context["MENUS"] if m.key == "blog")
         # 2026-10-23 사용자: 모니터링이 맨 위, 글 관리는 접고 펴기만 하고 그 아래 임시·검토글 · 발행예정글 · 게시글 관리 · 카테고리 관리 · 사이트별 템플릿
-        self.assertEqual([c.title for c in blog.children], ["모니터링", "글 관리", "memorily 티스토리"])
-        self.assertEqual([c.title for c in blog.children[1].children],
+        self.assertEqual([c.title for c in blog.children], ["통계현황", "모니터링", "글 관리", "memorily 티스토리"])  # 통계현황 (2026-10-23)
+        self.assertEqual([c.title for c in blog.children[2].children],
                          ["임시·검토글", "발행예정글", "게시글 관리", "카테고리 관리", "사이트별 템플릿"])
-        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")["children"][1]
+        group = next(n for n in res.context["NAV"] if n["menu"].key == "blog")["children"][2]
         self.assertFalse(group["link"])  # 글 관리 이름 줄은 링크가 아니라 접기 (memorily 티스토리와 같다)
         self.assertEqual([s["active"] for s in group["children"]], [True, False, False, False, False])
         self.assertContains(res, '<button type="button" class="nav-sub-label active" data-nav-mid-toggle>글 관리</button>', html=False)
@@ -480,10 +480,10 @@ class PostHubTests(TestCase):
         self.assertContains(res, 'data-nav-mid="posts_hub"')  # 중메뉴 접기 버튼 (기본은 펼침)
         self.assertContains(res, 'data-nav-mid-toggle aria-expanded="true"')
         planned = self.client.get(reverse("posts:planned"))
-        group = next(n for n in planned.context["NAV"] if n["menu"].key == "blog")["children"][1]
+        group = next(n for n in planned.context["NAV"] if n["menu"].key == "blog")["children"][2]
         self.assertEqual([s["active"] for s in group["children"]], [False, True, False, False, False])
         cats = self.client.get(reverse("blog_types:index"))
-        group = next(n for n in cats.context["NAV"] if n["menu"].key == "blog")["children"][1]
+        group = next(n for n in cats.context["NAV"] if n["menu"].key == "blog")["children"][2]
         self.assertEqual([s["active"] for s in group["children"]], [False, False, False, True, False])
 
     def test_temp_review_has_no_planned_tab(self):

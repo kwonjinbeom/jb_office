@@ -2010,3 +2010,52 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 }
 /* 변환본 창의 발행 완료 (2026-10-23 사용자) */
 .cv-publish { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 auto; }
+
+/* 블로그·카페 › 통계현황 (blog_ops/stats.html): 사이트 카드 → 꺾은선 → 기간 요약 → 직접 넣기 */
+.ss-bar { gap: 10px; }
+.ss-page { display: grid; gap: 14px; }
+.ss-checked { white-space: nowrap; }
+.ss-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.ss-card { display: grid; gap: 6px; padding: 14px 16px 12px; }
+.ss-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ss-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-card-head .br-plat { margin-left: auto; }
+.ss-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; margin-right: 6px; vertical-align: 1px; }
+.ss-card-head .ss-dot { margin-right: 0; }
+.ss-big { display: flex; align-items: baseline; gap: 8px; }
+.ss-big strong { font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -.5px; font-variant-numeric: tabular-nums; color: var(--text); }
+.ss-sub { display: flex; align-items: center; gap: 10px; min-height: 18px; }
+.ss-delta { font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ss-delta.up { color: var(--ok); }
+.ss-delta.down { color: var(--danger); }
+.ss-spark { display: block; width: 100%; height: 32px; }
+.ss-spark-empty { border-bottom: 1px dashed var(--line-soft); height: 16px; margin-bottom: 16px; }
+.ss-state { font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-state.is-bad { color: var(--warn); }
+.ss-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-left: auto; font-size: 12.5px; color: var(--text-2); }
+.ss-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.ss-legend i { width: 14px; height: 3px; border-radius: 2px; }
+.ss-chart { position: relative; padding: 8px 12px 4px; }
+.ss-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.ss-grid { stroke: var(--line-soft); stroke-width: 1; }
+.ss-ylabel, .ss-xlabel { font-size: 11px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
+.ss-cross { stroke: var(--border-strong); stroke-width: 1; }
+.ss-cross[hidden] { display: none; }  /* SVG 는 hidden 속성만으로 안 숨는다 */
+.ss-hit { fill: transparent; cursor: crosshair; }
+.ss-tip { position: absolute; top: 10px; min-width: 150px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 18px rgba(15, 23, 42, .12); font-size: 12px; pointer-events: none; z-index: 2; }
+.ss-tip b { display: block; margin-bottom: 4px; color: var(--text); }
+.ss-tip div { display: flex; align-items: center; gap: 6px; color: var(--text-2); line-height: 1.7; }
+.ss-tip i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ss-tip strong { margin-left: auto; padding-left: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+.ss-table { table-layout: fixed; width: 100%; }
+.ss-table td { height: 40px; }
+.ss-hand > summary { cursor: pointer; list-style: none; gap: 12px; }
+.ss-hand > summary::-webkit-details-marker { display: none; }
+.ss-hand:not([open]) > summary { border-bottom: 0; }
+.ss-hand-form { padding: 12px 16px 14px; display: grid; gap: 10px; }
+.ss-hand-top { display: flex; align-items: center; gap: 8px; }
+.ss-hand-top .input { width: 160px; }
+.ss-hand-table { max-width: 640px; }
+.ss-hand-table .input { width: 120px; text-align: right; }
+.ss-hand-foot { display: flex; }
+@media (max-width: 900px) { .ss-table { min-width: 680px; } .ss-page > .card { overflow-x: auto; } }

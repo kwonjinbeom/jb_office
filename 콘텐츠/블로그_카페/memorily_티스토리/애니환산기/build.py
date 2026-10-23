@@ -30,6 +30,8 @@ def main():
     out = ("<!-- memorily 애니 환산기 (build.py 로 만든 파일, 직접 고치지 않는다). "
            "티스토리 관리 › 꾸미기 › 스킨 편집 › html 편집 › HTML 탭의 </body> 바로 위에 통째로 붙인다 (예전 것은 지우고). -->\n"
            f'<link rel="stylesheet" href="{PRETENDARD}">\n'
+           # 통계현황 (JB Office blog_ops/stats.py): 티스토리가 이 치환자를 그날 방문자 수로 바꾼다. PC 가 블로그 첫 화면에서 읽는다
+           '<div id="jb-stat" hidden data-today="[##_count_today_##]" data-yesterday="[##_count_yesterday_##]" data-total="[##_count_total_##]"></div>\n'
            f"<style>\n{look}\n{css}\n</style>\n<script>\n{mark}{js}</script>\n")
     (HERE / "스킨에_붙일것.html").write_text(out, encoding="utf-8")
     print("작품", ", ".join(data), "·", len(out.encode("utf-8")) // 1024, "KB")

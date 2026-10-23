@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% comment %}통계현황 (blog_ops.views.stats_page, 2026-10-23 사용자): 사이트별 방문자 · 공감 · 댓글 추이.
+위: 무엇을(방문자·공감·댓글) · 얼마 동안(7·30·90일). 사이트 카드(마지막 날 · 앞날 대비 · 기간 합계 · 작은 선) → 꺾은선 → 기간 요약 표 → 직접 넣기.
+숫자는 PC 가 '지금 수집'·'발행 확인'·일일루틴 '전체 실행' 때 공개된 곳에서 읽는다 (stats.py). 못 읽는 곳은 직접 넣는다.{% endcomment %}
+
+{% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
+
+{% block heading %}통계현황{% endblock %}
+
+{% block actions %}
+<span class="muted small ss-checked">{% if checked_at %}마지막 수집 {{ checked_at|date:"m-d H:i" }}{% else %}아직 수집하지 않았어요{% endif %}</span>
+<button class="btn primary" type="button" data-feeds-check data-url="{% url 'blog_ops:check' %}" data-status="{% url 'blog_ops:status' %}" title="PC 가 사이트마다 공개된 방문자·공감·댓글을 읽어 온다 (RSS 발행 확인도 같이)">{% include "includes/ic.html" with name="refresh" %}지금 수집</button>
+{% endblock %}
+
+{% block toolbar %}
+<div class="filter-bar ss-bar">
+  <span class="seg" role="group" aria-label="무엇을">{% for key, label in metrics %}<a href="?m={{ key }}&amp;days={{ n }}"{% if key == metric %} class="on" aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}</span>
+  <span class="seg" role="group" aria-label="기간">{% for d, label in periods %}<a href="?m={{ metric }}&amp;days={{ d }}"{% if d == n %} class="on" aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}</span>
+  <span class="muted small">{{ days.0|date:"n월 j일" }} – {{ today|date:"n월 j일" }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="ss-page">
+  {% if not has_data %}
+  <div class="notice info">{% include "includes/ic.html" with name="info" %}<div><strong>아직 {{ metric_label }} 숫자가 없어요.</strong> PC 에서 <b>지금 수집</b>을 누르면 공개된 숫자를 읽어 옵니다 (일일루틴 전체 실행 때도 같이). 네이버는 방문자·공감·댓글, 티스토리는 스킨에 조각을 붙이면 방문자를 읽어요. 못 읽는 숫자는 아래 <b>직접 넣기</b>로.</div></div>
+  {% endif %}
+
+  <div class="ss-cards">
+    {% for c in cards %}
+    <section class="card ss-card">
+      <div class="ss-card-head"><span class="ss-dot" style="background:{{ c.color }}"></span><span class="ss-name">{{ c.blog.name }}</span><span class="br-plat">{{ c.blog.get_platform_display }}</span></div>
+      <div class="ss-big">{% if c.last %}<strong>{{ c.last.1 }}</strong><span class="muted small">{% if c.last.0 == today %}오늘{% else %}{{ c.last.0|date:"n월 j일" }}{% endif %} {{ metric_label }}</span>{% else %}<strong class="muted">–</strong><span class="muted small">숫자 없음</span>{% endif %}</div>
+      <div class="ss-sub">
+        {% if c.delta is not None %}<span class="ss-delta {% if c.delta > 0 %}up{% elif c.delta < 0 %}down{% endif %}" title="앞 기록일 {{ c.before }} 대비">{% if c.delta > 0 %}▲{% elif c.delta < 0 %}▼{% else %}–{% endif %} {{ c.delta_abs }}%</span>{% endif %}
+        <span class="muted small">{{ n }}일 합계 {{ c.sum }}</span>
+      </div>
+      {% if c.spark %}<svg class="ss-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{ c.spark }}" fill="none" stroke="{{ c.color }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>{% else %}<div class="ss-spark ss-spark-empty"></div>{% endif %}
+      <div class="ss-state{% if c.state and c.state.stat_checked_at and not c.state.stat_ok %} is-bad{% endif %}" title="{% if c.state.stat_checked_at %}{{ c.state.stat_checked_at|date:'m-d H:i' }} · {{ c.state.stat_message }}{% endif %}">{% if c.state.stat_checked_at %}{% if c.state.stat_ok %}자동 {{ c.state.stat_checked_at|date:"m-d H:i" }}{% else %}{{ c.state.stat_message }}{% endif %}{% else %}자동 수집 전{% endif %}</div>
+    </section>
+    {% endfor %}
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h3 class="card-title">{{ metric_label }} 추이 · 최근 {{ n }}일</h3>
+      <span class="ss-legend">{% for l in chart.lines %}<span><i style="background:{{ l.color }}"></i>{{ l.name }}</span>{% endfor %}</span>
+    </div>
+    <div class="ss-chart" data-ss-chart>
+      <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="사이트별 {{ metric_label }} 꺾은선 (최근 {{ n }}일)">
+        {% for y, v in chart.grid %}<line class="ss-grid" x1="{{ chart.plot.l }}" x2="{{ chart.plot.r }}" y1="{{ y }}" y2="{{ y }}"/><text class="ss-ylabel" x="{{ chart.plot.l|add:'-8' }}" y="{{ y }}" text-anchor="end" dominant-baseline="middle">{{ v }}</text>{% endfor %}
+        {% for x, d in chart.xlabels %}<text class="ss-xlabel" x="{{ x }}" y="{{ chart.height|add:'-8' }}" text-anchor="middle">{{ d|date:"n/j" }}</text>{% endfor %}
+        <line class="ss-cross" data-ss-cross x1="0" x2="0" y1="{{ chart.plot.t }}" y2="{{ chart.plot.b }}" hidden/>
+        {% for l in chart.lines %}
+        {% for seg in l.segs %}<polyline points="{{ seg }}" fill="none" stroke="{{ l.color }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>{% endfor %}
+        {% for x, y in l.dots %}<circle cx="{{ x }}" cy="{{ y }}" r="3.5" fill="{{ l.color }}" stroke="#fff" stroke-width="2"/>{% endfor %}
+        {% endfor %}
+        {% for c in chart.cols %}<rect class="ss-hit" x="{{ c.left }}" y="{{ chart.plot.t }}" width="{{ c.w }}" height="{{ chart.plot.h }}" data-x="{{ c.x }}" data-tip="{{ c.day|date:'n월 j일 (D)' }}|{% for name, color, v in c.vals %}{{ name }}~{{ color }}~{% if v is None %}–{% else %}{{ v }}{% endif %}{% if not forloop.last %};{% endif %}{% endfor %}"/>{% endfor %}
+      </svg>
+      <div class="ss-tip" data-ss-tip hidden></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h3 class="card-title">기간 요약 · 최근 {{ n }}일</h3></div>
+    <table class="grid ss-table">
+      <colgroup><col style="width:200px"><col><col><col><col><col><col style="width:110px"></colgroup>
+      <thead><tr><th>사이트</th><th class="r">방문자 합계</th><th class="r">하루 평균</th><th class="r">가장 많은 날</th><th class="r">공감</th><th class="r">댓글</th><th class="r">기록한 날</th></tr></thead>
+      <tbody>
+        {% for t in table %}
+        <tr>
+          <td><span class="ss-dot" style="background:{{ t.color }}"></span>{{ t.blog.name }}</td>
+          <td class="r num">{{ t.visitors.sum|default_if_none:"–" }}</td>
+          <td class="r num">{{ t.visitors.avg|default_if_none:"–" }}</td>
+          <td class="r num">{{ t.visitors.max|default_if_none:"–" }}</td>
+          <td class="r num">{{ t.likes.sum|default_if_none:"–" }}</td>
+          <td class="r num">{{ t.comments.sum|default_if_none:"–" }}</td>
+          <td class="r num muted">{{ t.visitors.days }}/{{ n }}일</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="grid-empty">운영 중인 사이트가 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <details class="card ss-hand"{% if not has_data %} open{% endif %}>
+    <summary class="card-head"><h3 class="card-title">직접 넣기</h3><span class="muted small">자동으로 못 읽는 숫자 (블로그 관리 화면의 통계를 보고). 넣은 날은 자동 수집이 덮어쓰지 않아요.</span></summary>
+    <form method="post" action="{% url 'blog_ops:stats_save' %}" class="ss-hand-form">{% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="ss-hand-top"><label class="small muted" for="ss-day">날짜</label><input class="input sm" id="ss-day" type="date" name="day" value="{{ hand_day|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" onchange="location.search='?m={{ metric }}&days={{ n }}&day='+this.value"></div>
+      <table class="grid ss-hand-table">
+        <thead><tr><th>사이트</th><th>방문자</th><th>공감</th><th>댓글</th></tr></thead>
+        <tbody>{% for b, row in hand_rows %}
+          <tr><td>{{ b.name }}</td>
+            <td><input class="input sm num" name="visitors_{{ b.pk }}" inputmode="numeric" value="{{ row.visitors|default_if_none:'' }}" placeholder="–" aria-label="{{ b.name }} 방문자"></td>
+            <td><input class="input sm num" name="likes_{{ b.pk }}" inputmode="numeric" value="{{ row.likes|default_if_none:'' }}" placeholder="–" aria-label="{{ b.name }} 공감"></td>
+            <td><input class="input sm num" name="comments_{{ b.pk }}" inputmode="numeric" value="{{ row.comments|default_if_none:'' }}" placeholder="–" aria-label="{{ b.name }} 댓글"></td></tr>
+        {% endfor %}</tbody>
+      </table>
+      <div class="ss-hand-foot"><button class="btn primary sm">저장</button></div>
+    </form>
+  </details>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* 꺾은선 위에 마우스를 올리면 그날 사이트별 숫자 (세로선 + 말풍선) */
+(function () {
+  var box = document.querySelector("[data-ss-chart]");
+  if (!box) return;
+  var svg = box.querySelector("svg"), tip = box.querySelector("[data-ss-tip]"), cross = box.querySelector("[data-ss-cross]");
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  box.addEventListener("mousemove", function (e) {
+    var hit = e.target.closest(".ss-hit");
+    if (!hit) { tip.hidden = true; cross.setAttribute("hidden", ""); return; }
+    var parts = hit.getAttribute("data-tip").split("|"), rows = parts[1] ? parts[1].split(";") : [];
+    tip.innerHTML = "<b>" + esc(parts[0]) + "</b>" + rows.map(function (r) {
+      var f = r.split("~");
+      return '<div><i style="background:' + esc(f[1]) + '"></i><span>' + esc(f[0]) + "</span><strong>" + esc(f[2]) + "</strong></div>";
+    }).join("");
+    var x = parseFloat(hit.getAttribute("data-x"));
+    cross.setAttribute("x1", x); cross.setAttribute("x2", x); cross.removeAttribute("hidden");
+    var scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width, px = x * scale;
+    tip.hidden = false;
+    var left = px + 14;
+    if (left + tip.offsetWidth > box.clientWidth) left = px - tip.offsetWidth - 14;
+    tip.style.left = Math.max(0, left) + "px";
+  });
+  box.addEventListener("mouseleave", function () { tip.hidden = true; cross.setAttribute("hidden", ""); });
+})();
+</script>
+{% endblock %}
