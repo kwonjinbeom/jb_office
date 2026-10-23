@@ -615,7 +615,16 @@ def index(request):
                                                                  RoutineRun.Status.BLOCKED]))[:50])
     from . import topics as topic_mod  # 글쓰기 줄 아래로 펼치는 커스텀 글쓰기 (사이트별 소재·고정 주제)
     topic_groups = topic_mod.groups()
+    from .results import counts, writing_results  # 실행 이력 아래 '글쓰기 결과' + 예정(코스피 15:30 전) 뱃지
+    results = writing_results(run_day)
+    planned = {row["sel"]: row["reason"] for row in results if row["state"] == "planned" and row["sel"]}
+    for g in topic_groups:
+        for c in g["cats"]:
+            c.planned = planned.get(c.sel)
+    for r in routines:
+        r.planned = len(planned) if r.key == topic_mod.WRITING_KEY else 0
     return render(request, "routines/index.html", {
+        "results": results, "result_counts": counts(results),
         "page_title": "일일루틴",
         "topic_groups": topic_groups, "topic_count": sum(g["count"] for g in topic_groups),
         "writing_key": topic_mod.WRITING_KEY,
