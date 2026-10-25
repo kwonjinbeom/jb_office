@@ -530,3 +530,16 @@ class CloudConvertApiTests(TestCase):
         self.assertEqual((again["id"], again["created"]), (pl.pk, False))  # 이미 넣은 곳은 그대로
         self.assertEqual(self.client.post(reverse("site_templates:api_place"), {"post": f"tistory:{post.pk}",
                                                                                 "site_category": cat.pk}).status_code, 403)
+
+    @override_settings(WRITING_DRAFTS_DIR="/없는-원고-폴더")
+    def test_stage_move(self):
+        from apps.writing.models import Post
+        post = Post.objects.create(title="검토 원고", body="본문", stage="review")
+        url = reverse("site_templates:api_stage") + "?token=tok"
+        self.assertEqual(self.client.post(url, {"post": f"tistory:{post.pk}", "to": "post"}).json()["stage"], "post")
+        post.refresh_from_db()
+        self.assertEqual(post.stage, "post")
+        self.assertEqual(self.client.post(url, {"post": f"tistory:{post.pk}", "to": "post"}).json()["stage"], "post")  # 이미 그 단계
+        temp = Post.objects.create(title="임시", body="b", stage="temp")
+        self.assertEqual(self.client.post(url, {"post": f"tistory:{temp.pk}", "to": "post"}).status_code, 400)  # 이웃 단계만
+        self.assertEqual(self.client.post(reverse("site_templates:api_stage"), {"post": f"tistory:{post.pk}", "to": "review"}).status_code, 403)
