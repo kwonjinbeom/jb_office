@@ -2,7 +2,31 @@
 컨텍스트: site_templates.views.convert_context. 복사 칸 id 는 매핑 번호를 붙여 한 화면에 여럿이어도 겹치지 않는다.{% endcomment %}
 <p class="muted small st-where">{{ blog.name }} › {{ pl.site_category }} · {{ blog.get_platform_display }}</p>
 
-{# 비교 (2026-10-20 사용자): 원문 ↔ 변환본을 좌우 같은 크기·높이로. 붙여넣기·고치기는 그 아래 #}
+{% if converted_html %}
+{# 붙여넣기: 변환본을 통째로 복사해 그 사이트 글쓰기 화면에 붙인다 (제목 → 본문 → 태그). 맨 위 (2026-10-25 사용자: 글 아래에 있어 매번 내려가야 했다) #}
+<section class="card st-paste">
+  <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }}에 붙여넣기</h3><span class="hint">{{ paste.where }}</span></div>
+  <div class="card-body st-paste-row">
+    <button type="button" class="btn" data-copy="#st-title-{{ pl.pk }}" data-copy-msg="제목을 복사했습니다. 제목 칸에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}① 제목</button>
+    {% for b in paste.body %}
+    <button type="button" class="btn{% if forloop.first %} primary{% endif %}" {% if b.kind == 'rich' %}data-copy-rich="#st-paste-{{ pl.pk }}" data-copy-plain="#st-plain-{{ pl.pk }}"{% elif b.kind == 'raw' %}data-copy="#st-raw-{{ pl.pk }}"{% else %}data-copy="#st-html-{{ pl.pk }}"{% endif %} data-copy-msg="{{ b.msg }}" title="{{ b.hint }}">{% include "includes/ic.html" with name="copy" %}② {{ b.label }}</button>
+    {% endfor %}
+    {% if pl.converted_tags %}<button type="button" class="btn" data-copy="#st-tags-{{ pl.pk }}" data-copy-msg="{% if is_naver %}태그를 복사했습니다. 네이버 발행 창의 태그 칸을 누르고 '네이버 태그 넣기' 북마크를 누르세요.{% else %}태그를 복사했습니다. {{ paste.tags }}에 붙여넣으세요.{% endif %}">{% include "includes/ic.html" with name="copy" %}③ 태그</button>{% endif %}
+  </div>
+  {% if tag_items %}
+  {# 네이버 태그 (2026-10-21 사용자): 태그 칸은 붙여넣기로 안 되고 '글 치고 Enter' 를 하나씩. 북마클릿이 대신 치거나, 하나씩 눌러 복사 #}
+  <div class="card-body st-tags-row">
+    <span class="muted small">태그 {{ tag_items|length }}개 — 발행 창 태그 칸을 누르고</span>
+    <a class="btn sm" href="{{ tag_bookmarklet }}" onclick="event.preventDefault();App.toast('이 버튼을 북마크바로 끌어다 놓으세요. ③ 태그를 복사하고, 네이버 발행 창의 태그 칸을 누른 뒤 북마크를 누르면 하나씩 넣고 Enter 를 칩니다.','ok')" title="북마크바로 끌어다 놓기 (한 번만)">네이버 태그 넣기</a>
+    <span class="muted small">북마크를 누르거나, 하나씩 눌러 복사 → 붙여넣고 Enter:</span>
+    {% for t in tag_items %}<button type="button" class="st-tag" data-copy-text="{{ t }}" data-copy-msg="'{{ t }}' 복사 — 태그 칸에 붙여넣고 Enter">{{ t }}</button>{% endfor %}
+  </div>
+  {% endif %}
+  {% if paste.after %}<div class="card-body st-after"><span class="muted small">붙인 뒤 확인:</span> {{ paste.after }}</div>{% endif %}
+</section>
+{% endif %}
+
+{# 비교 (2026-10-20 사용자): 원문 ↔ 변환본을 좌우 같은 크기·높이로. 붙여넣기는 그 위, 사실 점검·고치기는 그 아래 #}
 <div class="st-cols st-compare">
   <section class="card st-col">
     <div class="card-head"><h3 class="card-title">원문</h3><a class="hint" href="{{ post.get_absolute_url }}">글 열기</a></div>
@@ -36,29 +60,6 @@
 </section>
 {% endif %}
 
-{% if converted_html %}
-{# 붙여넣기: 변환본을 통째로 복사해 그 사이트 글쓰기 화면에 붙인다. 순서대로 제목 → 본문 → 태그. #}
-<section class="card st-paste">
-  <div class="card-head"><h3 class="card-title">{{ blog.get_platform_display }}에 붙여넣기</h3><span class="hint">{{ paste.where }}</span></div>
-  <div class="card-body st-paste-row">
-    <button type="button" class="btn" data-copy="#st-title-{{ pl.pk }}" data-copy-msg="제목을 복사했습니다. 제목 칸에 붙여넣으세요.">{% include "includes/ic.html" with name="copy" %}① 제목</button>
-    {% for b in paste.body %}
-    <button type="button" class="btn{% if forloop.first %} primary{% endif %}" {% if b.kind == 'rich' %}data-copy-rich="#st-paste-{{ pl.pk }}" data-copy-plain="#st-plain-{{ pl.pk }}"{% elif b.kind == 'raw' %}data-copy="#st-raw-{{ pl.pk }}"{% else %}data-copy="#st-html-{{ pl.pk }}"{% endif %} data-copy-msg="{{ b.msg }}" title="{{ b.hint }}">{% include "includes/ic.html" with name="copy" %}② {{ b.label }}</button>
-    {% endfor %}
-    {% if pl.converted_tags %}<button type="button" class="btn" data-copy="#st-tags-{{ pl.pk }}" data-copy-msg="{% if is_naver %}태그를 복사했습니다. 네이버 발행 창의 태그 칸을 누르고 '네이버 태그 넣기' 북마크를 누르세요.{% else %}태그를 복사했습니다. {{ paste.tags }}에 붙여넣으세요.{% endif %}">{% include "includes/ic.html" with name="copy" %}③ 태그</button>{% endif %}
-  </div>
-  {% if tag_items %}
-  {# 네이버 태그 (2026-10-21 사용자): 태그 칸은 붙여넣기로 안 되고 '글 치고 Enter' 를 하나씩. 북마클릿이 대신 치거나, 하나씩 눌러 복사 #}
-  <div class="card-body st-tags-row">
-    <span class="muted small">태그 {{ tag_items|length }}개 — 발행 창 태그 칸을 누르고</span>
-    <a class="btn sm" href="{{ tag_bookmarklet }}" onclick="event.preventDefault();App.toast('이 버튼을 북마크바로 끌어다 놓으세요. ③ 태그를 복사하고, 네이버 발행 창의 태그 칸을 누른 뒤 북마크를 누르면 하나씩 넣고 Enter 를 칩니다.','ok')" title="북마크바로 끌어다 놓기 (한 번만)">네이버 태그 넣기</a>
-    <span class="muted small">북마크를 누르거나, 하나씩 눌러 복사 → 붙여넣고 Enter:</span>
-    {% for t in tag_items %}<button type="button" class="st-tag" data-copy-text="{{ t }}" data-copy-msg="'{{ t }}' 복사 — 태그 칸에 붙여넣고 Enter">{{ t }}</button>{% endfor %}
-  </div>
-  {% endif %}
-  {% if paste.after %}<div class="card-body st-after"><span class="muted small">붙인 뒤 확인:</span> {{ paste.after }}</div>{% endif %}
-</section>
-{% endif %}
 
 <section class="card st-edit">
   <div class="card-head"><h3 class="card-title">변환본 고치기</h3></div>
