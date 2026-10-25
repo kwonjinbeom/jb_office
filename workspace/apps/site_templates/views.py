@@ -324,7 +324,7 @@ def _render_for(placement, text):
         html = render_body(text)
         rich = paste_html(html, gaps=needs_gaps(text, html), font=CONVERT_FONT)
         return rich, rich, plain_text(html), paste.clean_html(text)
-    from apps.writing.render import plain_text, render_body, tistory_html
+    from apps.writing.render import plain_text, render_body, tistory_align, tistory_html
     if platform == Blog.Platform.WORDPRESS:
         html = paste.clean_html(text)
         return html, html, plain_text(html), html
@@ -335,6 +335,8 @@ def _render_for(placement, text):
         out = looks.yudi_html(out)
     elif _heading_bar(placement.site_category):
         out = re.sub(r"<h2(?![^>]*\bstyle=)", f'<h2 style="{HEADING_BAR}"', out)
+    if platform == Blog.Platform.TISTORY:  # 사진·캡션 가운데 정렬이 붙여넣을 때 풀리지 않게 (2026-10-25)
+        out = tistory_align(out)
     return out, out, plain_text(html), out
 
 

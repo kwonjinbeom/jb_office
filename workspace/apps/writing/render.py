@@ -440,3 +440,16 @@ def tistory_html(body_html: str) -> str:
     for at, n in reversed(cuts):
         out = out[:at] + TISTORY_GAP * n + out[at:]
     return out
+
+
+# 티스토리 편집기는 자기 형식이 아닌 문단 style 을 지운다 (2026-10-25 사용자: 변환본은 사진이 가운데인데 붙여넣으면 왼쪽).
+# 사진 문단 · 캡션 문단을 티스토리의 가운데 정렬 버튼이 쓰는 꼴(style="text-align: center;" 하나 + data-ke-size)로,
+# 캡션의 색·크기는 글자 색 버튼이 쓰는 span 으로 옮긴다. 붙여넣기 HTML 의 맨 마지막에 (유디 메모지 모양 뒤).
+_IMG_P = re.compile(r'<p style="text-align:center;margin:18px 0">(<img [^>]*>)</p>')
+_CAP_P = re.compile(r'<p style="' + re.escape(CAPTION_STYLE) + r'">(.*?)</p>', re.S)
+TISTORY_CENTER = '<p style="text-align: center;" data-ke-size="size16">'
+
+
+def tistory_align(html_text: str) -> str:
+    out = _IMG_P.sub(lambda m: f"{TISTORY_CENTER}{m.group(1)}</p>", html_text)
+    return _CAP_P.sub(lambda m: f'{TISTORY_CENTER}<span style="color: #6b7280; font-size: 14px;">{m.group(1)}</span></p>', out)
