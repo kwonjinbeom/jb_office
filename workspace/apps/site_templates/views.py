@@ -231,6 +231,60 @@ def api_state(request):
     return JsonResponse({"sites": out}, json_dumps_params={"ensure_ascii": False})
 
 
+def _token_ok(request):
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    return bool(token) and hmac.compare_digest(request.GET.get("token", ""), token)
+
+
+@login_not_required
+def api_posts(request):
+    """클라우드 claude 가 글 관리의 글을 읽는 곳 (2026-10-25 사용자: 클라우드 세션에서 오늘 쓴 글과 임시글을 변환).
+    토큰은 api_save 와 같다. 먼저 새 원고를 임시글으로 가져오고(auto_import_drafts), 임시글·검토글·발행예정글을 넣은 곳과 함께."""
+    if not _token_ok(request):
+        return HttpResponseForbidden("token")
+    from apps.blog_types import classify
+    from apps.writing.views import auto_import_drafts
+    added = auto_import_drafts()
+    out = []
+    for w in classify.WRITERS:
+        model = classify.post_model(w)
+        for post in model.objects.filter(stage__in=["temp", "review", "post"]).order_by("-created_at"):
+            out.append({"ref": f"{w}:{post.pk}", "title": post.title, "stage": post.stage, "target": post.target,
+                        "created": timezone.localtime(post.created_at).isoformat(timespec="minutes"),
+                        "placements": [{"id": pl.pk, "site_category": pl.site_category_id, "category": f"{pl.site_category.blog.name} › {pl.site_category}",
+                                        "convert": pl.convert_status, "status": pl.status}
+                                       for pl in post.placements.select_related("site_category__blog")]})
+    return JsonResponse({"imported": added, "posts": out}, json_dumps_params={"ensure_ascii": False})
+
+
+@csrf_exempt
+@login_not_required
+@require_POST
+def api_place(request):
+    """클라우드 claude 가 글을 사이트 카테고리에 넣고 변환을 요청하는 곳: post=tistory:3 · site_category=<번호>.
+    변환은 검토글·발행예정글만 되므로 임시글이면 검토글로 옮긴다. 이미 넣은 곳이면 그대로 쓴다.
+    돌려주는 것: 넣은 곳 번호와 변환 안내문 (PC 의 '변환'과 같은 prompt.launcher — 변환본은 api_save 로 보낸다)."""
+    if not _token_ok(request):
+        return HttpResponseForbidden("token")
+    from apps.blog_types import classify
+    cat = get_object_or_404(SiteCategory, pk=request.POST.get("site_category") or 0)
+    w, _, pk = request.POST.get("post", "").rpartition(":")
+    if w not in classify.WRITERS or not pk.isdigit():
+        return HttpResponseBadRequest("post=tistory:3 꼴")
+    post = get_object_or_404(classify.post_model(w), pk=pk, stage__in=["temp", "review", "post"])
+    if post.stage == "temp":
+        post.stage = "review"
+        post.save(update_fields=["stage", "updated_at"])
+    field = "naver_post" if w == "naver" else "tistory_post"
+    pl, created = Placement.objects.get_or_create(site_category=cat, **{field: post})
+    if pl.convert_status in (Placement.Convert.NONE, Placement.Convert.REQUESTED):
+        pl.convert_status = Placement.Convert.REQUESTED
+        pl.save(update_fields=["convert_status", "updated_at"])
+    return JsonResponse({"id": pl.pk, "created": created, "stage": post.stage, "convert": pl.convert_status,
+                         "prompt": prompt.launcher(request, [pl], AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY))},
+                        json_dumps_params={"ensure_ascii": False})
+
+
 def site(request, pk):
     """예전 사이트 화면 주소 → 사이트별 템플릿에서 그 사이트를 고른 화면 (2026-10-22: 화면에서는 보기만)."""
     blog = get_object_or_404(Blog, pk=pk)
