@@ -301,8 +301,8 @@ class PasteFormatTests(TestCase):
         html = res.context["paste_html"]
         self.assertEqual(html.count('<p data-ke-size="size16">&nbsp;</p>'), 4)  # 소제목 앞 셋 · 바로 뒤에는 없이 · 사진 뒤 하나
         self.assertIn("첫 문단</p>\n" + '<p data-ke-size="size16">&nbsp;</p>' * 3 + "<h2>", html)
-        self.assertIn('<h2>소제목</h2>\n<p style="text-align:center', html)
-        self.assertIn('<p style="text-align:center;margin:18px 0"><img width="620" src="https://a.com/x.png"', html)
+        # 사진 문단은 티스토리 가운데 정렬 버튼의 꼴로 (2026-10-25: 다른 style 이 섞이면 붙여넣을 때 정렬이 풀린다)
+        self.assertIn('<h2>소제목</h2>\n<p style="text-align: center;" data-ke-size="size16"><img width="620" src="https://a.com/x.png"', html)
         self.assertContains(res, "st-converted st-flat")  # 미리보기도 같은 간격
         pl.converted_body = '<p>가</p><p><br></p><p>나</p>'  # 편집기 HTML 은 빈 줄이 이미 있다
         pl.save()
@@ -371,7 +371,7 @@ class PasteFormatTests(TestCase):
         tistory.save()
         html = self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["clean_html"]
         self.assertIn('<img width="620" src="https://images.unsplash.com/photo-1?w=1200&amp;q=80" alt="병원 대기실"', html)
-        self.assertIn("사진: 홍길동 · Unsplash</p>", html)
+        self.assertIn("사진: 홍길동 · Unsplash</span></p>", html)  # 티스토리: 캡션 색은 span (2026-10-25)
 
 
 class BloggerLabelTests(TestCase):
@@ -543,3 +543,16 @@ class CloudConvertApiTests(TestCase):
         temp = Post.objects.create(title="임시", body="b", stage="temp")
         self.assertEqual(self.client.post(url, {"post": f"tistory:{temp.pk}", "to": "post"}).status_code, 400)  # 이웃 단계만
         self.assertEqual(self.client.post(reverse("site_templates:api_stage"), {"post": f"tistory:{post.pk}", "to": "review"}).status_code, 403)
+
+
+class TistoryAlignTests(TestCase):
+    def test_caption_and_blogger(self):
+        """티스토리: 사진·캡션 문단은 style="text-align: center;" 하나 + 캡션 색은 span. 블로거는 그대로"""
+        from apps.writing.render import render_body, tistory_align, tistory_html
+        html = tistory_html(render_body("![사진](https://a.com/x.png)\n*사진: 누구 · Unsplash*\n\n끝"))
+        out = tistory_align(html)
+        self.assertIn('<p style="text-align: center;" data-ke-size="size16"><img width="620"', out)
+        self.assertIn('<p style="text-align: center;" data-ke-size="size16"><span style="color: #6b7280; font-size: 14px;">사진: 누구 · Unsplash</span></p>', out)
+        self.assertNotIn("margin:18px 0", out)
+        self.assertNotIn("margin-top:-8px", out)
+        self.assertEqual(tistory_align(out), out)  # 두 번 해도 같다
