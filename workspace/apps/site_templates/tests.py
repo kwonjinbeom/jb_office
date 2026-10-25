@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from apps.blog_rules.models import Blog
@@ -499,3 +499,34 @@ class YudiLookTests(TestCase):
         launch = prompt.launcher(RequestFactory().get("/"), [pl], "tok")
         self.assertIn("## 지난 변환본 (사진·사실 점검은 살리고", launch)
         self.assertIn("::: 제품 | 가습기 A", launch)
+
+
+class CloudConvertApiTests(TestCase):
+    """클라우드 claude 가 토큰으로 글 관리의 글을 읽고, 카테고리에 넣고, 변환 안내문을 받는다 (2026-10-25)"""
+
+    def setUp(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+
+    @override_settings(WRITING_DRAFTS_DIR="/없는-원고-폴더")
+    def test_list_place_and_prompt(self):
+        from apps.blog_types.models import Placement, SiteCategory
+        from apps.writing.models import Post
+        post = Post.objects.create(title="임시 원고", body="본문", stage="temp")
+        cat = SiteCategory.objects.filter(blog__name="눈잎").first()
+        self.assertEqual(self.client.get(reverse("site_templates:api_posts")).status_code, 403)
+        res = self.client.get(reverse("site_templates:api_posts"), {"token": "tok"})
+        row = next(p for p in res.json()["posts"] if p["ref"] == f"tistory:{post.pk}")
+        self.assertEqual((row["stage"], row["placements"]), ("temp", []))
+        url = reverse("site_templates:api_place") + "?token=tok"
+        res = self.client.post(url, {"post": f"tistory:{post.pk}", "site_category": cat.pk}).json()
+        post.refresh_from_db()
+        self.assertEqual(post.stage, "review")  # 변환은 검토글부터라 옮긴다
+        pl = Placement.objects.get(pk=res["id"])
+        self.assertEqual((pl.site_category, pl.convert_status), (cat, "requested"))
+        self.assertTrue(res["prompt"].startswith("# 사이트 변환"))
+        self.assertIn(reverse("site_templates:api_save", args=[pl.pk]), res["prompt"])
+        again = self.client.post(url, {"post": f"tistory:{post.pk}", "site_category": cat.pk}).json()
+        self.assertEqual((again["id"], again["created"]), (pl.pk, False))  # 이미 넣은 곳은 그대로
+        self.assertEqual(self.client.post(reverse("site_templates:api_place"), {"post": f"tistory:{post.pk}",
+                                                                                "site_category": cat.pk}).status_code, 403)
