@@ -285,6 +285,28 @@ def api_place(request):
                         json_dumps_params={"ensure_ascii": False})
 
 
+@csrf_exempt
+@login_not_required
+@require_POST
+def api_stage(request):
+    """클라우드 claude 가 글의 단계를 이웃 단계로 옮기는 곳: post=tistory:3 · to=review|post|temp (2026-10-25 사용자: 변환한 글을 발행예정글로).
+    글 관리의 체크한 글 옮기기(posts.bulk)와 같은 규칙 — 이웃 단계로만, 발행 완료한 글은 되돌리지 않는다."""
+    if not _token_ok(request):
+        return HttpResponseForbidden("token")
+    from apps.blog_types import classify
+    w, _, pk = request.POST.get("post", "").rpartition(":")
+    if w not in classify.WRITERS or not pk.isdigit():
+        return HttpResponseBadRequest("post=tistory:3 꼴")
+    post = get_object_or_404(classify.post_model(w), pk=pk)
+    to = request.POST.get("to", "")
+    if post.stage != to:
+        if not post.can_move_to(to):
+            return JsonResponse({"error": f"{post.stage} → {to} 로는 옮길 수 없습니다"}, status=400)
+        post.stage = to
+        post.save(update_fields=["stage", "updated_at"])
+    return JsonResponse({"post": f"{w}:{post.pk}", "stage": post.stage})
+
+
 def site(request, pk):
     """예전 사이트 화면 주소 → 사이트별 템플릿에서 그 사이트를 고른 화면 (2026-10-22: 화면에서는 보기만)."""
     blog = get_object_or_404(Blog, pk=pk)
