@@ -122,10 +122,12 @@ class AnimeWriteRunTests(TestCase):
             self.assertEqual(self.client.post(url + "?token=tok", {"folder": "T999_진격환산기"}).status_code, 404)
             folder = Path(tmp, "콘텐츠", "블로그_카페", "포스팅자동화", "원고", "T999_진격환산기")
             folder.mkdir(parents=True)
-            (folder / "원고.md").write_text(draft.replace("나의 히어로 아카데미아 회차정리", "진격의 거인 회차정리"), encoding="utf-8")
+            from apps.writing.drafts import parse
+            text = draft.replace("나의 히어로 아카데미아", "진격의 거인")  # 제목 꼴은 바뀔 수 있어서 작품 이름만 바꾼다
+            (folder / "원고.md").write_text(text, encoding="utf-8")
             res = self.client.post(url + "?token=tok", {"folder": "T999_진격환산기", "doc": "07_진격의거인.md"})
         self.assertContains(res, "ok 진격의 거인")
-        pl = Placement.objects.get(site_category=self.cat, tistory_post__title="진격의 거인 회차정리 애니만화 환산기 명장면 등 모음")
+        pl = Placement.objects.get(site_category=self.cat, tistory_post__title=parse(text).title)
         self.assertEqual(pl.convert_status, "done")
         self.aot.refresh_from_db()
         self.assertEqual((self.aot.status, self.aot.doc_key), ("written", "07_진격의거인"))

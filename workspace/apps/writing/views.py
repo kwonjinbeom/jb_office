@@ -170,11 +170,11 @@ def sync_sources(drafts):
         if sig == post.source_sig:
             continue
         untouched = draft_sig(post.title, post.body, post.tags, post.summary) == post.source_sig
-        note = f"제목: {post.title} → {d.title}" if d.title != post.title else "원고 본문이 바뀜"
+        note = sites.change_note(post.title, d.title, d.body != post.body, d.change)
         if untouched:
             post.title, post.body, post.tags, post.summary = d.title, d.body, d.tags, d.summary
         else:
-            note = "원고가 바뀌었지만 글을 손질해 둬서 덮어쓰지 않음 — 원고를 보고 직접 고친다"
+            note = "원고만 바뀜 · 글을 손질해 둬서 덮어쓰지 않음 — 원고를 보고 직접 고친다"
         post.source_sig = sig
         post.save()
         sites.mark_changed(post, note)

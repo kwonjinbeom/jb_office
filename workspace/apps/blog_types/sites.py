@@ -112,6 +112,24 @@ def mark_changed(post, note):
             pl.save(update_fields=["convert_status", "updated_at"])
 
 
+def change_note(old_title, new_title, body_changed, extra=""):
+    """'수정됨'에 보일 초간단 한 줄 (2026-10-26 사용자: 변환글 보기 맨 위에서 제목만 바꿀지 내용도 바꿀지 판단한다).
+    '제목만 · 옛 → 새' · '본문만' · '제목·본문 · 옛 → 새', 뒤에 무엇을 고쳤는지 (extra)."""
+    titled = old_title != new_title
+    head = ("제목·본문" if body_changed else "제목만") if titled else "본문만"
+    parts = [head] + ([f"{old_title} → {new_title}"] if titled else []) + ([extra.strip()] if extra.strip() else [])
+    return " · ".join(parts)[:200]
+
+
+def changed_old_title(note):
+    """change_note 의 옛 제목 (제목이 바뀐 수정일 때만). 예전 꼴 '제목: 옛 → 새' 도 읽는다."""
+    if note.startswith("제목: "):
+        return note[4:].split(" → ", 1)[0]
+    if note.startswith(("제목만 · ", "제목·본문 · ")) and " → " in note:
+        return note.split(" · ", 1)[1].split(" → ", 1)[0]
+    return None
+
+
 def clear_changed(placement):
     placement.changed_at, placement.changed_note = None, ""
     placement.save(update_fields=["changed_at", "changed_note", "updated_at"])

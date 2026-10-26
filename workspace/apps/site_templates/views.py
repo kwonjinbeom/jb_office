@@ -199,11 +199,15 @@ def api_save(request, pk):
     placement.converted_body = body
     placement.convert_status = Placement.Convert.DONE
     placement.converted_at = timezone.now()
-    if placement.status == Placement.Status.PUBLISHED and before[1] and before != (placement.converted_title, placement.converted_body):
-        # 발행한 글의 변환본이 바뀜 → 게시글 관리 '수정됨' (2026-10-26 사용자)
+    extra = data.get("change", "").strip()  # 무엇을 고쳤는지 한 줄 (보내는 쪽이 적는다, 예: '맨 앞 한 문장 추가')
+    if placement.status == Placement.Status.PUBLISHED and before[1] and (extra or before != (placement.converted_title, placement.converted_body)):
+        # 발행한 글의 변환본이 바뀜 → 게시글 관리 '수정됨' + 변환글 보기 맨 위 한 줄 (2026-10-26 사용자)
+        from apps.blog_types import sites
+        lit = placement.changed_at is not None  # 이미 켜져 있으면 처음 제목·본문 변경을 이어 간다
+        old_title = (sites.changed_old_title(placement.changed_note) if lit else None) or before[0]
+        body_changed = before[1] != placement.converted_body or (lit and not placement.changed_note.startswith("제목만"))
         placement.changed_at = placement.converted_at
-        placement.changed_note = (f"제목: {before[0]} → {placement.converted_title}" if before[0] != placement.converted_title
-                                  else "변환본이 바뀜 — 다시 붙여 넣기")[:200]
+        placement.changed_note = sites.change_note(old_title, placement.converted_title, body_changed, extra)
     placement.save()
     return HttpResponse(f"ok {placement.pk} done", content_type="text/plain; charset=utf-8")
 
