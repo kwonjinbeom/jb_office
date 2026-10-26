@@ -9,7 +9,7 @@
 | 파일 | 출처 | 남기는 기간 | 쓰는 곳 |
 |---|---|---|---|
 | 축제.csv | 관광공사 국문 관광정보(KorService2) `searchFestival2` | 끝난 지 7일까지, 앞으로 45일 | black_lukey 축제·주말 축제 카드 |
-| 분양.csv | 청약홈 APT 분양정보 `getAPTLttotPblancDetail` | 접수 끝난 지 30일까지 | 눈잎 주택 공고·청약·공모주 달력 |
+| 분양.csv | 청약홈 APT 분양정보 `getAPTLttotPblancDetail` | 접수 끝난 지 30일까지 | 눈잎 주택 공고·수도권 청약·임대 공고 달력 |
 | 박스오피스.csv | KOBIS 주간 박스오피스 | 12주 | black_lukey 영화·OTT 달력 |
 | 증권신고서.csv | OpenDART 공시검색 (지분증권 증권신고서 C001) | 180일 | 눈잎 공모주 (새 종목 신호) |
 | 미국지수.csv | FRED `NASDAQCOM` · `SP500` | 400일 | 밤밤 나스닥 시황 노트 (대조용) |
