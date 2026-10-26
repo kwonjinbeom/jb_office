@@ -39,6 +39,7 @@ class Draft:
     custom: bool = False
     place: str = ""  # 넣을 카테고리 '사이트 › 카테고리' (처음 겨냥한 곳)
     topic: str = ""  # 고정 주제 이름 (`고정주제: AI 소식` 줄). 일일루틴 글쓰기 결과에서 'memorily > AI 소식' 처럼 보인다
+    old_titles: tuple = ()  # `옛 제목: …` 줄 (2026-10-26: 이미 있는 글을 허브로 바꾸며 제목을 고칠 때, 그 글을 알아보게)
 
     @property
     def code(self) -> str:
@@ -69,6 +70,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     custom = re.search(r"^[-*\s]*`?(?:고정주제|커스텀):", head, re.M)
     topic = re.search(r"^[-*\s]*`?고정주제:\s*([^`\n]+)`?\s*$", head, re.M)
     place = re.search(r"^\|\s*넣을 카테고리\s*\|\s*([^|\n]+?)\s*\|", head, re.M)
+    old_titles = tuple(t.strip()[:200] for t in re.findall(r"^[-*\s]*`?옛 제목:\s*([^`\n]+)`?\s*$", head, re.M) if t.strip())
     return Draft(
         key=key,
         title=title[:200],
@@ -80,6 +82,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
         classification=classification.group(1).strip()[:200] if classification else "",
         custom=bool(custom),
         topic=topic.group(1).strip()[:60] if topic else "",
+        old_titles=old_titles,
         place=re.sub(r"\s*\([^)]*\)\s*$", "", place.group(1)).strip()[:120] if place else "",  # '(신설 제안)' 같은 꼬리는 뺀다
     )
 

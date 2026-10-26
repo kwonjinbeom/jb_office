@@ -473,3 +473,20 @@ class DraftSyncTests(TestCase):
         old.refresh_from_db()
         self.assertEqual(old.source, "T150_허브")
         self.assertEqual(Post.objects.count(), 1)
+
+    def test_old_title_line_links_renamed_hub(self):
+        """이미 있는 글을 허브로 바꾸며 제목을 고쳐도 `옛 제목:` 줄로 같은 글을 고친다 (새 글로 생기지 않는다)."""
+        from apps.blog_types.models import Placement, SiteCategory
+
+        from .views import auto_import_drafts
+        old = Post.objects.create(title="국내 공모주 일정 (10월 22일~12월 초)", body="옛 본문")
+        pl = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__name="눈잎").first(), tistory_post=old,
+                                      status=Placement.Status.PUBLISHED)
+        md = DRAFT_MD.replace("| 항목 | 내용 |", "옛 제목: 국내 공모주 일정 (10월 22일~12월 초)\n\n| 항목 | 내용 |", 1)
+        md = md.replace("# 시험 원고 제목", "# 이번 주 청약·공모주 달력 (10월 27일~11월 9일)")
+        (self.root / "T150_허브" / "원고.md").write_text(md, encoding="utf-8")
+        auto_import_drafts()
+        old.refresh_from_db(), pl.refresh_from_db()
+        self.assertEqual(Post.objects.count(), 1)
+        self.assertEqual((old.source, old.title), ("T150_허브", "이번 주 청약·공모주 달력 (10월 27일~11월 9일)"))
+        self.assertTrue(pl.changed_note.startswith("제목: 국내 공모주 일정"))

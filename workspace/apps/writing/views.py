@@ -155,9 +155,14 @@ def sync_sources(drafts):
     from apps.blog_types import sites
 
     by_title, by_key = {d.title: d for d in drafts}, {d.key: d for d in drafts}
+    for d in drafts:  # 제목을 고친 원고는 `옛 제목:` 줄로 그 글을 알아본다 (이미 있는 글을 허브로 바꿀 때)
+        for old in d.old_titles:
+            by_title.setdefault(old, d)
     for post in Post.all_objects.filter(source="", title__in=list(by_title)):
         d = by_title[post.title]
-        Post.all_objects.filter(pk=post.pk).update(source=d.key, source_sig=draft_sig(d.title, d.body, d.tags, d.summary))
+        # 옛 제목으로 찾은 글은 지문을 지금 글로 둔다 — 아래에서 새 원고로 고쳐지고, 발행한 글이면 '수정됨'이 켜진다
+        sig = draft_sig(*(d.title, d.body, d.tags, d.summary) if post.title == d.title else (post.title, post.body, post.tags, post.summary))
+        Post.all_objects.filter(pk=post.pk).update(source=d.key, source_sig=sig)
     changed = 0
     for post in Post.objects.filter(source__in=list(by_key)).prefetch_related("placements"):
         d = by_key[post.source]
