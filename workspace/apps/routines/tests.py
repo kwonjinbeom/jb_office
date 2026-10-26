@@ -99,7 +99,7 @@ class TempRepoTests(Login):
         self.assertNotIn("routine_report", scheduled)
         # 글쓰기는 분류 전체 트리 대신 그날 분류(+ 고른 중분류의 소분류)만
         self.assertNotIn("### 글 분류 전체", run)
-        self.assertIn("- 밤밤 > 시황 노트 — 1편 (컨셉: ", run)  # 분류 방향 = 글쓰기 컨셉 (2026-10-22)
+        self.assertIn("- 밤밤 > 코스피 시황 노트 — 1편 (컨셉: ", run)  # 분류 방향 = 글쓰기 컨셉 (2026-10-22)
         self.assertIn("최대 ", run.split("\n")[2])  # 기본은 소재 있는 것만
         self.assertIn("### 글 분류 전체", launcher(Routine.objects.get(key="prompt_update"), day))
         # 글쓰기의 이미 있는 글 = 원고 장부(중분류별) + 원고 말고 최근 글 15줄
@@ -542,7 +542,7 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 6, "밤밤": 2, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020)
+        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 6, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
@@ -551,7 +551,7 @@ class WritingPickTests(Login):
     def test_saved_picks(self):
         from apps.blog_types.models import Category
         it = Category.objects.get(section__name="black_lukey", name="신제품 출시")
-        t = Category.objects.get(section__name="밤밤", name="시황 노트")
+        t = Category.objects.get(section__name="밤밤", name="코스피 시황 노트")
         RoutinePick.objects.create(routine=self.writing, day=date(2026, 10, 16), picks={it.sel: 3, t.sel: 1})
         text = launcher(self.writing, date(2026, 10, 16))
         self.assertIn("(총 4편 · 사용자가 고른 분류)", text)
@@ -671,7 +671,7 @@ class FixedTopicTests(Login):
         self.assertEqual(res.context["ACTIVE_MENU"], "routine_topics")
         groups = res.context["groups"]
         self.assertEqual([g["name"] for g in groups[:3]], ["눈잎", "black_lukey", "밤밤"])  # 글 분류의 사이트 순서
-        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 6, 2])  # 일일루틴 글쓰기가 보는 소재 그대로
+        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 6, 3])  # 일일루틴 글쓰기가 보는 소재 그대로
         ipo = next(c for c in groups[0]["cats"] if c.name == "공모주")
         self.assertEqual([t.name for t in ipo.topics], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 고정 주제는 소재 아래
         self.assertNotContains(res, f'value="c{ipo.pk}"')  # 고정 주제가 있는 소재는 머리 줄만 (고르지 않는다)
@@ -720,7 +720,7 @@ class FixedTopicTests(Login):
         self.assertContains(res, 'class="rt-has-sub" data-rt-toggle')
         self.assertContains(res, "공모주 일정 · 해외")
         self.assertContains(res, "지역 놀거리")
-        self.assertContains(res, f'data-tp-one="c{Category.objects.get(name="시황 노트").pk}"')  # 줄마다 실행 (1편)
+        self.assertContains(res, f'data-tp-one="c{Category.objects.get(name="코스피 시황 노트").pk}"')  # 줄마다 실행 (1편)
         groups = res.context["topic_groups"]
         rows = len(groups) + sum(1 + len(c.topics) for g in groups for c in g["cats"]) + sum(len(g["topics"]) for g in groups) + 1  # 사이트 머리 + 소재(+그 아래 주제) + 줄 + 추가 줄
         self.assertContains(res, "data-rt-sub hidden", count=rows)
@@ -747,7 +747,7 @@ class FixedTopicTests(Login):
         self.assertFalse(Category.objects.filter(name__in=["엔화·환율", "일본 여행"]).exists())
         self.assertTrue(Category.all_objects.filter(name="엔화·환율", deleted_at__isnull=False).exists())  # 휴지통 (7일 복원)
         overseas = Category.objects.get(name="해외 여행")
-        self.assertEqual((overseas.section.name, overseas.code), ("밤밤", "B"))
+        self.assertEqual((overseas.section.name, overseas.code), ("밤밤", "C"))  # 코스피·나스닥 시황 노트 다음 (0033)
         self.assertIn("가볼 만한 곳", overseas.direction)
         prompt = self.run_prompt(**{f"f{kr.pk}": "1"}).json()["prompt"]
         self.assertIn("- 분류: 눈잎 > 공모주", prompt)
@@ -818,7 +818,7 @@ class WritingResultTests(Login):
 |---|---|---|
 | 눈잎 > 일본 | 있음 | 교토 단풍 시즌 |
 | black_lukey>축제·행사 | 있음 | 지스타 |
-| 밤밤 > 시황 노트 | 예정 | 15:30 장 마감 뒤 커스텀 글쓰기로 실행 |
+| 밤밤 > 코스피 시황 노트 | 예정 | 15:30 장 마감 뒤 커스텀 글쓰기로 실행 |
 | black_lukey > 세일 이벤트 | 없음 | 이번 주 이미 씀 |
 | 밤밤 > 해외여행 | 없음 | 하루 2편 한도 |
 
@@ -849,12 +849,12 @@ class WritingResultTests(Login):
         res = self.client.get(INDEX, {"date": "2026-10-23"})
         states = {r["label"]: r["word"] for r in res.context["results"]}
         self.assertEqual(states, {"눈잎 > 일본": "씀", "black_lukey > 축제·행사": "못 씀",
-                                  "밤밤 > 시황 노트": "예정", "black_lukey > 세일 이벤트": "없음", "밤밤 > 해외 여행": "씀",
+                                  "밤밤 > 코스피 시황 노트": "예정", "black_lukey > 세일 이벤트": "없음", "밤밤 > 해외 여행": "씀",
                                   "memorily > AI": "못 씀"})  # 매일 쓰는 고정 주제 AI 소식, 소재는 memorily > AI (2026-10-23)
         self.assertEqual([r["word"] for r in res.context["results"]], ["씀", "씀", "예정", "못 씀", "못 씀", "없음"])
         self.assertContains(res, "11월 교토 단풍 언제 갈까")
         self.assertContains(res, "예정 1")
-        kospi = Category.objects.get(section__name="밤밤", name="시황 노트")
+        kospi = Category.objects.get(section__name="밤밤", name="코스피 시황 노트")
         cats = {c.pk: c for g in res.context["topic_groups"] for c in g["cats"]}
         self.assertEqual(cats[kospi.pk].planned, "15:30 장 마감 뒤 커스텀 글쓰기로 실행")
         self.assertIsNone(cats[japan.pk].planned)
@@ -888,7 +888,7 @@ class DailyTopicTests(Login):
             plans = Path(tmp) / "주제기획"
             plans.mkdir()
             (plans / "2026-10-23.md").write_text("## 소재 판정\n| 사이트 > 소재 | 있음/없음 | 근거 |\n|---|---|---|\n"
-                                                 "| 밤밤 > 시황 노트 | 없음 | 휴장 |\n", encoding="utf-8")
+                                                 "| 밤밤 > 코스피 시황 노트 | 없음 | 휴장 |\n", encoding="utf-8")
             rows = {r["label"]: r for r in writing_results(day)}
             self.assertEqual(rows["memorily > AI"]["word"], "못 씀")  # 매일 주제인데 아직 원고 없음
             folder = Path(tmp) / "원고" / "T120_AI소식"
@@ -919,7 +919,8 @@ class DataFeedsTests(TestCase):
         with patch.dict("os.environ", {}, clear=True):
             out = dict(datafeeds.collect(today=date(2026, 10, 26)))
         self.assertEqual(out["축제"], "키 없음 (DATA_GO_KR_KEY)")
-        self.assertTrue((Path(self.tmp.name) / "시황노트.csv").read_text(encoding="utf-8").startswith("no,날짜,코스피"))
+        self.assertTrue((Path(self.tmp.name) / "코스피시황.csv").read_text(encoding="utf-8").startswith("날짜,no,코스피"))
+        self.assertTrue((Path(self.tmp.name) / "나스닥시황.csv").read_text(encoding="utf-8").startswith("날짜,no,나스닥"))  # 시황 노트 두 시리즈 (0033)
 
     def test_festivals_merge_and_prune(self):
         from . import datafeeds
