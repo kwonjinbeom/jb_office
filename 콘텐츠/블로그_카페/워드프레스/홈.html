@@ -1,214 +1,165 @@
 <!-- wp:html -->
 <style>
-/* jinbaam 홈 모양 (2026-10-26) — 이 블록 안에 둔다: 추가 CSS(사이트.css)가 없어도, 홈으로 지정하기 전 주소(/홈/)에서도 같은 모양 */
+@import url("https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
-:root { --s-ink: #1d2125; --s-ink-2: #555b62; --s-ink-3: #8b9097; --s-line: #e7e3db; --s-paper: #f7f5f0; --s-card: #ffffff;
-  --s-mtn: #2f5d45; --s-car: #1f6feb; --s-kr: #b4532a; --s-world: #6b4f3a; --s-radius: 16px; }
-.jb-dot--mtn { --dot: var(--s-mtn); } .jb-dot--car { --dot: var(--s-car); } .jb-dot--kr { --dot: var(--s-kr); } .jb-dot--world { --dot: var(--s-world); }
-body:has(.jb-home-hero) { background: var(--s-paper); }
+/* jinbaam 홈 — 걷기 일기장 (2026-10-26 사용자: 3번 위주 + 작은 사진 + 카테고리별 날짜 목록, 1번의 명조·종이·선 조금).
+   이 블록 안에 둔다: 추가 CSS(사이트.css)가 없어도, 홈으로 지정하기 전 주소(/홈/)에서도 같은 모양.
+   날짜는 워드프레스 설정 › 일반 › 날짜 형식을 Y.m.d 로 두면 2026.10.26 처럼 나온다. */
+:root { --d-ink: #26231f; --d-ink-2: #5d574f; --d-ink-3: #8f887d; --d-line: #ddd5c6; --d-line-2: #e9e2d5; --d-paper: #f6f2ea;
+  --d-date: #a0522d; --d-serif: "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --d-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --d-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+body:has(.jb-home-hero) { background: var(--d-paper); }
 body:has(.jb-home-hero) .is-right-sidebar, body:has(.jb-home-hero) .is-left-sidebar { display: none; }
 body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
-.site-main:has(.jb-home-hero):not(#jb) { max-width: none; margin: 24px 24px 64px; }  /* 테마 여백 규칙보다 세게 */
+.site-main:has(.jb-home-hero):not(#jb) { max-width: 980px; margin: 24px auto 72px; padding: 0 24px; }  /* 테마 여백 규칙보다 세게 · 일기장 폭 */
 .inside-article:has(.jb-home-hero) { padding: 0; border: 0; background: transparent; }
 .inside-article:has(.jb-home-hero) > .entry-header { display: none; }
-.entry-content:has(.jb-home-hero) { margin-top: 0; color: var(--s-ink); font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; word-break: keep-all; }
-.entry-content:has(.jb-home-hero) :is(h1, h2, h3) { font-family: inherit; color: var(--s-ink); }
-.jb-home-hero { max-width: 780px; padding: 40px 0 8px; }
-.jb-eyebrow { margin: 0 0 14px; color: var(--s-kr); font-size: 13px; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; }
-.jb-home-hero h1 { margin: 0 0 16px; font-size: 46px; font-weight: 850; line-height: 1.24; letter-spacing: -0.04em; }
-.jb-home-hero p.jb-hero-sub { margin: 0; color: var(--s-ink-2); font-size: 17.5px; line-height: 1.75; }
-.jb-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 32px 0 60px; }
-.entry-content a.jb-tile {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  min-height: 200px;
-  padding: 22px;
-  overflow: hidden;
-  border-radius: var(--s-radius);
-  background: var(--tile);
-  color: #fff;
-  text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.entry-content:has(.jb-home-hero) { margin-top: 0; color: var(--d-ink); font-family: var(--d-sans); word-break: keep-all; }
+.entry-content:has(.jb-home-hero) :is(h1, h2, h3) { color: var(--d-ink); }
+.entry-content:has(.jb-home-hero) a { color: var(--d-ink); text-decoration: none; }
+
+/* 머리: 일기장 표지 */
+.jb-home-hero { padding: 36px 0 30px; border-bottom: 1px solid var(--d-ink); }
+.jb-eyebrow { margin: 0 0 18px; color: var(--d-date); font-family: var(--d-mono); font-size: 12.5px; letter-spacing: 0.08em; }
+.jb-home-hero h1 { margin: 0; font-family: var(--d-serif); font-size: 50px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
+.jb-home-hero .jb-en--title { margin: 10px 0 22px; color: var(--d-ink-2); font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-style: italic; }
+.jb-home-hero p.jb-hero-sub { max-width: 700px; margin: 0; color: var(--d-ink-2); font-size: 16px; line-height: 1.8; }
+.jb-home-hero p.jb-hero-sub.jb-en { margin-top: 6px; color: var(--d-ink-3); font-size: 14.5px; line-height: 1.7; word-break: normal; }
+
+/* 차례: 카테고리 넷 (색 타일 대신 일기장 차례) */
+.jb-index { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 44px; border-bottom: 1px solid var(--d-line); }
+.entry-content .jb-index a { display: block; padding: 18px 18px 20px; border-left: 1px solid var(--d-line); }
+.entry-content .jb-index a:first-child { padding-left: 0; border-left: 0; }
+.jb-index__no { display: block; color: var(--d-date); font-family: var(--d-mono); font-size: 12px; }
+.jb-index__name { display: block; margin: 6px 0 4px; font-family: var(--d-serif); font-size: 20px; font-weight: 700; }
+.jb-index__desc { display: block; color: var(--d-ink-3); font-size: 13px; line-height: 1.5; }
+.entry-content .jb-index a:hover .jb-index__name { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+
+/* 칸 머리: 01 — 산과 캠핑 ……… 전체 보기 */
+.jb-sec-head { display: flex; align-items: baseline; gap: 14px; margin: 0; padding: 0 0 10px; border-bottom: 1px solid var(--d-ink); }
+.jb-sec-head__no { color: var(--d-date); font-family: var(--d-mono); font-size: 12.5px; }
+.jb-sec-head h2 { margin: 0; font-family: var(--d-serif); font-size: 23px; font-weight: 700; letter-spacing: -0.01em; }
+.jb-sec-head__en { color: var(--d-ink-3); font-family: Georgia, serif; font-size: 14px; font-style: italic; }
+.entry-content .jb-sec-head a { margin-left: auto; color: var(--d-ink-2); font-size: 13.5px; white-space: nowrap; }
+.entry-content .jb-sec-head a:hover { color: var(--d-ink); text-decoration: underline; }
+
+/* 오늘의 기록: 맨 위 한 편만 크게 (사진 반 · 글 반) */
+.entry-content ul.jb-feature:not(#jb) { display: grid; grid-template-columns: 1fr; margin: 0 0 52px; padding: 0; list-style: none; }
+.entry-content ul.jb-feature:not(#jb) li {
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+  grid-template-areas: "img date" "img title" "img text"; column-gap: 36px; width: auto; margin: 0; padding: 26px 0 0;
 }
-.entry-content a.jb-tile:hover { transform: translateY(-3px); box-shadow: 0 16px 32px rgba(30, 25, 15, 0.16); color: #fff; }
-.jb-tile svg { position: absolute; top: 18px; right: 16px; width: 92px; height: auto; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
-.jb-tile__kicker { font-size: 11.5px; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.78; }
-.jb-tile__name { margin: 4px 0 6px; font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
-.jb-tile__desc { font-size: 13.5px; line-height: 1.5; opacity: 0.88; }
-.jb-tile--mtn { --tile: linear-gradient(155deg, #4a8466 0%, #2f5d45 55%, #1f3f2e 100%); }
-.jb-tile--car { --tile: linear-gradient(155deg, #3b4652 0%, #262d34 60%, #1a1f24 100%); }
-.jb-tile--car .jb-tile__kicker { color: #8db8ff; opacity: 1; }
-.jb-tile--kr { --tile: linear-gradient(155deg, #d0733f 0%, #b4532a 55%, #873a1b 100%); }
-.jb-tile--world { --tile: linear-gradient(155deg, #8d6e55 0%, #6b4f3a 55%, #4b3627 100%); }
-.jb-sec-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin: 0 0 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--s-ink);
+.jb-feature .wp-block-latest-posts__featured-image { grid-area: img; margin: 0; }
+.jb-feature .wp-block-latest-posts__featured-image a { display: block; }
+.jb-feature .wp-block-latest-posts__featured-image img { display: block; width: 100%; max-width: none; height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
+.jb-feature .wp-block-latest-posts__post-date { grid-area: date; align-self: end; color: var(--d-date); font-family: var(--d-mono); font-size: 13px; }
+.entry-content .jb-feature a.wp-block-latest-posts__post-title { grid-area: title; margin: 8px 0 12px; font-family: var(--d-serif); font-size: 29px; font-weight: 700; line-height: 1.38; }
+.jb-feature .wp-block-latest-posts__post-excerpt { grid-area: text; margin: 0; color: var(--d-ink-2); font-size: 15px; line-height: 1.8; }
+.jb-feature .wp-block-latest-posts__post-excerpt a { display: none; }
+
+/* 기록 목록: 날짜 · 제목 · 작은 사진 한 줄씩 */
+.entry-content ul.jb-diary:not(#jb) { display: block; margin: 0 0 52px; padding: 0; list-style: none; }
+.entry-content ul.jb-diary:not(#jb) li {
+  display: grid; grid-template-columns: 112px minmax(0, 1fr) 96px; grid-template-areas: "date title img";
+  align-items: center; column-gap: 22px; width: auto; margin: 0; padding: 14px 0; border-bottom: 1px solid var(--d-line-2);
 }
-.jb-sec-head h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
-.jb-sec-head h2::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, var(--s-ink)); }
-.entry-content .jb-sec-head a { color: var(--s-ink-2); font-size: 14px; font-weight: 650; text-decoration: none; white-space: nowrap; }
-.entry-content .jb-sec-head a:hover { color: var(--s-ink); }
-.entry-content .wp-block-latest-posts.is-grid:not(#jb) {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-  margin: 0 0 60px;
-  padding: 0;
-  list-style: none;
-}
-.entry-content .wp-block-latest-posts.is-grid:not(#jb) li {
-  display: flex;
-  flex-direction: column;
-  width: auto;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--s-line);
-  border-radius: var(--s-radius);
-  background: var(--s-card);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.entry-content .wp-block-latest-posts.is-grid:not(#jb) li:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(30, 25, 15, 0.09); }
-.entry-content .wp-block-latest-posts__featured-image { margin: 0; }
-.entry-content .wp-block-latest-posts__featured-image img { display: block; width: 100%; max-width: none; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
-.entry-content a.wp-block-latest-posts__post-title {
-  display: -webkit-box;
-  margin: 16px 18px 0;
-  overflow: hidden;
-  color: var(--s-ink);
-  font-size: 18px;
-  font-weight: 750;
-  line-height: 1.45;
-  letter-spacing: -0.02em;
-  text-decoration: none;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-.entry-content .wp-block-latest-posts__post-date { display: block; margin: auto 0 0; padding: 10px 18px 18px; color: var(--s-ink-3); font-size: 13px; }
-/* 최신 글 칸: 워드프레스 기본 CSS(.is-grid:not(.is-layout-grid) li)보다 세게 :not(#jb) */
-/* 글이 아직 없는 카테고리는 제목째 숨긴다 (:has 는 겹쳐 쓸 수 없어 :empty) */
+.entry-content ul.jb-skip1:not(#jb) li:first-child { display: none; }  /* 오늘의 기록과 겹치는 첫 편 */
+.jb-diary .wp-block-latest-posts__post-date { grid-area: date; color: var(--d-date); font-family: var(--d-mono); font-size: 13px; }
+.entry-content .jb-diary a.wp-block-latest-posts__post-title { grid-area: title; font-family: var(--d-serif); font-size: 18.5px; font-weight: 700; line-height: 1.5; }
+.entry-content .jb-diary a.wp-block-latest-posts__post-title:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.jb-diary .wp-block-latest-posts__featured-image { grid-area: img; margin: 0; }
+.jb-diary .wp-block-latest-posts__featured-image a { display: block; }
+.jb-diary .wp-block-latest-posts__featured-image img { display: block; width: 96px; max-width: none; height: 68px; object-fit: cover; filter: saturate(0.9); }
+/* 글이 아직 없는 카테고리는 머리째 숨긴다 */
 .entry-content .wp-block-latest-posts:not(#jb):empty { display: none; }
 .jb-sec-head:has(+ .wp-block-latest-posts:empty) { display: none; }
-.jb-about {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 32px;
-  margin: 8px 0 24px;
-  padding: 36px 40px;
-  border: 1px solid var(--s-line);
-  border-radius: var(--s-radius);
-  background: var(--s-card);
-}
-.jb-about h2 { margin: 0 0 4px; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
-/* 한글 뒤 영문 (2026-10-26 사용자): 한 톤 옅고 작게, 영문 줄바꿈 */
-.entry-content p.jb-en { margin-top: 10px; color: var(--s-ink-3); letter-spacing: 0; word-break: normal; }
-.entry-content p.jb-en--title { margin: 0 0 18px; color: var(--s-ink-2); font-size: 19px; font-weight: 600; line-height: 1.45; }
-.jb-about p.jb-en--title { margin-bottom: 12px; font-size: 15.5px; }
-.jb-home-hero p.jb-hero-sub.jb-en { font-size: 16px; line-height: 1.7; }
-.jb-about p.jb-about__text.jb-en { margin-top: 10px; font-size: 14.5px; line-height: 1.7; }
-.jb-about p.jb-about__text { margin: 0; color: var(--s-ink-2); font-size: 15.5px; line-height: 1.75; }
-.jb-about ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; max-width: 300px; }
-.jb-about li { margin: 0; padding: 6px 12px; border-radius: 999px; background: var(--s-paper); color: var(--s-ink-2); font-size: 13px; font-weight: 600; }
-@media (max-width: 1024px) {
-  .entry-content .wp-block-latest-posts.is-grid:not(#jb) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .jb-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
+
+/* 끝: 쓰는 사람 */
+.jb-about { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 28px; margin: 12px 0 0; padding: 30px 0 0; border-top: 1px solid var(--d-ink); }
+.jb-about .jb-eyebrow { margin: 4px 0 0; }
+.jb-about h2 { margin: 0 0 4px; font-family: var(--d-serif); font-size: 23px; font-weight: 700; }
+.jb-about .jb-en--title { margin: 0 0 14px; color: var(--d-ink-2); font-family: Georgia, serif; font-size: 15px; font-style: italic; }
+.jb-about p.jb-about__text { margin: 0; color: var(--d-ink-2); font-size: 15px; line-height: 1.8; }
+.jb-about p.jb-about__text.jb-en { margin-top: 8px; color: var(--d-ink-3); font-size: 14px; line-height: 1.7; word-break: normal; }
+
 @media (max-width: 768px) {
-  .site-main:has(.jb-home-hero):not(#jb) { margin: 8px 16px 48px; }
-  .jb-home-hero { padding-top: 16px; }
-  .jb-home-hero h1 { font-size: 31px; }
-  .jb-home-hero p.jb-hero-sub { font-size: 16px; }
-  .jb-home-hero p.jb-hero-sub.jb-en { font-size: 14.5px; }
-  .entry-content p.jb-en--title { font-size: 16.5px; }
-  .jb-tiles { gap: 10px; margin: 24px 0 44px; }
-  .entry-content a.jb-tile { min-height: 150px; padding: 16px; }
-  .jb-tile svg { width: 64px; top: 14px; right: 12px; }
-  .jb-tile__name { font-size: 19px; }
-  .jb-tile__desc { display: none; }
-  .jb-about { grid-template-columns: 1fr; gap: 18px; padding: 26px 22px; }
-}
-@media (max-width: 600px) {
-  .entry-content .wp-block-latest-posts.is-grid:not(#jb) { grid-template-columns: 1fr; gap: 18px; }
+  .site-main:has(.jb-home-hero):not(#jb) { margin: 8px auto 48px; padding: 0 16px; }
+  .jb-home-hero { padding: 16px 0 24px; }
+  .jb-home-hero h1 { font-size: 34px; }
+  .jb-home-hero .jb-en--title { font-size: 16px; }
+  .jb-index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .entry-content .jb-index a, .entry-content .jb-index a:first-child { padding: 14px 12px 16px 0; border-left: 0; border-top: 1px solid var(--d-line); }
+  .entry-content .jb-index a:nth-child(even) { padding-left: 14px; border-left: 1px solid var(--d-line); }
+  .entry-content .jb-index a:nth-child(-n+2) { border-top: 0; }
+  .jb-index__name { font-size: 18px; }
+  .entry-content ul.jb-feature:not(#jb) li { grid-template-columns: 1fr; grid-template-areas: "img" "date" "title" "text"; padding-top: 18px; }
+  .jb-feature .wp-block-latest-posts__post-date { margin-top: 14px; }
+  .entry-content .jb-feature a.wp-block-latest-posts__post-title { font-size: 23px; }
+  .entry-content ul.jb-diary:not(#jb) li { grid-template-columns: minmax(0, 1fr) 76px; grid-template-areas: "date img" "title img"; row-gap: 2px; column-gap: 14px; }
+  .jb-diary .wp-block-latest-posts__post-date { font-size: 12px; }
+  .entry-content .jb-diary a.wp-block-latest-posts__post-title { font-size: 16.5px; }
+  .jb-diary .wp-block-latest-posts__featured-image img { width: 76px; height: 58px; }
+  .jb-sec-head__en { display: none; }
+  .jb-about { grid-template-columns: 1fr; gap: 10px; }
 }
 </style>
 <section class="jb-home-hero">
-  <p class="jb-eyebrow">Field notes · 산 · 길 · 여행</p>
+  <p class="jb-eyebrow">FIELD NOTES — 산 · 길 · 여행</p>
   <h1>걸어온 길,<br>적어 둔 날들</h1>
   <p class="jb-en jb-en--title">Roads I’ve walked, days I’ve written down.</p>
   <p class="jb-hero-sub">여행과 짜릿한 순간을 좋아하는 스물아홉 한국 청년입니다. 한국은 외국 친구에게 소개하듯 쉽게, 해외는 처음 가는 사람의 눈으로 꼼꼼하게 담아요.</p>
-  <p class="jb-hero-sub jb-en">A 29-year-old Korean who lives for travel and a good thrill. I show you Korea the way I'd show a visiting friend, and explore the world with first-timer eyes.</p>
+  <p class="jb-hero-sub jb-en">A 29-year-old Korean who lives for travel and a good thrill. I show you Korea the way I’d show a visiting friend, and explore the world with first-timer eyes.</p>
 </section>
-<nav class="jb-tiles" aria-label="카테고리">
-  <a class="jb-tile jb-tile--mtn" href="/category/mountain-camping/">
-    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><path d="M2 38 22 9l9 12 8-9 23 26Z"/><path d="m17 16 5 4 4-3"/></svg>
-    <span class="jb-tile__kicker">Mountain &amp; Camp</span>
-    <strong class="jb-tile__name">산과 캠핑</strong>
-    <span class="jb-tile__desc">계절 산 · 등산 코스 · 산 아래 야영장</span>
-  </a>
-  <a class="jb-tile jb-tile--car" href="/category/drive-car/">
-    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><path d="M4 28v-7l9-10h28l11 10h7v7Z"/><circle cx="17" cy="30" r="5"/><circle cx="47" cy="30" r="5"/><path d="M15 21h37"/></svg>
-    <span class="jb-tile__kicker">Drive &amp; Car</span>
-    <strong class="jb-tile__name">드라이브·자동차</strong>
-    <span class="jb-tile__desc">점검 · 신차 · 드라이브 코스</span>
-  </a>
-  <a class="jb-tile jb-tile--kr" href="/category/korea-travel/">
-    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><path d="M3 14q29-11 58 0"/><path d="M8 13v24M56 13v24M20 10v27M44 10v27M5 37h54M8 21h48"/></svg>
-    <span class="jb-tile__kicker">Korea Travel</span>
-    <strong class="jb-tile__name">Korea Travel</strong>
-    <span class="jb-tile__desc">Guides for visitors · 日本語 · 中文</span>
-  </a>
-  <a class="jb-tile jb-tile--world" href="/category/world-travel/">
-    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><circle cx="32" cy="20" r="17"/><path d="M15 20h34M32 3c-8 9-8 25 0 34M32 3c8 9 8 25 0 34"/></svg>
-    <span class="jb-tile__kicker">World Travel</span>
-    <strong class="jb-tile__name">World Travel</strong>
-    <span class="jb-tile__desc">N-day itineraries in English</span>
-  </a>
+<nav class="jb-index" aria-label="카테고리">
+  <a href="/category/mountain-camping/"><span class="jb-index__no">01</span><span class="jb-index__name">산과 캠핑</span><span class="jb-index__desc">계절 산 · 등산 코스 · 야영장</span></a>
+  <a href="/category/drive-car/"><span class="jb-index__no">02</span><span class="jb-index__name">드라이브·자동차</span><span class="jb-index__desc">점검 · 신차 · 드라이브 코스</span></a>
+  <a href="/category/korea-travel/"><span class="jb-index__no">03</span><span class="jb-index__name">Korea Travel</span><span class="jb-index__desc">Guides for visitors · 日本語 · 中文</span></a>
+  <a href="/category/world-travel/"><span class="jb-index__no">04</span><span class="jb-index__name">World Travel</span><span class="jb-index__desc">N-day itineraries in English</span></a>
 </nav>
-<div class="jb-sec-head"><h2>최신 글</h2></div>
+<div class="jb-sec-head"><span class="jb-sec-head__no">Today</span><h2>오늘의 기록</h2><span class="jb-sec-head__en">Latest entry</span></div>
 <!-- /wp:html -->
 
-<!-- wp:latest-posts {"postsToShow":6,"displayPostDate":true,"postLayout":"grid","columns":3,"displayFeaturedImage":true,"featuredImageSizeSlug":"medium_large","addLinkToFeaturedImage":true} /-->
+<!-- wp:latest-posts {"postsToShow":1,"displayPostContent":true,"excerptLength":45,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"large","addLinkToFeaturedImage":true,"className":"jb-feature"} /-->
 
 <!-- wp:html -->
-<div class="jb-sec-head jb-dot--mtn"><h2>산과 캠핑</h2><a href="/category/mountain-camping/">전체 보기 →</a></div>
+<div class="jb-sec-head"><span class="jb-sec-head__no">Recent</span><h2>지난 기록</h2><span class="jb-sec-head__en">Recent entries</span></div>
 <!-- /wp:html -->
 
-<!-- wp:latest-posts {"categories":[{"id":2,"value":"산과 캠핑"}],"postsToShow":3,"displayPostDate":true,"postLayout":"grid","columns":3,"displayFeaturedImage":true,"featuredImageSizeSlug":"medium_large","addLinkToFeaturedImage":true} /-->
+<!-- wp:latest-posts {"postsToShow":7,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"thumbnail","addLinkToFeaturedImage":true,"className":"jb-diary jb-skip1"} /-->
 
 <!-- wp:html -->
-<div class="jb-sec-head jb-dot--car"><h2>드라이브·자동차</h2><a href="/category/drive-car/">전체 보기 →</a></div>
+<div class="jb-sec-head"><span class="jb-sec-head__no">01</span><h2>산과 캠핑</h2><span class="jb-sec-head__en">Mountain &amp; Camp</span><a href="/category/mountain-camping/">전체 보기 →</a></div>
 <!-- /wp:html -->
 
-<!-- wp:latest-posts {"categories":[{"id":3,"value":"드라이브·자동차"}],"postsToShow":3,"displayPostDate":true,"postLayout":"grid","columns":3,"displayFeaturedImage":true,"featuredImageSizeSlug":"medium_large","addLinkToFeaturedImage":true} /-->
+<!-- wp:latest-posts {"categories":[{"id":2,"value":"산과 캠핑"}],"postsToShow":4,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"thumbnail","addLinkToFeaturedImage":true,"className":"jb-diary"} /-->
 
 <!-- wp:html -->
-<div class="jb-sec-head jb-dot--kr"><h2>Korea Travel</h2><a href="/category/korea-travel/">See all →</a></div>
+<div class="jb-sec-head"><span class="jb-sec-head__no">02</span><h2>드라이브·자동차</h2><span class="jb-sec-head__en">Drive &amp; Car</span><a href="/category/drive-car/">전체 보기 →</a></div>
 <!-- /wp:html -->
 
-<!-- wp:latest-posts {"categories":[{"id":4,"value":"Korea Travel"}],"postsToShow":3,"displayPostDate":true,"postLayout":"grid","columns":3,"displayFeaturedImage":true,"featuredImageSizeSlug":"medium_large","addLinkToFeaturedImage":true} /-->
+<!-- wp:latest-posts {"categories":[{"id":3,"value":"드라이브·자동차"}],"postsToShow":4,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"thumbnail","addLinkToFeaturedImage":true,"className":"jb-diary"} /-->
 
 <!-- wp:html -->
-<div class="jb-sec-head jb-dot--world"><h2>World Travel</h2><a href="/category/world-travel/">See all →</a></div>
+<div class="jb-sec-head"><span class="jb-sec-head__no">03</span><h2>Korea Travel</h2><span class="jb-sec-head__en">for visitors</span><a href="/category/korea-travel/">See all →</a></div>
 <!-- /wp:html -->
 
-<!-- wp:latest-posts {"categories":[{"id":5,"value":"World Travel"}],"postsToShow":3,"displayPostDate":true,"postLayout":"grid","columns":3,"displayFeaturedImage":true,"featuredImageSizeSlug":"medium_large","addLinkToFeaturedImage":true} /-->
+<!-- wp:latest-posts {"categories":[{"id":4,"value":"Korea Travel"}],"postsToShow":4,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"thumbnail","addLinkToFeaturedImage":true,"className":"jb-diary"} /-->
+
+<!-- wp:html -->
+<div class="jb-sec-head"><span class="jb-sec-head__no">04</span><h2>World Travel</h2><span class="jb-sec-head__en">itineraries</span><a href="/category/world-travel/">See all →</a></div>
+<!-- /wp:html -->
+
+<!-- wp:latest-posts {"categories":[{"id":5,"value":"World Travel"}],"postsToShow":4,"displayPostDate":true,"displayFeaturedImage":true,"featuredImageSizeSlug":"thumbnail","addLinkToFeaturedImage":true,"className":"jb-diary"} /-->
 
 <!-- wp:html -->
 <section class="jb-about">
+  <p class="jb-eyebrow">ABOUT</p>
   <div>
-    <p class="jb-eyebrow">About jinbaam</p>
     <h2>안녕하세요, 길 위에서 노는 스물아홉입니다</h2>
-    <p class="jb-en jb-en--title">Hi, I'm a 29-year-old Korean who'd rather be on the road.</p>
+    <p class="jb-en jb-en--title">Hi, I’m a 29-year-old Korean who’d rather be on the road.</p>
     <p class="jb-about__text">주말이면 산에 오르고, 차를 몰고, 처음 가 보는 동네를 찾아 나섭니다. 가슴 뛰는 곳을 찾아다니지만 정보는 꼼꼼하게 — 거리·운영 시간·요금은 공식 공지로 다시 확인하고, 글 끝에 출처를 남깁니다.</p>
-    <p class="jb-about__text jb-en">On weekends I climb mountains, take long drives and go looking for places I've never been. I chase the thrill, but keep the facts straight: distances, opening hours and prices are checked against official sources and linked at the end of every post.</p>
+    <p class="jb-about__text jb-en">On weekends I climb mountains, take long drives and go looking for places I’ve never been. I chase the thrill, but keep the facts straight: distances, opening hours and prices are checked against official sources and linked at the end of every post.</p>
   </div>
-  <ul><li>산 · 등산 코스</li><li>캠핑장</li><li>자동차 점검</li><li>신차</li><li>Korea for visitors</li><li>World itineraries</li></ul>
 </section>
 <!-- /wp:html -->
