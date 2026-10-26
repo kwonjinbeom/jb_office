@@ -124,8 +124,10 @@ def launcher(request, placements, token, redo=""):
         f"git 커밋·push 는 가공이미지 폴더({FIGURE_DIR})만 한다 (변환본은 서버 DB 에만 들어간다).",
         "## 글마다 하는 일\n"
         "1. 그 글의 요청문대로 변환한다. 숫자·날짜·일정은 요청문의 '사실 점검'대로 출처에서 다시 확인하고 틀린 것만 고친다. 링크는 바꾸지 않는다.\n"
-        "2. 본문만 `workspace/.routine/convert/<번호>.md`, 점검 기록은 `workspace/.routine/convert/<번호>-check.md` 파일로 쓴다 (UTF-8).\n"
-        "3. 아래 '보내기' 명령의 <제목> · <태그> 를 채워 실행한다. 응답이 `ok` 로 시작하면 다음 글.\n"
+        "2. 본문만 `workspace/.routine/convert/<번호>.md`, 점검 기록은 `<번호>-check.md`, 제목 한 줄은 `<번호>-title.txt`, "
+        "태그 한 줄은 `<번호>-tags.txt` 로 같은 폴더에 쓴다 (모두 UTF-8). 제목·태그를 명령줄에 직접 쓰지 않는다 — "
+        "Windows 는 명령줄 글자를 cp949 로 바꿔 — 같은 글자가 ? 로 깨진다 (2026-10-26).\n"
+        "3. 아래 '보내기' 명령을 그대로 실행한다. 응답이 `ok` 로 시작하면 다음 글.\n"
         "4. 실패하면 이유를 한 줄로 말하고 다음 글로 간다. 다 끝나면 보낸 편수와 고친 곳 수를 한 줄로 말한다.",
     ]
     if redo:
@@ -136,7 +138,8 @@ def launcher(request, placements, token, redo=""):
     parts = ["\n\n".join(head)]
     for n, pl in enumerate(placements, start=1):
         url = request.build_absolute_uri(reverse("site_templates:api_save", args=[pl.pk])) + f"?token={token}"
-        send = (f'curl -fsS -X POST "{url}" --data-urlencode "title=<제목>" --data-urlencode "tags=<태그>" '
+        send = (f'curl -fsS -X POST "{url}" --data-urlencode "title@workspace/.routine/convert/{pl.pk}-title.txt" '
+                f'--data-urlencode "tags@workspace/.routine/convert/{pl.pk}-tags.txt" '
                 f'--data-urlencode "body@workspace/.routine/convert/{pl.pk}.md" '
                 f'--data-urlencode "check@workspace/.routine/convert/{pl.pk}-check.md"')
         part = (f"---\n\n## 글 {n} · 번호 {pl.pk} · {pl.site_category.blog.name} › {pl.site_category}\n\n"

@@ -682,30 +682,26 @@ class HeroPhotoTests(TestCase):
         self.assertEqual(self.client.get(self.url()).status_code, 404)
 
 
-class WordpressSafeTitleTests(TestCase):
-    """jinbaam.com 제목 칸은 EUC-KR 밖 글자를 ? 로 저장한다 (2026-10-26: — 만 ? 로 깨지고 · 는 그대로)."""
+class ConvertSendByFileTests(TestCase):
+    """변환본 보내기: 제목·태그도 파일로 (2026-10-26: Windows 명령줄이 cp949 라 제목의 — 가 ? 로 서버에 들어갔다)."""
 
-    def test_safe_title(self):
-        from . import wp_looks
-        self.assertEqual(wp_looks.safe_title("민둥산 억새 등산코스 — 증산초 완만 3.2km·가파른 2.6km"),
-                         "민둥산 억새 등산코스: 증산초 완만 3.2km·가파른 2.6km")
-        self.assertEqual(wp_looks.safe_title("Kyoto (Nov 2026): Leaves — Tax–Free"), "Kyoto (Nov 2026): Leaves - Tax - Free")  # 앞에 : 가 있으면 -
-        self.assertEqual(wp_looks.safe_title("가을 🍂 산행 ¥2,700"), "가을 산행 2,700")  # 이모지·¥ 는 뺀다
-        self.assertEqual(wp_looks.safe_title("3 Days in Kyoto: Autumn"), "3 Days in Kyoto: Autumn")
-        for t in [wp_looks.safe_title("A — B – C 🍁 ¥"), wp_looks.safe_text("태그—하나, 둘")]:
-            t.encode("euc_kr")  # 남는 글자는 모두 EUC-KR 안
-
-    def test_convert_screen_copies_safe_title(self):
+    def test_launcher_sends_title_and_tags_from_files(self):
         wp = Blog.objects.get(platform="wordpress")
         cat = SiteCategory.objects.filter(blog=wp).first()
-        post = Post.objects.create(title="원문", stage="post", body="본문")
-        pl = Placement.objects.create(site_category=cat, tistory_post=post, convert_status="done", converted_body="본문",
-                                      converted_title="첫 영하 전 겨울 자동차 점검표 — 공기압·배터리", converted_tags="겨울—점검, 배터리")
-        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
-        res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
-        self.assertContains(res, f'<textarea id="st-title-{pl.pk}" hidden>첫 영하 전 겨울 자동차 점검표: 공기압·배터리</textarea>', html=False)
-        self.assertEqual(res.context["tags_copy"], "겨울점검, 배터리")
-        self.assertIn("줄표(— –)", res.context["request_text"])  # 변환 규칙에도
-        tistory = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__platform="tistory").first(), tistory_post=post,
-                                           convert_status="done", converted_body="본문", converted_title="가 — 나")
-        self.assertEqual(self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["title_copy"], "가 — 나")  # 다른 곳은 그대로
+        post = Post.objects.create(title="원문 — 제목", stage="post", body="본문")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post)
+        launch = prompt.launcher(RequestFactory().get("/"), [pl], "tok")
+        self.assertIn(f'--data-urlencode "title@workspace/.routine/convert/{pl.pk}-title.txt"', launch)
+        self.assertIn(f'--data-urlencode "tags@workspace/.routine/convert/{pl.pk}-tags.txt"', launch)
+        self.assertNotIn("title=<제목>", launch)
+
+    def test_title_file_keeps_dash(self):
+        from urllib.parse import quote_plus
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        cat = SiteCategory.objects.filter(blog__platform="wordpress").first()
+        pl = Placement.objects.create(site_category=cat, tistory_post=Post.objects.create(title="t", stage="post", body="b"))
+        body = "&".join(f"{k}={quote_plus(v)}" for k, v in [("title", "민둥산 억새 — 증산초\n"), ("tags", "억새, 민둥산\n"), ("body", "본문")])
+        self.client.post(reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok", body, content_type="application/x-www-form-urlencoded")
+        pl.refresh_from_db()
+        self.assertEqual((pl.converted_title, pl.converted_tags), ("민둥산 억새 — 증산초", "억새, 민둥산"))  # 파일 끝 줄바꿈은 걷는다
