@@ -1496,3 +1496,22 @@ class ChangeNoteTests(TestCase):
         res = self.client.get(page)
         self.assertContains(res, 'class="cv-changed"')
         self.assertContains(res, "본문만 · 맨 앞 한 문장 추가")
+
+
+class FixDashTitlesMigrationTests(TestCase):
+    """0034 (2026-10-26): curl 명령줄(cp949)에서 ? 로 깨진 변환본 제목의 줄표를 되살린다. 진짜 물음표는 그대로."""
+
+    def test_forward(self):
+        from importlib import import_module
+        from django.apps import apps as django_apps
+        from apps.writing.models import Post
+        cat = SiteCategory.objects.filter(blog__platform="wordpress").first()
+        broken = Placement.objects.create(site_category=cat, tistory_post=Post.objects.create(title="민둥산 억새 — 증산초", stage="post", body="b"),
+                                          converted_title="민둥산 억새 등산코스 ? 증산초 완만")
+        question = Placement.objects.create(site_category=cat, tistory_post=Post.objects.create(title="몇 화부터? 환산기", stage="post", body="b"),
+                                            converted_title="블리치 몇 화부터 ? 환산기")
+        import_module("apps.blog_types.migrations.0034_fix_dash_titles").forward(django_apps, None)
+        broken.refresh_from_db()
+        question.refresh_from_db()
+        self.assertEqual(broken.converted_title, "민둥산 억새 등산코스 — 증산초 완만")
+        self.assertEqual(question.converted_title, "블리치 몇 화부터 ? 환산기")  # 원문에 — 가 없으면 손대지 않는다

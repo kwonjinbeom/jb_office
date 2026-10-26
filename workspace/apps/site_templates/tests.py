@@ -680,3 +680,28 @@ class HeroPhotoTests(TestCase):
         self.pl.converted_body = "사진 없음"
         self.pl.save()
         self.assertEqual(self.client.get(self.url()).status_code, 404)
+
+
+class ConvertSendByFileTests(TestCase):
+    """변환본 보내기: 제목·태그도 파일로 (2026-10-26: Windows 명령줄이 cp949 라 제목의 — 가 ? 로 서버에 들어갔다)."""
+
+    def test_launcher_sends_title_and_tags_from_files(self):
+        wp = Blog.objects.get(platform="wordpress")
+        cat = SiteCategory.objects.filter(blog=wp).first()
+        post = Post.objects.create(title="원문 — 제목", stage="post", body="본문")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post)
+        launch = prompt.launcher(RequestFactory().get("/"), [pl], "tok")
+        self.assertIn(f'--data-urlencode "title@workspace/.routine/convert/{pl.pk}-title.txt"', launch)
+        self.assertIn(f'--data-urlencode "tags@workspace/.routine/convert/{pl.pk}-tags.txt"', launch)
+        self.assertNotIn("title=<제목>", launch)
+
+    def test_title_file_keeps_dash(self):
+        from urllib.parse import quote_plus
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        cat = SiteCategory.objects.filter(blog__platform="wordpress").first()
+        pl = Placement.objects.create(site_category=cat, tistory_post=Post.objects.create(title="t", stage="post", body="b"))
+        body = "&".join(f"{k}={quote_plus(v)}" for k, v in [("title", "민둥산 억새 — 증산초\n"), ("tags", "억새, 민둥산\n"), ("body", "본문")])
+        self.client.post(reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok", body, content_type="application/x-www-form-urlencoded")
+        pl.refresh_from_db()
+        self.assertEqual((pl.converted_title, pl.converted_tags), ("민둥산 억새 — 증산초", "억새, 민둥산"))  # 파일 끝 줄바꿈은 걷는다
