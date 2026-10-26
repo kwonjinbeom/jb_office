@@ -376,7 +376,19 @@ def _tags_for(placement):
         from .prompt import BLOGGER_LABELS
         labels = [t.strip() for t in placement.converted_tags.split(",") if t.strip()]
         return ", ".join(labels[:BLOGGER_LABELS])
+    if platform == Blog.Platform.WORDPRESS:  # 태그 칸도 EUC-KR 밖 글자를 ? 로 (wp_looks.safe_text)
+        from . import wp_looks
+        return wp_looks.safe_text(placement.converted_tags)
     return placement.converted_tags
+
+
+def _title_for(placement):
+    """제목 칸에 붙일 꼴. 워드프레스는 EUC-KR 밖 글자(— 등)를 ? 로 저장해서 바꿔 준다 (2026-10-26 jinbaam.com)."""
+    title = placement.converted_title or placement.post.title
+    if placement.site_category.blog.platform == Blog.Platform.WORDPRESS:
+        from . import wp_looks
+        return wp_looks.safe_title(title)
+    return title
 
 
 class ConvertForm(_Styled):
@@ -446,7 +458,7 @@ def convert_context(placement, form=None):
         "form": form or ConvertForm(instance=placement),
         "original_html": render_body(post.body), "converted_html": conv_html, "paste_html": rich, "plain_text": plain,
         "clean_html": clean, "paste": paste.for_platform(placement.site_category.blog.platform),
-        "is_naver": naver, "tags_copy": _tags_for(placement),
+        "is_naver": naver, "tags_copy": _tags_for(placement), "title_copy": _title_for(placement),
         "flat": placement.site_category.blog.platform in (Blog.Platform.TISTORY, Blog.Platform.BLOGGER),  # 빈 줄로 간격
         "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if naver else [],
         "tag_bookmarklet": paste.naver_tag_bookmarklet(),

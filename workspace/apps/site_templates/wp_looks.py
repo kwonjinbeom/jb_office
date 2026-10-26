@@ -18,6 +18,7 @@
 """
 import html
 import re
+import unicodedata
 from pathlib import Path
 
 import markdown
@@ -163,9 +164,44 @@ def preview_html(text: str, look: str = "") -> str:
     return f"<style>{css()}</style>\n{render(text, look)}"
 
 
+# jinbaam.com(Cafe24)의 제목·태그 칸은 EUC-KR 에 없는 글자를 ? 로 저장한다 (2026-10-26: 제목의 — 만 ? 로 깨지고 · 는 그대로).
+# 복사할 때 EUC-KR 안의 글자로 바꾼다. 줄표는 처음 하나를 ': ' 로 (앞에 : 가 없을 때), 나머지는 ' - '.
+_DASH = re.compile(r"\s*[—–]\s*")
+
+
+def safe_text(text: str) -> str:
+    out = []
+    for ch in unicodedata.normalize("NFC", text or ""):
+        try:
+            ch.encode("euc_kr")
+            out.append(ch)
+        except UnicodeEncodeError:
+            alt = unicodedata.normalize("NFKC", ch)
+            out.append(alt if alt != ch and _euc_kr_ok(alt) else "")
+    return re.sub(r" {2,}", " ", "".join(out)).strip()
+
+
+def _euc_kr_ok(text: str) -> bool:
+    try:
+        text.encode("euc_kr")
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
+def safe_title(title: str) -> str:
+    title = (title or "").strip()
+    m = _DASH.search(title)
+    if m:
+        first = ": " if ":" not in title[:m.start()] else " - "
+        title = title[:m.start()] + first + _DASH.sub(" - ", title[m.end():])
+    return safe_text(title)
+
+
 PROMPT = """## 워드프레스 글 모양 (붙여 넣는 HTML 이 그린다 · 변환본에는 꾸밈 코드를 넣지 않는다)
 - 마크다운 그대로 둔다. 맨 위 첫 인용(>)은 리드 상자, ## 소제목이 4개 이상이면 맨 위 목차가 저절로 생긴다.
 - 정보 카드 `::: 종류 | 이름` … `:::` — 종류: 요약(한눈에) · 장소 · 맛집 · 코스(등산) · 캠핑(야영장) · 나들이 · 차 · 비용 · 점검 · 제품 / 영어 글은 Place · Food · Stay · Route · Tour · Cost · Info. 한 줄에 `이모지 이름표 | 값`.
 - 여행 일정은 `## Day 1 · 지역` (한국어는 `## 1일차 · 지역`) 이 날짜 머리가 된다.
 - Korea Travel 은 끝에 `## 日本語まとめ` · `## 中文简介` 소제목으로 요약 — 요약 상자로 그려진다.
-- 사진은 `![설명](주소)` + 다음 줄 `*Photo: 작가 · 출처*` (한국어 글은 `*사진: …*`). 맨 끝 출처 줄은 `참고:` (영어는 `Sources:`)."""
+- 사진은 `![설명](주소)` + 다음 줄 `*Photo: 작가 · 출처*` (한국어 글은 `*사진: …*`). 맨 끝 출처 줄은 `참고:` (영어는 `Sources:`).
+- 제목·태그에는 줄표(— –)·¥·이모지를 쓰지 않는다 — 워드프레스 제목 칸이 ? 로 바꾼다. 이어 쓸 때는 `:` 를 쓴다 (예: `민둥산 억새 등산코스: 증산초 …`)."""
