@@ -20,7 +20,7 @@ class BlogRulesTests(TestCase):
     def test_seed(self):
         self.assertEqual(list(Blog.objects.values_list("name", flat=True)),
                          ["memorily", "눈잎", "black_lukey", "밤밤", "워드프레스"])
-        self.assertTrue(Blog.objects.get(name="밤밤").content.startswith("시황 노트"))  # 사이트별 타겟 (2026-10-22 사용자)
+        self.assertTrue(Blog.objects.get(name="밤밤").content.startswith("코스피 시황 노트"))  # 사이트별 타겟 (2026-10-22 사용자)
         memorily = Blog.objects.get(name="memorily")
         self.assertTrue(memorily.content.startswith("직접 쓰는 글"))
         self.assertFalse(memorily.routine)  # 사용자가 직접 쓰는 사이트는 글쓰기 루틴에서 뺀다

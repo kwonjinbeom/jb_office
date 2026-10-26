@@ -810,10 +810,10 @@ class SimpleClassesTests(TestCase):
         from apps.core.models import TrashEntry
         self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤", "memorily", "워드프레스"])  # memorily › AI 는 0021, 워드프레스 0030
         self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
-                         ["시황 노트", "해외 여행"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020), 코스피·나스닥 → 시황 노트·제품소개 지움 (0028)
+                         ["코스피 시황 노트", "나스닥 시황 노트", "해외 여행"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020), 제품소개 지움 (0028), 시황 노트를 코스피·나스닥으로 다시 나눔 (0033)
         self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.exclude(name__in=["memorily", "밤밤", "워드프레스"])))  # '그 외' 하나 (밤밤은 0028 에서 뺌, 워드프레스는 없음)
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
-        self.assertTrue(Category.objects.get(name="시황 노트").direction)  # 방향 = 글쓰기 컨셉
+        self.assertTrue(Category.objects.get(name="코스피 시황 노트").direction)  # 방향 = 글쓰기 컨셉
         trashed = TrashEntry.objects.filter(model_label="blog_types.section")
         self.assertEqual(sorted(trashed.values_list("title", flat=True)), ["IT/AI", "광고 수익 (조회수)", "판매 수익 (커넥트)"])
         self.assertIn("blog_types.subtype", trashed.get(title="판매 수익 (커넥트)").members)  # 복원하면 아래까지 함께
@@ -1258,7 +1258,7 @@ class MemorilyAiPickTests(TestCase):
         ai = Category.objects.get(section__name="memorily", name="AI")
         picks = default_picks(date(2026, 10, 23))
         self.assertNotIn(ai.sel, picks)
-        self.assertIn(Category.objects.get(section__name="밤밤", name="시황 노트").sel, picks)
+        self.assertIn(Category.objects.get(section__name="밤밤", name="코스피 시황 노트").sel, picks)
         self.assertEqual(FixedTopic.objects.get(name="AI 소식").category, ai)  # 고정 주제의 소재 → 원고 '분류: memorily > AI'
 
 
@@ -1289,8 +1289,8 @@ class SitesOverhaulTests(TestCase):
 
     def test_migrated_classes_and_concepts(self):
         bam = list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True))
-        self.assertIn("시황 노트", bam)
-        for gone in ("상품 추천", "그 외", "코스피", "나스닥"):
+        self.assertIn("코스피 시황 노트", bam)  # 0028 의 시황 노트는 0033 에서 다시 나뉨
+        for gone in ("상품 추천", "그 외", "코스피", "나스닥", "시황 노트"):
             self.assertNotIn(gone, bam)
         self.assertNotIn("상품 추천", Blog.objects.get(name="밤밤").content)
         daily = SiteCategory.objects.get(blog__name="눈잎", name="일상", parent=None)
@@ -1305,6 +1305,7 @@ class SitesOverhaulTests(TestCase):
         from apps.core.models import TrashEntry
         from apps.writing.models import Post
         bam = Section.objects.get(name="밤밤")
+        Category.objects.create(section=bam, code="X", name="시황 노트")  # 0033 이전 상태
         product = Category.objects.create(section=bam, code="Z", name="상품 추천")
         stock = Category.objects.create(section=bam, code="Y", name="나스닥")
         post = Post.objects.create(title="스탠리 퀜처 사도 될까", bt_category=product)
@@ -1320,6 +1321,45 @@ class SitesOverhaulTests(TestCase):
         night.refresh_from_db()
         self.assertEqual(night.bt_category.name, "시황 노트")  # 나스닥 글은 시황 노트로
         self.assertTrue(Post.objects.filter(pk=keep.pk).exists())
+
+
+class MarketNotesSplitTests(TestCase):
+    """0033 (2026-10-26 사용자: 코스피를 다음 날 아침에 보는 건 늦다): 시황 노트 → 코스피 · 나스닥 두 시리즈."""
+
+    def test_split_after_migrate(self):
+        bam = list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True))
+        self.assertEqual(bam[:2], ["코스피 시황 노트", "나스닥 시황 노트"])
+        self.assertTrue(Blog.objects.get(name="밤밤").content.startswith("코스피 시황 노트"))
+
+    def test_restores_trashed_nasdaq_and_moves_its_posts(self):
+        from datetime import timedelta
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+        from django.utils import timezone
+
+        from apps.core.models import TrashEntry
+        from apps.writing.models import Post
+        bam = Section.objects.get(name="밤밤")
+        Category.all_objects.filter(section=bam, name__endswith="시황 노트").delete()
+        market = Category.objects.create(section=bam, code="A", name="시황 노트", order=1)  # 0028 뒤 상태
+        when = timezone.now() - timedelta(days=1)
+        nasdaq = Category.objects.create(section=bam, code="B", name="나스닥", order=2)
+        Category.all_objects.filter(pk=nasdaq.pk).update(deleted_at=when)
+        TrashEntry.objects.create(model_label="blog_types.category", object_key=str(nasdaq.pk), title="밤밤 › 나스닥",
+                                  section="카테고리 관리 · 카테고리", deleted_at=when, members={"blog_types.category": [nasdaq.pk]})
+        night = Post.objects.create(title="나스닥 2.6% 급락", bt_category=market)
+        both = Post.objects.create(title="코스피 반등, 간밤 나스닥은", bt_category=market)
+        import_module("apps.blog_types.migrations.0033_market_notes_split").forward(django_apps, None)
+        self.assertEqual(Category.objects.get(pk=market.pk).name, "코스피 시황 노트")
+        self.assertEqual(Category.objects.get(pk=nasdaq.pk).name, "나스닥 시황 노트")  # 휴지통에서 되살림
+        self.assertFalse(TrashEntry.objects.filter(object_key=str(nasdaq.pk), model_label="blog_types.category").exists())
+        night.refresh_from_db(), both.refresh_from_db()
+        self.assertEqual(night.bt_category_id, nasdaq.pk)
+        self.assertEqual(both.bt_category_id, market.pk)  # 코스피 글은 그대로
+        stock = SiteCategory.objects.filter(blog__name="밤밤", name="주식").first()
+        if stock:
+            self.assertIn("시황 노트 두 시리즈", stock.concept)
 
 
 class PlacementChangedTests(TestCase):
