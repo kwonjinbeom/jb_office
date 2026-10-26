@@ -163,9 +163,46 @@ def preview_html(text: str, look: str = "") -> str:
     return f"<style>{css()}</style>\n{render(text, look)}"
 
 
+# 초안 올리기 (wp_draft 명령, 2026-10-26): 발췌는 맨 위 리드(첫 인용), 슬러그는 변환이 준 것 · 없으면 영어 제목에서.
+EXCERPT_MAX = 300
+
+
+def excerpt(text: str) -> str:
+    """맨 위 첫 인용(>) 덩어리를 글자만으로. 리드가 없으면 첫 문단."""
+    lines = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S).strip().split("\n")
+    quote = []
+    for line in lines:
+        if line.startswith(">"):
+            quote.append(line.lstrip("> ").strip())
+        elif quote:
+            break
+    if not quote:
+        quote = next((p.split("\n") for p in "\n".join(lines).split("\n\n")
+                      if p.strip() and not p.lstrip().startswith(("#", "!", "|", ":::", "<"))), [])
+    out = " ".join(q for q in quote if q)
+    out = _LINK.sub(r"\1", out)
+    out = re.sub(r"[*_`]+", "", out).strip()
+    return out if len(out) <= EXCERPT_MAX else out[:EXCERPT_MAX - 1].rsplit(" ", 1)[0] + "…"
+
+
+def clean_slug(slug: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (slug or "").strip().lower()).strip("-")
+    return slug[:80].rsplit("-", 1)[0] if len(slug) > 80 else slug
+
+
+def auto_slug(title: str) -> str:
+    """영어 제목이면 앞 8단어로 (괄호 속 날짜 등은 뺀다). 한글 제목은 '' — 변환이 슬러그를 줘야 한다."""
+    if re.search(r"[가-힣]", title or ""):
+        return ""
+    words = clean_slug(re.sub(r"\(.*?\)", " ", title or "")).split("-")
+    return "-".join(w for w in words if w)[:80].strip("-") if len(words) <= 8 else "-".join(words[:8])
+
+
 PROMPT = """## 워드프레스 글 모양 (붙여 넣는 HTML 이 그린다 · 변환본에는 꾸밈 코드를 넣지 않는다)
 - 마크다운 그대로 둔다. 맨 위 첫 인용(>)은 리드 상자, ## 소제목이 4개 이상이면 맨 위 목차가 저절로 생긴다.
 - 정보 카드 `::: 종류 | 이름` … `:::` — 종류: 요약(한눈에) · 장소 · 맛집 · 코스(등산) · 캠핑(야영장) · 나들이 · 차 · 비용 · 점검 · 제품 / 영어 글은 Place · Food · Stay · Route · Tour · Cost · Info. 한 줄에 `이모지 이름표 | 값`.
 - 여행 일정은 `## Day 1 · 지역` (한국어는 `## 1일차 · 지역`) 이 날짜 머리가 된다.
 - Korea Travel 은 끝에 `## 日本語まとめ` · `## 中文简介` 소제목으로 요약 — 요약 상자로 그려진다.
-- 사진은 `![설명](주소)` + 다음 줄 `*Photo: 작가 · 출처*` (한국어 글은 `*사진: …*`). 맨 끝 출처 줄은 `참고:` (영어는 `Sources:`)."""
+- 사진은 `![설명](주소)` + 다음 줄 `*Photo: 작가 · 출처*` (한국어 글은 `*사진: …*`). 맨 끝 출처 줄은 `참고:` (영어는 `Sources:`).
+- 맨 위 첫 인용(리드)이 워드프레스 '요약(발췌)'이 되고, 본문 첫 사진이 대표 이미지가 된다 — 리드는 한두 문장으로, 첫 사진은 글을 대표하는 것으로.
+- 슬러그: 영문 소문자와 하이픈 3~6단어 (예: `mindungsan-silver-grass-hiking`, `kyoto-3-days-autumn-leaves`). 날짜·연도는 넣지 않는다."""
