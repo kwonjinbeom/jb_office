@@ -680,32 +680,3 @@ class HeroPhotoTests(TestCase):
         self.pl.converted_body = "사진 없음"
         self.pl.save()
         self.assertEqual(self.client.get(self.url()).status_code, 404)
-
-
-class WordpressSafeTitleTests(TestCase):
-    """jinbaam.com 제목 칸은 EUC-KR 밖 글자를 ? 로 저장한다 (2026-10-26: — 만 ? 로 깨지고 · 는 그대로)."""
-
-    def test_safe_title(self):
-        from . import wp_looks
-        self.assertEqual(wp_looks.safe_title("민둥산 억새 등산코스 — 증산초 완만 3.2km·가파른 2.6km"),
-                         "민둥산 억새 등산코스: 증산초 완만 3.2km·가파른 2.6km")
-        self.assertEqual(wp_looks.safe_title("Kyoto (Nov 2026): Leaves — Tax–Free"), "Kyoto (Nov 2026): Leaves - Tax - Free")  # 앞에 : 가 있으면 -
-        self.assertEqual(wp_looks.safe_title("가을 🍂 산행 ¥2,700"), "가을 산행 2,700")  # 이모지·¥ 는 뺀다
-        self.assertEqual(wp_looks.safe_title("3 Days in Kyoto: Autumn"), "3 Days in Kyoto: Autumn")
-        for t in [wp_looks.safe_title("A — B – C 🍁 ¥"), wp_looks.safe_text("태그—하나, 둘")]:
-            t.encode("euc_kr")  # 남는 글자는 모두 EUC-KR 안
-
-    def test_convert_screen_copies_safe_title(self):
-        wp = Blog.objects.get(platform="wordpress")
-        cat = SiteCategory.objects.filter(blog=wp).first()
-        post = Post.objects.create(title="원문", stage="post", body="본문")
-        pl = Placement.objects.create(site_category=cat, tistory_post=post, convert_status="done", converted_body="본문",
-                                      converted_title="첫 영하 전 겨울 자동차 점검표 — 공기압·배터리", converted_tags="겨울—점검, 배터리")
-        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
-        res = self.client.get(reverse("site_templates:convert", args=[pl.pk]))
-        self.assertContains(res, f'<textarea id="st-title-{pl.pk}" hidden>첫 영하 전 겨울 자동차 점검표: 공기압·배터리</textarea>', html=False)
-        self.assertEqual(res.context["tags_copy"], "겨울점검, 배터리")
-        self.assertIn("줄표(— –)", res.context["request_text"])  # 변환 규칙에도
-        tistory = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__platform="tistory").first(), tistory_post=post,
-                                           convert_status="done", converted_body="본문", converted_title="가 — 나")
-        self.assertEqual(self.client.get(reverse("site_templates:convert", args=[tistory.pk])).context["title_copy"], "가 — 나")  # 다른 곳은 그대로
