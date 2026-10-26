@@ -26,6 +26,7 @@ from django.conf import settings
 
 TIMEOUT = 15
 UA = "Mozilla/5.0 (JB Office data)"
+LONG_EVENT = 92  # 축제.csv 에 넣는 행사의 최대 기간(일). 2026-10-26 첫 실행에 2022~2026 상설 전시가 섞였다
 
 
 def data_dir() -> Path:
@@ -33,7 +34,8 @@ def data_dir() -> Path:
 
 
 def _key(name):
-    return os.environ.get(name, "").strip()
+    """키. 공공데이터포털의 인코딩 키(%가 들어간 것)를 넣어도 되게 한 번 푼다 — 주소에 넣을 때 다시 인코딩한다 (2026-10-26)."""
+    return urllib.parse.unquote(os.environ.get(name, "").strip())
 
 
 def _get_json(url):
@@ -120,6 +122,8 @@ def festivals(today):
             s, e = _dash(it.get("eventstartdate")), _dash(it.get("eventenddate"))
             if not s or e < today.isoformat() or s > until.isoformat():
                 continue
+            if e and (date.fromisoformat(e) - date.fromisoformat(s)).days > LONG_EVENT:  # 상설 전시·1년 내내 하는 행사는 축제가 아니다
+                continue
             addr = " ".join(x for x in (it.get("addr1", ""), it.get("addr2", "")) if x).strip()
             rows.append({"열쇠": str(it.get("contentid", "")), "제목": it.get("title", ""), "시작": s, "끝": e,
                          "지역": addr.split(" ")[0] if addr else "", "주소": addr, "경도": it.get("mapx", ""), "위도": it.get("mapy", ""),
@@ -174,17 +178,23 @@ def dart(today):
     key = _key("DART_KEY")
     if not key:
         return "키 없음 (DART_KEY)"
-    q = urllib.parse.urlencode({"crtfc_key": key, "bgn_de": _ymd(today - timedelta(days=30)), "end_de": _ymd(today),
-                                "pblntf_ty": "C", "pblntf_detail_ty": "C001", "page_count": 100})
-    res = _get_json(f"https://opendart.fss.or.kr/api/list.json?{q}")
-    if res.get("status") not in ("000", "013"):  # 013 = 조회된 데이터 없음
-        raise RuntimeError(f"DART {res.get('status')} {res.get('message', '')}")
     market = {"Y": "유가", "K": "코스닥", "N": "코넥스", "E": "기타"}
-    rows = [{"접수번호": it.get("rcept_no", ""), "접수일": _dash(it.get("rcept_dt")), "회사": it.get("corp_name", ""),
-             "보고서": " ".join(it.get("report_nm", "").split()), "시장": market.get(it.get("corp_cls", ""), ""),
-             "원문": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={it.get('rcept_no', '')}"} for it in res.get("list", [])]
+    rows, page = [], 1
+    while page <= 10:  # 발행공시(C) 전체가 와서 (2026-10-26 첫 실행: 채권·실적보고서가 대부분) 지분증권 증권신고서만 남긴다
+        q = urllib.parse.urlencode({"crtfc_key": key, "bgn_de": _ymd(today - timedelta(days=30)), "end_de": _ymd(today),
+                                    "pblntf_ty": "C", "pblntf_detail_ty": "C001", "page_no": page, "page_count": 100})
+        res = _get_json(f"https://opendart.fss.or.kr/api/list.json?{q}")
+        if res.get("status") not in ("000", "013"):  # 013 = 조회된 데이터 없음
+            raise RuntimeError(f"DART {res.get('status')} {res.get('message', '')}")
+        rows += [{"접수번호": it.get("rcept_no", ""), "접수일": _dash(it.get("rcept_dt")), "회사": it.get("corp_name", ""),
+                  "보고서": " ".join(it.get("report_nm", "").split()), "시장": market.get(it.get("corp_cls", ""), ""),
+                  "원문": f"https://dart.fss.or.kr/dsaf001/main.do?rcpNo={it.get('rcept_no', '')}"} for it in res.get("list", [])]
+        if page >= int(res.get("total_page") or 1):
+            break
+        page += 1
     cut = (today - timedelta(days=180)).isoformat()
-    n, added = DART.merge([r for r in rows if r["접수번호"]], keep=lambda r: r["접수일"] >= cut, order=lambda r: (r["접수일"], r["접수번호"]))
+    n, added = DART.merge([r for r in rows if r["접수번호"] and "지분증권" in r["보고서"]],
+                          keep=lambda r: r["접수일"] >= cut and "지분증권" in r["보고서"], order=lambda r: (r["접수일"], r["접수번호"]))
     return f"{n}건 (새 {added})"
 
 
