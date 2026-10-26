@@ -501,6 +501,17 @@ def place_move(request, pk):
 
 
 @require_POST
+def place_seen(request, pk):
+    """게시글 관리의 '수정됨' 불 끄기 (2026-10-26 사용자): 바뀐 글을 그 사이트에 다시 붙여 넣었다."""
+    from . import sites
+    placement = get_object_or_404(Placement, pk=pk)
+    if placement.changed_at:
+        sites.clear_changed(placement)
+        messages.success(request, f"'{placement.post.title if placement.post else '글'}' 수정됨 표시를 껐습니다.")
+    return _back(request, _url(placement.site_category.sel))
+
+
+@require_POST
 def place_remove(request, pk):
     placement = get_object_or_404(Placement, pk=pk)
     sel = placement.site_category.sel

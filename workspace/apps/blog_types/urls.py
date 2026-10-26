@@ -14,6 +14,7 @@ urlpatterns = [
     path("place/<int:pk>/status/", views.place_status, name="place_status"),
     path("place/<int:pk>/move/", views.place_move, name="place_move"),
     path("place/<int:pk>/remove/", views.place_remove, name="place_remove"),
+    path("place/<int:pk>/seen/", views.place_seen, name="place_seen"),
     path("<str:kind>/add/", views.add, name="add"),
     path("<str:kind>/<int:pk>/save/", views.save, name="save"),
     path("<str:kind>/<int:pk>/move/", views.move, name="move"),

@@ -171,7 +171,7 @@ class SiteCategoryTests(TestCase):
                                  "공모전 및 프로젝트", "자격증", "일상생활", "기타", "AI"])  # AI 는 0021 (2026-10-23)
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
-        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 6)  # 0019 티스토리 화면 그대로
+        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 동물 (0028)
 
     def test_tree_shows_both_grids(self):
         res = self.client.get(INDEX)
@@ -810,10 +810,10 @@ class SimpleClassesTests(TestCase):
         from apps.core.models import TrashEntry
         self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤", "memorily"])  # memorily › AI 는 0021
         self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
-                         ["코스피", "나스닥", "상품 추천", "해외 여행", "그 외"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020)
-        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.exclude(name="memorily")))  # 루틴 사이트마다 '그 외' 하나
+                         ["시황 노트", "해외 여행"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020), 코스피·나스닥 → 시황 노트·제품소개 지움 (0028)
+        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.exclude(name__in=["memorily", "밤밤"])))  # '그 외' 하나 (밤밤은 0028 에서 뺌)
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
-        self.assertTrue(Category.objects.get(name="코스피").direction)  # 방향 = 글쓰기 컨셉
+        self.assertTrue(Category.objects.get(name="시황 노트").direction)  # 방향 = 글쓰기 컨셉
         trashed = TrashEntry.objects.filter(model_label="blog_types.section")
         self.assertEqual(sorted(trashed.values_list("title", flat=True)), ["IT/AI", "광고 수익 (조회수)", "판매 수익 (커넥트)"])
         self.assertIn("blog_types.subtype", trashed.get(title="판매 수익 (커넥트)").members)  # 복원하면 아래까지 함께
@@ -902,6 +902,9 @@ class SiteCleanupTests(TestCase):
         from apps.naver_writing.models import Post as NaverPost
         from apps.writing.models import Post
         mig = import_module("apps.blog_types.migrations.0018_site_cleanup")
+        bam = Section.objects.get(name="밤밤")  # 0028 이 지운 옛 소재를 다시 두고 0018 을 돌린다
+        Category.objects.create(section=bam, code="X", name="코스피")
+        Category.objects.create(section=bam, code="Y", name="상품 추천")
         kospi = Post.objects.create(title="코스피 3.29% 반등 다음 날 다시 약세, 9거래일 종가표로 보는 지금 위치", target="눈잎")
         heat = NaverPost.objects.create(title="전기장판 vs 온수매트 vs 탄소매트, 월 전기료 직접 계산하고 고르기 (2026 겨울)", target="black_lukey")
         anime = Post.objects.create(title="나루토 회차정리 애니만화 환산기 명장면 등 모음", target="memorily",
@@ -918,7 +921,7 @@ class SiteCleanupTests(TestCase):
 
 class NunipSiteCategoryTests(TestCase):
     """0019: 눈잎 사이트 카테고리 = 티스토리 관리 화면 그대로, 순서도 (2026-10-22 사용자)."""
-    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상"]
+    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상", "동물"]  # 동물: 0028
 
     def site_names(self):
         return list(SiteCategory.objects.filter(blog__name="눈잎", parent=None).order_by("order", "pk").values_list("name", flat=True))
@@ -927,7 +930,7 @@ class NunipSiteCategoryTests(TestCase):
         self.assertEqual(self.site_names(), self.NAMES)
         self.assertEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").note, "티스토리 주제: 경제")
         self.assertEqual(list(Category.objects.filter(section__name="눈잎").values_list("name", flat=True)),
-                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020)
+                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "동물", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020), 동물 (0028)
 
     def test_extra_categories_trashed_unless_they_hold_posts(self):
         from importlib import import_module
@@ -941,7 +944,7 @@ class NunipSiteCategoryTests(TestCase):
         Placement.objects.create(site_category=used, tistory_post=Post.objects.create(title="넣은 글"))
         SiteCategory.objects.filter(name="공모주").update(order=99)
         import_module("apps.blog_types.migrations.0019_nunip_site_categories").forward(django_apps, None)
-        self.assertEqual(self.site_names(), self.NAMES + ["쓰는 메뉴"])
+        self.assertEqual(self.site_names(), self.NAMES[:-1] + ["쓰는 메뉴"])  # 0019 를 다시 돌리면 빈 메뉴(동물)는 휴지통
         self.assertTrue(SiteCategory.all_objects.filter(pk=empty.pk, deleted_at__isnull=False).exists())
 
 
@@ -1255,7 +1258,7 @@ class MemorilyAiPickTests(TestCase):
         ai = Category.objects.get(section__name="memorily", name="AI")
         picks = default_picks(date(2026, 10, 23))
         self.assertNotIn(ai.sel, picks)
-        self.assertIn(Category.objects.get(section__name="밤밤", name="코스피").sel, picks)
+        self.assertIn(Category.objects.get(section__name="밤밤", name="시황 노트").sel, picks)
         self.assertEqual(FixedTopic.objects.get(name="AI 소식").category, ai)  # 고정 주제의 소재 → 원고 '분류: memorily > AI'
 
 
@@ -1281,13 +1284,95 @@ class NunipJapanConceptTests(TestCase):
         self.assertEqual(pl.convert_status, "none")
 
 
-class BambamOtherProductTests(TestCase):
-    """0027: 밤밤 › 그 외 = 제품소개 (2026-10-24 사용자: 글감이 없을 수 없다). 다른 사이트의 '그 외'는 그대로."""
+class SitesOverhaulTests(TestCase):
+    """0028 (2026-10-26 사용자): 제품소개 빼기 · 밤밤 시황 노트 · 눈잎 동물."""
 
-    def test_direction_and_custom_prompt_line(self):
-        from apps.routines.views import _picks_lines
-        other = Category.objects.get(section__name="밤밤", name="그 외")
-        self.assertTrue(other.direction.startswith("제품소개"))
-        self.assertIn("강한 소재", Category.objects.get(section__name="눈잎", name="그 외").direction)
-        text = _picks_lines({other.sel: 2}, "사용자가 고른 분류")
-        self.assertIn("밤밤 > 그 외 — 2편 (컨셉: 제품소개", text)  # 커스텀 글쓰기 안내문에 이 줄로 간다
+    def test_migrated_classes_and_concepts(self):
+        bam = list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True))
+        self.assertIn("시황 노트", bam)
+        for gone in ("상품 추천", "그 외", "코스피", "나스닥"):
+            self.assertNotIn(gone, bam)
+        nunip = list(Category.objects.filter(section__name="눈잎").values_list("name", flat=True))
+        self.assertEqual(nunip[-2:], ["동물", "그 외"])  # '그 외'는 맨 뒤
+        animal = SiteCategory.objects.get(blog__name="눈잎", name="동물", parent=None)
+        self.assertIn("글 모양 (2026-10-26", animal.concept)
+        self.assertIn("동물", Blog.objects.get(name="눈잎").content)
+        self.assertNotIn("상품 추천", Blog.objects.get(name="밤밤").content)
+        daily = SiteCategory.objects.get(blog__name="눈잎", name="일상", parent=None)
+        self.assertTrue(daily.concept.startswith("사용자가 직접 쓰는 일상 글" + chr(10) * 2 + "화면 모양"))  # 제품 소개 짜임은 빠지고 화면 모양만
+        self.assertNotIn("제품", daily.concept)
+
+    def test_product_posts_and_placements_go_to_trash(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.core.models import TrashEntry
+        from apps.writing.models import Post
+        bam = Section.objects.get(name="밤밤")
+        product = Category.objects.create(section=bam, code="Z", name="상품 추천")
+        stock = Category.objects.create(section=bam, code="Y", name="나스닥")
+        post = Post.objects.create(title="스탠리 퀜처 사도 될까", bt_category=product)
+        pl = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__name="눈잎").first(), tistory_post=post)
+        night = Post.objects.create(title="나스닥 마감", bt_category=stock)
+        keep = Post.objects.create(title="다른 글", bt_category=Category.objects.get(section__name="눈잎", name="동물"))
+        import_module("apps.blog_types.migrations.0028_sites_overhaul").forward(django_apps, None)
+        self.assertFalse(Post.objects.filter(pk=post.pk).exists())
+        self.assertFalse(Placement.objects.filter(pk=pl.pk).exists())
+        entry = TrashEntry.objects.get(model_label="writing.post", object_key=str(post.pk))
+        self.assertEqual(entry.members["blog_types.placement"], [pl.pk])
+        self.assertFalse(Category.objects.filter(pk__in=[product.pk, stock.pk]).exists())
+        night.refresh_from_db()
+        self.assertEqual(night.bt_category.name, "시황 노트")  # 나스닥 글은 시황 노트로
+        self.assertTrue(Post.objects.filter(pk=keep.pk).exists())
+
+
+class PlacementChangedTests(TestCase):
+    """게시글 관리 '수정됨' 불 (2026-10-26 사용자): 발행 뒤 바뀌면 켜지고, 누르거나 RSS 에 새 제목이 보이면 꺼진다."""
+
+    def setUp(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from apps.writing.models import Post
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        self.cat = SiteCategory.objects.filter(blog__name="눈잎").first()
+        self.post = Post.objects.create(title="옛 제목", body="본문", stage="post", publish_status="done", target="눈잎")
+        self.pl = Placement.objects.create(site_category=self.cat, tistory_post=self.post, status=Placement.Status.PUBLISHED,
+                                           converted_title="옛 제목", converted_body="옛 본문", convert_status=Placement.Convert.DONE)
+
+    def save(self, **data):
+        return self.client.post(reverse("site_templates:api_save", args=[self.pl.pk]) + "?token=tok", data)
+
+    def test_resend_converted_body_lights_lamp_and_seen_clears_it(self):
+        self.save(body="옛 본문")
+        self.pl.refresh_from_db()
+        self.assertIsNone(self.pl.changed_at)  # 같은 본문이면 그대로
+        self.save(title="새 제목", body="새 본문")
+        self.pl.refresh_from_db()
+        self.assertIsNotNone(self.pl.changed_at)
+        self.assertEqual(self.pl.changed_note, "제목: 옛 제목 → 새 제목")
+        res = self.client.get(reverse("posts:published"))
+        self.assertContains(res, 'class="pl-lamp on"')
+        self.assertContains(res, "수정됨 <span class=\"cnt\">1</span>")
+        self.assertContains(self.client.get(reverse("posts:published"), {"changed": "1"}), "옛 제목")
+        self.client.post(reverse("blog_types:place_seen", args=[self.pl.pk]))
+        self.pl.refresh_from_db()
+        self.assertIsNone(self.pl.changed_at)
+        self.assertNotContains(self.client.get(reverse("posts:published")), 'class="pl-lamp on"')
+
+    def test_unpublished_placement_does_not_light(self):
+        Placement.objects.filter(pk=self.pl.pk).update(status=Placement.Status.UNSAVED)
+        self.save(body="새 본문")
+        self.pl.refresh_from_db()
+        self.assertIsNone(self.pl.changed_at)
+
+    def test_feed_with_new_title_clears_lamp(self):
+        from datetime import datetime, timezone as dt_tz
+
+        from apps.blog_ops.feeds import clear_changed
+        self.save(title="새 제목", body="새 본문")
+        blog = self.cat.blog
+        self.assertEqual(clear_changed(blog, [("옛 제목", "u", datetime.now(dt_tz.utc))]), 0)
+        self.assertEqual(clear_changed(blog, [("새 제목", "u", datetime.now(dt_tz.utc))]), 1)
+        self.pl.refresh_from_db()
+        self.assertIsNone(self.pl.changed_at)

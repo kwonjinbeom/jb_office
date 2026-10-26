@@ -161,6 +161,10 @@ class Placement(TrashableModel):
     converted_check = models.TextField("사실 점검", blank=True,
                                        help_text="변환 때 숫자·날짜·일정을 출처에서 다시 확인한 기록 (고친 것 · 미정 · 확인한 출처)")
     converted_at = models.DateTimeField("변환한 때", null=True, blank=True)
+    # 발행한 뒤 이 사이트에 올릴 글이 바뀜 (2026-10-26 사용자: 게시글 관리의 '수정됨' 불 — 켜져 있으면 다시 붙여 넣는다).
+    # 켜기: 원고가 바뀌어 글을 고침(허브) · 변환본을 다시 받음 (sites.mark_changed). 끄기: 사용자가 누름 · 발행 확인 때 RSS 에 바뀐 제목이 보임.
+    changed_at = models.DateTimeField("발행 뒤 수정", null=True, blank=True)
+    changed_note = models.CharField("수정 내용", max_length=200, blank=True)
     created_at = models.DateTimeField("넣은 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 

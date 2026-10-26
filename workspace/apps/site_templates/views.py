@@ -189,6 +189,7 @@ def api_save(request, pk):
     body = data.get("body", "").replace("\r\n", "\n").strip()
     if not body:
         return HttpResponseBadRequest("body 가 비었습니다")
+    before = (placement.converted_title, placement.converted_body)
     if "title" in data:  # 안 보낸 칸은 그대로 둔다 (본문만 다시 보낼 때)
         placement.converted_title = data["title"].strip()[:200]
     if "tags" in data:
@@ -198,6 +199,11 @@ def api_save(request, pk):
     placement.converted_body = body
     placement.convert_status = Placement.Convert.DONE
     placement.converted_at = timezone.now()
+    if placement.status == Placement.Status.PUBLISHED and before[1] and before != (placement.converted_title, placement.converted_body):
+        # 발행한 글의 변환본이 바뀜 → 게시글 관리 '수정됨' (2026-10-26 사용자)
+        placement.changed_at = placement.converted_at
+        placement.changed_note = (f"제목: {before[0]} → {placement.converted_title}" if before[0] != placement.converted_title
+                                  else "변환본이 바뀜 — 다시 붙여 넣기")[:200]
     placement.save()
     return HttpResponse(f"ok {placement.pk} done", content_type="text/plain; charset=utf-8")
 
