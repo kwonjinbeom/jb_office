@@ -573,8 +573,9 @@ def _panel_context(request, post, nxt):
 def post_page(request):
     """글 관리 발행예정글의 제목을 누르면 여는 화면 (2026-10-22 사용자): 사이트별 템플릿의 변환 화면 그대로 —
     원문 ↔ 변환본 · 사실 점검 · 붙여넣기 · 변환본 고치기. ?p=tistory:3 [&pl=] [&back=<글 관리 목록 주소>]. 저장하면 이 화면으로."""
-    from apps.blog_types.posts import _one
+    from apps.blog_types.posts import _import_new_drafts, _one
     request.nav_key = "posts_view"
+    _import_new_drafts(request)  # 고친 허브 원고를 이 화면에서도 바로 반영한다 (2026-10-27 사용자)
     post = _one(request.GET.get("p"))
     if post is None:
         raise Http404

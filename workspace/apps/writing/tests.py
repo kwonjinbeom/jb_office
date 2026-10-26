@@ -455,6 +455,25 @@ class DraftSyncTests(TestCase):
         self.assertIsNotNone(pl.changed_at)
         self.assertTrue(pl.changed_note.startswith("제목·본문 · 이번 주 청약·공모주 달력 (10월 27일"))
 
+    def test_published_list_and_post_page_pick_up_hub_edit(self):
+        """게시글 관리·변환글 보기를 열어도 고친 허브 원고가 반영된다 (2026-10-27 사용자: 글 관리 목록을 안 열면 옛 제목 그대로였다)."""
+        from django.contrib.auth import get_user_model
+
+        from apps.blog_types.models import Placement, SiteCategory
+
+        from .views import auto_import_drafts
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        auto_import_drafts()
+        post = Post.objects.get(source="T150_허브")
+        pl = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__name="눈잎").first(), tistory_post=post,
+                                      status=Placement.Status.PUBLISHED)
+        for n, url in enumerate([reverse("posts:published"), f"{reverse('site_templates:post')}?p=tistory:{post.pk}"]):
+            self.write(f"국내 공모주 일정 ({n + 1}판)", f"{n + 1}판 내용")
+            self.assertEqual(self.client.get(url).status_code, 200)
+            post.refresh_from_db(), pl.refresh_from_db()
+            self.assertEqual(post.title, f"국내 공모주 일정 ({n + 1}판)")
+            self.assertIn(f"→ 국내 공모주 일정 ({n + 1}판)", pl.changed_note)
+
     def test_user_edited_post_is_not_overwritten(self):
         from .views import auto_import_drafts
         auto_import_drafts()
