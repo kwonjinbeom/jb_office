@@ -91,6 +91,9 @@ def build(placement):
         parts.append(looks.PROMPT)
     if blog.platform == "blogger":
         parts.append(BLOGGER_TAGS)
+    if blog.platform == "wordpress":  # 워드프레스 글 모양 (2026-10-26)
+        from . import wp_looks
+        parts.append(wp_looks.PROMPT)
     if placement.convert_note:
         parts.append(f"## 이 글만\n{placement.convert_note}")
     parts.append(f"## 원문\n### 제목\n{post.title}\n### 본문\n{post.body}")

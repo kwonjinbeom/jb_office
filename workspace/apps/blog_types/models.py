@@ -112,7 +112,10 @@ class SiteCategory(TrashableModel):
     heading_bar = models.BooleanField("소제목 빨간 막대", default=False,
                                       help_text="붙여넣는 HTML 의 소제목(##) 앞에 빨간 세로 막대를 단다 (하위 카테고리도 따른다)")
     # 2026-10-23 사용자 (눈잎 › 일본 여행): 내용이 아니라 화면 짜임을 통째로 — 붙여넣는 HTML 의 모양 (site_templates.looks)
-    look = models.CharField("글 모양", max_length=20, blank=True, choices=[("", "기본"), ("yudi", "유디 메모지")],
+    # 2026-10-26 사용자 (워드프레스): 카테고리마다 글모양 CSS 의 테마 — site_templates.wp_looks
+    look = models.CharField("글 모양", max_length=20, blank=True,
+                            choices=[("", "기본"), ("yudi", "유디 메모지"), ("wp_mountain", "워드프레스 · 산"),
+                                     ("wp_car", "워드프레스 · 자동차"), ("wp_travel", "워드프레스 · 여행")],
                             help_text="붙여넣는 HTML 의 화면 모양 (가운데 정렬·메모지 상자 등). 하위 카테고리도 따른다")
     order = models.PositiveIntegerField("순서", default=0)
 

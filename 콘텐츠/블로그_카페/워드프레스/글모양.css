@@ -1,0 +1,192 @@
+/* jinbaam.com 글 모양 (2026-10-26) — 워드프레스 › 외모 › 사용자 정의하기 › 추가 CSS 에 이 파일 전체를 붙여 넣는다 (한 번만).
+   글 본문은 jb_office 변환 화면의 '본문 HTML (코드 편집기)'를 붙인 '사용자 정의 HTML' 블록이다:
+   <div class="jb-post jb-mountain|jb-car|jb-travel"> … </div>  — 그 안에서만 적용되어 테마의 다른 곳은 건드리지 않는다.
+   만드는 곳: workspace/apps/site_templates/wp_looks.py (class 이름을 바꾸면 둘 다 고친다). */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+.jb-post {
+  --jb-ink: #23272b;
+  --jb-ink-2: #4c545c;
+  --jb-ink-3: #8a929a;
+  --jb-accent: #2f6fa8;
+  --jb-accent-2: #1f4e79;
+  --jb-tint: #f2f6fa;
+  --jb-line: #dde5ec;
+  --jb-paper: #ffffff;
+  --jb-radius: 14px;
+  color: var(--jb-ink);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 17px;
+  line-height: 1.85;
+  letter-spacing: -0.01em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+.jb-post[lang="en"] { letter-spacing: 0; line-height: 1.75; word-break: normal; }
+.jb-post > * + * { margin-top: 1.1em; }
+.jb-post p { margin: 0 0 1.1em; }
+.jb-post a { color: var(--jb-accent-2); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.jb-post a:hover { color: var(--jb-accent); }
+.jb-post strong { color: var(--jb-ink); font-weight: 700; }
+.jb-post ul, .jb-post ol { margin: 0 0 1.2em; padding-left: 1.3em; }
+.jb-post li { margin: 0.35em 0; }
+.jb-post li::marker { color: var(--jb-accent); }
+
+/* 소제목 */
+.jb-post h2 {
+  position: relative;
+  margin: 2.6em 0 0.9em;
+  padding: 0 0 0.55em;
+  border-bottom: 2px solid var(--jb-line);
+  color: var(--jb-ink);
+  font-size: 1.42em;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+.jb-post h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 56px;
+  height: 2px;
+  background: var(--jb-accent);
+}
+.jb-post h3 { margin: 1.9em 0 0.6em; color: var(--jb-accent-2); font-size: 1.15em; font-weight: 700; line-height: 1.45; }
+
+/* 맨 위 리드 상자 (첫 인용) */
+.jb-post blockquote.jb-lead {
+  margin: 0 0 1.6em;
+  padding: 20px 24px;
+  border: 0;
+  border-left: 5px solid var(--jb-accent);
+  border-radius: 0 var(--jb-radius) var(--jb-radius) 0;
+  background: var(--jb-tint);
+  color: var(--jb-ink);
+  font-size: 1.02em;
+  font-style: normal;
+  quotes: none;
+}
+.jb-post blockquote.jb-lead::before, .jb-post blockquote.jb-lead::after { content: none; display: none; }
+.jb-post blockquote.jb-lead p { margin: 0.25em 0; }
+.jb-post blockquote:not(.jb-lead) {
+  margin: 1.4em 0;
+  padding: 12px 18px;
+  border-left: 3px solid var(--jb-line);
+  color: var(--jb-ink-2);
+  font-style: normal;
+}
+
+/* 목차 */
+.jb-post .jb-toc {
+  margin: 0 0 2em;
+  padding: 18px 22px;
+  border: 1px solid var(--jb-line);
+  border-radius: var(--jb-radius);
+  background: var(--jb-paper);
+}
+.jb-post .jb-toc__title { margin: 0 0 0.5em; color: var(--jb-accent-2); font-size: 0.82em; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.jb-post .jb-toc ul { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 28px; }
+.jb-post .jb-toc li { position: relative; margin: 0.2em 0; padding-left: 14px; break-inside: avoid; font-size: 0.95em; }
+.jb-post .jb-toc li::before { content: ""; position: absolute; left: 0; top: 0.8em; width: 6px; height: 2px; background: var(--jb-accent); }
+.jb-post .jb-toc a { color: var(--jb-ink-2); text-decoration: none; }
+.jb-post .jb-toc a:hover { color: var(--jb-accent); text-decoration: underline; }
+
+/* 정보 카드 */
+.jb-post .jb-card {
+  margin: 1.6em 0;
+  border: 1px solid var(--jb-line);
+  border-radius: var(--jb-radius);
+  background: var(--jb-paper);
+  box-shadow: 0 1px 2px rgba(20, 30, 40, 0.04), 0 6px 18px rgba(20, 30, 40, 0.05);
+  overflow: hidden;
+}
+.jb-post .jb-card__head { display: flex; align-items: center; gap: 10px; padding: 13px 18px; background: var(--jb-accent); color: #fff; }
+.jb-post .jb-card__kind { flex: none; padding: 2px 9px; border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 999px; font-size: 0.72em; font-weight: 700; letter-spacing: 0.02em; }
+.jb-post .jb-card__name { color: #fff; font-size: 1.04em; font-weight: 700; line-height: 1.4; }
+.jb-post .jb-card__name a { color: #fff; }
+.jb-post .jb-card__rows { margin: 0; padding: 0; }
+.jb-post .jb-card__rows > div { display: grid; grid-template-columns: 9.5em minmax(0, 1fr); border-top: 1px solid var(--jb-line); }
+.jb-post .jb-card__rows > div:first-child { border-top: 0; }
+.jb-post .jb-card__rows > div:nth-child(even) { background: #fbfcfd; }
+.jb-post .jb-card__rows dt { margin: 0; padding: 10px 14px 10px 18px; color: var(--jb-accent-2); font-size: 0.92em; font-weight: 700; }
+.jb-post .jb-card__rows dd { margin: 0; padding: 10px 18px 10px 4px; color: var(--jb-ink); font-size: 0.95em; }
+
+/* 한눈에 카드: 머리는 연한 바탕 (글 첫머리의 요약) */
+.jb-post .jb-card--summary .jb-card__head { background: var(--jb-tint); color: var(--jb-accent-2); border-bottom: 1px solid var(--jb-line); }
+.jb-post .jb-card--summary .jb-card__name { color: var(--jb-ink); }
+.jb-post .jb-card--summary .jb-card__kind { border-color: var(--jb-accent); color: var(--jb-accent); }
+
+/* 표 */
+.jb-post .jb-table { margin: 1.5em 0; overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--jb-line); border-radius: var(--jb-radius); }
+.jb-post .jb-table table { width: 100%; margin: 0; border: 0; border-collapse: collapse; font-size: 0.93em; line-height: 1.6; }
+.jb-post .jb-table th { padding: 11px 14px; border: 0; border-bottom: 1px solid var(--jb-line); background: var(--jb-tint); color: var(--jb-accent-2); font-weight: 700; text-align: left; white-space: nowrap; }
+.jb-post .jb-table td { padding: 10px 14px; border: 0; border-top: 1px solid var(--jb-line); vertical-align: top; font-variant-numeric: tabular-nums; }
+.jb-post .jb-table tr:first-child td { border-top: 0; }
+.jb-post .jb-table tbody tr:nth-child(even) td { background: #fbfcfd; }
+
+/* 사진 */
+.jb-post figure.jb-photo { margin: 2em auto; text-align: center; }
+.jb-post figure.jb-photo img { display: block; width: auto; max-width: 100%; height: auto; margin: 0 auto; border-radius: 12px; }  /* 사진은 620 으로 받아 온다 — 늘리지 않는다 */
+.jb-post figure.jb-photo figcaption { margin-top: 8px; color: var(--jb-ink-3); font-size: 0.8em; line-height: 1.5; }
+
+/* 여행 날짜 머리 */
+.jb-post h2.jb-day { margin-top: 2.8em; padding: 12px 18px; border: 0; border-radius: 12px; background: var(--jb-accent-2); color: #fff; font-size: 1.28em; }
+.jb-post h2.jb-day::after { display: none; }
+
+/* 일본어·중국어 요약 */
+.jb-post section.jb-lang { margin: 2em 0 0; padding: 18px 22px 8px; border-radius: var(--jb-radius); background: #f6f6f4; color: var(--jb-ink-2); font-size: 0.95em; }
+.jb-post section.jb-lang + section.jb-lang { margin-top: 12px; }
+.jb-post h2.jb-lang-head { margin: 0 0 0.5em; padding: 0; border: 0; color: var(--jb-ink-2); font-size: 1em; font-weight: 800; }
+.jb-post h2.jb-lang-head::after { display: none; }
+
+/* 출처 · 구분선 */
+.jb-post .jb-source { margin-top: 2.4em; padding-top: 14px; border-top: 1px solid var(--jb-line); color: var(--jb-ink-3); font-size: 0.8em; line-height: 1.7; }
+.jb-post .jb-source a { color: var(--jb-ink-3); }
+.jb-post hr.jb-hr { margin: 2.4em auto; width: 72px; height: 0; border: 0; border-top: 2px solid var(--jb-line); }
+
+/* 산과 캠핑: 숲길 안내판 — 숲초록 · 연한 숲 바탕, 그림자 없이 (2026-10-26 조사) */
+.jb-post.jb-mountain { --jb-ink: #1f2a24; --jb-accent: #2f5d45; --jb-accent-2: #234836; --jb-tint: #eaf1ec; --jb-line: #d9e2dc; }
+.jb-post.jb-mountain .jb-card { box-shadow: none; }
+.jb-post.jb-mountain .jb-card--camp .jb-card__head { background: #8a5a2b; }
+.jb-post.jb-mountain .jb-card--camp .jb-card__rows dt { color: #6e4520; }
+.jb-post.jb-mountain .jb-card--cost .jb-card__head { background: #b0582a; }
+.jb-post.jb-mountain .jb-card--outing .jb-card__head { background: #4f7499; }
+
+/* 드라이브·자동차: 계기판·도로 — 그래파이트 · 정보 파랑 · 차선 노랑 밑줄 · 경고 앰버 (2026-10-26 조사) */
+.jb-post.jb-car { --jb-ink: #24292f; --jb-accent: #2b3137; --jb-accent-2: #1f6feb; --jb-tint: #f3f6fa; --jb-line: #d8dee4; }
+.jb-post.jb-car h2::after { width: 72px; height: 3px; bottom: -3px; background: #f2c300; }
+.jb-post.jb-car h3 { color: #1f6feb; }
+.jb-post.jb-car blockquote.jb-lead { border-left-color: #1f6feb; background: #f3f6fa; }
+.jb-post.jb-car .jb-card__head { background: #2b3137; }
+.jb-post.jb-car .jb-card--summary .jb-card__head { background: var(--jb-tint); color: #1f6feb; }
+.jb-post.jb-car .jb-card--cost .jb-card__head { background: #d29922; color: #24292f; }
+.jb-post.jb-car .jb-card--cost .jb-card__name, .jb-post.jb-car .jb-card--cost .jb-card__kind { color: #24292f; border-color: rgba(36, 41, 47, 0.4); }
+.jb-post.jb-car .jb-card__rows dt { color: #1f6feb; }
+.jb-post.jb-car .jb-table th { background: #2b3137; color: #ffffff; }
+.jb-post.jb-car .jb-table td, .jb-post.jb-car .jb-card__rows dd { font-variant-numeric: tabular-nums; }
+
+/* 여행 (Korea Travel · World Travel): 테라코타·구운 벽돌·모래, 사프란은 두 곳만 (2026-10-26 조사: 자동차 남색과 겹치지 않게) */
+.jb-post.jb-travel { --jb-ink: #2e2723; --jb-ink-2: #5a4f48; --jb-accent: #b4532a; --jb-accent-2: #7a3a1f; --jb-tint: #faf4ec; --jb-line: #eadccd; }
+.jb-post.jb-travel h2, .jb-post.jb-travel .jb-card__name { font-family: Georgia, "Iowan Old Style", "Times New Roman", "Noto Serif KR", serif; letter-spacing: 0; }
+.jb-post.jb-travel h2 { font-weight: 700; }
+.jb-post.jb-travel h2::after { background: #d99a2b; }
+.jb-post.jb-travel h2.jb-day { background: #7a3a1f; }
+.jb-post.jb-travel .jb-toc__title { color: #b4532a; }
+.jb-post.jb-travel .jb-card--food .jb-card__head { background: #8f3b1c; }
+.jb-post.jb-travel .jb-card--stay .jb-card__head { background: #6b4f3a; }
+.jb-post.jb-travel .jb-card--route .jb-card__head { background: #4a3f38; }
+.jb-post.jb-travel .jb-card--cost .jb-card__head { background: #d99a2b; color: #2e2723; }
+.jb-post.jb-travel .jb-card--cost .jb-card__head .jb-card__name, .jb-post.jb-travel .jb-card--cost .jb-card__kind { color: #2e2723; border-color: rgba(46, 39, 35, 0.4); }
+.jb-post.jb-travel .jb-card--info .jb-card__head { background: #5a4f48; }
+.jb-post.jb-travel .jb-table th { background: #f4e9dc; color: #7a3a1f; }
+
+@media (max-width: 560px) {
+  .jb-post { font-size: 16px; }
+  .jb-post h2 { font-size: 1.3em; }
+  .jb-post .jb-toc ul { columns: 1; }
+  .jb-post .jb-card__rows > div { grid-template-columns: 1fr; }
+  .jb-post .jb-card__rows dt { padding: 9px 16px 0; }
+  .jb-post .jb-card__rows dd { padding: 2px 16px 10px; }
+}

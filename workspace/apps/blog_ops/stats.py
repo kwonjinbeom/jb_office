@@ -8,7 +8,7 @@ PC 가 RSS 와 같이 읽어 보낸다 (routines/local_run.check_feeds → views
 - 티스토리: 방문자는 스킨의 숨은 칸 `#jb-stat`(애니환산기/스킨에_붙일것.html), 없으면 스킨 사이드바의 'Today : n · Yesterday : n'.
   공감·댓글은 RSS 의 최근 글마다 공개 주소(GET /reaction?entryId= · /m/api/<글>/comment)로 합계 (2026-10-24 마저 개발).
 - 블로거: 댓글은 공개 피드(alt=json)의 글마다 댓글 수 합계. 공감은 없고, 방문자는 공개된 곳이 없어 직접 넣는다.
-- 워드프레스: 아직 주소가 없다.
+- 워드프레스: 댓글은 공개 REST(wp-json/wp/v2/comments)의 수, 공감은 없고, 방문자는 공개된 곳이 없어 직접 넣는다 (2026-10-26).
 공감·댓글 합계는 최근 글 범위의 합이라, 그날 공감·댓글 = 오늘 합계 − 앞 수집 합계 (줄면 0).
 """
 import json
@@ -27,6 +27,7 @@ NAVER_INFO = "https://m.blog.naver.com/api/blogs/{id}"  # dayVisitorCount(오늘
 TISTORY_LIKES = "{addr}/reaction?entryId={id}"  # GET 만 (POST 는 공감을 누른다)
 TISTORY_COMMENTS = "{addr}/m/api/{id}/comment?reverse=true"
 BLOGGER_FEED = "{addr}/feeds/posts/default?alt=json&max-results=30"
+WP_COMMENTS = "{addr}/wp-json/wp/v2/comments?per_page=100&_fields=id"
 RECENT = 20  # 티스토리 공감·댓글을 볼 최근 글 수 (글마다 두 번 읽는다)
 METRICS = [("visitors", "방문자"), ("likes", "공감"), ("comments", "댓글")]
 # 사이트 색: 운영 화면의 사이트 순서대로 고정 (거른 뒤에도 색이 바뀌지 않게). dataviz 기본 범주 색 1~8.
@@ -166,6 +167,9 @@ def collect(site, fetch=None, today=None):
         elif site.get("platform") == "blogger" and addr:
             out["comments_total"] = blogger_comments(_get(BLOGGER_FEED.format(addr=addr), "", fetch))
             out["likes_total"] = 0 if out["comments_total"] is not None else None  # 블로거는 공감이 없다
+        elif site.get("platform") == "wordpress" and addr:
+            out["comments_total"] = len(json.loads(_get(WP_COMMENTS.format(addr=addr.rstrip("/")), "", fetch).decode("utf-8")))
+            out["likes_total"] = 0  # 워드프레스는 공감이 없다
         else:
             out["message"] = "공개된 숫자가 없어 직접 넣어요"
             return out
@@ -180,7 +184,7 @@ def collect(site, fetch=None, today=None):
         return out
     out["ok"] = bool(out["visitors"]) or out["likes_total"] is not None or out["comments_total"] is not None
     parts = [f"방문자 {len(out['visitors'])}일치"] if out["visitors"] else []
-    if site.get("platform") == "blogger":
+    if site.get("platform") in ("blogger", "wordpress"):
         parts.append("댓글 · 방문자는 직접" if out["comments_total"] is not None else "방문자는 직접")
     elif out["likes_total"] is not None:
         parts.append("공감·댓글")

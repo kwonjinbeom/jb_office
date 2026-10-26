@@ -339,10 +339,11 @@ class PasteFormatTests(TestCase):
                          '<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>')
         res = self.client.get(reverse("site_templates:convert", args=[self.place("워드프레스").pk]))
         self.assertContains(res, 'data-copy="#st-raw-')  # 워드프레스: 마크다운 그대로
-        self.assertEqual(res.context["clean_html"], "<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>")  # 꾸밈 없는 HTML
+        self.assertEqual(res.context["clean_html"], '<!-- wp:html -->\n<div class="jb-post" lang="ko">\n<h2 id="소제목">소제목</h2>\n'
+                         '<p><strong>굵게</strong> 본문</p>\n</div>\n<!-- /wp:html -->')  # class HTML 을 사용자 정의 HTML 블록으로 (2026-10-26)
         self.assertContains(res, "태그1, 태그2")
         self.assertIn("## 돌려줄 것", res.context["request_text"])
-        self.assertIn("블록 에디터", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
+        self.assertIn("사용자 정의 HTML", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
 
     def test_convert_keeps_original_and_fills_photos(self):
         # 변환은 원문이 기준 + 사진·그림 자리는 채우거나 지운다 (2026-10-21 사용자). 워드프레스는 사진 찾기 없이 자리만 지운다
@@ -556,3 +557,50 @@ class TistoryAlignTests(TestCase):
         self.assertNotIn("margin:18px 0", out)
         self.assertNotIn("margin-top:-8px", out)
         self.assertEqual(tistory_align(out), out)  # 두 번 해도 같다
+
+
+class WordpressLookTests(TestCase):
+    """워드프레스 글 모양 (2026-10-26 사용자): class HTML + 글모양 CSS. 카드·목차·날짜 머리·다른 언어 요약·사진 캡션."""
+
+    BODY = "\n".join([
+        "> 3 days is enough for Taipei.", "", "## Day 1 · Old Town", "Walk.", "", "## Day 2 · Beitou", "Soak.", "",
+        "## Day 3 · Jiufen", "Tea.", "", "## Budget", "| Item | Cost |", "|---|---|", "| MRT | TWD 50 |", "",
+        "![Taipei 101](https://images.unsplash.com/photo-1?w=1200)", "*Photo: Someone · Unsplash*", "",
+        "::: Place | Taipei 101", "⏰ Hours | 10:00–21:00", "📍 Map | [Google Maps](https://www.google.com/maps/search/?api=1&query=Taipei+101)", ":::",
+        "", "## 日本語まとめ", "台北3日間。", "", "## 中文简介", "台北三日游。", "", "Sources: [Taiwan Tourism](https://eng.taiwan.net.tw)",
+    ])
+
+    def test_render_classes(self):
+        from . import wp_looks
+        out = wp_looks.render(self.BODY, "wp_travel")
+        self.assertTrue(out.startswith('<div class="jb-post jb-travel" lang="en">'))
+        self.assertIn('<blockquote class="jb-lead">', out)
+        self.assertIn('<nav class="jb-toc"><p class="jb-toc__title">Contents</p>', out)  # 소제목 4개 이상 → 목차, 영어 글은 Contents
+        self.assertIn('class="jb-day"', out)
+        self.assertIn('<div class="jb-card jb-card--place">', out)
+        self.assertIn('<span class="jb-card__kind">Place</span>', out)
+        self.assertIn('target="_blank" rel="noopener">Google Maps</a>', out)
+        self.assertIn('<figure class="jb-photo"><img src="https://images.unsplash.com/photo-1?w=1200" alt="Taipei 101" loading="lazy">'
+                      '<figcaption>Photo: Someone · Unsplash</figcaption></figure>', out)
+        self.assertIn('<div class="jb-table"><table>', out)
+        self.assertEqual(out.count('<section class="jb-lang">'), 2)
+        self.assertNotIn("日本語まとめ</a>", out)  # 다른 언어 요약은 목차에 넣지 않는다
+        self.assertIn('<p class="jb-source">', out)
+        self.assertNotIn("style=", out)  # 블록 에디터가 지우는 인라인 style 은 쓰지 않는다
+
+    def test_convert_screen_for_wordpress(self):
+        from apps.writing.models import Post
+        wp = Blog.objects.get(platform="wordpress")
+        cat = SiteCategory.objects.get(blog=wp, name="산과 캠핑")
+        cat.look = "wp_mountain"
+        cat.save()
+        post = Post.objects.create(title="원문", stage="post", body="본문")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post, converted_title="민둥산 억새",
+                                      converted_body="> 리드\n\n::: 코스 | 증산초교 코스\n⏱️ 시간 | 3시간\n:::", convert_status="done")
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        ctx = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context
+        self.assertTrue(ctx["clean_html"].startswith("<!-- wp:html -->\n<div class=\"jb-post jb-mountain\" lang=\"ko\">"))
+        self.assertIn('<span class="jb-card__kind">등산 코스</span>', ctx["clean_html"])
+        self.assertIn(".jb-post.jb-mountain", ctx["converted_html"])  # 미리보기는 글모양 CSS 와 함께
+        self.assertIn("## 워드프레스 글 모양", ctx["request_text"])
+        self.assertIn("코드 편집기", ctx["paste"]["where"])
