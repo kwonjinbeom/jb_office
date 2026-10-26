@@ -40,6 +40,7 @@ class Draft:
     place: str = ""  # 넣을 카테고리 '사이트 › 카테고리' (처음 겨냥한 곳)
     topic: str = ""  # 고정 주제 이름 (`고정주제: AI 소식` 줄). 일일루틴 글쓰기 결과에서 'memorily > AI 소식' 처럼 보인다
     old_titles: tuple = ()  # `옛 제목: …` 줄 (2026-10-26: 이미 있는 글을 허브로 바꾸며 제목을 고칠 때, 그 글을 알아보게)
+    change: str = ""  # `고친 내용: …` 줄 — 변환글 보기 맨 위 '수정됨' 한 줄에 붙는다 (2026-10-26 사용자)
 
     @property
     def code(self) -> str:
@@ -70,6 +71,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     custom = re.search(r"^[-*\s]*`?(?:고정주제|커스텀):", head, re.M)
     topic = re.search(r"^[-*\s]*`?고정주제:\s*([^`\n]+)`?\s*$", head, re.M)
     place = re.search(r"^\|\s*넣을 카테고리\s*\|\s*([^|\n]+?)\s*\|", head, re.M)
+    change = re.search(r"^[-*\s]*`?고친 내용:\s*([^`\n]+)`?\s*$", head, re.M)
     old_titles = tuple(t.strip()[:200] for t in re.findall(r"^[-*\s]*`?옛 제목:\s*([^`\n]+)`?\s*$", head, re.M) if t.strip())
     return Draft(
         key=key,
@@ -83,6 +85,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
         custom=bool(custom),
         topic=topic.group(1).strip()[:60] if topic else "",
         old_titles=old_titles,
+        change=change.group(1).strip()[:120] if change else "",
         place=re.sub(r"\s*\([^)]*\)\s*$", "", place.group(1)).strip()[:120] if place else "",  # '(신설 제안)' 같은 꼬리는 뺀다
     )
 

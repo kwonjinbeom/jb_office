@@ -1345,7 +1345,7 @@ class PlacementChangedTests(TestCase):
         self.save(title="새 제목", body="새 본문")
         self.pl.refresh_from_db()
         self.assertIsNotNone(self.pl.changed_at)
-        self.assertEqual(self.pl.changed_note, "제목: 옛 제목 → 새 제목")
+        self.assertEqual(self.pl.changed_note, "제목·본문 · 옛 제목 → 새 제목")
         res = self.client.get(reverse("posts:published"))
         self.assertContains(res, 'class="pl-lamp on"')
         self.assertContains(res, "수정됨 <span class=\"cnt\">1</span>")
@@ -1427,3 +1427,32 @@ class WordpressLooksTests(TestCase):
         self.assertIn("Entry & Money Checklist", cats["World Travel"].concept)
         self.assertIn("코드 편집기", PlatformFormat.objects.get(platform="wordpress").guide)
         self.assertTrue(SiteLink.objects.filter(url="https://jinbaam.com/wp-admin/post-new.php").exists())
+
+
+class ChangeNoteTests(TestCase):
+    """'수정됨' 한 줄 (2026-10-26 사용자): 제목만 / 본문만 / 제목·본문 + 무엇을, 변환글 보기 맨 위."""
+
+    def test_note_shapes_and_old_title(self):
+        from .sites import change_note, changed_old_title
+        self.assertEqual(change_note("가", "나", False), "제목만 · 가 → 나")
+        self.assertEqual(change_note("가", "가", True, "맨 앞 한 문장 추가"), "본문만 · 맨 앞 한 문장 추가")
+        self.assertEqual(changed_old_title(change_note("가", "나", True)), "가")
+        self.assertEqual(changed_old_title("제목: 옛 → 새"), "옛")
+        self.assertIsNone(changed_old_title("본문만"))
+
+    def test_panel_shows_note_only_when_changed(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from apps.writing.models import Post
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        post = Post.objects.create(title="옛 제목", body="본문", stage="post", publish_status="done")
+        pl = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__name="눈잎").first(), tistory_post=post,
+                                      status=Placement.Status.PUBLISHED, converted_title="옛 제목", converted_body="옛 본문",
+                                      convert_status=Placement.Convert.DONE)
+        page = reverse("site_templates:post") + f"?p=tistory:{post.pk}"
+        self.assertNotContains(self.client.get(page), 'class="cv-changed"')
+        self.client.post(reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok",
+                         {"title": "옛 제목", "body": "한 문장\n\n옛 본문", "change": "맨 앞 한 문장 추가"})
+        res = self.client.get(page)
+        self.assertContains(res, 'class="cv-changed"')
+        self.assertContains(res, "본문만 · 맨 앞 한 문장 추가")

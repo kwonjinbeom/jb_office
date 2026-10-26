@@ -141,9 +141,10 @@ def clear_changed(blog, items) -> int:
     done = 0
     for pl in (Placement.objects.filter(site_category__blog=blog, status=Placement.Status.PUBLISHED, changed_at__isnull=False)
                .select_related("tistory_post", "naver_post")):
-        if not pl.changed_note.startswith("제목:"):
+        old = sites.changed_old_title(pl.changed_note)
+        if old is None:
             continue
-        old = _norm(pl.changed_note.split(":", 1)[1].split("→", 1)[0])
+        old = _norm(old)
         new = {_norm(t) for t in (pl.converted_title, pl.post.title if pl.post else "") if t.strip()} - {old}
         if new & seen:
             sites.clear_changed(pl)

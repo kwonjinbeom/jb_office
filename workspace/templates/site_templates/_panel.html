@@ -21,6 +21,10 @@
     </form>
     {% endif %}
   </div>
+  {% if pl.changed_at %}{# 발행 뒤 고친 글만 (2026-10-26 사용자): 맨 위에 무엇을 고쳤는지 한 줄 — 제목만 바꿀지 본문도 바꿀지 #}
+  <div class="cv-changed"><span class="pl-lamp on">수정됨</span><span class="cv-changed-note">{{ pl.changed_note }}</span><span class="muted small">{{ pl.changed_at|date:"m-d H:i" }}</span>
+    <form method="post" action="{% url 'blog_types:place_seen' pl.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm" title="{{ pl.site_category.blog.name }}에 다시 붙여 넣었으면 눌러서 끕니다">반영함</button></form></div>
+  {% endif %}
   {% if pl %}
   {% include "site_templates/_convert_body.html" %}
   {% else %}

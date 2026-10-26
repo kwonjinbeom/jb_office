@@ -453,7 +453,7 @@ class DraftSyncTests(TestCase):
         self.assertIn("둘째 주 내용", post.body)
         self.assertTrue(post.title.startswith("이번 주 청약·공모주 달력 (11월 3일"))
         self.assertIsNotNone(pl.changed_at)
-        self.assertTrue(pl.changed_note.startswith("제목: 이번 주 청약·공모주 달력 (10월 27일"))
+        self.assertTrue(pl.changed_note.startswith("제목·본문 · 이번 주 청약·공모주 달력 (10월 27일"))
 
     def test_user_edited_post_is_not_overwritten(self):
         from .views import auto_import_drafts
@@ -489,7 +489,7 @@ class DraftSyncTests(TestCase):
         old.refresh_from_db(), pl.refresh_from_db()
         self.assertEqual(Post.objects.count(), 1)
         self.assertEqual((old.source, old.title), ("T150_허브", "이번 주 청약·공모주 달력 (10월 27일~11월 9일)"))
-        self.assertTrue(pl.changed_note.startswith("제목: 국내 공모주 일정"))
+        self.assertTrue(pl.changed_note.startswith("제목·본문 · 국내 공모주 일정"))
 
 
 class TrashNunipKospiTests(TestCase):
