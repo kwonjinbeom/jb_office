@@ -106,7 +106,13 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
   border-radius: var(--s-radius);
   background: var(--s-card);
 }
-.jb-about h2 { margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+.jb-about h2 { margin: 0 0 4px; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+/* 한글 뒤 영문 (2026-10-26 사용자): 한 톤 옅고 작게, 영문 줄바꿈 */
+.entry-content p.jb-en { margin-top: 10px; color: var(--s-ink-3); letter-spacing: 0; word-break: normal; }
+.entry-content p.jb-en--title { margin: 0 0 18px; color: var(--s-ink-2); font-size: 19px; font-weight: 600; line-height: 1.45; }
+.jb-about p.jb-en--title { margin-bottom: 12px; font-size: 15.5px; }
+.jb-home-hero p.jb-hero-sub.jb-en { font-size: 16px; line-height: 1.7; }
+.jb-about p.jb-about__text.jb-en { margin-top: 10px; font-size: 14.5px; line-height: 1.7; }
 .jb-about p.jb-about__text { margin: 0; color: var(--s-ink-2); font-size: 15.5px; line-height: 1.75; }
 .jb-about ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; max-width: 300px; }
 .jb-about li { margin: 0; padding: 6px 12px; border-radius: 999px; background: var(--s-paper); color: var(--s-ink-2); font-size: 13px; font-weight: 600; }
@@ -119,6 +125,8 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
   .jb-home-hero { padding-top: 16px; }
   .jb-home-hero h1 { font-size: 31px; }
   .jb-home-hero p.jb-hero-sub { font-size: 16px; }
+  .jb-home-hero p.jb-hero-sub.jb-en { font-size: 14.5px; }
+  .entry-content p.jb-en--title { font-size: 16.5px; }
   .jb-tiles { gap: 10px; margin: 24px 0 44px; }
   .entry-content a.jb-tile { min-height: 150px; padding: 16px; }
   .jb-tile svg { width: 64px; top: 14px; right: 12px; }
@@ -132,8 +140,10 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
 </style>
 <section class="jb-home-hero">
   <p class="jb-eyebrow">Field notes · 산 · 길 · 여행</p>
-  <h1>가 보고, 재 보고,<br>확인한 길 위의 기록</h1>
-  <p class="jb-hero-sub">계절마다 오를 만한 산과 그 아래 캠핑장, 차 가진 사람이 궁금한 것, 그리고 한국을 찾는 여행자를 위한 영어 가이드. 거리·시간·요금은 공식 공지로 다시 확인해 씁니다.</p>
+  <h1>설레는 길은<br>직접 가 보고 씁니다</h1>
+  <p class="jb-en jb-en--title">I go first, then I write.</p>
+  <p class="jb-hero-sub">여행과 짜릿한 순간을 좋아하는 스물아홉 한국 청년입니다. 한국은 외국 친구에게 소개하듯 쉽게, 해외는 처음 가는 사람의 눈으로 꼼꼼하게 담아요.</p>
+  <p class="jb-hero-sub jb-en">A 29-year-old Korean who lives for travel and a good thrill. I show you Korea the way I'd show a visiting friend, and explore the world with first-timer eyes.</p>
 </section>
 <nav class="jb-tiles" aria-label="카테고리">
   <a class="jb-tile jb-tile--mtn" href="/category/mountain-camping/">
@@ -194,8 +204,10 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
 <section class="jb-about">
   <div>
     <p class="jb-eyebrow">About jinbaam</p>
-    <h2>숫자는 공식 출처로, 길은 직접 따라가 보며</h2>
-    <p class="jb-about__text">코스 거리·운영 시간·요금은 지자체와 공식 공지로 다시 확인하고, 글 끝에 출처를 남깁니다. 바뀐 정보를 알게 되면 글을 고치고 고친 날을 적습니다.</p>
+    <h2>안녕하세요, 길 위에서 노는 스물아홉입니다</h2>
+    <p class="jb-en jb-en--title">Hi, I'm a 29-year-old Korean who'd rather be on the road.</p>
+    <p class="jb-about__text">주말이면 산에 오르고, 차를 몰고, 처음 가 보는 동네를 찾아 나섭니다. 가슴 뛰는 곳을 찾아다니지만 정보는 꼼꼼하게 — 거리·운영 시간·요금은 공식 공지로 다시 확인하고, 글 끝에 출처를 남깁니다.</p>
+    <p class="jb-about__text jb-en">On weekends I climb mountains, take long drives and go looking for places I've never been. I chase the thrill, but keep the facts straight: distances, opening hours and prices are checked against official sources and linked at the end of every post.</p>
   </div>
   <ul><li>산 · 등산 코스</li><li>캠핑장</li><li>자동차 점검</li><li>신차</li><li>Korea for visitors</li><li>World itineraries</li></ul>
 </section>
