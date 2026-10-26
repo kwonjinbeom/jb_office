@@ -1,8 +1,9 @@
 """워드프레스 jinbaam.com 글 모양 (2026-10-26 사용자: 기존 블로그처럼 카테고리마다 맞는 구조·CSS 꾸미기).
 
 블록 에디터는 붙여 넣은 글의 인라인 style 을 지운다. 그래서 워드프레스는 style 대신 class 로 표시한 HTML 을
-'사용자 정의 HTML' 블록 하나(<!-- wp:html -->)로 붙이고, 모양은 워드프레스 '추가 CSS'에 한 번 넣는
-글모양 CSS(콘텐츠/블로그_카페/워드프레스/글모양.css)가 입힌다. 미리보기는 같은 CSS 를 <style> 로 함께 보여 준다.
+'사용자 정의 HTML' 블록 하나(<!-- wp:html -->)로 붙이고, 모양은 글모양 CSS(콘텐츠/블로그_카페/워드프레스/글모양.css)가 입힌다.
+그 CSS 는 블록 안에 <style> 로 함께 넣는다 (2026-10-26 사용자: 붙였더니 글꼴·색이 다 깨졌다 — '추가 CSS'가 아직 없었고,
+추가 CSS 는 글 편집 화면에는 보이지 않는다). 관리자 계정은 <style> 이 남는다. 미리보기도 같은 CSS 로 보여 준다.
 
 모양(SiteCategory.look): wp_mountain(산과 캠핑) · wp_car(드라이브·자동차) · wp_travel(Korea Travel · World Travel).
 원고·변환본의 마크다운에서 이렇게 바뀐다:
@@ -48,6 +49,13 @@ TOC_MIN = 4
 def css() -> str:
     path = Path(settings.REPO_ROOT).joinpath(*CSS_PATH)
     return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def css_min() -> str:
+    """글마다 붙이는 <style> 용: 주석·빈칸을 걷어 짧게."""
+    out = re.sub(r"/\*.*?\*/", "", css(), flags=re.S)
+    out = re.sub(r"\s+", " ", out)
+    return re.sub(r"\s*([{};,>])\s*", r"\1", out).replace(";}", "}").strip()
 
 
 def _inline(text: str) -> str:
@@ -148,7 +156,7 @@ def render(text: str, look: str = "") -> str:
 
 def paste_html(text: str, look: str = "") -> str:
     """붙여넣기용: 블록 에디터의 코드 편집기에 붙이면 '사용자 정의 HTML' 블록 하나가 된다."""
-    return f"<!-- wp:html -->\n{render(text, look)}\n<!-- /wp:html -->"
+    return f"<!-- wp:html -->\n<style>{css_min()}</style>\n{render(text, look)}\n<!-- /wp:html -->"
 
 
 def preview_html(text: str, look: str = "") -> str:

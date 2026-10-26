@@ -339,8 +339,10 @@ class PasteFormatTests(TestCase):
                          '<h2>소제목</h2>\n<p><strong>굵게</strong> 본문</p>')
         res = self.client.get(reverse("site_templates:convert", args=[self.place("워드프레스").pk]))
         self.assertContains(res, 'data-copy="#st-raw-')  # 워드프레스: 마크다운 그대로
-        self.assertEqual(res.context["clean_html"], '<!-- wp:html -->\n<div class="jb-post" lang="ko">\n<h2 id="소제목">소제목</h2>\n'
-                         '<p><strong>굵게</strong> 본문</p>\n</div>\n<!-- /wp:html -->')  # class HTML 을 사용자 정의 HTML 블록으로 (2026-10-26)
+        wp_html = res.context["clean_html"]  # class HTML 을 사용자 정의 HTML 블록으로 (2026-10-26)
+        self.assertTrue(wp_html.startswith("<!-- wp:html -->\n<style>"))  # 글모양 CSS 를 블록 안에 함께 (추가 CSS 없이도 같은 모양)
+        self.assertTrue(wp_html.endswith('</style>\n<div class="jb-post" lang="ko">\n<h2 id="소제목">소제목</h2>\n'
+                                         '<p><strong>굵게</strong> 본문</p>\n</div>\n<!-- /wp:html -->'))
         self.assertContains(res, "태그1, 태그2")
         self.assertIn("## 돌려줄 것", res.context["request_text"])
         self.assertIn("사용자 정의 HTML", res.context["request_text"])  # 그 플랫폼 포맷 규칙이 요청문에 들어간다
@@ -599,8 +601,12 @@ class WordpressLookTests(TestCase):
                                       converted_body="> 리드\n\n::: 코스 | 증산초교 코스\n⏱️ 시간 | 3시간\n:::", convert_status="done")
         self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
         ctx = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context
-        self.assertTrue(ctx["clean_html"].startswith("<!-- wp:html -->\n<div class=\"jb-post jb-mountain\" lang=\"ko\">"))
+        self.assertIn("</style>\n<div class=\"jb-post jb-mountain\" lang=\"ko\">", ctx["clean_html"])
         self.assertIn('<span class="jb-card__kind">등산 코스</span>', ctx["clean_html"])
         self.assertIn(".jb-post.jb-mountain", ctx["converted_html"])  # 미리보기는 글모양 CSS 와 함께
+        style = ctx["clean_html"].split("<style>", 1)[1].split("</style>", 1)[0]  # 붙일 HTML 에도 같은 CSS (주석·빈칸만 걷어 냄)
+        self.assertIn(".jb-post.jb-mountain{", style)
+        self.assertIn("Pretendard", style)
+        self.assertNotIn("/*", style)
         self.assertIn("## 워드프레스 글 모양", ctx["request_text"])
         self.assertIn("코드 편집기", ctx["paste"]["where"])
