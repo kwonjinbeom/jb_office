@@ -490,3 +490,22 @@ class DraftSyncTests(TestCase):
         self.assertEqual(Post.objects.count(), 1)
         self.assertEqual((old.source, old.title), ("T150_허브", "이번 주 청약·공모주 달력 (10월 27일~11월 9일)"))
         self.assertTrue(pl.changed_note.startswith("제목: 국내 공모주 일정"))
+
+
+class TrashNunipKospiTests(TestCase):
+    """writing 0026 (2026-10-26 사용자): 눈잎에 넣었던 코스피 글은 휴지통으로."""
+
+    def test_post_and_placement_trashed(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.blog_types.models import Placement, SiteCategory
+        mig = import_module("apps.writing.migrations.0026_trash_nunip_kospi")
+        post = Post.objects.create(title=mig.TITLE)
+        pl = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__name="눈잎").first(), tistory_post=post)
+        keep = Post.objects.create(title="다른 글")
+        mig.forward(django_apps, None)
+        self.assertFalse(Post.objects.filter(pk=post.pk).exists())
+        self.assertFalse(Placement.objects.filter(pk=pl.pk).exists())
+        self.assertTrue(Post.objects.filter(pk=keep.pk).exists())
