@@ -364,7 +364,7 @@ class PasteFormatTests(TestCase):
         self.assertEqual(PlatformFormat.objects.get(platform="naver").guide.count("\n"), 3)
         wordpress = self.place("워드프레스")
         wp_text = self.client.get(reverse("site_templates:convert", args=[wordpress.pk])).context["request_text"]
-        self.assertNotIn("## 사진·그림", wp_text)
+        self.assertIn("## 사진·그림", wp_text)  # 워드프레스도 사진을 넣는다 (0030, 2026-10-26 사용자)
         self.assertIn("[사진]·📷·[그림] 자리 줄은 변환본에 남기지 않는다", wp_text)
         # 찾아 넣은 사진 + 출처 캡션 → 붙여넣기 HTML 에 실제 이미지와 캡션
         tistory.converted_body = "글\n\n![병원 대기실](https://images.unsplash.com/photo-1?w=1200&q=80)\n*사진: 홍길동 · Unsplash*"

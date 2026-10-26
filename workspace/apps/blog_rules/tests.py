@@ -44,7 +44,7 @@ class BlogRulesTests(TestCase):
     def test_page_shows_sites_and_checks(self):
         res = self.client.get(INDEX)
         self.assertEqual(res.status_code, 200)
-        self.assertEqual((res.context["mode"], res.context["target_total"]), ("day", 5))  # 운영 중인 넷: 1 + 1 + 1 + 밤밤 2편
+        self.assertEqual((res.context["mode"], res.context["target_total"]), ("day", 6))  # 운영 중인 다섯: 1 + 1 + 1 + 밤밤 2편 + 워드프레스 1 (0030)
         self.assertEqual(res.context["accounts"], [("카카오 계정 1", 2)])
         for text in ["jinbaam.tistory.com", "nunip.tistory.com", "쇼핑커넥트 링크는", "하루 편수 정하기", "하루 1편 · 애드센스",
                      "발행", "임시저장", "일별", "월별", "data-open-picker"]:
@@ -109,4 +109,4 @@ class BlogRulesTests(TestCase):
         b = Blog.objects.get(name="세번째")
         self.assertEqual(b.order, 6)
         res = self.client.get(INDEX)
-        self.assertEqual(res.context["target_total"], 5)  # 준비 상태는 목표에 넣지 않는다
+        self.assertEqual(res.context["target_total"], 6)  # 준비 상태는 목표에 넣지 않는다

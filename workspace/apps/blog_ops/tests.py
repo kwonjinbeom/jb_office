@@ -64,6 +64,7 @@ class BlogOpsTests(TestCase):
         state = feeds.sync(self.nunip, fetch=blocked)
         self.assertFalse(state.ok)
         self.assertIn("허용 목록", state.message)
+        Blog.objects.filter(platform="wordpress").update(address="")  # 워드프레스는 0030 에서 주소가 생겼다
         no_addr = Blog.objects.get(platform="wordpress")
         state = feeds.sync(no_addr)
         self.assertIn("주소가 없어", state.message)
