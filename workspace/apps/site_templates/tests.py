@@ -705,3 +705,117 @@ class ConvertSendByFileTests(TestCase):
         self.client.post(reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok", body, content_type="application/x-www-form-urlencoded")
         pl.refresh_from_db()
         self.assertEqual((pl.converted_title, pl.converted_tags), ("민둥산 억새 — 증산초", "억새, 민둥산"))  # 파일 끝 줄바꿈은 걷는다
+
+
+class WordpressDraftTests(TestCase):
+    """워드프레스 초안 자동 올리기 (2026-10-26 사용자): 서버 api_wp 재료 → PC wp_draft 가 REST API 로 초안 → 글 번호를 돌려준다."""
+
+    BODY = ("> 증산초 코스는 완만하고 3.2km예요. **11월 8일**까지 축제.\n> 셔틀은 멈췄어요.\n\n## 코스\n본문\n\n"
+            "![민둥산 억새](https://images.unsplash.com/photo-9?w=620)\n*사진: 누구 · Unsplash*")
+
+    def setUp(self):
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.cat = SiteCategory.objects.get(blog__platform="wordpress", name="산과 캠핑")
+        self.pl = Placement.objects.create(site_category=self.cat, tistory_post=Post.objects.create(title="원문", stage="post", body="b"),
+                                           converted_title="민둥산 억새 등산코스 — 증산초", converted_body=self.BODY,
+                                           converted_tags="민둥산, 억새", convert_status="done")
+        self.api = reverse("site_templates:api_wp", args=[self.pl.pk]) + "?token=tok"
+
+    def test_helpers(self):
+        from . import wp_looks
+        self.assertEqual(wp_looks.excerpt(self.BODY), "증산초 코스는 완만하고 3.2km예요. 11월 8일까지 축제. 셔틀은 멈췄어요.")
+        self.assertEqual(wp_looks.excerpt("## 소제목\n\n첫 문단이에요.\n\n둘째"), "첫 문단이에요.")  # 리드가 없으면 첫 문단
+        self.assertEqual(wp_looks.auto_slug("3 Days in Kyoto (Nov 2026): Autumn Leaves + Tax-Free Rules"),
+                         "3-days-in-kyoto-autumn-leaves-tax-free")
+        self.assertEqual(wp_looks.auto_slug("민둥산 억새"), "")  # 한글 제목은 변환이 준다
+        self.assertEqual(wp_looks.clean_slug(" Mindungsan  Silver_Grass! "), "mindungsan-silver-grass")
+
+    def test_api_wp(self):
+        self.assertEqual(self.client.get(reverse("site_templates:api_wp", args=[self.pl.pk]) + "?token=bad").status_code, 403)
+        save = reverse("site_templates:api_save", args=[self.pl.pk]) + "?token=tok"
+        self.client.post(save, {"title": self.pl.converted_title, "body": self.BODY, "slug": "Mindungsan Silver-Grass Hiking\n"})
+        data = self.client.get(self.api).json()
+        self.assertEqual(data["slug"], "mindungsan-silver-grass-hiking")
+        self.assertEqual((data["title"], data["category"], data["tags"]), ("민둥산 억새 등산코스 — 증산초", "산과 캠핑", ["민둥산", "억새"]))
+        self.assertTrue(data["content"].startswith("<!-- wp:html -->\n<style>"))
+        self.assertEqual(data["hero"], {"src": "https://images.unsplash.com/photo-9?w=620", "alt": "민둥산 억새"})
+        self.assertIn("셔틀은 멈췄어요", data["excerpt"])
+        self.assertIsNone(data["wp_post_id"])
+        self.assertEqual(self.client.post(self.api, {"wp_post_id": "77"}).content.decode(), f"ok {self.pl.pk} wp 77")
+        self.pl.refresh_from_db()
+        self.assertEqual(self.pl.wp_post_id, 77)
+        tistory = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__platform="tistory").first(),
+                                           tistory_post=self.pl.tistory_post, converted_body="b")
+        self.assertEqual(self.client.get(reverse("site_templates:api_wp", args=[tistory.pk]) + "?token=tok").status_code, 400)
+        # 변환 화면에 초안 열기
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        self.assertContains(self.client.get(reverse("site_templates:convert", args=[self.pl.pk])), "wp-admin/post.php?post=77&amp;action=edit")
+
+    def test_launcher_adds_slug_and_draft_for_wordpress(self):
+        launch = prompt.launcher(RequestFactory().get("/"), [self.pl], "tok")
+        self.assertIn(f'--data-urlencode "slug@workspace/.routine/convert/{self.pl.pk}-slug.txt"', launch)
+        self.assertIn(f'manage.py wp_draft "http://testserver/blog/site-templates/api/wp/{self.pl.pk}/?token=tok"', launch)
+        tistory = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__platform="tistory").first(),
+                                           tistory_post=self.pl.tistory_post)
+        self.assertNotIn("wp_draft", prompt.launcher(RequestFactory().get("/"), [tistory], "tok"))
+        from apps.routines.local_run import ROUTINE_ALLOW
+        self.assertIn("Bash(workspace/.venv/Scripts/python.exe workspace/manage.py wp_draft *)", ROUTINE_ALLOW)
+
+    def test_draft_flow(self):
+        from unittest import mock
+        from . import wp_rest
+
+        class Fake(wp_rest.Client):
+            def __init__(self, existing=None):
+                super().__init__("https://jinbaam.com", "u", "p")
+                self.calls, self.existing = [], existing
+
+            def call(self, method, path, data=None, raw=None, headers=None):
+                self.calls.append((method, path, data))
+                if path.startswith("/categories"):
+                    return [{"id": 2, "name": "산과 캠핑"}, {"id": 3, "name": "드라이브&middot;자동차"}]
+                if path.startswith("/tags?"):
+                    return [{"id": 9, "name": "민둥산"}] if "%EB%AF%BC" in path else []
+                if path == "/tags":
+                    return {"id": 10}
+                if path == "/media":
+                    return {"id": 55}
+                if path.startswith("/media/"):
+                    return {}
+                if path.startswith("/posts/") and method == "GET":
+                    if self.existing is None:
+                        raise wp_rest.WPError("404 rest_post_invalid_id")
+                    return self.existing
+                return {"id": 100 if path == "/posts" else int(path.split("/")[2])}
+
+        job = {"id": self.pl.pk, "title": "t", "content": "<!-- wp:html -->x", "category": "산과 캠핑", "tags": ["민둥산", "억새"],
+               "slug": "mindungsan", "excerpt": "e", "hero": {"src": "https://x/p.jpg", "alt": "억새"}, "wp_post_id": None}
+        with mock.patch.object(wp_rest, "fetch_job", return_value=job), mock.patch.object(wp_rest, "report") as rep, \
+                mock.patch.object(wp_rest, "image_bytes", return_value=(b"img", "p.jpg", "image/jpeg")):
+            fake = Fake()
+            out = wp_rest.draft("http://srv/api", fake, log=lambda m: None)
+            self.assertIn("워드프레스 초안 100 새로 만듦", out)
+            post = next(d for m, p, d in fake.calls if p == "/posts")
+            self.assertEqual((post["status"], post["categories"], post["tags"], post["featured_media"], post["slug"]),
+                             ("draft", [2], [9, 10], 55, "mindungsan"))
+            rep.assert_called_with("http://srv/api", 100)
+            # 다시 변환: 초안이면 같은 글을 고친다 (대표 이미지가 이미 있으면 다시 올리지 않는다)
+            job["wp_post_id"] = 100
+            fake = Fake(existing={"status": "draft", "featured_media": 55})
+            out = wp_rest.draft("http://srv/api", fake, log=lambda m: None)
+            self.assertIn("워드프레스 초안 100 고침", out)
+            self.assertFalse(any(p == "/media" for m, p, d in fake.calls))
+            # 발행한 글은 건드리지 않는다
+            fake = Fake(existing={"status": "publish"})
+            self.assertIn("건너뜀", wp_rest.draft("http://srv/api", fake, log=lambda m: None))
+            self.assertFalse(any(m == "POST" for m, p, d in fake.calls))
+
+    def test_command_skips_without_password(self):
+        from io import StringIO
+        from unittest import mock
+        from django.core.management import call_command
+        out = StringIO()
+        with mock.patch.dict("os.environ", {"WP_USER": "", "WP_APP_PASSWORD": ""}):
+            call_command("wp_draft", "http://srv/api", stdout=out)
+        self.assertIn("건너뜀", out.getvalue())

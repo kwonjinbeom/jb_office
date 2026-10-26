@@ -53,6 +53,9 @@ ROUTINE_ALLOW = [
     "Bash(curl *)",  # 진행 보고를 서버 실행 이력으로 (views.report_api)
     "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_report *)",
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
+    # 사이트 변환 뒤 워드프레스 초안 올리기 (2026-10-26, site_templates.wp_rest)
+    "Bash(workspace/.venv/Scripts/python workspace/manage.py wp_draft *)",
+    "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py wp_draft *)",
 ]
 ROUTINE_DENY = ["AskUserQuestion", "mcp__claude-in-chrome"]
 # 애니 글쓰기·변환은 회차 데이터·환산기 빌드·가공이미지를 파이썬으로 돌린다 (애니환산기/build.py · 그림.py, 자동완성 조사)

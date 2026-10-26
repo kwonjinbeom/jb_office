@@ -164,6 +164,10 @@ class Placement(TrashableModel):
     converted_check = models.TextField("사실 점검", blank=True,
                                        help_text="변환 때 숫자·날짜·일정을 출처에서 다시 확인한 기록 (고친 것 · 미정 · 확인한 출처)")
     converted_at = models.DateTimeField("변환한 때", null=True, blank=True)
+    # 워드프레스 초안 (2026-10-26 사용자: 변환이 끝나면 PC claude 가 REST API 로 초안을 올린다 — site_templates wp_draft 명령)
+    converted_slug = models.CharField("슬러그", max_length=120, blank=True, help_text="워드프레스 글 주소 (영문 소문자-하이픈)")
+    wp_post_id = models.PositiveIntegerField("워드프레스 글 번호", null=True, blank=True,
+                                             help_text="올린 초안 번호. 다시 변환하면 같은 초안을 고친다 (발행한 글은 건드리지 않는다)")
     # 발행한 뒤 이 사이트에 올릴 글이 바뀜 (2026-10-26 사용자: 게시글 관리의 '수정됨' 불 — 켜져 있으면 다시 붙여 넣는다).
     # 켜기: 원고가 바뀌어 글을 고침(허브) · 변환본을 다시 받음 (sites.mark_changed). 끄기: 사용자가 누름 · 발행 확인 때 RSS 에 바뀐 제목이 보임.
     changed_at = models.DateTimeField("발행 뒤 수정", null=True, blank=True)

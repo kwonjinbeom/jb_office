@@ -26,6 +26,9 @@
     {% for t in tag_items %}<button type="button" class="st-tag" data-copy-text="{{ t }}" data-copy-msg="'{{ t }}' 복사 — 태그 칸에 붙여넣고 Enter">{{ t }}</button>{% endfor %}
   </div>
   {% endif %}
+  {% if pl.wp_post_id and blog.address %}{# 변환 뒤 PC 가 REST API 로 올린 초안 (2026-10-26, site_templates.wp_rest) #}
+  <div class="card-body st-after"><span class="muted small">워드프레스 초안:</span> <a href="{{ blog.address }}wp-admin/post.php?post={{ pl.wp_post_id }}&amp;action=edit" target="_blank" rel="noopener">#{{ pl.wp_post_id }} 열기</a> <span class="muted small">— 제목·본문·카테고리·태그·슬러그·요약·대표 이미지가 들어가 있다. 확인하고 발행만 누르면 된다</span></div>
+  {% endif %}
   {% if paste.after %}<div class="card-body st-after"><span class="muted small">붙인 뒤 확인:</span> {{ paste.after }}</div>{% endif %}
 </section>
 {% endif %}

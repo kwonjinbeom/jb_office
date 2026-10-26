@@ -197,6 +197,9 @@ def api_save(request, pk):
         placement.converted_tags = data["tags"].strip()[:500]
     if "check" in data:  # 사실 점검 기록 (고친 것 · 미정 · 확인한 출처)
         placement.converted_check = data["check"].replace("\r\n", "\n").strip()
+    if "slug" in data:  # 워드프레스 글 주소 (2026-10-26)
+        from . import wp_looks
+        placement.converted_slug = wp_looks.clean_slug(data["slug"])[:120]
     placement.converted_body = body
     placement.convert_status = Placement.Convert.DONE
     placement.converted_at = timezone.now()
@@ -211,6 +214,41 @@ def api_save(request, pk):
         placement.changed_note = sites.change_note(old_title, placement.converted_title, body_changed, extra)
     placement.save()
     return HttpResponse(f"ok {placement.pk} done", content_type="text/plain; charset=utf-8")
+
+
+@csrf_exempt
+@login_not_required
+def api_wp(request, pk):
+    """워드프레스 초안 재료 (2026-10-26 사용자: 변환이 끝나면 PC claude 가 REST API 로 초안을 올린다).
+    서버(PythonAnywhere 무료)는 jinbaam.com 에 닿지 않아, PC 의 wp_draft 명령이 이 주소에서 재료를 받아 워드프레스에 올리고
+    올린 글 번호를 POST 로 돌려준다 (다시 변환하면 같은 초안을 고친다). 토큰은 api_save 와 같다."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    placement = get_object_or_404(Placement.objects.select_related("site_category__blog", "site_category__parent"), pk=pk)
+    if placement.site_category.blog.platform != Blog.Platform.WORDPRESS:
+        return HttpResponseBadRequest("워드프레스 글이 아닙니다")
+    if request.method == "POST":
+        try:
+            placement.wp_post_id = int(request.POST.get("wp_post_id", ""))
+        except ValueError:
+            return HttpResponseBadRequest("wp_post_id")
+        placement.save(update_fields=["wp_post_id", "updated_at"])
+        return HttpResponse(f"ok {placement.pk} wp {placement.wp_post_id}", content_type="text/plain; charset=utf-8")
+    if not placement.converted_body.strip():
+        return HttpResponseBadRequest("변환본이 없습니다")
+    from . import wp_looks
+    title = placement.converted_title or placement.post.title
+    return JsonResponse({
+        "id": placement.pk, "title": title,
+        "content": wp_looks.paste_html(placement.converted_body, _look(placement.site_category)),
+        "category": placement.site_category.name,
+        "tags": [t.strip() for t in placement.converted_tags.split(",") if t.strip()],
+        "slug": placement.converted_slug or wp_looks.auto_slug(title),
+        "excerpt": wp_looks.excerpt(placement.converted_body),
+        "hero": _hero(placement.converted_body),
+        "wp_post_id": placement.wp_post_id,
+    }, json_dumps_params={"ensure_ascii": False})
 
 
 @login_not_required

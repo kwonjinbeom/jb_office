@@ -7,6 +7,8 @@
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.blog_rules.models import Blog
+
 from . import looks, paste
 from .models import PlatformFormat, SiteTemplate
 
@@ -127,7 +129,8 @@ def launcher(request, placements, token, redo=""):
         "2. 본문만 `workspace/.routine/convert/<번호>.md`, 점검 기록은 `<번호>-check.md`, 제목 한 줄은 `<번호>-title.txt`, "
         "태그 한 줄은 `<번호>-tags.txt` 로 같은 폴더에 쓴다 (모두 UTF-8). 제목·태그를 명령줄에 직접 쓰지 않는다 — "
         "Windows 는 명령줄 글자를 cp949 로 바꿔 — 같은 글자가 ? 로 깨진다 (2026-10-26).\n"
-        "3. 아래 '보내기' 명령을 그대로 실행한다. 응답이 `ok` 로 시작하면 다음 글.\n"
+        "3. 아래 '보내기' 명령을 그대로 실행한다. 응답이 `ok` 로 시작하면, 워드프레스 글은 이어서 '초안 올리기' 명령도 실행한다 "
+        "(`건너뜀`·실패여도 변환은 끝난 것이니 한 줄로 말하고 넘어간다). 그다음 글.\n"
         "4. 실패하면 이유를 한 줄로 말하고 다음 글로 간다. 다 끝나면 보낸 편수와 고친 곳 수를 한 줄로 말한다.",
     ]
     if redo:
@@ -142,8 +145,14 @@ def launcher(request, placements, token, redo=""):
                 f'--data-urlencode "tags@workspace/.routine/convert/{pl.pk}-tags.txt" '
                 f'--data-urlencode "body@workspace/.routine/convert/{pl.pk}.md" '
                 f'--data-urlencode "check@workspace/.routine/convert/{pl.pk}-check.md"')
+        wp = ""
+        if pl.site_category.blog.platform == Blog.Platform.WORDPRESS:  # 초안 올리기 (2026-10-26 사용자, site_templates.wp_rest)
+            send += f' --data-urlencode "slug@workspace/.routine/convert/{pl.pk}-slug.txt"'
+            wp_url = request.build_absolute_uri(reverse("site_templates:api_wp", args=[pl.pk])) + f"?token={token}"
+            wp = (f"슬러그 한 줄(영문 소문자-하이픈 3~6단어)을 `workspace/.routine/convert/{pl.pk}-slug.txt` 에 먼저 쓴다.\n\n"
+                  f"초안 올리기 (보내기가 ok 인 뒤):\n```\nworkspace/.venv/Scripts/python.exe workspace/manage.py wp_draft \"{wp_url}\"\n```\n\n")
         part = (f"---\n\n## 글 {n} · 번호 {pl.pk} · {pl.site_category.blog.name} › {pl.site_category}\n\n"
-                f"보내기:\n```\n{send}\n```\n\n{build(pl)}")
+                f"보내기:\n```\n{send}\n```\n\n{wp}{build(pl)}")
         if redo and pl.converted_body.strip():
             part += (f"\n\n## 지난 변환본 (재변환 코멘트대로 고친다)\n### 제목\n{pl.converted_title or '-'}\n"
                      f"### 태그\n{pl.converted_tags or '-'}\n### 본문\n{pl.converted_body}")
