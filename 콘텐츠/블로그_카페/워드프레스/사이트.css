@@ -145,6 +145,15 @@ a:hover, a:focus { color: var(--d-date); }
 .comment-form input:not([type="submit"]):not([type="checkbox"]), .comment-form textarea { border: 1px solid var(--d-line); background: #fffdf8; }
 .comment-form .submit, .comment-form input[type="submit"] { border-radius: 0; background: var(--d-ink); color: var(--d-paper); font-family: var(--d-mono); font-size: 13px; }
 
+/* ── 페이지 본문 (About · 문의 · 개인정보처리방침): 글 본문(글모양.css)이 아닌 보통 글 ── */
+.page:not(:has(.jb-home-hero)) .entry-content { color: var(--d-ink); font-size: 16.5px; line-height: 1.85; }
+.page:not(:has(.jb-home-hero)) .entry-content h2 { margin: 2.2em 0 0.7em; padding-bottom: 8px; border-bottom: 1px solid var(--d-line); font-family: var(--d-serif); font-size: 23px; font-weight: 700; }
+.page:not(:has(.jb-home-hero)) .entry-content ul { margin: 0 0 1.2em 1.1em; }
+.page:not(:has(.jb-home-hero)) .entry-content li { margin: 0.4em 0; }
+.page:not(:has(.jb-home-hero)) .entry-content em { color: var(--d-ink-2); font-family: Georgia, serif; }
+.page:not(:has(.jb-home-hero)) .entry-content a { text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.page:not(:has(.jb-home-hero)) .entry-content hr { margin: 2.6em 0; border: 0; border-top: 1px solid var(--d-ink); }
+
 /* ── 바닥 ── */
 .site-footer .site-info { border-top: 1px solid var(--d-ink); background: transparent; color: var(--d-ink-3); font-family: var(--d-mono); font-size: 12px; }
 .site-footer .site-info a { color: var(--d-ink-3); }
