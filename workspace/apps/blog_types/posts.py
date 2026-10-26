@@ -237,6 +237,7 @@ def published(request):
     """블로그·카페 › 게시글 관리 (2026-10-23 사용자: 글 관리 탭에서 중메뉴로): 발행 완료한 글.
     사이트 → 카테고리 → 발행일 순. 조건은 검색 · 오늘(오늘 발행한 글) · 사이트 · 전체만."""
     request.nav_key = "posts_published"
+    _import_new_drafts(request)  # 허브 원고를 고쳤으면 여기서 '수정됨' 불이 켜진다 (2026-10-27 사용자: 고친 원고가 안 보였다)
     get = request.GET
     q, today, changed = get.get("q", "").strip(), get.get("today") == "1", get.get("changed") == "1"
     p = {"stage": "done", "sel": "", "kind": None, "obj": None, "view": "", "site": "", "q": q, "today": False, "custom": False}
