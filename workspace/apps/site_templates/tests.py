@@ -610,3 +610,73 @@ class WordpressLookTests(TestCase):
         self.assertNotIn("/*", style)
         self.assertIn("## 워드프레스 글 모양", ctx["request_text"])
         self.assertIn("코드 편집기", ctx["paste"]["where"])
+
+
+class HeroPhotoTests(TestCase):
+    """워드프레스 대표 사진 내려받기 (2026-10-26 사용자): 대표 이미지는 미디어 라이브러리에 올려야 해서 첫 사진을 파일로."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
+        wp = Blog.objects.get(platform="wordpress")
+        cat = SiteCategory.objects.filter(blog=wp).first()
+        self.post = Post.objects.create(title="원문", stage="post", body="본문")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        fig = Path(self.tmp.name) / prompt.FIGURE_DIR / "57"
+        fig.mkdir(parents=True)
+        (fig / "mindungsan-station.jpg").write_bytes(b"\xff\xd8jpeg")
+        self.pl = Placement.objects.create(site_category=cat, tistory_post=self.post, converted_title="민둥산", convert_status="done",
+                                           converted_body="> 리드\n\n![민둥산역 승강장](" + prompt.FIGURE_URL
+                                           + "%EC%BD%98%ED%85%90%EC%B8%A0/%EB%B8%94%EB%A1%9C%EA%B7%B8_%EC%B9%B4%ED%8E%98/"
+                                           "%EB%B3%80%ED%99%98%EA%B7%B8%EB%A6%BC/57/mindungsan-station.jpg)\n*사진: 한국관광공사*\n\n"
+                                           "![둘째](https://images.unsplash.com/photo-2?w=620)")
+
+    def url(self, pl=None):
+        return reverse("site_templates:hero_photo", args=[(pl or self.pl).pk])
+
+    def test_button_on_wordpress_convert_screen(self):
+        res = self.client.get(reverse("site_templates:convert", args=[self.pl.pk]))
+        self.assertContains(res, self.url())
+        self.assertContains(res, 'data-copy-text="민둥산역 승강장"')  # 대체 텍스트 복사
+        tistory = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__platform="tistory").first(),
+                                           tistory_post=self.post, converted_body="![가](https://images.unsplash.com/photo-1)",
+                                           convert_status="done")
+        self.assertNotContains(self.client.get(reverse("site_templates:convert", args=[tistory.pk])), "대표 사진")
+
+    def test_repo_figure_served_from_disk(self):
+        with override_settings(REPO_ROOT=self.tmp.name):
+            res = self.client.get(self.url())
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('attachment; filename="mindungsan-station.jpg"', res["Content-Disposition"])
+        self.assertEqual(b"".join(res.streaming_content), b"\xff\xd8jpeg")
+
+    def test_outside_figure_dir_not_served(self):
+        from unittest import mock
+        self.pl.converted_body = f"![x]({prompt.FIGURE_URL}workspace/db.sqlite3)"
+        self.pl.save()
+        with override_settings(REPO_ROOT=self.tmp.name), mock.patch("urllib.request.urlopen", side_effect=OSError):
+            res = self.client.get(self.url())
+        self.assertEqual(res.status_code, 302)  # 저장소의 다른 파일은 내주지 않는다
+
+    def test_remote_photo_fetched_or_redirected(self):
+        from unittest import mock
+        self.pl.converted_body = "![억새](https://images.unsplash.com/photo-123abc?w=620)"
+        self.pl.save()
+        res_obj = mock.MagicMock()
+        res_obj.__enter__.return_value = res_obj
+        res_obj.headers.get_content_type.return_value = "image/jpeg"
+        res_obj.read.return_value = b"img"
+        with mock.patch("urllib.request.urlopen", return_value=res_obj):
+            res = self.client.get(self.url())
+        self.assertEqual(res.content, b"img")
+        self.assertIn('filename="photo-123abc.jpg"', res["Content-Disposition"])
+        with mock.patch("urllib.request.urlopen", side_effect=OSError):  # 서버가 못 받으면 사진 주소로 (브라우저에서 저장)
+            res = self.client.get(self.url())
+        self.assertRedirects(res, "https://images.unsplash.com/photo-123abc?w=620", fetch_redirect_response=False)
+
+    def test_no_photo_404(self):
+        self.pl.converted_body = "사진 없음"
+        self.pl.save()
+        self.assertEqual(self.client.get(self.url()).status_code, 404)
