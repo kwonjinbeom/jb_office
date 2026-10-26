@@ -385,3 +385,16 @@ class SiteStatsTests(TestCase):
         self.assertEqual(SiteStat.objects.get(blog=self.naver, day=self.today).visitors, 5)
         nav = [c.title for m in self.client.get(reverse("blog_ops:stats")).context["MENUS"] if m.key == "blog" for c in m.children]
         self.assertEqual(nav[:2], ["통계현황", "모니터링"])
+
+
+class WordpressStatsTests(TestCase):
+    """워드프레스 통계 (2026-10-26): 댓글 수는 공개 REST, 공감은 없다, 방문자는 직접."""
+
+    def test_collect_wordpress_comments(self):
+        import json as _json
+
+        from . import stats
+        wp = Blog.objects.get(platform="wordpress")
+        got = stats.collect(stats.target(wp), fetch=lambda url: _json.dumps([{"id": 1}, {"id": 2}]).encode())
+        self.assertEqual((got["likes_total"], got["comments_total"]), (0, 2))
+        self.assertIn("방문자는 직접", got["message"])

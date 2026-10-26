@@ -1410,3 +1410,20 @@ class WordpressSitesTests(TestCase):
         import_module("apps.blog_types.migrations.0030_wordpress_sites").forward(django_apps, None)
         self.assertFalse(Post.objects.filter(pk=post.pk).exists())
         self.assertFalse(Category.objects.filter(pk=animal.pk).exists())
+
+
+class WordpressLooksTests(TestCase):
+    """0032 (2026-10-26 사용자): 워드프레스 카테고리 글 모양·컨셉, 붙여넣기 포맷, 바로가기."""
+
+    def test_looks_concepts_format_links(self):
+        from apps.site_templates.models import PlatformFormat
+        from .models import SiteLink
+        cats = {c.name: c for c in SiteCategory.objects.filter(blog__platform="wordpress", parent=None)}
+        self.assertEqual({n: c.look for n, c in cats.items()},
+                         {"산과 캠핑": "wp_mountain", "드라이브·자동차": "wp_car", "Korea Travel": "wp_travel", "World Travel": "wp_travel"})
+        self.assertIn("기관별 절정일 비교", cats["산과 캠핑"].concept)
+        self.assertIn("C. 기능·노하우", cats["드라이브·자동차"].concept)
+        self.assertIn("## 日本語まとめ", cats["Korea Travel"].concept)
+        self.assertIn("Entry & Money Checklist", cats["World Travel"].concept)
+        self.assertIn("코드 편집기", PlatformFormat.objects.get(platform="wordpress").guide)
+        self.assertTrue(SiteLink.objects.filter(url="https://jinbaam.com/wp-admin/post-new.php").exists())
