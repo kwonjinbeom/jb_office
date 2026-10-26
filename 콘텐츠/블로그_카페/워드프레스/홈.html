@@ -1,4 +1,135 @@
 <!-- wp:html -->
+<style>
+/* jinbaam 홈 모양 (2026-10-26) — 이 블록 안에 둔다: 추가 CSS(사이트.css)가 없어도, 홈으로 지정하기 전 주소(/홈/)에서도 같은 모양 */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+:root { --s-ink: #1d2125; --s-ink-2: #555b62; --s-ink-3: #8b9097; --s-line: #e7e3db; --s-paper: #f7f5f0; --s-card: #ffffff;
+  --s-mtn: #2f5d45; --s-car: #1f6feb; --s-kr: #b4532a; --s-world: #6b4f3a; --s-radius: 16px; }
+.jb-dot--mtn { --dot: var(--s-mtn); } .jb-dot--car { --dot: var(--s-car); } .jb-dot--kr { --dot: var(--s-kr); } .jb-dot--world { --dot: var(--s-world); }
+body:has(.jb-home-hero) { background: var(--s-paper); }
+body:has(.jb-home-hero) .is-right-sidebar, body:has(.jb-home-hero) .is-left-sidebar { display: none; }
+body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
+.site-main:has(.jb-home-hero):not(#jb) { max-width: none; margin: 24px 24px 64px; }  /* 테마 여백 규칙보다 세게 */
+.inside-article:has(.jb-home-hero) { padding: 0; border: 0; background: transparent; }
+.inside-article:has(.jb-home-hero) > .entry-header { display: none; }
+.entry-content:has(.jb-home-hero) { margin-top: 0; color: var(--s-ink); font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; word-break: keep-all; }
+.entry-content:has(.jb-home-hero) :is(h1, h2, h3) { font-family: inherit; color: var(--s-ink); }
+.jb-home-hero { max-width: 780px; padding: 40px 0 8px; }
+.jb-eyebrow { margin: 0 0 14px; color: var(--s-kr); font-size: 13px; font-weight: 750; letter-spacing: 0.14em; text-transform: uppercase; }
+.jb-home-hero h1 { margin: 0 0 16px; font-size: 46px; font-weight: 850; line-height: 1.24; letter-spacing: -0.04em; }
+.jb-home-hero p.jb-hero-sub { margin: 0; color: var(--s-ink-2); font-size: 17.5px; line-height: 1.75; }
+.jb-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 32px 0 60px; }
+.entry-content a.jb-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 200px;
+  padding: 22px;
+  overflow: hidden;
+  border-radius: var(--s-radius);
+  background: var(--tile);
+  color: #fff;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.entry-content a.jb-tile:hover { transform: translateY(-3px); box-shadow: 0 16px 32px rgba(30, 25, 15, 0.16); color: #fff; }
+.jb-tile svg { position: absolute; top: 18px; right: 16px; width: 92px; height: auto; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
+.jb-tile__kicker { font-size: 11.5px; font-weight: 750; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.78; }
+.jb-tile__name { margin: 4px 0 6px; font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
+.jb-tile__desc { font-size: 13.5px; line-height: 1.5; opacity: 0.88; }
+.jb-tile--mtn { --tile: linear-gradient(155deg, #4a8466 0%, #2f5d45 55%, #1f3f2e 100%); }
+.jb-tile--car { --tile: linear-gradient(155deg, #3b4652 0%, #262d34 60%, #1a1f24 100%); }
+.jb-tile--car .jb-tile__kicker { color: #8db8ff; opacity: 1; }
+.jb-tile--kr { --tile: linear-gradient(155deg, #d0733f 0%, #b4532a 55%, #873a1b 100%); }
+.jb-tile--world { --tile: linear-gradient(155deg, #8d6e55 0%, #6b4f3a 55%, #4b3627 100%); }
+.jb-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--s-ink);
+}
+.jb-sec-head h2 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+.jb-sec-head h2::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, var(--s-ink)); }
+.entry-content .jb-sec-head a { color: var(--s-ink-2); font-size: 14px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+.entry-content .jb-sec-head a:hover { color: var(--s-ink); }
+.entry-content .wp-block-latest-posts.is-grid:not(#jb) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0 0 60px;
+  padding: 0;
+  list-style: none;
+}
+.entry-content .wp-block-latest-posts.is-grid:not(#jb) li {
+  display: flex;
+  flex-direction: column;
+  width: auto;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius);
+  background: var(--s-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.entry-content .wp-block-latest-posts.is-grid:not(#jb) li:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(30, 25, 15, 0.09); }
+.entry-content .wp-block-latest-posts__featured-image { margin: 0; }
+.entry-content .wp-block-latest-posts__featured-image img { display: block; width: 100%; max-width: none; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+.entry-content a.wp-block-latest-posts__post-title {
+  display: -webkit-box;
+  margin: 16px 18px 0;
+  overflow: hidden;
+  color: var(--s-ink);
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.entry-content .wp-block-latest-posts__post-date { display: block; margin: auto 0 0; padding: 10px 18px 18px; color: var(--s-ink-3); font-size: 13px; }
+/* 최신 글 칸: 워드프레스 기본 CSS(.is-grid:not(.is-layout-grid) li)보다 세게 :not(#jb) */
+/* 글이 아직 없는 카테고리는 제목째 숨긴다 (:has 는 겹쳐 쓸 수 없어 :empty) */
+.entry-content .wp-block-latest-posts:not(#jb):empty { display: none; }
+.jb-sec-head:has(+ .wp-block-latest-posts:empty) { display: none; }
+.jb-about {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 32px;
+  margin: 8px 0 24px;
+  padding: 36px 40px;
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius);
+  background: var(--s-card);
+}
+.jb-about h2 { margin: 0 0 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+.jb-about p.jb-about__text { margin: 0; color: var(--s-ink-2); font-size: 15.5px; line-height: 1.75; }
+.jb-about ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; max-width: 300px; }
+.jb-about li { margin: 0; padding: 6px 12px; border-radius: 999px; background: var(--s-paper); color: var(--s-ink-2); font-size: 13px; font-weight: 600; }
+@media (max-width: 1024px) {
+  .entry-content .wp-block-latest-posts.is-grid:not(#jb) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .jb-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 768px) {
+  .site-main:has(.jb-home-hero):not(#jb) { margin: 8px 16px 48px; }
+  .jb-home-hero { padding-top: 16px; }
+  .jb-home-hero h1 { font-size: 31px; }
+  .jb-home-hero p.jb-hero-sub { font-size: 16px; }
+  .jb-tiles { gap: 10px; margin: 24px 0 44px; }
+  .entry-content a.jb-tile { min-height: 150px; padding: 16px; }
+  .jb-tile svg { width: 64px; top: 14px; right: 12px; }
+  .jb-tile__name { font-size: 19px; }
+  .jb-tile__desc { display: none; }
+  .jb-about { grid-template-columns: 1fr; gap: 18px; padding: 26px 22px; }
+}
+@media (max-width: 600px) {
+  .entry-content .wp-block-latest-posts.is-grid:not(#jb) { grid-template-columns: 1fr; gap: 18px; }
+}
+</style>
 <section class="jb-home-hero">
   <p class="jb-eyebrow">Field notes · 산 · 길 · 여행</p>
   <h1>가 보고, 재 보고,<br>확인한 길 위의 기록</h1>
@@ -6,25 +137,25 @@
 </section>
 <nav class="jb-tiles" aria-label="카테고리">
   <a class="jb-tile jb-tile--mtn" href="/category/mountain-camping/">
-    <svg viewBox="0 0 64 40" aria-hidden="true"><path d="M2 38 22 9l9 12 8-9 23 26Z"/><path d="m17 16 5 4 4-3"/></svg>
+    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><path d="M2 38 22 9l9 12 8-9 23 26Z"/><path d="m17 16 5 4 4-3"/></svg>
     <span class="jb-tile__kicker">Mountain &amp; Camp</span>
     <strong class="jb-tile__name">산과 캠핑</strong>
     <span class="jb-tile__desc">계절 산 · 등산 코스 · 산 아래 야영장</span>
   </a>
   <a class="jb-tile jb-tile--car" href="/category/drive-car/">
-    <svg viewBox="0 0 64 40" aria-hidden="true"><path d="M4 28v-7l9-10h28l11 10h7v7Z"/><circle cx="17" cy="30" r="5"/><circle cx="47" cy="30" r="5"/><path d="M15 21h37"/></svg>
+    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><path d="M4 28v-7l9-10h28l11 10h7v7Z"/><circle cx="17" cy="30" r="5"/><circle cx="47" cy="30" r="5"/><path d="M15 21h37"/></svg>
     <span class="jb-tile__kicker">Drive &amp; Car</span>
     <strong class="jb-tile__name">드라이브·자동차</strong>
     <span class="jb-tile__desc">점검 · 신차 · 드라이브 코스</span>
   </a>
   <a class="jb-tile jb-tile--kr" href="/category/korea-travel/">
-    <svg viewBox="0 0 64 40" aria-hidden="true"><path d="M3 14q29-11 58 0"/><path d="M8 13v24M56 13v24M20 10v27M44 10v27M5 37h54M8 21h48"/></svg>
+    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><path d="M3 14q29-11 58 0"/><path d="M8 13v24M56 13v24M20 10v27M44 10v27M5 37h54M8 21h48"/></svg>
     <span class="jb-tile__kicker">Korea Travel</span>
     <strong class="jb-tile__name">Korea Travel</strong>
     <span class="jb-tile__desc">Guides for visitors · 日本語 · 中文</span>
   </a>
   <a class="jb-tile jb-tile--world" href="/category/world-travel/">
-    <svg viewBox="0 0 64 40" aria-hidden="true"><circle cx="32" cy="20" r="17"/><path d="M15 20h34M32 3c-8 9-8 25 0 34M32 3c8 9 8 25 0 34"/></svg>
+    <svg viewBox="0 0 64 40" width="92" height="58" aria-hidden="true"><circle cx="32" cy="20" r="17"/><path d="M15 20h34M32 3c-8 9-8 25 0 34M32 3c8 9 8 25 0 34"/></svg>
     <span class="jb-tile__kicker">World Travel</span>
     <strong class="jb-tile__name">World Travel</strong>
     <span class="jb-tile__desc">N-day itineraries in English</span>
