@@ -17,4 +17,5 @@ urlpatterns = [
     path("api/stage/", views.api_stage, name="api_stage"),
     path("<int:pk>/", views.site, name="site"),
     path("convert/<int:pk>/", views.convert, name="convert"),
+    path("convert/<int:pk>/hero/", views.hero_photo, name="hero_photo"),
 ]

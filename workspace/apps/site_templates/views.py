@@ -16,7 +16,8 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.db.models import Prefetch
-from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
+from django.conf import settings
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -451,7 +452,68 @@ def convert_context(placement, form=None):
         "tag_bookmarklet": paste.naver_tag_bookmarklet(),
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
+        "hero": _hero(placement.converted_body) if placement.site_category.blog.platform == Blog.Platform.WORDPRESS else None,
     }
+
+
+# 대표 사진 내려받기 (2026-10-26 사용자, 워드프레스): 대표 이미지는 미디어 라이브러리에 올린 사진만 고를 수 있어
+# 변환본의 첫 사진을 파일로 내려받아 '대표 이미지 설정 → 파일 업로드'에 끌어다 놓는다.
+_HERO_MD = re.compile(r"!\[([^\]\n]*)\]\((https?://[^)\s]+)\)")
+_HERO_IMG = re.compile(r'<img\b[^>]*?\bsrc="(https?://[^"]+)"[^>]*>')
+HERO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
+HERO_MAX = 15 * 1024 * 1024
+
+
+def _hero(text):
+    """변환본의 첫 사진 {'src', 'alt'} — 없으면 None."""
+    text = text or ""
+    md, tag = _HERO_MD.search(text), _HERO_IMG.search(text)
+    if md and (not tag or md.start() < tag.start()):
+        return {"src": md[2], "alt": md[1].strip()}
+    if tag:
+        alt = re.search(r'\balt="([^"]*)"', tag[0])
+        return {"src": tag[1], "alt": alt[1].strip() if alt else ""}
+    return None
+
+
+def _hero_name(src, pk, ext=""):
+    """내려받을 파일 이름: 주소의 파일 이름(영문·숫자만), 없으면 jinbaam-<매핑 번호>."""
+    from urllib.parse import unquote, urlsplit
+    base = unquote(urlsplit(src).path.rsplit("/", 1)[-1])
+    stem, dot, suffix = base.rpartition(".")
+    stem, suffix = (stem, "." + suffix.lower()) if dot and len(suffix) <= 4 else (base, "")
+    stem = re.sub(r"[^A-Za-z0-9_-]+", "-", stem).strip("-")[:60] or f"jinbaam-{pk}"
+    return stem + (suffix if suffix in HERO_TYPES.values() or suffix == ".jpeg" else ext or ".jpg")
+
+
+def hero_photo(request, pk):
+    """변환본 첫 사진을 파일로. 저장소의 변환그림은 서버 디스크에서, 다른 주소는 서버가 받아서 넘긴다.
+    서버가 받지 못하면 (무료 계정의 외부 접속 제한 등) 그 사진 주소로 보내 브라우저에서 저장하게 한다."""
+    placement = get_object_or_404(Placement, pk=pk)
+    hero = _hero(placement.converted_body)
+    if not hero:
+        raise Http404("변환본에 사진이 없습니다.")
+    src = hero["src"]
+    if src.startswith(prompt.FIGURE_URL):
+        from pathlib import Path
+        from urllib.parse import unquote
+        base = (Path(settings.REPO_ROOT) / prompt.FIGURE_DIR).resolve()
+        path = (Path(settings.REPO_ROOT) / unquote(src[len(prompt.FIGURE_URL):].split("?", 1)[0])).resolve()
+        if path.is_file() and base in path.parents:
+            return FileResponse(path.open("rb"), as_attachment=True, filename=_hero_name(src, pk))
+    import urllib.request
+    try:
+        req = urllib.request.Request(src, headers={"User-Agent": "Mozilla/5.0 (jb_office)"})
+        with urllib.request.urlopen(req, timeout=15) as res:
+            ctype = res.headers.get_content_type()
+            data = res.read(HERO_MAX + 1)
+        if ctype not in HERO_TYPES or len(data) > HERO_MAX:
+            raise ValueError(ctype)
+    except Exception:
+        return redirect(src)
+    resp = HttpResponse(data, content_type=ctype)
+    resp["Content-Disposition"] = f"attachment; filename=\"{_hero_name(src, pk, HERO_TYPES[ctype])}\""
+    return resp
 
 
 def _panel_context(request, post, nxt):
