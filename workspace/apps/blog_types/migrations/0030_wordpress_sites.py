@@ -86,7 +86,8 @@ ABROAD = "\n".join([
     "- 비자·입국 규정·환율은 공식 출처와 기준일. 미국·영국·호주 등 영어권 여권 기준으로 쓰고, 다르면 그렇게 적는다.",
     "- 밤밤의 한국어 글을 번역하지 않는다. 같은 도시는 밤밤과 21일 안에 겹치지 않게.",
 ])
-CONCEPTS = {"산과 캠핑": MOUNTAIN, "드라이브·자동차": CAR, "국내여행": KOREA, "해외여행": ABROAD}
+# 사이트 카테고리 = 워드프레스에 실제로 만드는 메뉴 이름 (영어 독자용 둘은 영어 이름, 2026-10-26)
+CONCEPTS = {"산과 캠핑": MOUNTAIN, "드라이브·자동차": CAR, "Korea Travel": KOREA, "World Travel": ABROAD}
 
 TEMPLATE = dict(
     tone="한국어 카테고리(산과 캠핑·드라이브·자동차)는 정보성 해요체, 짧은 문단, 풍경에 대한 감상 한 줄까지. "
@@ -118,7 +119,7 @@ def forward(apps, schema_editor):
     wp = Blog.objects.filter(platform="wordpress", deleted_at__isnull=True).first()
     if wp:
         Blog.objects.filter(pk=wp.pk).update(status="active", address=wp.address or ADDRESS, routine=True, content=CONTENT,
-                                             daily=wp.daily or len(MATERIALS))
+                                             daily=wp.daily or 1)  # 하루 편수는 사용자가 운영 화면에서 정한다
         Rule.objects.filter(blog=wp, body=OLD_CHECK, deleted_at__isnull=True).update(deleted_at=now)
         for i, body in enumerate(CHECKS, start=1):
             if not Rule.objects.filter(blog=wp, body=body, deleted_at__isnull=True).exists():
@@ -171,8 +172,9 @@ def forward(apps, schema_editor):
 
     # 3. 자동차 출시는 워드프레스
     for cat in SiteCategory.objects.filter(blog__name="black_lukey", name="출시", deleted_at__isnull=True):
-        if "·자동차 등" in cat.concept:
-            cat.concept = cat.concept.replace("·자동차 등", " 등")
+        text = cat.concept.replace("·자동차 같은", " 같은").replace("·자동차 등", " 등")
+        if text != cat.concept:
+            cat.concept = text
             cat.save(update_fields=["concept"])
 
 

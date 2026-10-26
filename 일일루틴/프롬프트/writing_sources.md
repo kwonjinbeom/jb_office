@@ -78,16 +78,6 @@
 | 외교부 해외안전여행 | https://www.0404.go.kr/ | 나라별 입국 규정·안전 공지 | 확인 전 |
 | 인천공항 | https://www.airport.kr/ | 노선·출국 혼잡·새 취항 | 확인 전 |
 
-### 동물 (2026-10-26)
-| 사이트 | 주소 | 무엇을 보나 | 읽기 |
-|---|---|---|---|
-| 국립생물자원관 | https://www.nibr.go.kr/ | 국내 생물 정보·보도자료 | 확인 전 |
-| 국립생태원 | https://www.nie.re.kr/ | 국내 생태·멸종위기종 | 확인 전 |
-| 내셔널지오그래픽 동물 | https://www.nationalgeographic.com/animals | 종별 기본 사실 | 확인 전 |
-| 사이언스데일리 동물 | https://www.sciencedaily.com/news/plants_animals/ | 새 연구 결과 (원 논문 링크) | 확인 전 |
-| 구글 스칼라 | https://scholar.google.com/ | 원 논문 확인 (초록·연도·저널) | 확인 전 |
-- 인터넷 '상식' 글·블로그는 근거로 쓰지 않는다. 숫자·연구 결과는 원 논문이나 기관 글에서, 연도·기관을 본문에 적는다.
-
 ## black_lukey (네이버)
 ### 지역 놀거리 · 축제·행사
 | 사이트 | 주소 | 무엇을 보나 | 읽기 |
@@ -133,6 +123,44 @@
 | 네이버 증권 (playwright) | https://stock.naver.com/ | 일별 시세·투자자별 매매·등락 종목 (2026-10-23 기획표: WebFetch 막힘, 브라우저로 읽힘) | 브라우저 |
 
 막힘: 뽐뿌(403) → WebSearch "뽐뿌 <검색어>". 다음 뉴스 랭킹(주소 없어짐) → 네이버 뉴스 많이 본.
+
+## 워드프레스 jinbaam.com (2026-10-26)
+### 산과 캠핑
+| 사이트 | 주소 | 무엇을 보나 | 읽기 |
+|---|---|---|---|
+| 산림청 숲에ON (100대 명산·등산로) | https://www.foresttrip.go.kr/ | 명산 정보·자연휴양림 예약 | 확인 전 |
+| 산림청 단풍·꽃 예측 | https://www.forest.go.kr/ | 단풍·봄꽃 절정 예측 | 바로 |
+| 국립공원공단 예약 | https://reservation.knps.or.kr/ | 대피소·야영장 예약 오픈일 | 확인 전 |
+| 국립공원공단 | https://www.knps.or.kr/ | 탐방로 통제·코스·탐방 예약 | 확인 전 |
+| 고캠핑 | https://www.gocamping.or.kr/ | 전국 야영장 시설·예약 (공공데이터 15101933) | 확인 전 |
+| 기상청 산악 예보 | https://www.weather.go.kr/ | 산 날씨·상고대·눈 | 바로 |
+
+### 드라이브·자동차
+| 사이트 | 주소 | 무엇을 보나 | 읽기 |
+|---|---|---|---|
+| 오피넷 | https://www.opinet.co.kr/ | 주간·시도별 기름값 (공공데이터 15163154) | 확인 전 |
+| 한국도로공사 | https://www.ex.co.kr/ | 통행료·휴게소·교통 예보 | 확인 전 |
+| 위택스 | https://www.wetax.go.kr/ | 자동차세·연납 할인 | 확인 전 |
+| 한국교통안전공단 | https://www.kotsa.or.kr/ | 자동차 검사·리콜 | 확인 전 |
+| 무공해차 통합누리집 | https://ev.or.kr/ | 전기차 보조금·충전 | 확인 전 |
+| 제조사 뉴스룸 (현대·기아·KGM·르노·쉐보레·테슬라·BMW·벤츠) | 각 사 뉴스룸 | 신차·연식 변경·가격 | 확인 전 |
+
+### 국내여행 (외국인용, 영어)
+| 사이트 | 주소 | 무엇을 보나 | 읽기 |
+|---|---|---|---|
+| VisitKorea (영문) | https://english.visitkorea.or.kr/ | 관광지·축제 영문 정보 | 확인 전 |
+| Visit Seoul | https://english.visitseoul.net/ | 서울 영문 안내 | 확인 전 |
+| 코레일 (영문) | https://www.letskorail.com/ebizbf/EbizBfTicketSearch.do | KTX 외국인 예매 | 확인 전 |
+| K-ETA | https://www.k-eta.go.kr/ | 전자여행허가·면제 국가 | 확인 전 |
+| 관광지 집중률 예측 | https://www.data.go.kr/data/15128555/openapi.do | 30일 혼잡 예측 | 확인 전 |
+
+### 해외여행 (영어 N박 N일)
+| 사이트 | 주소 | 무엇을 보나 | 읽기 |
+|---|---|---|---|
+| 각국 관광청 공식 사이트 | (그 나라) | 명소·교통·패스 | 확인 전 |
+| 미국 국무부 여행 정보 | https://travel.state.gov/ | 영어권 여권 기준 입국·안전 | 확인 전 |
+| 영국 외무부 여행 안내 | https://www.gov.uk/foreign-travel-advice | 입국 조건·안전 | 확인 전 |
+- 일본·밤밤과 겹치는 도시는 writing_topics.md 반복 규칙대로.
 
 ## memorily (커스텀 글쓰기 · AI 소식)
 ### AI 소식
