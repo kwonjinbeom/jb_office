@@ -414,3 +414,62 @@ class DraftImportTests(TestCase):
         self.client.post(url, {"keys": ["T99_시험"]})  # 두 번 가져와도 한 편
         self.assertEqual(Post.objects.filter(title="시험 원고 제목").count(), 1)
         self.assertContains(self.client.get(url), "이미 있음")
+
+
+class DraftSyncTests(TestCase):
+    """원고 폴더 ↔ 글 (2026-10-26 사용자): 같은 원고를 고치면(허브) 글도 고치고, 발행한 글이면 '수정됨' 불."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "T150_허브").mkdir()
+        self.write("이번 주 청약·공모주 달력 (10월 27일~11월 9일)", "첫 주 내용")
+        self.settings_ctx = self.settings(WRITING_DRAFTS_DIR=self.root)
+        self.settings_ctx.enable()
+
+    def tearDown(self):
+        self.settings_ctx.disable()
+        self.tmp.cleanup()
+
+    def write(self, title, line):
+        md = DRAFT_MD.replace("# 시험 원고 제목", f"# {title}").replace("첫 문단이에요.", line)
+        (self.root / "T150_허브" / "원고.md").write_text(md, encoding="utf-8")
+
+    def test_hub_edit_updates_post_and_lights_published_lamp(self):
+        from apps.blog_types.models import Placement, SiteCategory
+
+        from .views import auto_import_drafts
+        auto_import_drafts()
+        post = Post.objects.get(source="T150_허브")
+        pl = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__name="눈잎").first(), tistory_post=post,
+                                      status=Placement.Status.PUBLISHED)
+        self.write("이번 주 청약·공모주 달력 (11월 3일~11월 16일)", "둘째 주 내용")
+        self.assertEqual(auto_import_drafts(), 0)  # 제목이 바뀌어도 새 글로 생기지 않는다
+        post.refresh_from_db(), pl.refresh_from_db()
+        self.assertEqual(Post.objects.filter(source="T150_허브").count(), 1)
+        self.assertIn("둘째 주 내용", post.body)
+        self.assertTrue(post.title.startswith("이번 주 청약·공모주 달력 (11월 3일"))
+        self.assertIsNotNone(pl.changed_at)
+        self.assertTrue(pl.changed_note.startswith("제목: 이번 주 청약·공모주 달력 (10월 27일"))
+
+    def test_user_edited_post_is_not_overwritten(self):
+        from .views import auto_import_drafts
+        auto_import_drafts()
+        post = Post.objects.get(source="T150_허브")
+        post.body = "사용자가 손질한 본문"
+        post.save()
+        self.write("이번 주 청약·공모주 달력 (10월 27일~11월 9일)", "고친 원고")
+        auto_import_drafts()
+        post.refresh_from_db()
+        self.assertEqual(post.body, "사용자가 손질한 본문")
+
+    def test_old_post_gets_source_by_title(self):
+        from .views import auto_import_drafts
+        old = Post.objects.create(title="이번 주 청약·공모주 달력 (10월 27일~11월 9일)", body="그대로")
+        auto_import_drafts()
+        old.refresh_from_db()
+        self.assertEqual(old.source, "T150_허브")
+        self.assertEqual(Post.objects.count(), 1)

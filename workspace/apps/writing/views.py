@@ -89,7 +89,7 @@ def _topic_class(topic):
 
 def _draft_post(d):
     post = Post(stage=Stage.TEMP, title=d.title, body=d.body, tags=d.tags, summary=d.summary, target=d.site,
-                custom=d.custom)
+                custom=d.custom, source=d.key, source_sig=draft_sig(d.title, d.body, d.tags, d.summary))
     _classify_draft(post, d)
     post.save()
     post.created_at = drafts_mod.written_at(d)  # 만든 날 = 원고를 쓴 날 (가져온 날이 아니라)
@@ -140,6 +140,43 @@ def fill_classes(drafts):
                 post.save(update_fields=["bt_category", "bt_type", "bt_sub"])
 
 
+def draft_sig(title, body, tags, summary):
+    """원고에서 글로 옮기는 칸의 지문 (sync_sources)."""
+    import hashlib
+    return hashlib.sha1("".join((title, body, tags, summary)).encode("utf-8")).hexdigest()
+
+
+def sync_sources(drafts):
+    """원고 폴더 ↔ 글 (2026-10-26 사용자: 허브처럼 같은 원고를 고치면 글도 고치고, 발행한 글이면 '수정됨' 불을 켠다).
+
+    처음에는 같은 제목의 글에 원고 폴더를 이어 붙인다. 그 뒤 원고의 지문이 바뀌면:
+    글이 마지막으로 옮긴 그대로면 제목·본문·태그·소개를 새 원고로 고치고, 사용자가 손질해 다르면 덮어쓰지 않고 불만 켠다.
+    고친 글 수를 돌려준다."""
+    from apps.blog_types import sites
+
+    by_title, by_key = {d.title: d for d in drafts}, {d.key: d for d in drafts}
+    for post in Post.all_objects.filter(source="", title__in=list(by_title)):
+        d = by_title[post.title]
+        Post.all_objects.filter(pk=post.pk).update(source=d.key, source_sig=draft_sig(d.title, d.body, d.tags, d.summary))
+    changed = 0
+    for post in Post.objects.filter(source__in=list(by_key)).prefetch_related("placements"):
+        d = by_key[post.source]
+        sig = draft_sig(d.title, d.body, d.tags, d.summary)
+        if sig == post.source_sig:
+            continue
+        untouched = draft_sig(post.title, post.body, post.tags, post.summary) == post.source_sig
+        note = f"제목: {post.title} → {d.title}" if d.title != post.title else "원고 본문이 바뀜"
+        if untouched:
+            post.title, post.body, post.tags, post.summary = d.title, d.body, d.tags, d.summary
+        else:
+            note = "원고가 바뀌었지만 글을 손질해 둬서 덮어쓰지 않음 — 원고를 보고 직접 고친다"
+        post.source_sig = sig
+        post.save()
+        sites.mark_changed(post, note)
+        changed += 1
+    return changed
+
+
 def auto_import_drafts():
     """T88 이후 원고.md 중 아직 없는 것을 임시글으로 가져온다. 글 관리를 열 때 부른다.
 
@@ -152,10 +189,12 @@ def auto_import_drafts():
     fill_targets(drafts)
     fill_custom(drafts)
     fill_classes(drafts)
+    sync_sources(drafts)
+    sources = set(Post.all_objects.exclude(source="").values_list("source", flat=True))  # 제목이 바뀐 허브가 새 글로 생기지 않게
     added = 0
     for d in drafts:
         number = d.code[1:]
-        if number.isdigit() and int(number) >= AUTO_IMPORT_FROM and d.title not in existing:
+        if number.isdigit() and int(number) >= AUTO_IMPORT_FROM and d.title not in existing and d.key not in sources:
             _draft_post(d)
             existing.add(d.title)
             added += 1

@@ -51,6 +51,10 @@ class Post(TrashableModel):
     # 어느 계정(블로그)을 겨냥해 쓴 글인지 (2026-10-16 사용자: 글 관리에 '타겟' 칸). 원고.md 의 `사이트:` 줄에서 온다.
     target = models.CharField("사이트", max_length=60, blank=True, help_text="이 글을 올릴 사이트 이름 (예: memorily, 눈잎)")
     custom = models.BooleanField("커스텀", default=False, help_text="일일루틴 하루 분량이 아닌 글 (고정 주제·추가 실행·따로 요청한 글)")
+    # 이 글을 만든 원고 폴더 (2026-10-26: 허브처럼 같은 원고를 고치면 글도 고친다 — views.sync_sources).
+    # source_sig 는 마지막으로 원고에서 옮긴 제목·본문·태그·소개의 지문. 글이 이 지문과 다르면 사용자가 손질한 것이라 덮어쓰지 않는다.
+    source = models.CharField("원고 폴더", max_length=120, blank=True, db_index=True)
+    source_sig = models.CharField("원고 지문", max_length=64, blank=True)
     created_at = models.DateTimeField("만든 날", auto_now_add=True)
     updated_at = models.DateTimeField("수정일", auto_now=True)
 

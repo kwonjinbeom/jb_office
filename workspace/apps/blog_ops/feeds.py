@@ -131,6 +131,26 @@ def align_dates(blog, items) -> int:
     return fixed
 
 
+def clear_changed(blog, items) -> int:
+    """'수정됨' 불 끄기 (2026-10-26 사용자): 발행 뒤 제목이 바뀐 넣은 곳은 RSS 에 새 제목이 보이면 다시 붙여 넣은 것으로 본다.
+    본문만 바뀐 것은 RSS 로 알 수 없어 사용자가 끈다 (게시글 관리). 끈 수를 돌려준다."""
+    from apps.blog_types import sites
+    from apps.blog_types.models import Placement
+
+    seen = {_norm(title) for title, _link, _when in items}
+    done = 0
+    for pl in (Placement.objects.filter(site_category__blog=blog, status=Placement.Status.PUBLISHED, changed_at__isnull=False)
+               .select_related("tistory_post", "naver_post")):
+        if not pl.changed_note.startswith("제목:"):
+            continue
+        old = _norm(pl.changed_note.split(":", 1)[1].split("→", 1)[0])
+        new = {_norm(t) for t in (pl.converted_title, pl.post.title if pl.post else "") if t.strip()} - {old}
+        if new & seen:
+            sites.clear_changed(pl)
+            done += 1
+    return done
+
+
 def auto_publish(blog, items) -> int:
     """RSS 에 올라온 글과 제목(변환 제목 또는 글 제목)이 같은 이 사이트의 미발행 '넣은 곳'을 발행 완료로.
     넣은 곳이 모두 발행 완료면 글도 발행 완료 (sites.sync_post). 넣은 곳 없이 사이트만 이 사이트로 정한 발행예정글도.
@@ -152,6 +172,7 @@ def auto_publish(blog, items) -> int:
         for post in model.objects.filter(stage="post", publish_status=model.Publish.TODO, target=blog.name, placements__isnull=True):
             alone.setdefault(_norm(post.title), []).append(post)
     done = 0
+    clear_changed(blog, items)
     for title, _link, when in items:
         key = _norm(title)
         for pl in waiting.pop(key, []):

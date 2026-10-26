@@ -481,7 +481,7 @@ class YudiLookTests(TestCase):
         from .views import _render_for
         daily = SiteCategory.objects.get(blog__name="눈잎", name="일상")
         self.assertEqual(daily.look, "yudi")
-        self.assertIn("제품 소개 글 모양", daily.concept)
+        self.assertNotIn("제품 소개 글 모양", daily.concept)  # 0028: 제품소개는 지웠다 (2026-10-26 사용자), 화면 모양은 둔다
         self.assertIn("화면 모양", daily.concept)
         body = "## 1. 어떤 가습기가 좋을까요?\n\n### 가습기 A\n\n::: 제품 | 가습기 A\n💰 가격 | 59,000원\n:::\n"
         post = Post.objects.create(title="가습기", body="원문", stage="post")

@@ -97,3 +97,21 @@ def sync_post(post):
     statuses = list(post.placements.values_list("status", flat=True))
     if statuses:
         _set_post(post, all(s == Placement.Status.PUBLISHED for s in statuses))
+
+
+def mark_changed(post, note):
+    """발행한 글이 바뀜 (2026-10-26 사용자: 게시글 관리의 '수정됨' 불). 발행한 넣은 곳은 불을 켜고,
+    변환만 해 둔 미발행 넣은 곳은 미변환으로 돌린다 (지난 변환본은 남는다 — 다시 변환하면 덮어쓴다)."""
+    now = timezone.now()
+    for pl in post.placements.all():
+        if pl.status == Placement.Status.PUBLISHED:
+            pl.changed_at, pl.changed_note = now, note[:200]
+            pl.save(update_fields=["changed_at", "changed_note", "updated_at"])
+        elif pl.convert_status in (Placement.Convert.DONE, Placement.Convert.CHECKED):
+            pl.convert_status = Placement.Convert.NONE
+            pl.save(update_fields=["convert_status", "updated_at"])
+
+
+def clear_changed(placement):
+    placement.changed_at, placement.changed_note = None, ""
+    placement.save(update_fields=["changed_at", "changed_note", "updated_at"])

@@ -1951,7 +1951,7 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .wr-fit { table-layout: fixed; width: 100%; min-width: 860px; }  /* 좁은 화면에서도 제목 칸이 남게 (넘치면 가로로 민다) */
 .wr-fit th:first-child { width: 40px; }
 .wr-fit .wr-c-site { width: 108px; } .wr-fit .wr-c-cat { width: 168px; } .wr-fit .wr-c-cv { width: 112px; }
-.wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 150px; }
+.wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 150px; } .wr-fit .wr-c-chg { width: 84px; }
 .wr-fit .wr-site-pick select { min-width: 0; }
 .wr-fit td { overflow: hidden; }
 .wr-fit .status-seg { flex-wrap: nowrap; white-space: nowrap; }
@@ -2059,3 +2059,14 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .ss-hand-table .input { width: 120px; text-align: right; }
 .ss-hand-foot { display: flex; }
 @media (max-width: 900px) { .ss-table { min-width: 680px; } .ss-page > .card { overflow-x: auto; } }
+
+/* 게시글 관리 › 수정됨 불 (2026-10-26 사용자): 발행한 뒤 글이 바뀌면 켜진다. 다시 붙여 넣었으면 눌러서 끈다 */
+.pl-chg { display: flex; align-items: center; min-height: 22px; }
+.pl-chg + .pl-chg { margin-top: 2px; }
+.pl-lamp { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--panel); color: var(--text-3); font: inherit; font-size: 12px; white-space: nowrap; }
+.pl-lamp::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); }
+.pl-lamp.on { border-color: var(--warn); background: var(--warn-weak); color: var(--warn); cursor: pointer; }
+.pl-lamp.on::before { background: var(--warn); }
+.pl-lamp.on:hover { background: var(--panel); }
+

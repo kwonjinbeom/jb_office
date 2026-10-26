@@ -1,11 +1,12 @@
-"""사이트 정리 (2026-10-26 사용자): 제품소개 빼기 · 밤밤 시황 노트 · 눈잎 동물 · 첫 4주 하루 1편.
+"""사이트 정리 (2026-10-26 사용자): 제품소개 빼기 · 밤밤 시황 노트 · 눈잎 동물.
 
-1. 밤밤 › 상품 추천 · 그 외(제품소개) 소재를 휴지통으로. 그 소재의 글(글 관리)과 그 글을 넣은 곳(매핑)도 함께 —
+1. 밤밤 › 상품 추천 · 그 외(제품소개) 소재를 휴지통으로. 눈잎 › 일상 카테고리 컨셉의 '제품 소개 글 모양'(0025)도 뺀다
+   (화면 모양 '유디 메모지'는 둔다 — 사용자가 직접 쓰는 일상 글). 그 소재의 글(글 관리)과 그 글을 넣은 곳(매핑)도 함께 —
    블로그에서는 사용자가 이미 지웠다. 7일 안에는 휴지통에서 되돌릴 수 있다.
 2. 밤밤 코스피 · 나스닥 → '시황 노트' 한 소재 (사용자가 아침에 돌린다: 전 거래일 코스피 마감 + 간밤 나스닥 마감을 한 편에).
    코스피 소재 이름을 바꾸고, 나스닥 글은 시황 노트로 옮긴 뒤 나스닥 소재를 휴지통으로. 밤밤 › 주식 카테고리 컨셉의 글 모양을 시황 노트로.
 3. 눈잎에 '동물' 소재 + 사이트 카테고리 '동물' (티스토리 메뉴는 사용자가 만든다).
-4. 사이트 컨셉 · 하루 편수 · 말투: 밤밤 하루 1편(첫 4주), 컨셉에서 상품 추천을 빼고, 눈잎 컨셉에 동물, 감상 규칙 한 줄.
+4. 사이트 컨셉 · 말투: 컨셉에서 상품 추천을 빼고, 눈잎 컨셉에 동물, 감상 규칙 한 줄. 하루 편수는 사용자가 정한다 (바꾸지 않는다).
 이름으로 찾아 있는 것만 손댄다. 서버에서 이미 바꿔 둔 값은 건너뛴다.
 """
 from django.db import migrations
@@ -61,13 +62,25 @@ ANIMAL_CONCEPT = "\n".join([
 BLOG_CONTENT = {
     "밤밤": "시황 노트(전 거래일 코스피 + 간밤 나스닥, 아침 한 편) · 해외여행(경비·패스 계산형)",
 }
-DAILY_NOTE = "첫 4주(11/23까지) 하루 1편 (2026-10-26)"
 TONE = {  # 사이트 → (원래 값 그대로일 때 바꿀 값, 없으면 뒤에 덧붙일 한 줄)
     "밤밤": ("정보성 해요체, 눈잎보다 간결하게.",
             "정보성 해요체, 담백하게 — 감상 없이 숫자와 까닭으로. 1인칭은 끝의 '내가 보는 다음 장'에서만."),
     "눈잎": ("", "동물 카테고리만 감상·이모지를 가볍게 (writing_site_눈잎.md '감상'). 공고·정책·공모주는 담백하게."),
     "black_lukey": ("", "갈 곳·작품마다 감상 한두 줄과 짧은 줄바꿈은 좋다 (writing_site_black_lukey.md '감상'). 겪은 척은 하지 않는다."),
 }
+
+
+def _drop_daily_products(SiteCategory):
+    """눈잎 › 일상: 0025 가 넣은 제품 소개 짜임을 뺀다. 남는 것은 '사용자가 직접 쓰는 일상 글' + 화면 모양."""
+    from importlib import import_module
+    old = import_module("apps.blog_types.migrations.0025_nunip_daily_yudi")
+    for cat in SiteCategory.objects.filter(blog__name="눈잎", name="일상", parent__isnull=True, deleted_at__isnull=True):
+        if old.SHAPE not in cat.concept:
+            continue
+        gap = chr(10) * 2  # 단락 사이
+        text = cat.concept.replace(old.CONCEPT.split(gap, 1)[0], old.OLD).replace(old.SHAPE, "")
+        cat.concept = gap.join(part.strip() for part in text.split(gap) if part.strip())
+        cat.save(update_fields=["concept"])
 
 
 def _active(Category, section, name):
@@ -135,18 +148,18 @@ def forward(apps, schema_editor):
                 _trash_posts(apps, cat, now)
                 FixedTopic.objects.filter(category=cat).update(category=None)
                 _trash_category(apps, cat, now)
-        kospi, nasdaq = _active(Category, bam, "코스피"), _active(Category, bam, "나스닥")  # 2. 시황 노트
-        market = kospi or nasdaq
+        olds = [c for c in (_active(Category, bam, "코스피"), _active(Category, bam, "나스닥")) if c]  # 2. 시황 노트
+        market = _active(Category, bam, "시황 노트") or (olds.pop(0) if olds else None)
         if market:
             Category.objects.filter(pk=market.pk).update(name="시황 노트", direction=MARKET_DIRECTION, question=MARKET_QUESTION)
-            other = nasdaq if market == kospi else None
-            if other:
+            for other in olds:  # 나머지(나스닥) 글은 시황 노트로 옮기고 소재는 휴지통
                 for label in ("writing", "naver_writing"):
                     apps.get_model(label, "Post").objects.filter(bt_category=other).update(bt_category=market, bt_type=None, bt_sub=None)
                 FixedTopic.objects.filter(category=other).update(category=market)
                 _trash_category(apps, other, now)
         _renumber(Category, bam)
         Section.objects.filter(pk=bam.pk).update(note=BLOG_CONTENT["밤밤"])
+    _drop_daily_products(SiteCategory)
     for cat in SiteCategory.objects.filter(blog__name="밤밤", name="주식", deleted_at__isnull=True):
         if "시황 노트 (2026-10-26" in cat.concept:
             continue
@@ -166,8 +179,7 @@ def forward(apps, schema_editor):
         if "동물" not in blog.content:
             Blog.objects.filter(pk=blog.pk).update(content=f"{blog.content} · 동물(신기한 이야기)".strip(" ·")[:200])
 
-    for blog in Blog.objects.filter(name="밤밤", deleted_at__isnull=True):  # 4. 컨셉 · 하루 편수
-        Blog.objects.filter(pk=blog.pk).update(content=BLOG_CONTENT["밤밤"], daily=1, daily_note=DAILY_NOTE)
+    Blog.objects.filter(name="밤밤", deleted_at__isnull=True).update(content=BLOG_CONTENT["밤밤"])  # 4. 컨셉
     for name, (old, new) in TONE.items():
         for tpl in SiteTemplate.objects.filter(blog__name=name):
             if old and tpl.tone.strip() == old:

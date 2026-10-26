@@ -238,7 +238,7 @@ def published(request):
     사이트 → 카테고리 → 발행일 순. 조건은 검색 · 오늘(오늘 발행한 글) · 사이트 · 전체만."""
     request.nav_key = "posts_published"
     get = request.GET
-    q, today = get.get("q", "").strip(), get.get("today") == "1"
+    q, today, changed = get.get("q", "").strip(), get.get("today") == "1", get.get("changed") == "1"
     p = {"stage": "done", "sel": "", "kind": None, "obj": None, "view": "", "site": "", "q": q, "today": False, "custom": False}
     posts, _ = _collect(p, prefetch=True)
     if today:
@@ -247,10 +247,17 @@ def published(request):
     site = get.get("site", "") if get.get("site", "") in names else ""
     if site:
         posts = [x for x in posts if site_of(x) == site]
+
+    def is_changed(x):  # 수정됨 불 (2026-10-26 사용자): 넣은 곳 중 하나라도 발행 뒤 바뀜
+        return any(pl.changed_at for pl in x.placements.all())
+
+    changed_count = sum(1 for x in posts if is_changed(x))
+    if changed:
+        posts = [x for x in posts if is_changed(x)]
     base = reverse("posts:published")
 
     def url(**override):
-        vals = {"q": q, "today": "1" if today else "", "site": site, **override}
+        vals = {"q": q, "today": "1" if today else "", "site": site, "changed": "1" if changed else "", **override}
         query = urlencode({k: v for k, v in vals.items() if v})
         return f"{base}?{query}" if query else base
 
@@ -266,10 +273,10 @@ def published(request):
         first.group_head = (label, count)
     return render(request, "blog_types/posts_published.html", {
         "page_title": "게시글 관리",
-        "posts": posts, "q": q, "today": today, "site_filter": site,
-        "today_url": url(today="" if today else "1"),
+        "posts": posts, "q": q, "today": today, "site_filter": site, "changed": changed, "changed_count": changed_count,
+        "today_url": url(today="" if today else "1"), "changed_url": url(changed="" if changed else "1"),
         "site_buttons": [{"name": n, "count": by_site[n], "on": n == site, "url": url(site="" if n == site else n)} for n in names],
-        "all_url": base, "filtered": bool(q or today or site),
+        "all_url": base, "filtered": bool(q or today or site or changed),
         "publish_choices": PUBLISH_SHORT,
     })
 
