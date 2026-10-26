@@ -46,7 +46,7 @@
       <button type="button" class="btn ghost sm st-solo-btn" data-st-solo><span class="st-solo-off">원문 접기</span><span class="st-solo-on">원문 펴기</span></button></div>
     <div class="card-body wr-article st-preview st-converted{% if is_naver %} st-naver{% elif flat %} st-flat{% endif %}">
       {% if converted_html %}
-      <h2 class="st-ptitle">{{ pl.converted_title|default:post.title }}</h2>
+      <h2 class="st-ptitle">{{ title_copy }}</h2>
       {{ converted_html|safe }}
       {% if pl.converted_tags %}<p class="st-ptags">{{ tags_copy }}</p>{% endif %}
       {% else %}
@@ -81,7 +81,7 @@
   </form>
 </section>
 <textarea id="st-request-{{ pl.pk }}" hidden>{{ request_text }}</textarea>
-<textarea id="st-title-{{ pl.pk }}" hidden>{{ pl.converted_title|default:post.title }}</textarea>
+<textarea id="st-title-{{ pl.pk }}" hidden>{{ title_copy }}</textarea>
 <textarea id="st-paste-{{ pl.pk }}" hidden>{{ paste_html }}</textarea>
 <textarea id="st-html-{{ pl.pk }}" hidden>{{ clean_html }}</textarea>
 <textarea id="st-raw-{{ pl.pk }}" hidden>{{ pl.converted_body }}</textarea>
