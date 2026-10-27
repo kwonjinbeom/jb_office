@@ -1951,7 +1951,7 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .wr-fit { table-layout: fixed; width: 100%; min-width: 860px; }  /* 좁은 화면에서도 제목 칸이 남게 (넘치면 가로로 민다) */
 .wr-fit th:first-child { width: 40px; }
 .wr-fit .wr-c-site { width: 108px; } .wr-fit .wr-c-cat { width: 168px; } .wr-fit .wr-c-cv { width: 112px; }
-.wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 150px; } .wr-fit .wr-c-chg { width: 84px; }
+.wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 150px; } .wr-fit .wr-c-chg { width: 84px; } .wr-fit .wr-c-made { width: 96px; }
 .wr-fit .wr-site-pick select { min-width: 0; }
 .wr-fit td { overflow: hidden; }
 .wr-fit .status-seg { flex-wrap: nowrap; white-space: nowrap; }
