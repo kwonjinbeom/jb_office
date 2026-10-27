@@ -54,11 +54,17 @@ class PostPipelineTests(TestCase):
         post.refresh_from_db()
         self.assertEqual(post.stage, Stage.REVIEW)
 
-    def test_cannot_skip_a_screen(self):
+    def test_temp_jumps_to_post_but_not_back(self):
+        """임시글 → 발행예정글은 검토 없이 바로 (2026-10-27 사용자). 거꾸로는 한 칸씩"""
         post = Post.objects.create(title="글")
+        res = self.client.get(post.get_absolute_url())
+        self.assertContains(res, 'name="to" value="post"')
         self.client.post(reverse("writing:move"), {"pk": post.pk, "to": "post"})
         post.refresh_from_db()
-        self.assertEqual(post.stage, Stage.TEMP)
+        self.assertEqual(post.stage, Stage.POST)
+        self.client.post(reverse("writing:move"), {"pk": post.pk, "to": "temp"})
+        post.refresh_from_db()
+        self.assertEqual(post.stage, Stage.POST)
 
     def test_bulk_move(self):
         a = Post.objects.create(title="가")
