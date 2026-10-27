@@ -2,7 +2,7 @@
 /**
  * Plugin Name: jinbaam 좋아요·공유
  * Description: 글 끝에 좋아요(로그인 없이 한 번)와 공유 줄. 파일 하나, 외부 서비스·추적 없음. 좋아요 수는 글 정보(_jb_likes)에 둔다.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: jinbaam
  * License: GPL-2.0-or-later
  *
@@ -71,11 +71,12 @@ add_filter('the_content', function ($html) {
     $title = rawurlencode(wp_strip_all_tags(get_the_title($id)));
     $img = get_the_post_thumbnail_url($id, 'large');
     $t = $en
-        ? ['like' => 'Like', 'share' => 'Share', 'copy' => 'Copy link', 'done' => 'Copied']
-        : ['like' => '좋아요', 'share' => '공유', 'copy' => '링크 복사', 'done' => '복사했어요'];
+        ? ['like' => 'Like', 'share' => 'Share', 'copy' => 'Copy link', 'done' => 'Copied', 'more' => 'More']
+        : ['like' => '좋아요', 'share' => '공유', 'copy' => '링크 복사', 'done' => '복사했어요', 'more' => '카톡·더보기'];
     $links = [
         'Facebook' => "https://www.facebook.com/sharer/sharer.php?u={$url}",
         'X' => "https://twitter.com/intent/tweet?url={$url}&text={$title}",
+        'LINE' => "https://social-plugins.line.me/lineit/share?url={$url}",
     ];
     if ($img) {
         $links['Pinterest'] = "https://www.pinterest.com/pin/create/button/?url={$url}&media=" . rawurlencode($img) . "&description={$title}";
@@ -91,6 +92,7 @@ add_filter('the_content', function ($html) {
         . '<button type="button" class="jb-like" aria-pressed="false">' . $heart . '<span>' . esc_html($t['like']) . '</span>'
         . '<b class="jb-like-n">' . ($count > 0 ? $count : '') . '</b></button>'
         . '<div class="jb-share-row"><span class="jb-share-label">' . esc_html($t['share']) . '</span>' . $share
+        . '<button type="button" class="jb-share jb-more" hidden data-title="' . esc_attr(wp_strip_all_tags(get_the_title($id))) . '">' . esc_html($t['more']) . '</button>'
         . '<button type="button" class="jb-share jb-copy" data-url="' . esc_url(get_permalink($id)) . '" data-done="' . esc_attr($t['done']) . '">'
         . esc_html($t['copy']) . '</button></div></div>';
 }, 20);
@@ -118,6 +120,7 @@ add_action('wp_footer', function () {
 .jb-share{padding:0;border:0;background:none;color:var(--jr-ink);font-size:13.5px;text-decoration:none;border-bottom:1px solid var(--jr-line)}
 .jb-share:hover,.jb-share:focus{color:var(--jr-accent);border-bottom-color:var(--jr-accent)}
 .jb-copy.done{color:var(--jr-accent)}
+.jb-react [hidden]{display:none}
 </style>
 <script id="jb-react-js">
 (function () {
@@ -142,6 +145,12 @@ add_action('wp_footer', function () {
     try { localStorage.setItem(key, "1"); } catch (e) {}
     if (window.fetch) fetch(api, { method: "POST" }).then(function (r) { return r.json(); }).then(function (d) { show(d.count, true); }).catch(function () {});
   });
+  // 카카오톡·인스타그램은 웹 공유 링크가 없다 → 휴대폰 공유 창 (2026-10-28 사용자). 공유 창이 없는 PC 에서는 버튼을 숨긴 채 둔다
+  var more = box.querySelector(".jb-more"), link = box.querySelector(".jb-copy").getAttribute("data-url");
+  if (navigator.share) {
+    more.hidden = false;
+    more.addEventListener("click", function () { navigator.share({ title: more.getAttribute("data-title"), url: link }).catch(function () {}); });
+  }
   var copy = box.querySelector(".jb-copy");
   copy.addEventListener("click", function () {
     var url = copy.getAttribute("data-url"), label = copy.textContent;
