@@ -372,18 +372,20 @@ class SiteStatsTests(TestCase):
         self.assertEqual((tile["visitors"], tile["views"], tile["source"]), (12, 30, "GA4"))
         self.assertEqual(res.context["total"]["visitors"], 26)
         self.assertEqual(len(res.context["chart"]["cols"]), 7)
-        self.assertContains(res, "black_lukey~")  # 막대 말풍선 자료
-        col = next(c for c in res.context["chart"]["cols"] if c["day"] == y)
-        self.assertEqual((col["total"], len(col["segs"])), (22, 2))  # 그날 막대에 두 사이트를 쌓는다
+        self.assertContains(res, "black_lukey~")  # 말풍선 자료
+        # 전체는 꺾은선 — 빈 날은 앞뒤를 잇는다 (점만 남지 않게)
+        self.assertEqual(res.context["chart"]["kind"], "lines")
+        line = next(l for l in res.context["chart"]["lines"] if l["name"] == "black_lukey")
+        self.assertEqual(len(line["points"].split()), 2)
         self.assertEqual([p["title"] for p in res.context["top"]], ["교토 단풍"])  # 첫 화면·카테고리는 뺀다
         self.assertEqual(res.context["top"][0]["url"], self.tistory.address.rstrip("/") + "/7")
         self.assertEqual([(c["name"], c["pct"]) for c in res.context["channels"]], [("검색", 75), ("직접", 25)])
         # 색은 사이트 순서로 고정: 운영 중이 아닌 사이트를 빼도 같은 색
         colors = {t["blog"].pk: t["color"] for t in res.context["tiles"]}
         self.assertEqual(len(set(colors.values())), len(colors))
-        # 사이트 칸을 누르면 그 사이트만 (막대 · 많이 본 글 · 어디서 왔나)
+        # 사이트 칸을 누르면 그 사이트만 — 막대 (많이 본 글 · 어디서 왔나도 그 사이트)
         res = self.client.get(reverse("blog_ops:stats"), {"site": self.naver.pk})
-        self.assertEqual(res.context["selected"], self.naver)
+        self.assertEqual((res.context["selected"], res.context["chart"]["kind"]), (self.naver, "bars"))
         self.assertEqual(next(c for c in res.context["chart"]["cols"] if c["day"] == y)["total"], 10)
         self.assertEqual((res.context["top"], res.context["channels"]), ([], []))
         self.assertContains(res, "네이버는 GA4 를 붙일 수 없어")
