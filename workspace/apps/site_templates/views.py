@@ -478,7 +478,9 @@ def convert_context(placement, form=None):
     from apps.writing.render import render_body
     conv_html, rich, plain, clean = (_render_for(placement, placement.converted_body) if placement.converted_body
                                      else ("", "", "", ""))
-    naver = placement.site_category.blog.platform == Blog.Platform.NAVER
+    platform = placement.site_category.blog.platform
+    naver = platform == Blog.Platform.NAVER
+    one_shot = rich and platform in (Blog.Platform.TISTORY, Blog.Platform.NAVER, Blog.Platform.BLOGGER)  # 한 번에 넣기
     return {
         "pl": placement, "blog": placement.site_category.blog, "post": post,
         "form": form or ConvertForm(instance=placement),
@@ -488,6 +490,8 @@ def convert_context(placement, form=None):
         "flat": placement.site_category.blog.platform in (Blog.Platform.TISTORY, Blog.Platform.BLOGGER),  # 빈 줄로 간격
         "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if naver else [],
         "tag_bookmarklet": paste.naver_tag_bookmarklet(),
+        "paste_all": paste.paste_all(placement.converted_title or post.title, rich, _tags_for(placement)) if one_shot else "",
+        "paste_bookmarklet": paste.paste_bookmarklet() if one_shot else "",
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
         "hero": _hero(placement.converted_body) if placement.site_category.blog.platform == Blog.Platform.WORDPRESS else None,

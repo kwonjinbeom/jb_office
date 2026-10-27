@@ -29,7 +29,7 @@ PLATFORMS = {
             {"kind": "rich", "label": "본문 (서식 그대로)", "msg": "본문을 서식 그대로 복사했습니다. 네이버 블로그 본문에 붙여넣으세요.",
              "hint": "스마트에디터 ONE 본문에 Ctrl+V"},
         ],
-        "tags": "발행 창의 태그 칸 (붙여넣기로는 한 태그로 붙는다 → 아래 '네이버 태그 넣기' 북마크나 태그 하나씩 복사 + Enter)",
+        "tags": "발행 창의 태그 칸 (붙여넣기로는 한 태그로 붙는다 → '블로그 넣기' 북마크나 태그 하나씩 복사 + Enter)",
         "after": "맨 위 결론 인용은 네이버 '따옴표' 인용구로 바뀐다 (그대로 둔다) · 소제목 줄을 '소제목'으로 다시 지정 · 찾아 넣은 사진은 그대로 옮겨진다 · 남은 사진 자리에 직접 업로드(빈 1칸 표 지우기) · 코드는 소스코드 칸에 · "
                  "지도: 정보 카드의 📍 장소 이름을 에디터 '장소' 버튼으로 검색해 그 단락 아래에 넣기 (붙여넣기로는 지도 칸이 생기지 않는다) · "
                  "스티커·링크 카드는 에디터에서 · 본문에 의도치 않은 #태그 없는지",
@@ -105,6 +105,84 @@ key('keydown');key('keypress');key('keyup');await new Promise(function(r){setTim
 
 
 def naver_tag_bookmarklet():
+    return _bookmarklet(NAVER_TAG_JS)
+
+
+def _bookmarklet(source):
     from urllib.parse import quote
-    js = " ".join(line.strip() for line in NAVER_TAG_JS.splitlines())
+    js = " ".join(line.strip() for line in source.splitlines())
     return "javascript:" + quote(js, safe="()[]{};:,.'=!&|<>?+-*/_~@$^")
+
+
+# 한 번에 넣기 (2026-10-27 사용자: 복사 버튼 하나 + 북마크 하나로 제목·본문·태그를). '한 번에 복사'가 클립보드 글자칸에
+# ALL_MARK + {title, html, tags} 를, 서식칸에 본문 HTML 을 담는다 (북마크가 안 되면 네이버 본문은 Ctrl+V 로 그대로 붙는다).
+# 북마크 하나가 사이트를 보고 나눈다. 태그가 따로 있는 네이버(발행 창)·블로거(라벨)는 그 칸을 누르고 같은 북마크를 한 번 더.
+# - 티스토리: 제목 칸 · 본문(기본모드 TinyMCE setContent — HTML 모드에 붙이고 돌아온 것과 같다) · 태그 칸에 하나씩 Enter
+# - 블로거: 제목 칸 · HTML 보기(CodeMirror)에 본문. 라벨 칸을 누르고 다시 누르면 라벨을 쉼표로
+# - 네이버: 스마트에디터 ONE 제목·본문에 붙여넣기 이벤트 (PC 에서 못 열어 본 화면 — 안 되면 알리고 Ctrl+V 로).
+#   발행 창 태그 칸을 누르고 다시 누르면 태그를 하나씩 Enter
+ALL_MARK = "JBPASTE1\n"
+PASTE_JS = """(async()=>{
+var MARK='JBPASTE1';
+function act(d){var a=d.activeElement;while(a&&a.tagName==='IFRAME'){try{d=a.contentDocument;a=d.activeElement;}catch(e){break;}}return a;}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function note(m){var b=document.createElement('div');b.textContent=m;b.style.cssText='position:fixed;z-index:2147483647;left:50%;top:16px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25)';document.body.appendChild(b);setTimeout(function(){b.remove();},4000);}
+function setVal(el,v){var p=Object.getPrototypeOf(el);el.focus();Object.getOwnPropertyDescriptor(p,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
+async function enterTags(el,tags){var w=el.ownerDocument.defaultView,set=Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype,'value').set;
+function key(type){var ev=new w.KeyboardEvent(type,{key:'Enter',code:'Enter',bubbles:true,cancelable:true});
+Object.defineProperty(ev,'keyCode',{get:function(){return 13;}});Object.defineProperty(ev,'which',{get:function(){return 13;}});el.dispatchEvent(ev);}
+for(var i=0;i<tags.length;i++){el.focus();set.call(el,tags[i]);el.dispatchEvent(new w.Event('input',{bubbles:true}));
+key('keydown');key('keypress');key('keyup');await wait(150);}}
+var raw='';try{raw=await navigator.clipboard.readText();}catch(e){}
+var data=null;if(raw.indexOf(MARK)===0){try{data=JSON.parse(raw.slice(MARK.length));}catch(e){}}
+var tags=data?data.tags:raw.split(/[#,\\n]+/).map(function(t){return t.replace(/\\s+/g,'');}).filter(Boolean);
+tags=tags.slice(0,30);
+var host=location.hostname,el=act(document);
+function need(){if(!data){alert('변환 화면에서 「한 번에 복사」를 먼저 누른 뒤 다시 눌러 주세요.');return true;}return false;}
+if(/(^|\\.)tistory\\.com$/.test(host)){
+if(need())return;var t=document.querySelector('#post-title-inp');
+if(!t||!window.tinymce||!tinymce.activeEditor){alert('티스토리 글쓰기 화면에서 눌러 주세요.');return;}
+if([].some.call(document.querySelectorAll('.CodeMirror'),function(c){return c.offsetParent;})){alert('기본모드로 바꾼 뒤 다시 눌러 주세요.');return;}
+setVal(t,data.title);var ed=tinymce.activeEditor;ed.setContent(data.html);ed.undoManager.add();ed.fire('change');ed.setDirty(true);
+var tg=document.querySelector('#tagText');if(tg&&tags.length)await enterTags(tg,tags);
+note('제목·본문·태그 '+tags.length+'개를 넣었습니다. 사진·대표 이미지를 확인하세요.');return;}
+if(/(^|\\.)blogger\\.com$/.test(host)){
+if(need())return;
+if(el&&el.tagName==='TEXTAREA'&&/라벨|label/i.test((el.placeholder||'')+(el.getAttribute('aria-label')||''))){
+el.select();document.execCommand('insertText',false,tags.join(', '));note('라벨 '+tags.length+'개를 넣었습니다.');return;}
+var bt=document.querySelector('input[aria-label="제목"],input[aria-label="Title"]');
+var cm=[].filter.call(document.querySelectorAll('.CodeMirror'),function(c){return c.offsetParent&&c.CodeMirror;})[0];
+if(!bt){alert('블로거 글쓰기 화면에서 눌러 주세요.');return;}
+if(!cm){alert('왼쪽 위 연필 → HTML 보기로 바꾼 뒤 다시 눌러 주세요.');return;}
+setVal(bt,data.title);bt.blur();cm.CodeMirror.setValue(data.html);
+note('제목·본문을 넣었습니다. 라벨 칸을 누르고 북마크를 한 번 더 누르세요.');return;}
+if(/(^|\\.)naver\\.com$/.test(host)){
+if(el&&el.tagName==='INPUT'&&!el.closest('.se-documentTitle')){
+if(!tags.length){alert('태그가 없습니다. 「한 번에 복사」나 ③ 태그를 먼저 누르세요.');return;}
+await enterTags(el,tags);return;}
+if(need())return;var d=document,f=d.querySelector('#mainFrame');if(f){try{d=f.contentDocument||d;}catch(e){}}
+var w=d.defaultView;
+var tp=d.querySelector('.se-documentTitle .se-text-paragraph');
+var bp=d.querySelectorAll('.se-component.se-text .se-text-paragraph');bp=bp[bp.length-1];
+if(!tp||!bp){alert('네이버 글쓰기 화면에서 눌러 주세요.');return;}
+function paste(p,html,text){['mousedown','mouseup','click'].forEach(function(t){p.dispatchEvent(new w.MouseEvent(t,{bubbles:true,cancelable:true,view:w}));});
+var s=w.getSelection(),r=d.createRange();r.selectNodeContents(p);r.collapse(false);s.removeAllRanges();s.addRange(r);
+var dt=new w.DataTransfer();if(html)dt.setData('text/html',html);dt.setData('text/plain',text);
+(act(d)||p).dispatchEvent(new w.ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));}
+var before=d.body.innerText.length;paste(tp,'',data.title);await wait(300);var x=d.createElement('div');x.innerHTML=data.html;paste(bp,data.html,x.textContent);await wait(500);
+if(d.body.innerText.length-before<data.title.length){alert('네이버 에디터가 붙여넣기를 받지 않았습니다. 제목은 ① 제목, 본문은 Ctrl+V 로 붙여 주세요 (서식 그대로 붙습니다).');return;}
+note('제목·본문을 넣었습니다. 발행 창 태그 칸을 누르고 북마크를 한 번 더 누르세요.');return;}
+alert('티스토리·블로거·네이버 글쓰기 화면에서 눌러 주세요.');
+})();"""
+
+
+def paste_bookmarklet():
+    return _bookmarklet(PASTE_JS)
+
+
+def paste_all(title, html, tags):
+    """'한 번에 복사' 글자칸: 북마크가 읽는 표시 + JSON. 태그는 '#가 #나'·'가, 나' 어느 꼴이든 목록으로."""
+    import json
+    import re
+    items = [t.strip() for t in re.split(r"[#,\n]+", tags or "") if t.strip()]
+    return ALL_MARK + json.dumps({"title": title, "html": html, "tags": items}, ensure_ascii=False)
