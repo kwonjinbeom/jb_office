@@ -306,37 +306,35 @@ def _nice(top):
     return int(10 * step)
 
 
-def chart(series, days, width=960, height=260):
-    """여러 사이트 꺾은선 (같은 축 하나). series: [{"name", "color", "values": [n|None]}] → 그릴 좌표."""
+def bars(series, days, width=960, height=420):
+    """날짜별 막대 (2026-10-27 사용자: 꺾은선은 빈 날이 끼면 점만 남아 안 보였다). 사이트가 여럿이면 그날 막대에 쌓는다.
+    series: [{"name", "color", "values": [n|None]}] → 그릴 좌표. 빈 날은 막대가 없다."""
     pad_l, pad_r, pad_t, pad_b = 44, 16, 14, 28
     w, h = width - pad_l - pad_r, height - pad_t - pad_b
-    top = _nice(max([v for s in series for v in s["values"] if v is not None] or [0]))
     n = len(days)
-    x = [pad_l + (w * i / (n - 1) if n > 1 else w / 2) for i in range(n)]
-    lines = []
-    for s in series:
-        pts = [(round(x[i], 1), round(pad_t + h - h * v / top, 1)) for i, v in enumerate(s["values"]) if v is not None]
-        # 빈 날은 선을 끊는다
-        segs, cur = [], []
-        for i, v in enumerate(s["values"]):
-            if v is None:
-                if cur:
-                    segs.append(cur)
-                cur = []
-            else:
-                cur.append(f"{x[i]:.1f},{pad_t + h - h * v / top:.1f}")
-        if cur:
-            segs.append(cur)
-        lines.append({**s, "segs": [" ".join(c) for c in segs], "dots": pts if n <= 14 else [],
-                      "end": pts[-1] if pts else None})
+    totals = [sum(s["values"][i] or 0 for s in series) for i in range(n)]
+    top = _nice(max(totals or [0]))
+    band = w / max(n, 1)
+    bw = min(48, band * (0.62 if n <= 31 else 0.8))
+    cols = []
+    for i, d in enumerate(days):
+        x = pad_l + band * i + band / 2
+        y, segs = pad_t + h, []
+        for s in series:
+            v = s["values"][i]
+            if v:
+                bh = h * v / top
+                y -= bh
+                segs.append({"y": round(y, 1), "h": round(bh, 1), "color": s["color"]})
+        cols.append({"x": round(x, 1), "bx": round(x - bw / 2, 1), "day": d, "left": round(pad_l + band * i, 1), "w": round(band, 1),
+                     "segs": segs, "top_y": round(y, 1),
+                     "total": totals[i] if any(s["values"][i] is not None for s in series) else None,
+                     "vals": [(s["name"], s["color"], s["values"][i]) for s in series]})
     every = 1 if n <= 10 else (5 if n <= 35 else 14)
-    xlabels = [(round(x[i], 1), d) for i, d in enumerate(days) if (n - 1 - i) % every == 0]
+    xlabels = [(c["x"], c["day"]) for i, c in enumerate(cols) if (n - 1 - i) % every == 0]
     grid = [(round(pad_t + h - h * k / 4, 1), int(top * k / 4)) for k in range(5)]
-    cols = [{"x": round(x[i], 1), "day": d, "left": round(x[i] - (w / max(n - 1, 1)) / 2, 1),
-             "w": round(w / max(n - 1, 1), 1),
-             "vals": [(s["name"], s["color"], s["values"][i]) for s in series]} for i, d in enumerate(days)]
-    return {"width": width, "height": height, "lines": lines, "xlabels": xlabels, "grid": grid, "cols": cols,
-            "plot": {"l": pad_l, "r": width - pad_r, "t": pad_t, "b": pad_t + h, "h": h}}
+    return {"width": width, "height": height, "cols": cols, "bw": round(bw, 1), "xlabels": xlabels, "grid": grid,
+            "plot": {"l": pad_l, "r": width - pad_r, "t": pad_t, "b": pad_t + h, "h": h}, "show_total": n <= 14}
 
 
 def spark(values, width=120, height=32):
@@ -351,6 +349,7 @@ def spark(values, width=120, height=32):
 CHANNELS = {"Organic Search": "검색", "Direct": "직접", "Referral": "다른 사이트", "Organic Social": "SNS", "Unassigned": "알 수 없음",
             "Paid Search": "검색 광고", "Email": "메일", "Organic Video": "동영상", "Display": "광고", "Organic Shopping": "쇼핑"}
 TOP_PAGES = 10
+NOT_POSTS = re.compile(r"^(/m)?(/(category|tag|search|archive|guestbook|notice|page|feed|author)(/.*)?|/index\.html|/\d{4}(/\d{2})?)?$")
 
 
 def _sum(vals):
@@ -358,9 +357,16 @@ def _sum(vals):
     return sum(got) if got else None
 
 
-def page_data(blogs, all_order, days, today):
+def _is_post(path):
+    """많이 본 글에는 글만: 첫 화면·카테고리·태그·검색·쪽 목록은 뺀다"""
+    p = (path or "/").split("?")[0].rstrip("/")
+    return bool(p) and not NOT_POSTS.match(p)
+
+
+def page_data(blogs, all_order, days, today, selected=None):
     """통계현황 화면 (2026-10-27 사용자: 보기 편하게 싹 갈아엎기).
-    사이트 칸(기간 방문자 · 어제·오늘 · 조회·공감·댓글) → 하루 방문자 꺾은선 → 많이 본 글 · 어디서 왔나."""
+    사이트 칸(기간 방문자 · 어제·오늘 · 조회·공감·댓글) → 하루 방문자 막대 → 많이 본 글 · 어디서 왔나.
+    selected: 사이트 칸을 누르면 그 사이트만 (막대 · 많이 본 글 · 어디서 왔나)."""
     from .models import FeedState, SitePage, SiteStat
     rows = {(r.blog_id, r.day): r for r in SiteStat.objects.filter(blog__in=blogs, day__range=(days[0], days[-1]))}
     states = {s.blog_id: s for s in FeedState.objects.filter(blog__in=blogs)}
@@ -376,21 +382,27 @@ def page_data(blogs, all_order, days, today):
                       "yesterday": getattr(rows.get((b.pk, yday)), "visitors", None),
                       "spark": spark(vals["visitors"]),
                       "source": "GA4" if _sum(vals["views"]) is not None else ("공개 숫자" if _sum(vals["visitors"]) is not None else ""),
-                      "state": state})
-        series.append({"name": b.name, "color": color, "values": vals["visitors"]})
+                      "state": state, "on": selected is not None and b.pk == selected.pk})
+        series.append({"name": b.name, "color": color, "values": vals["visitors"], "pk": b.pk})
     total = {k: _sum([t[k] for t in tiles]) for k in ("visitors", "views", "today", "yesterday")}
     total["spark"] = spark([_sum(col) for col in zip(*[s["values"] for s in series])] if series else [])
+    shown = [b for b in blogs if selected is None or b.pk == selected.pk]
     colors = {t["blog"].pk: t["color"] for t in tiles}
     top = []
-    for p in SitePage.objects.filter(blog__in=blogs).select_related("blog")[:TOP_PAGES]:
-        top.append({"blog": p.blog, "color": colors.get(p.blog_id), "title": p.title or p.path, "views": p.views,
-                    "url": (p.blog.address or "").rstrip("/") + p.path})
+    for p in SitePage.objects.filter(blog__in=shown).select_related("blog"):
+        if _is_post(p.path):
+            top.append({"blog": p.blog, "color": colors.get(p.blog_id), "title": p.title or p.path, "views": p.views,
+                        "url": (p.blog.address or "").rstrip("/") + p.path})
+        if len(top) == TOP_PAGES:
+            break
     counts = Counter()
-    for s in states.values():
-        for name, n in s.ga_channels or []:
+    for b in shown:
+        for name, n in getattr(states.get(b.pk), "ga_channels", None) or []:
             counts[CHANNELS.get(name, name)] += n
     whole = sum(counts.values())
     channels = [{"name": name, "n": n, "pct": round(n * 100 / whole), "color": COLORS[i % len(COLORS)]}
                 for i, (name, n) in enumerate(counts.most_common(6))] if whole else []
-    return {"tiles": tiles, "total": total, "chart": chart(series, days, height=420), "top": top, "channels": channels,
-            "has_data": total["visitors"] is not None}
+    chart_series = [s for s in series if selected is None or s["pk"] == selected.pk]
+    return {"tiles": tiles, "total": total, "chart": bars(chart_series, days), "legend": chart_series if selected is None else [],
+            "top": top, "channels": channels, "ga4_any": any(getattr(states.get(b.pk), "ga_checked_at", None) for b in shown),
+            "has_data": any(v is not None for s in chart_series for v in s["values"])}
