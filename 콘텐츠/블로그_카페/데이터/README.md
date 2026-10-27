@@ -49,3 +49,18 @@ FRED_KEY=FRED API 키
    ```
 4. PC 에서 `workspace/.venv/Scripts/python workspace/manage.py search_perf --auth` → 열리는 브라우저에서 서치 콘솔을 쓰는 구글 계정(wlsqja0124)으로 허용. 토큰이 `workspace/.routine/gsc_token.json` 에 남는다.
 그 뒤로는 `manage.py search_perf` 가 서치 콘솔에 있는 모든 사이트(memorily·눈잎·밤밤)의 최근 28일 글×검색어를 받는다.
+
+## 조회수 (GA4) — `manage.py site_views`
+검색 유입만 세는 서치 콘솔과 달리 모든 방문(검색·SNS·직접)의 글별 조회수. 같은 `workspace/.routine/perf/` 에 사이트마다
+`<사이트>_조회수_글.csv` · `_조회수_날짜.csv` · `_유입.csv` 와 `조회수.md` 를 쓰고, 명령 창에 사이트별 합계와 상위 글 10편을 보여 준다.
+네이버 블로그는 GA4 코드를 넣을 수 없어 빠진다 (운영 › 통계).
+처음 한 번 (사용자, 위 '검색 성과' 설정을 한 구글 클라우드 프로젝트에서):
+1. 구글 클라우드 콘솔 → 'API 및 서비스' → 라이브러리 → **Google Analytics Admin API**, **Google Analytics Data API** 사용 설정.
+2. analytics.google.com 에 같은 구글 계정으로 들어가 '측정 시작' → 계정 이름만 넣고 약관 동의 (속성은 아무거나 하나 만들어도 된다).
+3. `manage.py search_perf --auth` 를 **다시** → 애널리틱스 권한까지 허용 (권한 범위가 늘었다).
+4. `manage.py site_views --setup` → 서치 콘솔 사이트마다 GA4 속성을 만들고 측정 ID(G-…)와 붙일 코드를 보여 준다.
+5. 측정 ID 를 사이트에 붙인다:
+   - 티스토리(memorily·눈잎): 관리 › 플러그인 › '구글 애널리틱스'에 측정 ID. 플러그인이 G- 를 안 받으면 스킨 편집 › HTML 의 `</head>` 바로 앞에 코드.
+   - 블로거(밤밤): 설정 › 기본 › 'Google 애널리틱스 측정 ID'.
+   - 워드프레스(jinbaam.com): 플러그인 'WPCode' 설치 → 코드 스니펫 › 헤더 및 푸터 › 헤더에 코드.
+그 뒤로는 `manage.py site_views` (기본 최근 28일, `--days 7` 처럼 바꿀 수 있다). 붙인 날부터 쌓인다.
