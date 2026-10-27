@@ -1090,6 +1090,15 @@ class PostMenusTests(TestCase):
         self.assertEqual(res.context["planned"][0].day_head["count"], 2)  # 날짜 묶음 머리
         self.assertContains(res, "wr-day-row is-today")
         self.assertContains(res, "data-pp-split")  # 두 표 + 높이 손잡이
+        # 예정일 없는 글은 작성일로 묶는다 (2026-10-27 사용자). 최근 날이 위, 작성일에는 '지남'을 달지 않는다
+        from datetime import timedelta
+        old = self.T.objects.create(title="그제 쓴 글", stage="post", target="눈잎")
+        self.T.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=2))
+        res = self.client.get(reverse("posts:planned"))
+        top = res.context["unplanned"]
+        self.assertEqual([p.title for p in top], ["날짜 없음", "그제 쓴 글"])
+        self.assertEqual((top[0].day_head["today"], top[1].day_head["day"], top[1].day_head["past"]),
+                         (True, today - timedelta(days=2), False))
         self.assertContains(res, "data-feeds-check")  # 갱신
         self.assertContains(res, ">예정일</button>", html=False)  # 짧은 버튼
         self.assertNotContains(res, "예정일 주기")

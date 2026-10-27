@@ -173,14 +173,20 @@ DAY_NAMES = "월화수목금토일"
 PUBLISH_SHORT = [("todo", "미발행"), ("done", "발행")]
 
 
-def _day_heads(posts):
-    """발행 예정일 정한 글(날짜순)에 날짜 묶음 머리: 묶음 첫 글에 (날짜, 요일, 글 수, 오늘인가, 지났나)."""
-    by_day, today, seen = Counter(x.planned_on for x in posts), timezone.localdate(), set()
-    for x in posts:
-        if x.planned_on and x.planned_on not in seen:
-            seen.add(x.planned_on)
-            x.day_head = {"day": x.planned_on, "dow": DAY_NAMES[x.planned_on.weekday()], "count": by_day[x.planned_on],
-                          "today": x.planned_on == today, "past": x.planned_on < today}
+def _day_heads(posts, day_of=lambda x: x.planned_on, past=True):
+    """날짜순 글에 날짜 묶음 머리: 묶음 첫 글에 (날짜, 요일, 글 수, 오늘인가, 지났나). 기본은 발행 예정일,
+    예정일 없는 글은 작성일로 (2026-10-27 사용자) — 작성일은 지난 날이 당연하니 '지남'을 달지 않는다."""
+    days = [day_of(x) for x in posts]
+    by_day, today, seen = Counter(days), timezone.localdate(), set()
+    for x, day in zip(posts, days):
+        if day and day not in seen:
+            seen.add(day)
+            x.day_head = {"day": day, "dow": DAY_NAMES[day.weekday()], "count": by_day[day],
+                          "today": day == today, "past": past and day < today}
+
+
+def _made_on(post):
+    return timezone.localdate(post.created_at)
 
 
 def _list_page(request, p, template="blog_types/posts.html", base="posts:view", extra=None):
@@ -201,6 +207,9 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
     ready = [str(pl.pk) for post in posts for pl in post.placements.all() if pl.convert_status == "none"]
     planned = [x for x in posts if x.planned_on]
     _day_heads(planned)
+    # 예정일 없는 글은 작성일(최근이 위)로 묶는다. 같은 날 안에서는 사이트 순 그대로 (정렬이 안정적)
+    unplanned = sorted((x for x in posts if not x.planned_on), key=lambda x: -_made_on(x).toordinal())
+    _day_heads(unplanned, _made_on, past=False)
     return render(request, template, {
         "page_title": "글 관리",
         "sel": sel, "q": q, "stage": p["stage"], "today": today,
@@ -211,7 +220,7 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
                  for k, label in STAGES if k in TAB_KEYS or k == stage],
         "list_mode": p["view"] == "list", "mode_urls": _mode_urls(p), "table_stage": stage in TABLE_STAGES,
         "plan_split": stage == "post",  # 예정일 없는 글 · 정한 글을 두 표로 (2026-10-22 사용자)
-        "unplanned": [x for x in posts if not x.planned_on], "planned": planned,
+        "unplanned": unplanned, "planned": planned,
         "clear_url": f"{reverse(base)}?{_query(p, sel='', q='', today='', custom='', site='')}",
         "site_filter": p["site"],
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
