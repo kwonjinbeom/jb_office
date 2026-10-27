@@ -1,3 +1,4 @@
+{% load trash_tags %}
 {# 고른 것의 이름·설명 고치기 (트리에서 수정을 켜고 연필). 컨텍스트: form, ekind, eobj, here #}
 <section class="card bt-edit">
   <div class="card-head"><h3 class="card-title">{% include "includes/ic.html" with name="edit" %}고치기</h3>
@@ -19,7 +20,7 @@
       {% endfor %}
     </div>
     <div class="form-foot bt-edit-foot">
-      <a class="btn ghost danger sm" href="{% url 'blog_types:delete' ekind eobj.pk %}?next={{ here|urlencode }}">{% include "includes/ic.html" with name="trash" %}삭제</a>
+      <a {% trash_attrs eobj %} data-trash-trigger data-trash-next="{{ here }}" class="btn ghost danger sm" href="{% url 'blog_types:delete' ekind eobj.pk %}?next={{ here|urlencode }}">{% include "includes/ic.html" with name="trash" %}삭제</a>
       <span style="margin-left:auto"></span>
       <a class="btn sm" href="{{ here }}">닫기</a>
       <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>

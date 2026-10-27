@@ -1,3 +1,4 @@
+{% load trash_tags %}
 {# 커스텀 글쓰기의 고정 주제 한 줄 + 고치기 줄. 컨텍스트: t, site(사이트 묶음 번호), sub(소재 아래면 True), categories, site_names #}
 <tr{% if sub %} class="tp-sub"{% endif %}>
   <td class="c"><input type="checkbox" class="checkbox" data-tp-pick data-site="{{ site }}" value="f{{ t.pk }}" aria-label="{{ t.name }} 고르기"></td>
@@ -16,7 +17,7 @@
       <div class="tp-form-foot">
         <label class="tp-daily"><input type="checkbox" class="checkbox" name="daily"{% if t.daily %} checked{% endif %}> 매일 전체 실행에 1편</label>
         <button class="btn primary sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button>
-        <button class="btn ghost sm danger" type="submit" formaction="{% url 'routines:topic_delete' t.pk %}" formnovalidate onclick="return confirm('{{ t.name|escapejs }} 주제를 휴지통으로 옮길까요?')">{% include "includes/ic.html" with name="trash" %}삭제</button>
+        <button type="button" {% trash_attrs t %} data-trash-trigger data-trash-next="{{ request.get_full_path }}" class="btn ghost sm danger">{% include "includes/ic.html" with name="trash" %}삭제</button>
       </div>
     </form>
   </td>

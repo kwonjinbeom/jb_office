@@ -173,7 +173,10 @@ def delete(request, kind, pk):
         obj.delete()  # 휴지통으로 (7일 동안 복원 가능)
         messages.success(request, "휴지통으로 옮겼습니다.")
         return redirect("blog_rules:index")
-    return render(request, "blog_rules/confirm_delete.html", {"page_title": "삭제", "obj": obj, "kind": kind})
+    return render(request, "core/confirm_delete.html", {
+        "page_title": "삭제", "kind_label": "사이트" if kind == "blog" else "체크", "object_label": str(obj),
+        "cancel_url": reverse("blog_rules:index"),
+        "crumbs": [("블로그·카페", reverse("blog:list")), ("운영", reverse("blog_rules:index"))]})
 
 
 def _index_url():

@@ -80,7 +80,7 @@ def delete(request, pk):
     if request.method == "POST":
         back = _back(item)
         item.delete()
-        messages.success(request, "증거를 삭제했습니다.")
+        messages.success(request, "증거를 휴지통으로 옮겼습니다.")
         return redirect(back)
     return render(
         request,

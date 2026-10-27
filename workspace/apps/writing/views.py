@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.text import Truncator
 from django.views.decorators.http import require_POST
 
 from apps.blog_types import classify
@@ -339,12 +341,14 @@ def delete(request, pk):
     if request.method == "POST":
         stage = post.stage
         post.delete()
-        messages.success(request, "삭제했습니다.")
+        messages.success(request, "휴지통으로 옮겼습니다.")
         return redirect(LIST_URLS[stage])
     return render(
         request,
-        "writing/confirm_delete.html",
-        {"page_title": "삭제", "post": post, "stage": post.stage, "tabs": _tabs(post.stage)},
+        "core/confirm_delete.html",
+        {"page_title": "삭제", "kind_label": f"{post.get_stage_display()}의", "object_label": post.title,
+         "cancel_url": post.get_absolute_url(), "stage": post.stage, "tabs": _tabs(post.stage),
+         "crumbs": [("블로그·카페", reverse("blog:list")), (Truncator(post.title).chars(30), post.get_absolute_url())]},
     )
 
 

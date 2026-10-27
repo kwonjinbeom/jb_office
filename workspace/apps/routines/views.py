@@ -873,4 +873,6 @@ def delete(request, pk):
         routine.delete()  # 휴지통으로 (7일 동안 복원)
         messages.success(request, f"'{routine.name}' 루틴을 휴지통으로 옮겼습니다.")
         return redirect("routines:prompts")
-    return render(request, "routines/confirm_delete.html", {"page_title": "삭제", "routine": routine})
+    return render(request, "core/confirm_delete.html", {
+        "page_title": "삭제", "kind_label": "루틴", "object_label": routine.name, "cancel_url": reverse("routines:edit", args=[routine.pk]),
+        "crumbs": [("일일루틴", reverse("routines:index")), ("프롬프트 관리", reverse("routines:prompts"))]})

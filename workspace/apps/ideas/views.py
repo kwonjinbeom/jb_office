@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.db.models import Max, Prefetch, Q
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.core.inplace import answer, wants_json
@@ -127,9 +128,12 @@ def idea_delete(request, pk):
     if request.method == "POST":
         code = idea.code
         idea.delete()
-        messages.success(request, f"{code} 아이디어를 삭제했습니다.")
+        messages.success(request, f"{code} 아이디어를 휴지통으로 옮겼습니다.")
         return redirect("ideas:list")
-    return render(request, "ideas/confirm_delete.html", {"page_title": f"{idea.code} 삭제", "idea": idea})
+    return render(request, "core/confirm_delete.html", {
+        "page_title": f"{idea.code} 삭제", "kind_label": "아이디어", "object_label": f"{idea.code} {idea.title}",
+        "hint": "단계·작업 로그·할 일·증거도 함께 옮기고 함께 복원됩니다.", "cancel_url": idea.get_absolute_url(),
+        "crumbs": [("내 아이디어", reverse("ideas:list")), (idea.code, idea.get_absolute_url())]})
 
 
 # ---- 단계 ------------------------------------------------------------------

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 {# 일정관리: 위 큰 월 달력 · 아래 고른 날 일정 · 매일 알림 · 입력·수정 폼 (2026-10-22·27 사용자) #}
 
 {% block heading %}일정관리{% endblock %}
@@ -89,7 +90,7 @@
           {% include "includes/field.html" with field=form.note cls="sc-wide" nolabel=True %}
         </div>
         <div class="form-foot">
-          {% if editing %}<button class="btn ghost sm danger-text" formaction="{% url 'schedule:delete' editing.pk %}" formnovalidate>{% include "includes/ic.html" with name="trash" %}삭제</button>{% endif %}
+          {% if editing %}<button type="button" {% trash_attrs editing %} data-trash-trigger data-trash-next="{{ request.get_full_path }}" class="btn ghost sm danger">{% include "includes/ic.html" with name="trash" %}삭제</button>{% endif %}
           <span style="margin-left:auto"></span>
           {{ form.repeat }}
           <button class="btn primary sm">{% include "includes/ic.html" with name="save" %}저장</button>

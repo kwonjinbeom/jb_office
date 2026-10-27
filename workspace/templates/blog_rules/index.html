@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
 
@@ -37,7 +38,7 @@
         <td>
           <ul class="br-checks">
             {% for c in b.checks.all %}
-            <li><span>{{ c.body }}</span><span class="br-tools"><a href="{% url 'blog_rules:rule_edit' c.pk %}" title="수정" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</a><a href="{% url 'blog_rules:delete' 'rule' c.pk %}" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</a></span></li>
+            <li><span>{{ c.body }}</span><span class="br-tools"><a href="{% url 'blog_rules:rule_edit' c.pk %}" title="수정" aria-label="수정">{% include "includes/ic.html" with name="edit" %}</a><a {% trash_attrs c %} data-trash-trigger data-trash-next="{{ request.get_full_path }}" href="{% url 'blog_rules:delete' 'rule' c.pk %}" title="삭제" aria-label="삭제">{% include "includes/ic.html" with name="trash" %}</a></span></li>
             {% endfor %}
           </ul>
           <form class="br-add" method="post" action="{% url 'blog_rules:rule_add' %}">
