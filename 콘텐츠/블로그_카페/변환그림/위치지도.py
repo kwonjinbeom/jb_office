@@ -16,7 +16,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[3]
 NE_DIR = ROOT / "workspace" / ".routine" / "ne"
@@ -25,6 +25,8 @@ CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 FONT = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
 SEOUL = (37.5665, 126.9780)
 FROM_EN = (("London", 51.5072, -0.1276), ("New York", 40.7128, -74.0060), ("Sydney", -33.8688, 151.2093))
+SHORT_KO = {"CHN": "중국", "PRK": "북한", "KOR": "한국", "TWN": "대만", "USA": "미국", "GBR": "영국", "CZE": "체코",
+            "AUS": "호주", "ARE": "아랍에미리트", "ZAF": "남아공", "BIH": "보스니아", "COD": "콩고", "COG": "콩고"}
 CONTINENT_KO = {"Europe": "유럽", "Asia": "아시아", "Africa": "아프리카", "Oceania": "오세아니아",
                 "North America": "북아메리카", "South America": "남아메리카"}
 
@@ -83,6 +85,9 @@ class View:
     def xy(self, lat, lon):
         return self.w / 2 + (lon - self.lon0) * self.c * self.k, self.h / 2 - (lat - self.lat0) * self.k
 
+    def latlon(self, x, y):
+        return self.lat0 - (y - self.h / 2) / self.k, self.lon0 + (x - self.w / 2) / (self.c * self.k)
+
     def latlon_box(self):
         dlon = self.w / 2 / (self.c * self.k)
         dlat = self.h / 2 / self.k
@@ -135,6 +140,16 @@ def main_bbox(geom):
     return min(lats), max(lats), min(lons), max(lons)
 
 
+def inside(geom, lat, lon):
+    """점이 나라 안인가 (짝홀 규칙). 나라 안 이름은 흰 글씨로 쓴다."""
+    hit = False
+    for ring in rings(geom):
+        for (x1, y1), (x2, y2) in zip(ring, ring[1:] + ring[:1]):
+            if (y1 > lat) != (y2 > lat) and lon < (x2 - x1) * (lat - y1) / (y2 - y1) + x1:
+                hit = not hit
+    return hit
+
+
 def text_w(s, size):
     return sum(size * (0.95 if ord(ch) > 0x2000 else 0.56) for ch in s)
 
@@ -142,8 +157,9 @@ def text_w(s, size):
 class Labels:
     """겹치지 않게 이름을 놓는다. 먼저 놓은 것이 이긴다."""
 
-    def __init__(self, w, h):
+    def __init__(self, w, h, on_accent=None):
         self.boxes, self.w, self.h, self.svg = [], w, h, []
+        self.on_accent = on_accent  # (x, y) 가 칠한 나라 위인가 — 그 위 이름은 흰 글씨 · 빨강 테두리
 
     def free(self, box):
         x0, y0, x1, y1 = box
@@ -166,18 +182,20 @@ class Labels:
                         f'paint-order="stroke">{html.escape(text)}</text>')
         return True
 
-    def city(self, text, x, y, size, color, weight, r):
-        """점 옆 이름: 오른쪽 → 왼쪽 → 위 → 아래 순서로 빈자리."""
-        w = text_w(text, size)
-        for anchor, tx, ty in (("start", x + r + 6, y + size * 0.35), ("end", x - r - 6, y + size * 0.35),
-                               ("middle", x, y - r - 8), ("middle", x, y + r + size)):
+    def city(self, text, x, y, size, color, weight, r, accent="#ffffff"):
+        """점 옆 이름: 오른쪽 → 왼쪽 → 위 → 아래 순서로 빈자리. 점은 block 으로 미리 막아 둔다 (반지름 r)."""
+        w, g = text_w(text, size), r + 8
+        spots = [("start", x + g, y + size * 0.35), ("end", x - g, y + size * 0.35),
+                 ("middle", x, y - g), ("middle", x, y + g + size * 0.7)]
+        for n, (anchor, tx, ty) in enumerate(spots + spots[:1]):
             x0 = tx - w / 2 if anchor == "middle" else (tx if anchor == "start" else tx - w)
-            if self.free((x0 - 4, ty - size * 0.85, x0 + w + 4, ty + size * 0.3)):
-                return self.put(text, tx, ty, size, color, weight, anchor)
-        return self.put(text, x + r + 6, y + size * 0.35, size, color, weight, "start", force=True)
+            if n == len(spots) or self.free((x0 - 4, ty - size * 0.85, x0 + w + 4, ty + size * 0.3)):
+                on = self.on_accent and self.on_accent(x0 + w / 2, ty - size * 0.3)
+                return self.put(text, tx, ty, size, "#ffffff" if on else color, weight, anchor,
+                                accent if on else "#ffffff", force=True)
 
 
-def map_svg(feats, view, look, iso, home=False, name_key="NAME_KO", label_min=70, size=20, skip_names=()):
+def map_svg(feats, view, look, iso, home=False):
     """땅 · 그 나라 칠하기 · 이웃 나라 이름. (svg 조각, Labels) 를 돌려준다."""
     parts, lab = [], Labels(view.w, view.h)
     for f in feats:
@@ -190,7 +208,7 @@ def map_svg(feats, view, look, iso, home=False, name_key="NAME_KO", label_min=70
     return parts, lab
 
 
-def country_labels(feats, view, lab, look, iso, name_key, size, label_min, skip=()):
+def country_labels(feats, view, lab, look, iso, name_key, size, label_min, skip=(), most=99):
     ranked = sorted(feats, key=lambda f: (f["properties"].get("LABELRANK") or 9, -(f["properties"].get("POP_EST") or 0)))
     for f in ranked:
         p = f["properties"]
@@ -202,8 +220,12 @@ def country_labels(feats, view, lab, look, iso, name_key, size, label_min, skip=
         x0, y0, x1, y1 = proj_bbox(f["geometry"], view)
         if min(x1, view.w) - max(x0, 0) < label_min or min(y1, view.h) - max(y0, 0) < size * 1.4:
             continue
-        name = p.get(name_key) or p["NAME"]
-        lab.put(name, x, y + size * 0.35, size, look["label"], 600)
+        name = (SHORT_KO.get(p["ADM0_A3"]) if name_key == "NAME_KO" else None) or p.get(name_key) or p["NAME"]
+        if len(name) > (7 if name_key == "NAME_KO" else 16):
+            continue
+        most -= lab.put(name, x, y + size * 0.35, size, look["label"], 600)
+        if most <= 0:
+            break
 
 
 def panel(inner, w, h, look, radius=14):
@@ -218,8 +240,8 @@ def marker(x, y, look, r=9):
             f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="#ffffff" stroke="{look["mark"]}" stroke-width="4"/>')
 
 
-def dot(x, y, color, r=5):
-    return f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{color}" stroke="#ffffff" stroke-width="2"/>'
+def dot(x, y, color, r=5, ring="#ffffff"):
+    return f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{color}" stroke="{ring}" stroke-width="2"/>'
 
 
 def near_list(text):
@@ -244,19 +266,21 @@ def closeup_view(feat, lat, lon, w, h, span, grow):
 def closeup(feats, feat, a, look, w, h, grow, name_key, size):
     view = closeup_view(feat, a.lat, a.lon, w, h, a.span, grow)
     parts, lab = map_svg(feats, view, look, a.iso)
+    lab.on_accent = lambda px, py: inside(feat["geometry"], *view.latlon(px, py))
     x, y = view.xy(a.lat, a.lon)
-    lab.block((x - 16, y - 16, x + 16, y + 16))
-    lab.city(a.city, x, y, size + 6, look["ink"], 800, 12)
+    lab.block((x - 15, y - 15, x + 15, y + 15))
     near = []
     for name, la, lo in near_list(a.near):
         nx, ny = view.xy(la, lo)
         if 8 < nx < w - 8 and 8 < ny < h - 8:
             lab.block((nx - 7, ny - 7, nx + 7, ny + 7))
-            near.append((name, nx, ny))
-    for name, nx, ny in near:
-        lab.city(name, nx, ny, size - 2, look["ink2"], 600, 6)
+            near.append((name, nx, ny, inside(feat["geometry"], la, lo)))
+    lab.city(a.city, x, y, size + 6, look["ink"], 800, 13, look["accent"])
+    for name, nx, ny, _ in near:
+        lab.city(name, nx, ny, size - 2, look["ink2"], 600, 6, look["accent"])
     country_labels(feats, view, lab, look, a.iso, name_key, size, 70)
-    body = "".join(parts) + "".join(dot(nx, ny, look["ink2"]) for _, nx, ny in near) + marker(x, y, look) + "".join(lab.svg)
+    dots = "".join(dot(nx, ny, "#ffffff" if inn else look["ink2"], 5, look["accent"] if inn else "#ffffff") for _, nx, ny, inn in near)
+    body = "".join(parts) + dots + marker(x, y, look) + "".join(lab.svg)
     return view, body
 
 
@@ -278,11 +302,11 @@ def bambam(a, feats, feat):
     for la, lo in arc[8:-8:6]:  # 점선 위에는 이름을 놓지 않는다
         px, py = lv.xy(la, lo)
         lab.block((px - 4, py - 4, px + 4, py + 4))
-    lab.block((sx - 12, sy - 12, sx + 12, sy + 12))
-    lab.block((cx - 16, cy - 16, cx + 16, cy + 16))
-    lab.city(a.city, cx, cy, 26, look["ink"], 800, 12)
+    lab.block((sx - 9, sy - 9, sx + 9, sy + 9))
+    lab.block((cx - 15, cy - 15, cx + 15, cy + 15))
+    lab.city(a.city, cx, cy, 26, look["ink"], 800, 13)
     lab.city("서울", sx, sy, 22, look["ink"], 700, 7)
-    country_labels(feats, lv, lab, look, a.iso, "NAME_KO", 19, 80, skip=("KOR",))
+    country_labels(feats, lv, lab, look, a.iso, "NAME_KO", 19, 50, skip=("KOR",), most=5)
     left = ("".join(parts) + f'<path d="{line}" fill="none" stroke="{look["ink"]}" stroke-width="2.5" stroke-dasharray="7 7" stroke-linecap="round"/>'
             + dot(sx, sy, look["ink"], 7) + marker(cx, cy, look) + "".join(lab.svg))
     # 오른쪽: 그 나라 가까이
@@ -303,7 +327,7 @@ def wordpress(a, feats, feat, world):
     region = feat["properties"].get("SUBREGION") or feat["properties"]["CONTINENT"]
     sub = a.sub or " · ".join([region] + [f"{round(km((la, lo), (a.lat, a.lon)), -1):,.0f} km from {n}" for n, la, lo in FROM_EN])
     W, H = 1120, 600
-    view, body = closeup(feats, feat, a, look, W, H, 2.4, "NAME_EN", 21)
+    view, body = closeup(feats, feat, a, look, W, H, 2.4, "NAME_EN", 19)
     # 구석 세계 지도: 지금 보는 범위를 네모로
     iw, ih = 300, 128
     wv = View([-58, 80], [-180, 180], iw, ih, pad=0, plain=True)
@@ -338,8 +362,9 @@ def shoot(body, out):
     subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={tmp / 'prof'}", "--window-size=1260,1400", "--virtual-time-budget=6000",
                     f"--screenshot={shot}", page.as_uri()], check=True, capture_output=True)
     im = Image.open(shot).convert("RGB").crop((0, 0, 1200, 1400))
-    box = ImageChops.difference(im, Image.new("RGB", im.size, "#ffffff")).getbbox()
-    im = im.crop((0, 0, 1200, min(1400, box[3] + 40)))
+    gray = im.convert("L")
+    bottom = next(y for y in range(im.height - 1, 0, -1) if gray.crop((0, y, 1200, y + 1)).getextrema() not in ((0, 0), (255, 255)))
+    im = im.crop((0, 0, 1200, min(im.height, bottom + 40)))
     out.parent.mkdir(parents=True, exist_ok=True)
     im.save(out, optimize=True)
 

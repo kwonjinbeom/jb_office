@@ -503,14 +503,16 @@ HERO_MAX = 15 * 1024 * 1024
 
 
 def _hero(text):
-    """변환본의 첫 사진 {'src', 'alt'} — 없으면 None."""
+    """변환본의 첫 사진 {'src', 'alt'} — 없으면 None. 해외여행 글 맨 위 위치 지도는 대표 사진이 아니라 건너뛴다 (2026-10-27)."""
+    from urllib.parse import unquote
     text = text or ""
-    md, tag = _HERO_MD.search(text), _HERO_IMG.search(text)
-    if md and (not tag or md.start() < tag.start()):
-        return {"src": md[2], "alt": md[1].strip()}
-    if tag:
-        alt = re.search(r'\balt="([^"]*)"', tag[0])
-        return {"src": tag[1], "alt": alt[1].strip() if alt else ""}
+    found = [(m.start(), m[2], m[1]) for m in _HERO_MD.finditer(text)]
+    for m in _HERO_IMG.finditer(text):
+        alt = re.search(r'\balt="([^"]*)"', m[0])
+        found.append((m.start(), m[1], alt[1] if alt else ""))
+    for _, src, alt in sorted(found):
+        if not unquote(src.split("?", 1)[0]).endswith("/" + prompt.LOCATOR_NAME):
+            return {"src": src, "alt": alt.strip()}
     return None
 
 
