@@ -62,14 +62,6 @@ def _num(text):
     return int(digits) if digits else None
 
 
-def naver_visitors(xml):
-    """<visitorcnt id="20261023" cnt="12"/> … → {"2026-10-23": 12}"""
-    out = {}
-    for d, n in re.findall(r'<visitorcnt[^>]*\bid="(\d{8})"[^>]*\bcnt="(\d+)"', xml.decode("utf-8", "replace")):
-        out[f"{d[:4]}-{d[4:6]}-{d[6:]}"] = int(n)
-    return out
-
-
 def naver_totals(body):
     items = (json.loads(body.decode("utf-8")).get("result") or {}).get("items") or []
     likes = sum(_num(i.get("sympathyCnt")) or 0 for i in items)

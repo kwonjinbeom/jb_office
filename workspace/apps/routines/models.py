@@ -177,11 +177,6 @@ class RoutinePick(models.Model):
         return f"{self.routine} {self.day}"
 
 
-def week_start(day):
-    """그 날이 든 주의 월요일 (커스텀 글쓰기는 주 단위로 본다)"""
-    return day - timezone.timedelta(days=day.weekday())
-
-
 class FixedTopic(TrashableModel):
     """커스텀 글쓰기의 고정 주제 (2026-10-21 사용자): 주제·지침이 정해진 글. 예) 공모주 일정 · 국내 / 해외, 청년·신혼 정책.
     글 분류의 소재 아래에 있다 (2026-10-23 사용자: 공모주 일정 국내·해외는 눈잎 > 공모주 아래). 실행은 topics.run."""
