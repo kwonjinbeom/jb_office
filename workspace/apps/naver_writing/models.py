@@ -78,7 +78,7 @@ class Post(TrashableModel):
     def is_published(self):
         return self.publish_status == self.Publish.DONE
 
-    # 화면 사이 이동: 임시 ↔ 검토 ↔ 포스트. 한 번에 한 칸씩만 옮긴다.
+    # 화면 사이 이동: 임시 ↔ 검토 ↔ 포스트. 한 번에 한 칸씩 (임시 → 포스트는 예외).
     def next_stage(self):
         return {self.Stage.TEMP: self.Stage.REVIEW, self.Stage.REVIEW: self.Stage.POST}.get(self.stage)
 
@@ -88,4 +88,6 @@ class Post(TrashableModel):
         return {self.Stage.REVIEW: self.Stage.TEMP, self.Stage.POST: self.Stage.REVIEW}.get(self.stage)
 
     def can_move_to(self, stage):
+        if self.stage == self.Stage.TEMP and stage == self.Stage.POST:  # 검토 없이 바로 발행예정 (2026-10-27 사용자)
+            return True
         return stage is not None and stage in (self.next_stage(), self.prev_stage())

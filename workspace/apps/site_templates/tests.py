@@ -609,8 +609,9 @@ class CloudConvertApiTests(TestCase):
         post.refresh_from_db()
         self.assertEqual(post.stage, "post")
         self.assertEqual(self.client.post(url, {"post": f"tistory:{post.pk}", "to": "post"}).json()["stage"], "post")  # 이미 그 단계
+        self.assertEqual(self.client.post(url, {"post": f"tistory:{post.pk}", "to": "temp"}).status_code, 400)  # 되돌릴 때는 이웃 단계만
         temp = Post.objects.create(title="임시", body="b", stage="temp")
-        self.assertEqual(self.client.post(url, {"post": f"tistory:{temp.pk}", "to": "post"}).status_code, 400)  # 이웃 단계만
+        self.assertEqual(self.client.post(url, {"post": f"tistory:{temp.pk}", "to": "post"}).json()["stage"], "post")  # 임시 → 발행예정은 바로 (2026-10-27)
         self.assertEqual(self.client.post(reverse("site_templates:api_stage"), {"post": f"tistory:{post.pk}", "to": "review"}).status_code, 403)
 
 

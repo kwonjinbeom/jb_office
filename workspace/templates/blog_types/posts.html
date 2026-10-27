@@ -37,7 +37,7 @@
       {% if posts %}
       {# 체크한 글에 하는 일 (2026-10-22 사용자): 같은 모양 버튼, 성격별로 | 로 나눈다 — 단계 | 발행 | 삭제 #}
       <span class="wr-bulk">
-        {% if stage == 'temp' %}<button class="btn sm" form="ph-bulk" name="to" value="review" title="체크한 글을 검토글로">검토글</button>
+        {% if stage == 'temp' %}<button class="btn sm" form="ph-bulk" name="to" value="review" title="체크한 글을 검토글로">검토글</button><button class="btn sm" form="ph-bulk" name="to" value="post" title="체크한 글을 검토 없이 바로 발행예정글로">발행예정글</button>
         {% elif stage == 'review' %}<button class="btn sm" form="ph-bulk" name="to" value="temp" title="체크한 글을 임시글로">임시글</button><button class="btn sm" form="ph-bulk" name="to" value="post" title="체크한 글을 발행예정글로">발행예정글</button>
         {% else %}{% include "blog_types/_plan_bulk.html" %}{% endif %}
         <span class="bar-sep" aria-hidden="true"></span>

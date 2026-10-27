@@ -31,6 +31,7 @@
       {% csrf_token %}<input type="hidden" name="pk" value="{{ post.pk }}"><input type="hidden" name="next" value="{{ pl_next_url }}">
       {% if prev_label %}<button class="btn sm" name="to" value="{{ post.prev_stage|default:'' }}" {% if not post.prev_stage %}disabled title="발행 완료한 글은 되돌리지 않습니다"{% endif %}>{% include "includes/ic.html" with name="chevron-left" %}{{ prev_label }}</button>{% endif %}
       {% if next_label %}<button class="btn sm primary" name="to" value="{{ post.next_stage }}">{{ next_label }}{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}
+      {% if post.stage == 'temp' %}<button class="btn sm" name="to" value="post" title="검토글을 건너뛰고 바로 발행예정글로">발행예정으로{% include "includes/ic.html" with name="chevron-right" %}</button>{% endif %}{# 2026-10-27 사용자 #}
     </form>
     <a {% trash_attrs post %} data-trash-trigger data-trash-next="{{ pl_next_url }}" class="btn sm icon ghost danger" href="{% url 'writing:delete' post.pk %}" title="휴지통으로" aria-label="휴지통으로">{% include "includes/ic.html" with name="trash" %}</a>
   </div>
