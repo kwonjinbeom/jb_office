@@ -15,8 +15,7 @@ from datetime import date, datetime, timedelta
 from django.contrib.auth.decorators import login_not_required
 from django.db.models import Max
 from django.http import HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
-from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -26,7 +25,7 @@ from apps.blog_rules.models import Blog
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
 from . import dash, feeds, stats
-from .models import FeedEntry, FeedState, Plan, SiteStat
+from .models import FeedEntry, FeedState, Plan
 
 DAY_NAMES = "월화수목금토일"
 CHECK_HEAD = "# 발행 확인"  # apps/routines/local_run.FEEDS_HEAD
@@ -191,6 +190,11 @@ def api_feeds(request):
         if blog is not None and isinstance(r, dict):
             state = stats.record(blog, r)
             out.append({"blog": f"{blog.name} 통계", "ok": state.stat_ok, "message": state.stat_message})
+    by_host = stats.ga4_blogs(blogs.values())
+    for r in data.get("ga4") or []:  # GA4 (2026-10-27): 날짜별 방문자·조회 · 많이 본 글 · 유입
+        blog = by_host.get(str(r.get("host", ""))) if isinstance(r, dict) else None
+        if blog is not None:
+            out.append({"blog": f"{blog.name} GA4", "ok": True, "message": stats.record_ga4(blog, r)})
     return JsonResponse({"results": out}, json_dumps_params={"ensure_ascii": False})
 
 
@@ -198,7 +202,7 @@ PERIODS = [(7, "7일"), (30, "30일"), (90, "90일")]
 
 
 def stats_page(request):
-    """통계현황: 사이트별 방문자 · 공감 · 댓글 추이 (?days=7|30|90 &m=visitors|likes|comments)"""
+    """통계현황 (?days=7|30|90): 사이트 칸 · 하루 방문자 · 많이 본 글 · 어디서 왔나 (2026-10-27 사용자: 쉽게 싹 갈아엎기)"""
     request.nav_key = "blog_stats"
     today = timezone.localdate()
     try:
@@ -206,45 +210,10 @@ def stats_page(request):
     except ValueError:
         n = 30
     n = n if n in dict(PERIODS) else 30
-    metric = request.GET.get("m") if request.GET.get("m") in dict(stats.METRICS) else "visitors"
     days = [today - timedelta(days=n - 1 - i) for i in range(n)]
     order = list(Blog.objects.values_list("pk", flat=True))  # 색은 사이트 순서로 고정
     blogs = list(Blog.objects.filter(status=Blog.Status.ACTIVE))
-    data = stats.page_data(blogs, order, days, metric)
-    try:
-        hand_day = date.fromisoformat(request.GET.get("day", ""))
-    except ValueError:
-        hand_day = today
-    hand = {r.blog_id: r for r in SiteStat.objects.filter(blog__in=blogs, day=hand_day)}
     return render(request, "blog_ops/stats.html", {
-        "page_title": "통계현황", **data, "days": days, "n": n, "metric": metric,
-        "metric_label": dict(stats.METRICS)[metric], "metrics": stats.METRICS, "periods": PERIODS,
-        "hand_day": hand_day, "today": today,
-        "hand_rows": [(b, hand.get(b.pk)) for b in blogs],
-        "checked_at": FeedState.objects.aggregate(m=Max("stat_checked_at"))["m"],
+        "page_title": "통계현황", **stats.page_data(blogs, order, days, today), "days": days, "n": n, "periods": PERIODS,
+        "today": today, "checked_at": FeedState.objects.aggregate(m=Max("stat_checked_at"))["m"],
     })
-
-
-@require_POST
-def stats_save(request):
-    """직접 넣기: 그날 사이트마다 방문자 · 공감 · 댓글. 빈 칸은 그대로 두고, 넣은 날은 자동 수집이 덮어쓰지 않는다."""
-    try:
-        day = date.fromisoformat(request.POST.get("day", ""))
-    except ValueError:
-        day = timezone.localdate()
-    saved = 0
-    for b in Blog.objects.filter(status=Blog.Status.ACTIVE):
-        vals = {m: request.POST.get(f"{m}_{b.pk}", "").strip().replace(",", "") for m, _ in stats.METRICS}
-        vals = {m: int(v) for m, v in vals.items() if v.isdigit()}
-        if not vals:
-            continue
-        row, _ = SiteStat.objects.get_or_create(blog=b, day=day)
-        for m, v in vals.items():
-            setattr(row, m, v)
-        row.hand = True
-        row.save()
-        saved += 1
-    if saved:
-        messages.success(request, f"{day:%m-%d} 숫자를 {saved}개 사이트에 넣었습니다.")
-    nxt = request.POST.get("next", "")
-    return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else reverse("blog_ops:stats"))

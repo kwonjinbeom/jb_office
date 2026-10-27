@@ -296,7 +296,10 @@ def check_feeds(payload):
                         "items": [[t, u, w.isoformat()] for t, u, w in items]})
     from apps.blog_ops import stats
     numbers = [stats.collect(s) for s in payload.get("stats") or []]  # 통계현황: 방문자 · 공감 · 댓글
-    body = json.dumps({"token": payload.get("token", ""), "results": results, "stats": numbers}, ensure_ascii=False).encode("utf-8")
+    from . import site_views
+    ga4 = site_views.collect()  # 통계현황: GA4 날짜별 방문자·조회 · 많이 본 글 · 유입 (인증 없으면 빈 목록)
+    body = json.dumps({"token": payload.get("token", ""), "results": results, "stats": numbers, "ga4": ga4},
+                      ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(payload["api"], data=body, headers={"Content-Type": "application/json; charset=utf-8"})
     with urllib.request.urlopen(req, timeout=60) as res:
         out = json.loads(res.read().decode("utf-8"))

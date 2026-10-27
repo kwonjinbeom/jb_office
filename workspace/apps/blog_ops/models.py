@@ -55,6 +55,9 @@ class FeedState(models.Model):
     stat_checked_at = models.DateTimeField(null=True, blank=True)
     stat_ok = models.BooleanField(default=False)
     stat_message = models.CharField(max_length=200, blank=True)
+    # GA4 (2026-10-27): 같은 PC 실행에서 받는다 (routines.site_views.collect). 유입은 최근 30일 [[경로, 세션]]
+    ga_checked_at = models.DateTimeField(null=True, blank=True)
+    ga_channels = models.JSONField(default=list, blank=True)
 
 
 class SiteStat(models.Model):
@@ -69,6 +72,7 @@ class SiteStat(models.Model):
     likes_total = models.PositiveIntegerField(null=True, blank=True)
     comments_total = models.PositiveIntegerField(null=True, blank=True)
     visitors_total = models.PositiveIntegerField(null=True, blank=True)  # 그날 마지막 수집 때 누적 방문자 (다음 날 어제를 마저 채운다)
+    views = models.PositiveIntegerField("조회수", null=True, blank=True)  # GA4 가 채운 날: 방문자도 GA4 사용자 수 (공개 숫자가 덮지 않는다)
     hand = models.BooleanField("직접 넣음", default=False)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -78,3 +82,18 @@ class SiteStat(models.Model):
 
     def __str__(self):
         return f"{self.blog} {self.day}"
+
+
+class SitePage(models.Model):
+    """통계현황 '많이 본 글' (2026-10-27 사용자): GA4 최근 30일 글별 조회수. 수집 때마다 사이트 것을 통째로 바꾼다."""
+    blog = models.ForeignKey(Blog, on_delete=models.CASCADE, related_name="pages")
+    path = models.CharField(max_length=500)
+    title = models.CharField(max_length=300, blank=True)
+    views = models.PositiveIntegerField(default=0)
+    users = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-views"]
+
+    def __str__(self):
+        return f"{self.blog} {self.path}"

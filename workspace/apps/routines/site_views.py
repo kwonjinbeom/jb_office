@@ -21,6 +21,8 @@ DATA = "https://analyticsdata.googleapis.com/v1beta"
 DAYS = 28
 TOP = 10  # 명령 창에 사이트마다 보여 줄 글 수
 PAGE_LIMIT = 1000
+SERVER_DAYS = 90  # 통계현황 기간 (7·30·90일) 을 다 채운다
+SERVER_PAGES = 50  # 통계현황 '많이 본 글'에 보낼 사이트마다 글 수 (최근 30일)
 
 
 def _call(url, token, body=None):
@@ -110,6 +112,40 @@ def _int(v):
         return 0
 
 
+def _fetch(prop, token, start, end):
+    """속성 하나의 (글별 [경로, 제목, 조회, 사용자], 날짜별 [YYYYMMDD, 조회, 사용자, 세션], 유입 [경로, 세션])"""
+    pages = _report(prop, token, start, end, ["pagePath", "pageTitle"], ["screenPageViews", "activeUsers"], order="screenPageViews")
+    daily = sorted(_report(prop, token, start, end, ["date"], ["screenPageViews", "activeUsers", "sessions"]))
+    channels = _report(prop, token, start, end, ["sessionDefaultChannelGroup"], ["sessions"], order="sessions")
+    return pages, daily, channels
+
+
+def collect(today=None, days=SERVER_DAYS):
+    """통계현황으로 보낼 숫자 ('지금 수집'·발행 확인 때 PC 가 부른다, routines.local_run.check_feeds).
+    인증·속성이 없거나 구글에 못 닿으면 빈 목록 — 나머지 수집은 그대로 간다.
+    → [{"host", "daily": [[날짜, 조회, 사용자]], "pages": [[경로, 제목, 조회, 사용자]], "channels": [[경로, 세션]]}]"""
+    today = today or date.today()
+    start = today - timedelta(days=days - 1)
+    try:
+        token = search_perf.access_token()
+        props = [p for p in properties(token) if p["host"]]
+    except (PerfError, urllib.error.URLError, OSError, ValueError):
+        return []
+    out = []
+    for p in props:
+        try:
+            daily = sorted(_report(p["property"], token, start, today, ["date"], ["screenPageViews", "activeUsers"]))
+            s30 = today - timedelta(days=29)  # 글·유입은 최근 30일
+            pages = _report(p["property"], token, s30, today, ["pagePath", "pageTitle"], ["screenPageViews", "activeUsers"],
+                            order="screenPageViews", limit=SERVER_PAGES)
+            channels = _report(p["property"], token, s30, today, ["sessionDefaultChannelGroup"], ["sessions"], order="sessions")
+        except (PerfError, urllib.error.URLError, OSError, ValueError):
+            continue
+        out.append({"host": p["host"], "daily": [[f"{d[:4]}-{d[4:6]}-{d[6:]}", v, u] for d, v, u in daily],
+                    "pages": pages, "channels": channels})
+    return out
+
+
 def pull(today=None, days=DAYS):
     """GA4 속성마다 글별·날짜별·유입 경로 CSV 와 조회수.md → [(host, 한 줄, 상위 글 [(조회, 사용자, 경로, 제목)])]"""
     today = today or date.today()
@@ -123,14 +159,10 @@ def pull(today=None, days=DAYS):
     for p in props:
         h = p["host"]
         try:
-            pages = _report(p["property"], token, start, today, ["pagePath", "pageTitle"], ["screenPageViews", "activeUsers"],
-                            order="screenPageViews")
-            daily = _report(p["property"], token, start, today, ["date"], ["screenPageViews", "activeUsers", "sessions"])
-            channels = _report(p["property"], token, start, today, ["sessionDefaultChannelGroup"], ["sessions"], order="sessions")
+            pages, daily, channels = _fetch(p["property"], token, start, today)
         except urllib.error.HTTPError as e:
             results.append((h, f"실패 (HTTP {e.code})", []))
             continue
-        daily.sort()
         search_perf._write(search_perf.out_dir() / f"{h}_조회수_글.csv", ["경로", "제목", "조회수", "사용자"], pages)
         search_perf._write(search_perf.out_dir() / f"{h}_조회수_날짜.csv", ["날짜", "조회수", "사용자", "세션"],
                            [[f"{d[:4]}-{d[4:6]}-{d[6:]}", v, u, s] for d, v, u, s in daily])

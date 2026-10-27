@@ -322,7 +322,7 @@ class SiteStatsTests(TestCase):
         got = stats.collect(stats.target(blogger), fetch=lambda url: feed)
         self.assertEqual((got["visitors"], got["likes_total"], got["comments_total"]), ({}, 0, 3))
         self.assertTrue(got["ok"])
-        self.assertIn("방문자는 직접", got["message"])
+        self.assertIn("방문자는 GA4", got["message"])
 
     def test_naver_yesterday_filled_from_total(self):
         """네이버는 오늘 방문자만 준다: 다음 날 누적으로 어제를 마저 채운다 (어제 마지막 수집 뒤에 온 사람까지)"""
@@ -349,25 +349,52 @@ class SiteStatsTests(TestCase):
         self.assertEqual(SiteStat.objects.get(blog=self.naver, day=y - timedelta(days=1)).visitors, 7)  # 직접 넣은 날은 그대로
         self.assertTrue(FeedState.objects.get(blog=self.naver).stat_ok)
 
-    def test_page_and_hand_entry(self):
+    def test_page_tiles_top_pages_channels(self):
+        """2026-10-27 사용자: 보기 쉽게 — 사이트 칸(기간 방문자 · 어제·오늘) · 하루 방문자 · 많이 본 글 · 어디서 왔나"""
+        from . import stats
         from .models import SiteStat
         res = self.client.get(reverse("blog_ops:stats"))
         self.assertEqual(res.status_code, 200)
         self.assertFalse(res.context["has_data"])
-        self.assertContains(res, "직접 넣기")
-        self.client.post(reverse("blog_ops:stats_save"), {"day": self.today.isoformat(), f"visitors_{self.naver.pk}": "1,234",
-                                                           f"likes_{self.naver.pk}": "5", f"comments_{self.naver.pk}": ""})
-        row = SiteStat.objects.get(blog=self.naver, day=self.today)
-        self.assertEqual((row.visitors, row.likes, row.comments, row.hand), (1234, 5, None, True))
-        res = self.client.get(reverse("blog_ops:stats"), {"m": "visitors", "days": 7})
+        self.assertContains(res, "지금 수집")
+        y = self.today - timedelta(days=1)
+        SiteStat.objects.create(blog=self.naver, day=y, visitors=10)
+        SiteStat.objects.create(blog=self.naver, day=self.today, visitors=4)
+        stats.record_ga4(self.tistory, {"daily": [[y.isoformat(), 30, 12]], "pages": [["/7", "교토 단풍", 21, 9]],
+                                        "channels": [["Organic Search", 30], ["Direct", 10]]})
+        res = self.client.get(reverse("blog_ops:stats"), {"days": 7})
         self.assertTrue(res.context["has_data"])
-        card = next(c for c in res.context["cards"] if c["blog"] == self.naver)
-        self.assertEqual(card["last"], (self.today, 1234))
+        tile = next(t for t in res.context["tiles"] if t["blog"] == self.naver)
+        self.assertEqual((tile["visitors"], tile["yesterday"], tile["today"], tile["source"]), (14, 10, 4, "공개 숫자"))
+        tile = next(t for t in res.context["tiles"] if t["blog"] == self.tistory)
+        self.assertEqual((tile["visitors"], tile["views"], tile["source"]), (12, 30, "GA4"))
+        self.assertEqual(res.context["total"]["visitors"], 26)
         self.assertEqual(len(res.context["chart"]["cols"]), 7)
         self.assertContains(res, "black_lukey~")  # 꺾은선 말풍선 자료
+        self.assertEqual(res.context["top"][0]["url"], self.tistory.address.rstrip("/") + "/7")
+        self.assertEqual([(c["name"], c["pct"]) for c in res.context["channels"]], [("검색", 75), ("직접", 25)])
         # 색은 사이트 순서로 고정: 운영 중이 아닌 사이트를 빼도 같은 색
-        colors = {c["blog"].pk: c["color"] for c in res.context["cards"]}
+        colors = {t["blog"].pk: t["color"] for t in res.context["tiles"]}
         self.assertEqual(len(set(colors.values())), len(colors))
+
+    def test_ga4_days_win_over_public_numbers(self):
+        """GA4 가 채운 날은 공개 숫자(스킨 방문자 칸)가 방문자를 덮지 않는다. 글 목록은 수집마다 통째로 바뀐다."""
+        import json as _json
+
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from . import stats
+        from .models import SitePage, SiteStat
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        host = self.tistory.address.split("://")[-1].strip("/")
+        body = {"token": "tok", "results": [], "stats": [], "ga4": [
+            {"host": host, "daily": [[self.today.isoformat(), 50, 20]], "pages": [["/1", "a", 5, 3], ["/2", "b", 4, 2]], "channels": []}]}
+        res = self.client.post(reverse("blog_ops:api_feeds"), _json.dumps(body), content_type="application/json")
+        self.assertIn({"blog": "memorily GA4", "ok": True, "message": "GA4 1일 · 글 2"}, res.json()["results"])
+        stats.record(self.tistory, {"ok": True, "visitors": {self.today.isoformat(): 999}})
+        row = SiteStat.objects.get(blog=self.tistory, day=self.today)
+        self.assertEqual((row.visitors, row.views), (20, 50))
+        stats.record_ga4(self.tistory, {"daily": [], "pages": [["/3", "c", 1, 1]]})
+        self.assertEqual(list(SitePage.objects.filter(blog=self.tistory).values_list("path", flat=True)), ["/3"])
 
     def test_pc_report_carries_stats_and_menu_order(self):
         import json as _json
@@ -388,7 +415,7 @@ class SiteStatsTests(TestCase):
 
 
 class WordpressStatsTests(TestCase):
-    """워드프레스 통계 (2026-10-26): 댓글 수는 공개 REST, 공감은 없다, 방문자는 직접."""
+    """워드프레스 통계 (2026-10-26): 댓글 수는 공개 REST, 공감은 없다, 방문자는 GA4 (2026-10-27)."""
 
     def test_collect_wordpress_comments(self):
         import json as _json
@@ -397,4 +424,4 @@ class WordpressStatsTests(TestCase):
         wp = Blog.objects.get(platform="wordpress")
         got = stats.collect(stats.target(wp), fetch=lambda url: _json.dumps([{"id": 1}, {"id": 2}]).encode())
         self.assertEqual((got["likes_total"], got["comments_total"]), (0, 2))
-        self.assertIn("방문자는 직접", got["message"])
+        self.assertIn("방문자는 GA4", got["message"])
