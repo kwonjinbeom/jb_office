@@ -339,7 +339,7 @@ def api_place(request):
 @require_POST
 def api_stage(request):
     """클라우드 claude 가 글의 단계를 이웃 단계로 옮기는 곳: post=tistory:3 · to=review|post|temp (2026-10-25 사용자: 변환한 글을 발행예정글로).
-    글 관리의 체크한 글 옮기기(posts.bulk)와 같은 규칙 — 이웃 단계로만, 발행 완료한 글은 되돌리지 않는다."""
+    글 관리의 체크한 글 옮기기(posts.bulk)와 같은 규칙 — 이웃 단계로만 (임시 → 발행예정은 바로), 발행 완료한 글은 되돌리지 않는다."""
     if not _token_ok(request):
         return HttpResponseForbidden("token")
     from apps.blog_types import classify
