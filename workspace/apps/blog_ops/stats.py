@@ -306,9 +306,31 @@ def _nice(top):
     return int(10 * step)
 
 
+def lines(series, days, width=960, height=420):
+    """전체 보기: 사이트마다 꺾은선 (2026-10-27 사용자: 전체는 꺾은선, 사이트 하나는 막대).
+    빈 날은 앞뒤 숫자를 그대로 잇는다 — 끊으면 점만 남아 안 보였다. series: [{"name", "color", "values": [n|None]}]"""
+    pad_l, pad_r, pad_t, pad_b = 44, 16, 14, 28
+    w, h = width - pad_l - pad_r, height - pad_t - pad_b
+    top = _nice(max([v for s in series for v in s["values"] if v is not None] or [0]))
+    n = len(days)
+    band = w / max(n, 1)
+    x = [pad_l + band * i + band / 2 for i in range(n)]
+    out = []
+    for s in series:
+        pts = [(round(x[i], 1), round(pad_t + h - h * v / top, 1)) for i, v in enumerate(s["values"]) if v is not None]
+        out.append({**s, "points": " ".join(f"{px},{py}" for px, py in pts), "dots": pts if n <= 31 else []})
+    every = 1 if n <= 10 else (5 if n <= 35 else 14)
+    cols = [{"x": round(x[i], 1), "day": d, "left": round(pad_l + band * i, 1), "w": round(band, 1),
+             "vals": [(s["name"], s["color"], s["values"][i]) for s in series]} for i, d in enumerate(days)]
+    return {"kind": "lines", "width": width, "height": height, "lines": out, "cols": cols,
+            "xlabels": [(c["x"], c["day"]) for i, c in enumerate(cols) if (n - 1 - i) % every == 0],
+            "grid": [(round(pad_t + h - h * k / 4, 1), int(top * k / 4)) for k in range(5)],
+            "plot": {"l": pad_l, "r": width - pad_r, "t": pad_t, "b": pad_t + h, "h": h}}
+
+
 def bars(series, days, width=960, height=420):
-    """날짜별 막대 (2026-10-27 사용자: 꺾은선은 빈 날이 끼면 점만 남아 안 보였다). 사이트가 여럿이면 그날 막대에 쌓는다.
-    series: [{"name", "color", "values": [n|None]}] → 그릴 좌표. 빈 날은 막대가 없다."""
+    """사이트 하나 보기: 날짜별 막대 (2026-10-27 사용자). 빈 날은 막대가 없다.
+    series: [{"name", "color", "values": [n|None]}] → 그릴 좌표. 여럿이면 그날 막대에 쌓는다."""
     pad_l, pad_r, pad_t, pad_b = 44, 16, 14, 28
     w, h = width - pad_l - pad_r, height - pad_t - pad_b
     n = len(days)
@@ -333,7 +355,7 @@ def bars(series, days, width=960, height=420):
     every = 1 if n <= 10 else (5 if n <= 35 else 14)
     xlabels = [(c["x"], c["day"]) for i, c in enumerate(cols) if (n - 1 - i) % every == 0]
     grid = [(round(pad_t + h - h * k / 4, 1), int(top * k / 4)) for k in range(5)]
-    return {"width": width, "height": height, "cols": cols, "bw": round(bw, 1), "xlabels": xlabels, "grid": grid,
+    return {"kind": "bars", "width": width, "height": height, "cols": cols, "bw": round(bw, 1), "xlabels": xlabels, "grid": grid,
             "plot": {"l": pad_l, "r": width - pad_r, "t": pad_t, "b": pad_t + h, "h": h}, "show_total": n <= 14}
 
 
@@ -403,6 +425,6 @@ def page_data(blogs, all_order, days, today, selected=None):
     channels = [{"name": name, "n": n, "pct": round(n * 100 / whole), "color": COLORS[i % len(COLORS)]}
                 for i, (name, n) in enumerate(counts.most_common(6))] if whole else []
     chart_series = [s for s in series if selected is None or s["pk"] == selected.pk]
-    return {"tiles": tiles, "total": total, "chart": bars(chart_series, days), "legend": chart_series if selected is None else [],
+    return {"tiles": tiles, "total": total, "chart": (bars if selected else lines)(chart_series, days), "legend": chart_series if selected is None else [],
             "top": top, "channels": channels, "ga4_any": any(getattr(states.get(b.pk), "ga_checked_at", None) for b in shown),
             "has_data": any(v is not None for s in chart_series for v in s["values"])}
