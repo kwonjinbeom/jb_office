@@ -1854,7 +1854,6 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .sc-fields .field { margin: 0; }
 .sc-fields .sc-wide { grid-column: 1 / -1; }
 .sc-form .form-foot { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-.danger-text { color: var(--danger); }
 @media (min-width: 901px) and (max-width: 1280px) {
   .sc { grid-template-rows: minmax(0, 1fr) 256px; }
   .sc-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

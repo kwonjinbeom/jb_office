@@ -1,14 +1,17 @@
 {% extends "base.html" %}
-{# 공용 삭제 확인. 컨텍스트: page_title, object_label, cancel_url, (선택) hint #}
+{# 공용 삭제 확인 (모든 화면). 화면에서는 휴지통 창(trash.js)이 먼저 뜨고, 이 화면은 스크립트가 없을 때만 본다.
+   컨텍스트: page_title, object_label, cancel_url, (선택) kind_label · hint · crumbs [(이름, 주소)] · hidden [(name, value)] #}
+{% block breadcrumb %}{% if crumbs %}<div class="crumb">{% for label, url in crumbs %}{% if not forloop.first %}{% include "includes/ic.html" with name="chevron-right" %}{% endif %}<a href="{{ url }}">{{ label }}</a>{% endfor %}</div>{% endif %}{% endblock %}
+
 {% block content %}
 <div class="confirm">
   <div class="confirm-head">{% include "includes/ic.html" with name="alert" %}휴지통으로 이동할까요?</div>
   <div class="confirm-body">
-    <p><strong>{{ object_label }}</strong> 을(를) 휴지통으로 이동합니다. 휴지통에서 7일 동안 복원할 수 있습니다.</p>
+    <p>{% if kind_label %}{{ kind_label }} {% endif %}<strong>{{ object_label }}</strong>을(를) 휴지통으로 옮깁니다. 7일 동안 복원할 수 있습니다.</p>
     {% if hint %}<p class="muted small">{{ hint }}</p>{% endif %}
   </div>
   <form method="post" class="confirm-foot">
-    {% csrf_token %}
+    {% csrf_token %}{% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
     <a class="btn" href="{{ cancel_url }}">취소</a>
     <button class="btn danger solid" type="submit">{% include "includes/ic.html" with name="trash" %}삭제</button>
   </form>

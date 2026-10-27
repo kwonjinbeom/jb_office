@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 {# 블로그·카페 › memorily 티스토리 › 애니 총정리: 왼쪽 전체 애니 목록(담기·상태·삭제) · 가운데 작업 순서·담은 작품 · 오른쪽 고른 md (2026-10-21, 10-23 사용자) #}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a> › memorily 티스토리</div>{% endblock %}
@@ -35,9 +36,7 @@
           {% if t.picked %}<button class="btn sm an-pick on" title="담은 작품에서 빼기">{% include "includes/ic.html" with name="check" %}담음</button>
           {% else %}<button class="btn sm an-pick" title="작업 작품에 담기">{% include "includes/ic.html" with name="plus" %}담기</button>{% endif %}
         </form>
-        <form method="post" action="{% url 'anime:delete' t.pk %}" onsubmit="return confirm('{{ t.title|escapejs }} 을(를) 목록에서 지울까요? (휴지통에서 7일간 복원)')">{% csrf_token %}<input type="hidden" name="next" value="{{ here }}">
-          <button class="an-del" title="목록에서 삭제" aria-label="{{ t.title }} 삭제">{% include "includes/ic.html" with name="trash" %}</button>
-        </form>
+        <button type="button" {% trash_attrs t %} data-trash-trigger data-trash-next="{{ here }}" class="an-del" title="목록에서 삭제" aria-label="{{ t.title }} 삭제">{% include "includes/ic.html" with name="trash" %}</button>
       </div>
       {% empty %}
       <div class="bt-empty-line">목록이 비었습니다.</div>

@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'evidence:list' %}">증거 수집함</a></div>{% endblock %}
 
 {% block actions %}
-{% if item %}<a class="btn ghost danger" href="{% url 'evidence:delete' item.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
+{% if item %}<a {% trash_attrs item %} data-trash-trigger class="btn ghost danger" href="{% url 'evidence:delete' item.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
 <a class="btn" href="{{ next|default:'/evidence/' }}">취소</a>
 <button class="btn primary" type="submit" form="main-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}

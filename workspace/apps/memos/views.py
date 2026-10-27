@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils.text import Truncator
 
 from .forms import MemoForm
 from .models import Memo
@@ -46,9 +48,11 @@ def memo_delete(request, pk):
     memo = get_object_or_404(Memo, pk=pk)
     if request.method == "POST":
         memo.delete()
-        messages.success(request, "메모를 삭제했습니다.")
+        messages.success(request, "메모를 휴지통으로 옮겼습니다.")
         return redirect("memos:list")
-    return render(request, "memos/confirm_delete.html", {"page_title": "메모 삭제", "memo": memo})
+    return render(request, "core/confirm_delete.html", {
+        "page_title": "메모 삭제", "kind_label": "메모", "object_label": memo.title, "cancel_url": memo.get_absolute_url(),
+        "crumbs": [("메모", reverse("memos:list")), (Truncator(memo.title).chars(30), memo.get_absolute_url())]})
 
 
 def memo_toggle_pin(request, pk):

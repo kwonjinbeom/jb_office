@@ -421,7 +421,7 @@ def delete(request, kind, pk):
     if request.method == "POST":
         label = obj.name
         obj.delete()
-        messages.success(request, f"{KIND_LABEL[kind]} '{label}'을(를) 삭제했습니다.")
+        messages.success(request, f"{KIND_LABEL[kind]} '{label}'을(를) 휴지통으로 옮겼습니다.")
         return redirect(_merge(nxt, parent.sel, w) if parent else _merge(nxt))
     inside = []
     if kind == "section":
@@ -434,9 +434,11 @@ def delete(request, kind, pk):
     elif kind == "sitecat":
         n = Placement.objects.filter(site_category__in=[obj, *obj.children.all()]).count()
         inside = ([f"하위 카테고리 {obj.children.count()}개"] if not obj.parent_id else []) + ([f"넣은 글 {n}개"] if n else [])
-    return render(request, "blog_types/confirm_delete.html", {
-        "page_title": "삭제", "obj": obj, "kind_label": KIND_LABEL[kind], "inside": inside,
-        "back": _merge(nxt, obj.sel, w), "next": nxt, "w": w,
+    return render(request, "core/confirm_delete.html", {
+        "page_title": "삭제", "kind_label": KIND_LABEL[kind], "object_label": obj.name,
+        "hint": f"안에 있는 {', '.join(inside)}도 함께 옮깁니다." if inside else "",
+        "cancel_url": _merge(nxt, obj.sel, w), "hidden": [("next", nxt), ("w", w)],
+        "crumbs": [("블로그·카페", reverse("blog:list")), ("카테고리 관리", reverse("blog_types:index"))],
     })
 
 

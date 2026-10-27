@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 {% load static %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}{% for t in tabs %}{% if t.on %}<a href="{% url t.url_name %}">{{ t.label }}</a>{% endif %}{% endfor %}{% if post %}{% include "includes/ic.html" with name="chevron-right" %}<a href="{{ post.get_absolute_url }}">{{ post.title|truncatechars:30 }}</a>{% endif %}</div>{% endblock %}
@@ -6,7 +7,7 @@
 {% block heading %}{% if post %}글쓰기{% else %}{{ page_title }}{% endif %}{% endblock %}
 
 {% block actions %}
-{% if post %}<a class="btn ghost danger" href="{% url 'naver_writing:delete' post.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
+{% if post %}<a {% trash_attrs post %} data-trash-trigger class="btn ghost danger" href="{% url 'naver_writing:delete' post.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
 {% if post %}<a class="btn" href="{{ post.get_absolute_url }}">취소</a>{% else %}{% for t in tabs %}{% if t.on %}<a class="btn" href="{% url t.url_name %}">취소</a>{% endif %}{% endfor %}{% endif %}
 <button class="btn primary" type="submit" form="post-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}

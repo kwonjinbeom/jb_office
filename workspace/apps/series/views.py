@@ -1,4 +1,4 @@
-"""블로그·카페 › memorily 연재: 세 칸 (2026-10-20 사용자).
+"""블로그·카페 › memorily 티스토리 › 블로그 자동화(예전 memorily 연재): 세 칸 (2026-10-20 사용자).
 왼쪽 회차 목록(글 보기 왼쪽 목록과 같은 크기) · 가운데 고른 회차 요약(흐름 · 화면 · 근거 · 상태 · 내 추가 설명) ·
 오른쪽 글쓰기(버튼, 만든 뒤에는 그 글)."""
 from pathlib import Path
@@ -88,7 +88,7 @@ def index(request):
         from apps.writing.render import render_body
         post_html = render_body(current.post.body)
     return render(request, "series/index.html", {
-        "page_title": "memorily 연재", "series": SERIES,
+        "page_title": "블로그 자동화", "series": SERIES,
         "episodes": episodes, "current": None if new else current, "form": form, "new": new,
         "status_choices": Episode.Status.choices,
         "shots": shots(current.number) if current and not new else [],

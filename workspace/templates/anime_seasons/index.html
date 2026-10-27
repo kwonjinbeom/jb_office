@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 {# 분기별 애니 추천 및 후기: 왼쪽 분기 방영작 → 가운데 본 애니 (버튼·끌어 놓기) · 오른쪽 고른 작품의 평점·감상 (2026-10-23 사용자) #}
 
 {% block heading %}분기별 애니 추천 및 후기{% endblock %}
@@ -67,7 +68,7 @@
       <div class="field"><label for="as-one">한 줄 평</label><input id="as-one" class="input" name="one_line" maxlength="120" value="{{ picked.one_line }}" placeholder="추천 글에 들어갈 한 줄"></div>
       <div class="field as-review"><label for="as-review">감상평</label><textarea id="as-review" class="input" name="review" placeholder="좋았던 점 · 아쉬운 점 · 누구에게 추천할지">{{ picked.review }}</textarea></div>
       <div class="form-foot">
-        <button class="btn ghost sm danger-text" formaction="{% url 'anime_seasons:delete' picked.pk %}" formnovalidate>{% include "includes/ic.html" with name="trash" %}삭제</button>
+        <button type="button" {% trash_attrs picked %} data-trash-trigger data-trash-next="{{ request.get_full_path }}" class="btn ghost sm danger">{% include "includes/ic.html" with name="trash" %}삭제</button>
         <span style="margin-left:auto"></span>
         <button class="btn primary sm">{% include "includes/ic.html" with name="save" %}저장</button>
       </div>

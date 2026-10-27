@@ -1,9 +1,10 @@
 {% extends "base.html" %}
+{% load trash_tags %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a>{% include "includes/ic.html" with name="chevron-right" %}<a href="{% url 'blog_rules:index' %}">운영</a></div>{% endblock %}
 
 {% block actions %}
-{% if obj %}<a class="btn ghost danger" href="{% url 'blog_rules:delete' kind obj.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
+{% if obj %}<a {% trash_attrs obj %} data-trash-trigger data-trash-next="{% url 'blog_rules:index' %}" class="btn ghost danger" href="{% url 'blog_rules:delete' kind obj.pk %}">{% include "includes/ic.html" with name="trash" %}삭제</a>{% endif %}
 <a class="btn" href="{% url 'blog_rules:index' %}">취소</a>
 <button class="btn primary" type="submit" form="br-form">{% include "includes/ic.html" with name="save" %}저장</button>
 {% endblock %}
