@@ -506,6 +506,27 @@ HERO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", 
 HERO_MAX = 15 * 1024 * 1024
 
 
+# '한 번에 복사' 뒤 알림 (변환글 보기 _convert_body.html 과 같은 말)
+PASTE_MSG = {
+    Blog.Platform.NAVER: "복사했습니다. 네이버 글쓰기에서 북마크 → 발행 창 태그 칸을 누르고 북마크 한 번 더.",
+    Blog.Platform.BLOGGER: "복사했습니다. 블로거 HTML 보기에서 북마크 → 라벨 칸을 누르고 북마크 한 번 더.",
+    Blog.Platform.TISTORY: "복사했습니다. 티스토리 글쓰기(기본모드)에서 북마크를 누르세요.",
+}
+
+
+def paste_data(request, pk):
+    """발행예정글 표의 '복사' (2026-10-27 사용자): 변환글 보기의 '한 번에 복사'와 같은 것을 누를 때 받는다.
+    표를 열 때 글마다 본문을 그려 두면 느려서, 누른 글만 그린다. html = 서식칸, plain = 북마크가 읽는 글자칸."""
+    placement = get_object_or_404(Placement.objects.select_related("site_category__blog", "site_category__parent"), pk=pk)
+    platform = placement.site_category.blog.platform
+    if platform not in PASTE_MSG or not placement.converted_body.strip():
+        return HttpResponseBadRequest("복사할 변환본이 없습니다")
+    _, rich, _, _ = _render_for(placement, placement.converted_body)
+    title = placement.converted_title or placement.post.title
+    return JsonResponse({"html": rich, "plain": paste.paste_all(title, rich, _tags_for(placement)), "msg": PASTE_MSG[platform]},
+                        json_dumps_params={"ensure_ascii": False})
+
+
 def _hero(text):
     """변환본의 첫 사진 {'src', 'alt'} — 없으면 None. 해외여행 글 맨 위 위치 지도는 대표 사진이 아니라 건너뛴다 (2026-10-27)."""
     from urllib.parse import unquote

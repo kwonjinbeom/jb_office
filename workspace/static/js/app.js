@@ -180,6 +180,27 @@
       return;
     }
 
+    // 받아서 서식 그대로 복사: data-copy-url="주소" → {html, plain, msg} (발행예정글 표의 '복사', 2026-10-27).
+    // 받은 뒤에 복사하면 브라우저가 막아서, 누른 순간 클립보드에 자리를 잡고 받는 대로 채운다 (ClipboardItem 에 Promise).
+    var cu = e.target.closest("[data-copy-url]");
+    if (cu) {
+      e.preventDefault();
+      var got = fetch(cu.getAttribute("data-copy-url"), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+      var ok = function (d) { cu.classList.add("done"); toast(d.msg || "복사했습니다.", "ok"); };
+      var fail = function () { toast("복사하지 못했습니다. 변환글 보기에서 '한 번에 복사'를 누르세요.", "warn"); };
+      var bySelection = function () { return got.then(function (d) { return copyRichBySelection(d.html).then(function () { ok(d); }); }).catch(fail); };
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write && window.isSecureContext) {
+        navigator.clipboard.write([new ClipboardItem({
+          "text/html": got.then(function (d) { return new Blob([d.html], { type: "text/html" }); }),
+          "text/plain": got.then(function (d) { return new Blob([d.plain], { type: "text/plain" }); })
+        })]).then(function () { got.then(ok); }, bySelection);
+      } else {
+        bySelection();
+      }
+      return;
+    }
+
     // 글 그대로 복사: data-copy-text="글". 누른 버튼은 .done 으로 표시한다 (네이버 태그를 하나씩 넣을 때 어디까지 했는지).
     var ct = e.target.closest("[data-copy-text]");
     if (ct) {
