@@ -206,10 +206,23 @@ class PasteFormatTests(TestCase):
         self.assertTrue(res.context["tag_bookmarklet"].startswith("javascript:"))
         self.assertNotIn(" ", res.context["tag_bookmarklet"])
         self.assertNotIn("#", res.context["tag_bookmarklet"])  # 주소에 # 이 있으면 뒤가 잘린다
+        # 한 번에 넣기 (2026-10-27): 글자칸은 표시 + JSON, 서식칸은 본문 HTML. 북마크 하나가 세 사이트를 나눈다
+        import json
+        from .paste import ALL_MARK
+        self.assertTrue(res.context["paste_all"].startswith(ALL_MARK))
+        data = json.loads(res.context["paste_all"][len(ALL_MARK):])
+        self.assertEqual((data["tags"], data["html"]), (["태그1", "태그2", "태그3"], rich))
+        mark = res.context["paste_bookmarklet"]
+        self.assertTrue(mark.startswith("javascript:"))
+        self.assertNotIn(" ", mark)
+        self.assertNotIn("#", mark)
+        self.assertContains(res, f'data-copy-plain="#st-all-{pl.pk}"')
+        self.assertNotContains(res, "네이버 태그 넣기</a>")  # 새 북마크가 태그도 넣는다
         tistory = self.place("memorily")
         res = self.client.get(reverse("site_templates:convert", args=[tistory.pk]))
         self.assertContains(res, f'<textarea id="st-tags-{tistory.pk}" hidden>태그1, 태그2</textarea>', html=False)  # 티스토리는 쉼표 그대로
         self.assertEqual(res.context["tag_items"], [])
+        self.assertEqual(json.loads(res.context["paste_all"][len(ALL_MARK):])["tags"], ["태그1", "태그2"])
         self.assertNotIn("<p>&nbsp;</p>", res.context["paste_html"])  # 티스토리는 네이버식 빈 줄이 아니라 티스토리식 (data-ke-size)
 
     def test_naver_fixes_apply_to_html_saved_conversion(self):

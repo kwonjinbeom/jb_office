@@ -11,6 +11,7 @@ venv/
 # DB는 git에 넣지 않는다. 실제 데이터는 PythonAnywhere 서버의 ~/data/db.sqlite3 하나다 (workspace/DEPLOY.md).
 # 로컬 db.sqlite3 는 개발용 임시 DB.
 workspace/db.sqlite3
+workspace/default_*.sqlite3
 workspace/.env
 workspace/.sync_state.json
 workspace/.deploy_state.json
