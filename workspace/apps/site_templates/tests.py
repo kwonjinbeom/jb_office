@@ -225,6 +225,22 @@ class PasteFormatTests(TestCase):
         self.assertEqual(json.loads(res.context["paste_all"][len(ALL_MARK):])["tags"], ["태그1", "태그2"])
         self.assertNotIn("<p>&nbsp;</p>", res.context["paste_html"])  # 티스토리는 네이버식 빈 줄이 아니라 티스토리식 (data-ke-size)
 
+    def test_planned_row_copy(self):
+        """발행예정글 표의 '복사' (2026-10-27 사용자): 누르면 변환글 보기의 '한 번에 복사'와 같은 내용을 받는다. 워드프레스는 없다."""
+        import json
+        from .paste import ALL_MARK
+        pl = self.place("memorily")
+        wp = self.place("워드프레스")
+        res = self.client.get(reverse("posts:planned"))
+        self.assertContains(res, f'data-copy-url="{reverse("site_templates:paste_data", args=[pl.pk])}"')
+        self.assertNotContains(res, reverse("site_templates:paste_data", args=[wp.pk]))
+        d = self.client.get(reverse("site_templates:paste_data", args=[pl.pk])).json()
+        page = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context
+        self.assertEqual((d["html"], d["plain"]), (page["paste_html"], page["paste_all"]))
+        self.assertEqual(json.loads(d["plain"][len(ALL_MARK):])["title"], "바꾼 제목")
+        self.assertIn("티스토리", d["msg"])
+        self.assertEqual(self.client.get(reverse("site_templates:paste_data", args=[wp.pk])).status_code, 400)
+
     def test_naver_fixes_apply_to_html_saved_conversion(self):
         """HTML 로 저장한 변환본(예: 롤드컵 입문)도 빈 줄 · 확인 날짜가 같게. 다시 그려도 두 번 감싸지 않는다."""
         from apps.writing.render import render_body

@@ -19,4 +19,5 @@ urlpatterns = [
     path("<int:pk>/", views.site, name="site"),
     path("convert/<int:pk>/", views.convert, name="convert"),
     path("convert/<int:pk>/hero/", views.hero_photo, name="hero_photo"),
+    path("convert/<int:pk>/paste/", views.paste_data, name="paste_data"),
 ]
