@@ -177,10 +177,19 @@ add_action('wp_footer', function () {
     el.classList.add("done"); el.textContent = el.getAttribute("data-done");
     setTimeout(function () { el.classList.remove("done"); el.textContent = label; }, 2500);
   }
+  function copyOld() {  // 클립보드 권한이 막힌 곳(틀 안 · 옛 브라우저)에서
+    var ta = document.createElement("textarea"), ok = false;
+    ta.value = link; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
   function copyLink(el, then) {
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(link).then(function () { flash(el); if (then) then(); }, function () { window.prompt("", link); });
-    } else { window.prompt("", link); }
+    function done() { flash(el); if (then) then(); }
+    function old() { copyOld() ? done() : window.prompt("", link); }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(link).then(done, old);
+    else old();
   }
   function phoneShare(el) {
     navigator.share({ title: title, url: link }).catch(function (e) { if (!e || e.name !== "AbortError") copyLink(el); });
