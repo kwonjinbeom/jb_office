@@ -675,7 +675,7 @@ class FixedTopicTests(Login):
         ipo = next(c for c in groups[0]["cats"] if c.name == "공모주")
         self.assertEqual([t.name for t in ipo.topics], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 고정 주제는 소재 아래
         self.assertNotContains(res, f'value="c{ipo.pk}"')  # 고정 주제가 있는 소재는 머리 줄만 (고르지 않는다)
-        self.assertEqual(groups[0]["count"], 6)  # 청년·신혼 1 + 주택 1 + 공모주 2 + 일본 + 그 외
+        self.assertEqual(groups[0]["count"], 7)  # 청년·신혼 1 + 주택 1 + 공모주 2 + 일본 + 생활 + 그 외
         shown = [t.pk for g in groups for t in g["topics"]] + [t.pk for g in groups for c in g["cats"] for t in c.topics]
         self.assertEqual(sorted(shown), sorted(FixedTopic.objects.values_list("pk", flat=True)))
         nunip = next(c for c in groups[0]["cats"] if not c.topics)
