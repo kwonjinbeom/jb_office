@@ -202,18 +202,20 @@ PERIODS = [(7, "7일"), (30, "30일"), (90, "90일")]
 
 
 def stats_page(request):
-    """통계현황 (?days=7|30|90): 사이트 칸 · 하루 방문자 · 많이 본 글 · 어디서 왔나 (2026-10-27 사용자: 쉽게 싹 갈아엎기)"""
+    """통계현황 (?days=7|30|90 &site=<사이트>): 사이트 칸 · 하루 방문자 · 많이 본 글 · 어디서 왔나 (2026-10-27 사용자: 쉽게 싹 갈아엎기).
+    기본은 7일, 사이트 칸을 누르면 그 사이트만."""
     request.nav_key = "blog_stats"
     today = timezone.localdate()
     try:
-        n = int(request.GET.get("days", 30))
+        n = int(request.GET.get("days", 7))
     except ValueError:
-        n = 30
-    n = n if n in dict(PERIODS) else 30
+        n = 7
+    n = n if n in dict(PERIODS) else 7
     days = [today - timedelta(days=n - 1 - i) for i in range(n)]
     order = list(Blog.objects.values_list("pk", flat=True))  # 색은 사이트 순서로 고정
     blogs = list(Blog.objects.filter(status=Blog.Status.ACTIVE))
+    selected = next((b for b in blogs if str(b.pk) == request.GET.get("site", "")), None)
     return render(request, "blog_ops/stats.html", {
-        "page_title": "통계현황", **stats.page_data(blogs, order, days, today), "days": days, "n": n, "periods": PERIODS,
-        "today": today, "checked_at": FeedState.objects.aggregate(m=Max("stat_checked_at"))["m"],
+        "page_title": "통계현황", **stats.page_data(blogs, order, days, today, selected), "days": days, "n": n, "periods": PERIODS,
+        "selected": selected, "today": today, "checked_at": FeedState.objects.aggregate(m=Max("stat_checked_at"))["m"],
     })
