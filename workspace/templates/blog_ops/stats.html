@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% comment %}통계현황 (blog_ops.views.stats_page). 2026-10-27 사용자: 보기 편하게 싹 갈아엎기.
-위: 기간(7·30·90일). 사이트 칸 한 줄(전체 + 사이트마다: 기간 방문자 · 어제·오늘 · 작은 선 · 조회·공감·댓글)
-→ 아래 왼쪽 하루 방문자 꺾은선, 오른쪽 많이 본 글 · 어디서 왔나 (GA4 최근 30일).
+위: 기간(7·30·90일, 기본 7일). 사이트 칸 한 줄(전체 + 사이트마다: 기간 방문자 · 어제·오늘 · 작은 선 · 조회·공감·댓글) — 칸을 누르면 그 사이트만
+→ 아래 왼쪽 하루 방문자 막대(사이트를 쌓는다 · 빈 날은 막대 없음), 오른쪽 많이 본 글(첫 화면·목록 뺌) · 어디서 왔나 (GA4 최근 30일).
 숫자는 PC 가 '지금 수집'·'발행 확인'·일일루틴 '전체 실행' 때 보낸다: GA4(티스토리·블로거·워드프레스) + 공개 숫자(네이버 등, stats.py).{% endcomment %}
 
 {% block breadcrumb %}<div class="crumb"><a href="{% url 'blog:list' %}">블로그·카페</a></div>{% endblock %}
@@ -10,7 +10,7 @@
 {% block body_class %}sv-body{% endblock %}
 
 {% block actions %}
-<span class="seg" role="group" aria-label="기간">{% for d, label in periods %}<a href="?days={{ d }}"{% if d == n %} class="on" aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}</span>
+<span class="seg" role="group" aria-label="기간">{% for d, label in periods %}<a href="?days={{ d }}{% if selected %}&amp;site={{ selected.pk }}{% endif %}"{% if d == n %} class="on" aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}</span>
 <span class="muted small sv-checked">{% if checked_at %}{{ checked_at|date:"m-d H:i" }} 수집{% else %}수집 전{% endif %}</span>
 <button class="btn primary" type="button" data-feeds-check data-url="{% url 'blog_ops:check' %}" data-status="{% url 'blog_ops:status' %}" title="PC 가 GA4 와 사이트마다 공개된 숫자를 받아 온다 (발행 확인도 같이)">{% include "includes/ic.html" with name="refresh" %}지금 수집</button>
 {% endblock %}
@@ -18,40 +18,38 @@
 {% block content %}
 <div class="sv-page">
   <div class="sv-tiles">
-    <section class="card sv-tile sv-tile-all">
+    <a class="card sv-tile sv-tile-all{% if not selected %} on{% endif %}" href="?days={{ n }}"{% if not selected %} aria-current="true"{% endif %}>
       <div class="sv-tile-head"><span class="sv-name">전체</span><span class="sv-src">{{ n }}일</span></div>
       <div class="sv-big">{{ total.visitors|default_if_none:"–" }}<small>방문자</small></div>
       <div class="sv-sub">어제 <b>{{ total.yesterday|default_if_none:"–" }}</b> · 오늘 <b>{{ total.today|default_if_none:"–" }}</b></div>
       {% if total.spark %}<svg class="sv-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{ total.spark }}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>{% else %}<div class="sv-spark"></div>{% endif %}
       <div class="sv-foot">조회 {{ total.views|default_if_none:"–" }}</div>
-    </section>
+    </a>
     {% for t in tiles %}
-    <section class="card sv-tile" title="{% if t.state.ga_checked_at %}GA4 {{ t.state.ga_checked_at|date:'m-d H:i' }}{% endif %}{% if t.state.stat_checked_at %} · 공개 숫자 {{ t.state.stat_checked_at|date:'m-d H:i' }} {{ t.state.stat_message }}{% endif %}">
+    <a class="card sv-tile{% if t.on %} on{% endif %}" href="?days={{ n }}&amp;site={{ t.blog.pk }}"{% if t.on %} aria-current="true"{% endif %} title="{% if t.state.ga_checked_at %}GA4 {{ t.state.ga_checked_at|date:'m-d H:i' }}{% endif %}{% if t.state.stat_checked_at %} · 공개 숫자 {{ t.state.stat_checked_at|date:'m-d H:i' }} {{ t.state.stat_message }}{% endif %}">
       <div class="sv-tile-head"><span class="sv-dot" style="background:{{ t.color }}"></span><span class="sv-name">{{ t.blog.name }}</span><span class="sv-src">{{ t.source|default:"수집 전" }}</span></div>
       <div class="sv-big">{{ t.visitors|default_if_none:"–" }}<small>방문자</small></div>
       <div class="sv-sub">어제 <b>{{ t.yesterday|default_if_none:"–" }}</b> · 오늘 <b>{{ t.today|default_if_none:"–" }}</b></div>
       {% if t.spark %}<svg class="sv-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><polyline points="{{ t.spark }}" fill="none" stroke="{{ t.color }}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>{% else %}<div class="sv-spark"></div>{% endif %}
       <div class="sv-foot">{% if t.views is not None %}조회 {{ t.views }}{% endif %}{% if t.likes %}{% if t.views is not None %} · {% endif %}공감 {{ t.likes }}{% endif %}{% if t.comments %} · 댓글 {{ t.comments }}{% endif %}</div>
-    </section>
+    </a>
     {% endfor %}
   </div>
 
   <div class="sv-main">
     <section class="card sv-chart-card">
       <div class="card-head">
-        <h3 class="card-title">하루 방문자</h3>
-        <span class="sv-legend">{% for l in chart.lines %}<span><i style="background:{{ l.color }}"></i>{{ l.name }}</span>{% endfor %}</span>
+        <h3 class="card-title">하루 방문자{% if selected %} · {{ selected.name }}{% endif %}</h3>
+        <span class="sv-legend">{% for l in legend %}<span><i style="background:{{ l.color }}"></i>{{ l.name }}</span>{% endfor %}</span>
       </div>
       {% if has_data %}
       <div class="sv-chart" data-ss-chart>
-        <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="사이트별 하루 방문자 (최근 {{ n }}일)">
+        <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="하루 방문자 (최근 {{ n }}일)">
           {% for y, v in chart.grid %}<line class="sv-grid" x1="{{ chart.plot.l }}" x2="{{ chart.plot.r }}" y1="{{ y }}" y2="{{ y }}"/><text class="sv-axis" x="{{ chart.plot.l|add:'-8' }}" y="{{ y }}" text-anchor="end" dominant-baseline="middle">{{ v }}</text>{% endfor %}
           {% for x, d in chart.xlabels %}<text class="sv-axis" x="{{ x }}" y="{{ chart.height|add:'-8' }}" text-anchor="middle">{{ d|date:"n/j" }}</text>{% endfor %}
           <line class="sv-cross" data-ss-cross x1="0" x2="0" y1="{{ chart.plot.t }}" y2="{{ chart.plot.b }}" hidden/>
-          {% for l in chart.lines %}
-          {% for seg in l.segs %}<polyline points="{{ seg }}" fill="none" stroke="{{ l.color }}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>{% endfor %}
-          {% for x, y in l.dots %}<circle cx="{{ x }}" cy="{{ y }}" r="3" fill="{{ l.color }}" stroke="var(--panel)" stroke-width="1.5"/>{% endfor %}
-          {% endfor %}
+          {% if chart.kind == "lines" %}{% for l in chart.lines %}<polyline points="{{ l.points }}" fill="none" stroke="{{ l.color }}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% for x, y in l.dots %}<circle cx="{{ x }}" cy="{{ y }}" r="3.5" fill="{{ l.color }}" stroke="var(--panel)" stroke-width="1.5"/>{% endfor %}{% endfor %}
+          {% else %}{% for c in chart.cols %}{% for g in c.segs %}<rect x="{{ c.bx }}" y="{{ g.y }}" width="{{ chart.bw }}" height="{{ g.h }}" fill="{{ g.color }}"/>{% endfor %}{% if chart.show_total and c.total is not None %}<text class="sv-val" x="{{ c.x }}" y="{{ c.top_y }}" dy="-6" text-anchor="middle">{{ c.total }}</text>{% endif %}{% endfor %}{% endif %}
           {% for c in chart.cols %}<rect class="sv-hit" x="{{ c.left }}" y="{{ chart.plot.t }}" width="{{ c.w }}" height="{{ chart.plot.h }}" data-x="{{ c.x }}" data-tip="{{ c.day|date:'n월 j일 (D)' }}|{% for name, color, v in c.vals %}{{ name }}~{{ color }}~{% if v is None %}–{% else %}{{ v }}{% endif %}{% if not forloop.last %};{% endif %}{% endfor %}"/>{% endfor %}
         </svg>
         <div class="sv-tip" data-ss-tip hidden></div>
@@ -68,7 +66,7 @@
           {% for p in top %}
           <li><span class="sv-rank">{{ forloop.counter }}</span><span class="sv-dot" style="background:{{ p.color }}" title="{{ p.blog.name }}"></span><a href="{{ p.url }}" target="_blank" rel="noopener" title="{{ p.blog.name }} · {{ p.title }}">{{ p.title }}</a><b>{{ p.views }}</b></li>
           {% empty %}
-          <li class="sv-none">GA4 숫자가 들어오면 여기에 보여요.</li>
+          <li class="sv-none">{% if selected.platform == 'naver' %}네이버는 GA4 를 붙일 수 없어 글별 조회가 없어요.{% elif ga4_any %}아직 글 조회가 없어요. GA4 는 반나절~하루 늦게 채워져요.{% else %}GA4 숫자가 들어오면 여기에 보여요.{% endif %}</li>
           {% endfor %}
         </ol>
       </section>
@@ -78,7 +76,7 @@
         <div class="sv-bar" role="img" aria-label="유입 경로 비율">{% for c in channels %}<i style="width:{{ c.pct }}%;background:{{ c.color }}" title="{{ c.name }} {{ c.pct }}%"></i>{% endfor %}</div>
         <ul class="sv-chan">{% for c in channels %}<li><i style="background:{{ c.color }}"></i>{{ c.name }}<b>{{ c.pct }}%</b><span>{{ c.n }}</span></li>{% endfor %}</ul>
         {% else %}
-        <div class="sv-none">GA4 숫자가 들어오면 여기에 보여요.</div>
+        <div class="sv-none">{% if selected.platform == 'naver' %}네이버는 GA4 를 붙일 수 없어 유입 경로가 없어요.{% elif ga4_any %}아직 방문이 없어요. GA4 는 반나절~하루 늦게 채워져요.{% else %}GA4 숫자가 들어오면 여기에 보여요.{% endif %}</div>
         {% endif %}
       </section>
     </div>

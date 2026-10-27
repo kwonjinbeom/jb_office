@@ -104,7 +104,8 @@ class AnimeWriteRunTests(TestCase):
         j = self.client.post(reverse("anime:write_run")).json()
         self.assertTrue(j["prompt"].startswith("# 애니 총정리"))
         self.assertIn(f"<!-- 애니 총정리 작품: a{self.aot.pk} -->", j["prompt"])
-        self.assertIn("진격의 거인 회차정리 애니만화 환산기 명장면 등 모음", j["prompt"])
+        self.assertIn("진격의 거인 <그 질문>? 화수 환산기", j["prompt"])  # 제목은 검색 질문형 (2026-10-26)
+        self.assertNotIn("진격의 거인 회차정리", j["prompt"])
         self.assertIn("(시험)", j["prompt"])  # 카테고리 컨셉이 들어간다
         self.assertIn(reverse("anime:api_place", args=[self.aot.pk]) + "?token=tok", j["prompt"])
         self.assertEqual(j["count"], 1)

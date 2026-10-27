@@ -360,9 +360,11 @@ class SiteStatsTests(TestCase):
         y = self.today - timedelta(days=1)
         SiteStat.objects.create(blog=self.naver, day=y, visitors=10)
         SiteStat.objects.create(blog=self.naver, day=self.today, visitors=4)
-        stats.record_ga4(self.tistory, {"daily": [[y.isoformat(), 30, 12]], "pages": [["/7", "교토 단풍", 21, 9]],
+        stats.record_ga4(self.tistory, {"daily": [[y.isoformat(), 30, 12]],
+                                        "pages": [["/", "홈", 50, 20], ["/category/애니", "애니", 30, 9], ["/7", "교토 단풍", 21, 9]],
                                         "channels": [["Organic Search", 30], ["Direct", 10]]})
-        res = self.client.get(reverse("blog_ops:stats"), {"days": 7})
+        res = self.client.get(reverse("blog_ops:stats"))  # 기본 7일 (2026-10-27 사용자)
+        self.assertEqual(res.context["n"], 7)
         self.assertTrue(res.context["has_data"])
         tile = next(t for t in res.context["tiles"] if t["blog"] == self.naver)
         self.assertEqual((tile["visitors"], tile["yesterday"], tile["today"], tile["source"]), (14, 10, 4, "공개 숫자"))
@@ -370,12 +372,23 @@ class SiteStatsTests(TestCase):
         self.assertEqual((tile["visitors"], tile["views"], tile["source"]), (12, 30, "GA4"))
         self.assertEqual(res.context["total"]["visitors"], 26)
         self.assertEqual(len(res.context["chart"]["cols"]), 7)
-        self.assertContains(res, "black_lukey~")  # 꺾은선 말풍선 자료
+        self.assertContains(res, "black_lukey~")  # 말풍선 자료
+        # 전체는 꺾은선 — 빈 날은 앞뒤를 잇는다 (점만 남지 않게)
+        self.assertEqual(res.context["chart"]["kind"], "lines")
+        line = next(l for l in res.context["chart"]["lines"] if l["name"] == "black_lukey")
+        self.assertEqual(len(line["points"].split()), 2)
+        self.assertEqual([p["title"] for p in res.context["top"]], ["교토 단풍"])  # 첫 화면·카테고리는 뺀다
         self.assertEqual(res.context["top"][0]["url"], self.tistory.address.rstrip("/") + "/7")
         self.assertEqual([(c["name"], c["pct"]) for c in res.context["channels"]], [("검색", 75), ("직접", 25)])
         # 색은 사이트 순서로 고정: 운영 중이 아닌 사이트를 빼도 같은 색
         colors = {t["blog"].pk: t["color"] for t in res.context["tiles"]}
         self.assertEqual(len(set(colors.values())), len(colors))
+        # 사이트 칸을 누르면 그 사이트만 — 막대 (많이 본 글 · 어디서 왔나도 그 사이트)
+        res = self.client.get(reverse("blog_ops:stats"), {"site": self.naver.pk})
+        self.assertEqual((res.context["selected"], res.context["chart"]["kind"]), (self.naver, "bars"))
+        self.assertEqual(next(c for c in res.context["chart"]["cols"] if c["day"] == y)["total"], 10)
+        self.assertEqual((res.context["top"], res.context["channels"]), ([], []))
+        self.assertContains(res, "네이버는 GA4 를 붙일 수 없어")
 
     def test_ga4_days_win_over_public_numbers(self):
         """GA4 가 채운 날은 공개 숫자(스킨 방문자 칸)가 방문자를 덮지 않는다. 글 목록은 수집마다 통째로 바뀐다."""
