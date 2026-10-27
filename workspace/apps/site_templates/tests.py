@@ -451,6 +451,29 @@ class LocatorMapTests(TestCase):
         self.assertTrue(korea.concept.startswith("순서: 리드 → 위치 지도 → `## {City} at a Glance`"))
         self.assertIn("우리나라 작은 지도", korea.concept)
 
+    def test_photo_counts(self):
+        """0041: 사진이 빠지지 않게 (2026-10-27 사용자: 선운산·로마). 컨셉에 장수, 요청문에 한국관광콘텐츠랩."""
+        import importlib
+        from django.apps import apps as live_apps
+        wp = Blog.objects.get(platform="wordpress")
+        mountain = SiteCategory.objects.filter(blog=wp, name="산과 캠핑", parent=None).first() or \
+            SiteCategory.objects.create(blog=wp, name="산과 캠핑")
+        mountain.concept = "글 모양\n- 사진: 그 산이 그 계절에 실제로 찍힌 무료 사진 2~4장. 경험은 쓰지 않는다."
+        mountain.save()
+        world = SiteCategory.objects.create(blog=wp, name="World Travel",
+                                            concept="- 끝에 `Sources:`. 사진은 그 장소가 실제로 찍힌 무료 사진. 경험은 쓰지 않는다.")
+        importlib.import_module("apps.blog_types.migrations.0041_photo_counts").forward(live_apps, None)
+        mountain.refresh_from_db()
+        world.refresh_from_db()
+        self.assertIn("2~4장 — 꼭", mountain.concept)
+        self.assertTrue(mountain.concept.endswith("경험은 쓰지 않는다."))
+        self.assertIn("Day 마다 그날 주인공 장소 1~2장, 글 전체 4장 이상", world.concept)
+        pl = Placement.objects.create(site_category=mountain, tistory_post=Post.objects.create(title="선운산", body="본문"))
+        text = prompt.build(pl)
+        self.assertIn("api.visitkorea.or.kr/hub/getTourPhotoInfo.do", text)
+        self.assertIn('{"type":"photo"', text)  # f-string 중괄호가 한 겹으로
+        self.assertIn("그 장수가 바닥이다", text)
+
     def test_hero_skips_locator(self):
         from .views import _hero
         fig = prompt.FIGURE_URL + "%EB%B3%80%ED%99%98%EA%B7%B8%EB%A6%BC/66/"
