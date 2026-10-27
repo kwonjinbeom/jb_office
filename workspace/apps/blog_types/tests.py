@@ -171,7 +171,7 @@ class SiteCategoryTests(TestCase):
                                  "공모전 및 프로젝트", "자격증", "일상생활", "기타", "AI"])  # AI 는 0021 (2026-10-23)
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
-        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 6)  # 0019 티스토리 화면 그대로
+        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 생활 (0039)
 
     def test_tree_shows_both_grids(self):
         res = self.client.get(INDEX)
@@ -921,7 +921,7 @@ class SiteCleanupTests(TestCase):
 
 class NunipSiteCategoryTests(TestCase):
     """0019: 눈잎 사이트 카테고리 = 티스토리 관리 화면 그대로, 순서도 (2026-10-22 사용자)."""
-    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상"]
+    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상", "생활"]  # 생활 (0039)
 
     def site_names(self):
         return list(SiteCategory.objects.filter(blog__name="눈잎", parent=None).order_by("order", "pk").values_list("name", flat=True))
@@ -930,7 +930,15 @@ class NunipSiteCategoryTests(TestCase):
         self.assertEqual(self.site_names(), self.NAMES)
         self.assertEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").note, "티스토리 주제: 경제")
         self.assertEqual(list(Category.objects.filter(section__name="눈잎").values_list("name", flat=True)),
-                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020), 동물 (0028)
+                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "생활", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020), 동물 (0028)
+
+    def test_life_category(self):
+        """0039 (2026-10-27 사용자): 독감 무료접종 같은 공공 일정을 눈잎 › 생활로. 그 외 앞, 사이트 카테고리에 글 모양"""
+        life = Category.objects.get(section__name="눈잎", name="생활")
+        self.assertEqual((life.code, Category.objects.get(section__name="눈잎", name="그 외").code), ("E", "F"))
+        self.assertIn("무료 접종", life.direction)
+        self.assertIn("독감 무료접종 일정", SiteCategory.objects.get(blog__name="눈잎", name="생활").concept)
+        self.assertIn("생활(", Blog.objects.get(name="눈잎").content)
 
     def test_extra_categories_trashed_unless_they_hold_posts(self):
         from importlib import import_module
@@ -944,7 +952,7 @@ class NunipSiteCategoryTests(TestCase):
         Placement.objects.create(site_category=used, tistory_post=Post.objects.create(title="넣은 글"))
         SiteCategory.objects.filter(name="공모주").update(order=99)
         import_module("apps.blog_types.migrations.0019_nunip_site_categories").forward(django_apps, None)
-        self.assertEqual(self.site_names(), self.NAMES + ["쓰는 메뉴"])
+        self.assertEqual(self.site_names(), self.NAMES[:-1] + ["쓰는 메뉴"])  # 0019 를 다시 돌리면 그 뒤에 더한 빈 생활도 걷힌다
         self.assertTrue(SiteCategory.all_objects.filter(pk=empty.pk, deleted_at__isnull=False).exists())
 
 
