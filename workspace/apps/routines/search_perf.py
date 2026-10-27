@@ -22,7 +22,8 @@ from pathlib import Path
 
 from django.conf import settings
 
-SCOPE = "https://www.googleapis.com/auth/webmasters.readonly"
+# 서치 콘솔 읽기 + GA4 조회수 읽기·속성 만들기 (site_views). 범위를 늘리면 --auth 를 다시 해야 한다
+SCOPE = " ".join("https://www.googleapis.com/auth/" + s for s in ("webmasters.readonly", "analytics.readonly", "analytics.edit"))
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 API = "https://www.googleapis.com/webmasters/v3"

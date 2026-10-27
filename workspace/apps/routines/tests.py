@@ -970,3 +970,52 @@ class SearchPerfTests(TestCase):
             self.assertEqual(res, [("https://nunip.tistory.com/", "글 1 · 노출 40 · 클릭 2")])
             self.assertIn("청약 일정", (search_perf.out_dir() / "nunip.tistory.com.csv").read_text(encoding="utf-8"))
             self.assertIn("노출 40", (search_perf.out_dir() / "summary.md").read_text(encoding="utf-8"))
+
+
+class SiteViewsTests(TestCase):
+    """사이트별·글별 조회수 (2026-10-27 사용자): GA4 속성이 없으면 만들고, 있으면 글별·날짜별 표를 쓴다."""
+
+    def _api(self, created):
+        def call(url, token, body=None):
+            if "accountSummaries" in url:
+                return {"accountSummaries": [{"account": "accounts/1", "propertySummaries": [{"property": "properties/9"}]}]}
+            if url.endswith("properties/9/dataStreams"):
+                return {"dataStreams": [{"type": "WEB_DATA_STREAM", "webStreamData": {"defaultUri": "https://www.jinbaam.com/",
+                                                                                         "measurementId": "G-OLD"}}]}
+            if url.endswith("/properties"):
+                created.append(body)
+                return {"name": "properties/10"}
+            if url.endswith("properties/10/dataStreams"):
+                return {"webStreamData": {"measurementId": "G-NEW"}}
+            dims = [d["name"] for d in body["dimensions"]]
+            if dims == ["pagePath", "pageTitle"]:
+                return {"rows": [{"dimensionValues": [{"value": "/kyoto"}, {"value": "교토 3일"}],
+                                  "metricValues": [{"value": "12"}, {"value": "7"}]}]}
+            if dims == ["date"]:
+                return {"rows": [{"dimensionValues": [{"value": "20261026"}], "metricValues": [{"value": "12"}, {"value": "7"}, {"value": "8"}]}]}
+            return {"rows": [{"dimensionValues": [{"value": "Organic Search"}], "metricValues": [{"value": "8"}]}]}
+        return call
+
+    def test_setup_creates_missing_and_pull_writes_tables(self):
+        from . import search_perf, site_views
+        sites = {"siteEntry": [{"siteUrl": "sc-domain:jinbaam.com", "permissionLevel": "siteOwner"},
+                               {"siteUrl": "https://nunip.tistory.com/", "permissionLevel": "siteOwner"}]}
+        created = []
+        with tempfile.TemporaryDirectory() as tmp, self.settings(BASE_DIR=Path(tmp)), \
+                patch.object(search_perf, "access_token", return_value="a"), patch.object(search_perf, "_api", return_value=sites), \
+                patch.object(site_views, "_call", side_effect=self._api(created)):
+            self.assertEqual(site_views.setup(), [("jinbaam.com", "G-OLD", False), ("nunip.tistory.com", "G-NEW", True)])
+            self.assertEqual(created[0]["displayName"], "nunip.tistory.com")
+            out = StringIO()
+            call_command("site_views", stdout=out)
+            self.assertIn("jinbaam.com · 조회 12 · 사용자 7 · 글 1 · 유입 Organic Search 8", out.getvalue())
+            self.assertIn("교토 3일", out.getvalue())
+            self.assertIn("2026-10-26,12,7,8", (search_perf.out_dir() / "jinbaam.com_조회수_날짜.csv").read_text(encoding="utf-8"))
+            self.assertIn("교토 3일", (search_perf.out_dir() / "조회수.md").read_text(encoding="utf-8"))
+
+    def test_skips_without_auth(self):
+        with tempfile.TemporaryDirectory() as tmp, self.settings(BASE_DIR=Path(tmp)), \
+                patch.dict("os.environ", {"GSC_CLIENT_ID": "id", "GSC_CLIENT_SECRET": "sec"}):
+            out = StringIO()
+            call_command("site_views", stdout=out)
+            self.assertIn("인증 전", out.getvalue())
