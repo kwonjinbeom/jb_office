@@ -187,7 +187,7 @@ def api_save(request, pk):
         return HttpResponseForbidden("token")
     placement = get_object_or_404(Placement, pk=pk)
     data = _form_fields(request)
-    body = data.get("body", "").replace("\r\n", "\n").strip()
+    body = paste.unwrap_images(data.get("body", "").replace("\r\n", "\n")).strip()
     if not body:
         return HttpResponseBadRequest("body 가 비었습니다")
     before = (placement.converted_title, placement.converted_body)
