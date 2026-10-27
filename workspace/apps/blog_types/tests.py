@@ -171,7 +171,7 @@ class SiteCategoryTests(TestCase):
                                  "공모전 및 프로젝트", "자격증", "일상생활", "기타", "AI"])  # AI 는 0021 (2026-10-23)
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
-        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 생활 (0039)
+        self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 생활 (0040)
 
     def test_tree_shows_both_grids(self):
         res = self.client.get(INDEX)
@@ -921,7 +921,7 @@ class SiteCleanupTests(TestCase):
 
 class NunipSiteCategoryTests(TestCase):
     """0019: 눈잎 사이트 카테고리 = 티스토리 관리 화면 그대로, 순서도 (2026-10-22 사용자)."""
-    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상", "생활"]  # 생활 (0039)
+    NAMES = ["청년·신혼 정책", "주택 공고", "공모주", "해외 여행", "일본 여행", "일상", "생활"]  # 생활 (0040)
 
     def site_names(self):
         return list(SiteCategory.objects.filter(blog__name="눈잎", parent=None).order_by("order", "pk").values_list("name", flat=True))
@@ -933,7 +933,7 @@ class NunipSiteCategoryTests(TestCase):
                          ["청년·신혼 정책", "주택 공고", "공모주", "일본", "생활", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020), 동물 (0028)
 
     def test_life_category(self):
-        """0039 (2026-10-27 사용자): 독감 무료접종 같은 공공 일정을 눈잎 › 생활로. 그 외 앞, 사이트 카테고리에 글 모양"""
+        """0040 (2026-10-27 사용자): 독감 무료접종 같은 공공 일정을 눈잎 › 생활로. 그 외 앞, 사이트 카테고리에 글 모양"""
         life = Category.objects.get(section__name="눈잎", name="생활")
         self.assertEqual((life.code, Category.objects.get(section__name="눈잎", name="그 외").code), ("E", "F"))
         self.assertIn("무료 접종", life.direction)

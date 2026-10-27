@@ -542,7 +542,7 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 6, "black_lukey": 6, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020), 생활 (blog_types 0039)
+        self.assertEqual(self.by_section(a), {"눈잎": 6, "black_lukey": 6, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020), 생활 (blog_types 0040)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")

@@ -59,7 +59,7 @@ def forward(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("blog_types", "0038_locator_map_concepts"),
+        ("blog_types", "0039_korea_travel_locator_map"),
         ("blog_rules", "0009_site_targets"),
     ]
     operations = [migrations.RunPython(forward, migrations.RunPython.noop)]
