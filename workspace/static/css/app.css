@@ -1960,13 +1960,13 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 /* 발행예정글·게시글 관리 표: 화면 너비에 맞춘다 (2026-10-22 사용자: 오른쪽이 잘렸다). 제목이 줄고, 좁으면 칸도 준다 */
 .wr-fit { table-layout: fixed; width: 100%; min-width: 860px; }  /* 좁은 화면에서도 제목 칸이 남게 (넘치면 가로로 민다) */
 .wr-fit th:first-child { width: 40px; }
-.wr-fit .wr-c-site { width: 108px; } .wr-fit .wr-c-cat { width: 168px; } .wr-fit .wr-c-cv { width: 112px; }
+.wr-fit .wr-c-site { width: 108px; } .wr-fit .wr-c-cat { width: 168px; } .wr-fit .wr-c-cv { width: 132px; }
 .wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 150px; } .wr-fit .wr-c-chg { width: 84px; } .wr-fit .wr-c-made { width: 96px; }
 .wr-fit .wr-site-pick select { min-width: 0; }
 .wr-fit td { overflow: hidden; }
 .wr-fit .status-seg { flex-wrap: nowrap; white-space: nowrap; }
 @media (max-width: 1280px) {
-  .wr-fit .wr-c-site { width: 92px; } .wr-fit .wr-c-cat { width: 132px; } .wr-fit .wr-c-cv { width: 92px; }
+  .wr-fit .wr-c-site { width: 92px; } .wr-fit .wr-c-cat { width: 132px; } .wr-fit .wr-c-cv { width: 124px; }
   .wr-fit .wr-c-pub { width: 112px; } .wr-fit .wr-c-date { width: 146px; }
 }
 /* 홈 › 사이트 주소 (2026-10-22 사용자) */
