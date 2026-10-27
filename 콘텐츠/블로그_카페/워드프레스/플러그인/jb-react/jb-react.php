@@ -147,7 +147,7 @@ add_action('wp_footer', function () {
   });
   // 카카오톡·인스타그램은 웹 공유 링크가 없다 → 휴대폰 공유 창 (2026-10-28 사용자). 공유 창이 없는 PC 에서는 버튼을 숨긴 채 둔다
   var more = box.querySelector(".jb-more"), link = box.querySelector(".jb-copy").getAttribute("data-url");
-  if (navigator.share) {
+  if (navigator.share && window.matchMedia && matchMedia("(pointer: coarse)").matches) {  // 휴대폰·태블릿만
     more.hidden = false;
     more.addEventListener("click", function () { navigator.share({ title: more.getAttribute("data-title"), url: link }).catch(function () {}); });
   }
