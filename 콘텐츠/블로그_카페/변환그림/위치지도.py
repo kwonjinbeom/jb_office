@@ -1,10 +1,12 @@
-"""해외여행 글 맨 위 위치 지도 (2026-10-27 사용자: "나는 사실 어딘지도 몰라 너가 쓰는 지역들이" → 글 첫머리에 여기가 어디인지).
-python 위치지도.py <사이트> <나라 ISO3> <도시> <위도> <경도> <저장할 png> [--span 경도폭] [--near 이름:위도:경도,…] [--title …] [--sub …]
+"""여행 글 맨 위 위치 지도 (2026-10-27 사용자: "나는 사실 어딘지도 몰라 너가 쓰는 지역들이" → 글 첫머리에 여기가 어디인지).
+python 위치지도.py <사이트> <나라 ISO3 | 시도 코드> <도시> <위도> <경도> <저장할 png> [--span 경도폭] [--near 이름:위도:경도,…] [--title …] [--sub …]
   밤밤: 한국어 · 흰 바탕 회색 땅 · 빨강 한 가지. 두 칸 — 왼쪽 서울에서 그 도시까지(점선), 오른쪽 그 나라 가까이.
   워드프레스: 영어 · 글모양.css 여행(테라코타·모래) · 제목은 세리프. 넓은 지도 한 장 + 구석에 세계 지도, 런던·뉴욕·시드니에서 거리.
+  black_lukey: 국내 지역 놀거리 (네이버). 두 번째 값은 시도 코드 (KR-48 경남 · KR-42 강원 …, ISO 3166-2). 정보 카드 '가 볼 곳'의 초록.
+    두 칸 — 왼쪽 우리나라 전체에 그 시도 칠하기 · 서울, 오른쪽 그 도시 가까이 (시도 경계 · 이웃 도시). 제목 '경남 통영'.
   --span: 가까운 지도의 가로 폭(경도). 홍콩처럼 나라가 작으면 3 정도로 넓힌다. 없으면 나라 크기에 맞춘다.
   --near: 가까운 지도에 회색 점으로 찍을 이웃 도시 (예: '잘츠부르크:47.80:13.04,프라하:50.08:14.44').
-지도: Natural Earth 1:10m·1:110m 나라 경계 (퍼블릭 도메인). 처음 쓸 때 workspace/.routine/ne/ 로 받는다.
+지도: Natural Earth 1:10m·1:110m 나라·시도 경계 (퍼블릭 도메인). 처음 쓸 때 workspace/.routine/ne/ 로 받는다.
 만드는 법은 다른 가공이미지와 같다: HTML(SVG) → 크롬 헤드리스 캡처 → PIL 로 1200px·내용 높이만 자른다.
 """
 import argparse
@@ -38,7 +40,13 @@ LOOKS = {
     "워드프레스": {"ink": "#2e2723", "ink2": "#5a4f48", "sea": "#f7f1e8", "land": "#e9dccb", "home": "#e9dccb",
               "border": "#ffffff", "accent": "#b4532a", "mark": "#7a3a1f", "label": "#9a8878",
               "title_font": 'Georgia, "Iowan Old Style", "Times New Roman", serif', "lang": "en"},
+    # black_lukey: apps/writing/render.CARD_KINDS '장소' (#1f6f5c · 연한 바탕 #eef6f2)
+    "black_lukey": {"ink": "#222222", "ink2": "#6b7280", "sea": "#f3f5f7", "land": "#dfe3e7", "home": "#eceef0",
+                    "border": "#ffffff", "accent": "#b5dbc9", "glow": "#1f6f5c", "mark": "#1f6f5c", "label": "#8a9097",
+                    "title_font": "Pretendard", "lang": "ko"},
 }
+# Natural Earth 의 옛 이름 → 지금 이름 (2023 강원특별자치도 · 2024 전북특별자치도)
+PROV_NAME = {"강원도": "강원특별자치도", "전라북도": "전북특별자치도"}
 
 
 def load(name):
@@ -236,7 +244,7 @@ def panel(inner, w, h, look, radius=14):
 
 
 def marker(x, y, look, r=9):
-    return (f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r + 5}" fill="{look["accent"]}" fill-opacity="0.18"/>'
+    return (f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r + 5}" fill="{look.get("glow", look["accent"])}" fill-opacity="0.18"/>'
             f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="#ffffff" stroke="{look["mark"]}" stroke-width="4"/>')
 
 
@@ -353,6 +361,91 @@ def wordpress(a, feats, feat, world):
             f'<div style="margin-top:14px;font-size:16px;color:#a89888">Map data: Natural Earth</div></div>')
 
 
+def prov_short(name):
+    """경상남도 → 경남, 서울특별시 → 서울, 강원특별자치도 → 강원."""
+    for tail in ("특별자치시", "특별자치도", "특별시", "광역시"):
+        if name.endswith(tail):
+            return name[:-len(tail)]
+    if name[:2] in ("경상", "전라", "충청") and len(name) == 4:
+        return name[0] + name[2]
+    return name[:-1] if name.endswith("도") else name
+
+
+def korea(a, countries, provs):
+    """국내 지역 놀거리: 왼쪽 우리나라 전체 · 오른쪽 그 도시 가까이. 칠하는 단위는 시도."""
+    look = LOOKS["black_lukey"]
+    kor = [f for f in provs if f["properties"]["adm0_a3"] == "KOR"]
+    prov = next((f for f in kor if f["properties"]["iso_3166_2"] == a.iso), None)
+    if prov is None:
+        raise SystemExit(f"{a.iso}: 시도 코드가 아니다 (예: KR-48 경남)")
+    pname = PROV_NAME.get(prov["properties"]["name_ko"], prov["properties"]["name_ko"])
+    short = prov_short(pname)
+    title = a.title or (a.city if a.city == short else f"{short} {a.city}")
+    sub = a.sub or f"{pname} · 서울에서 직선 약 {round(km(SEOUL, (a.lat, a.lon)), -1):,.0f}km"
+    W, H = 550, 440
+
+    def land(view):
+        parts = []
+        for f in countries:
+            if f["properties"]["ADM0_A3"] != "KOR" and (d := path_d(f["geometry"], view)):
+                parts.append(f'<path d="{d}" fill="{look["home"]}" stroke="{look["border"]}" stroke-width="1.2" fill-rule="evenodd"/>')
+        for f in kor:
+            if d := path_d(f["geometry"], view):
+                fill = look["accent"] if f is prov else look["land"]
+                parts.append(f'<path d="{d}" fill="{fill}" stroke="{look["border"]}" stroke-width="1.4" stroke-linejoin="round" fill-rule="evenodd"/>')
+        return parts
+
+    def prov_labels(view, lab, size, skip_home):
+        for f in kor:
+            p = f["properties"]
+            if f is prov and skip_home:
+                continue
+            x, y = view.xy(p["latitude"], p["longitude"])
+            name = prov_short(PROV_NAME.get(p["name_ko"], p["name_ko"]))
+            if 0 < x < view.w and 0 < y < view.h and len(name) <= 3:
+                color, weight = (look["mark"], 800) if f is prov else (look["label"], 600)
+                lab.put(name, x, y + size * 0.35, size, color, weight)
+
+    # 왼쪽: 우리나라 전체 (울릉도까지)
+    lv = View([33.05, 38.7], [124.9, 131.0], W, H, pad=0.03)
+    lab = Labels(W, H)
+    cx, cy = lv.xy(a.lat, a.lon)
+    lab.block((cx - 15, cy - 15, cx + 15, cy + 15))
+    lab.city(a.city, cx, cy, 26, look["ink"], 800, 13)
+    seoul = km(SEOUL, (a.lat, a.lon)) > 30
+    if seoul:
+        sx, sy = lv.xy(*SEOUL)
+        lab.block((sx - 9, sy - 9, sx + 9, sy + 9))
+        lab.city("서울", sx, sy, 22, look["ink"], 700, 7)
+    lx, ly = lv.xy(prov["properties"]["latitude"], prov["properties"]["longitude"])
+    lab.put(short, lx, ly + 8, 22, look["mark"], 800)
+    left = "".join(land(lv)) + (dot(sx, sy, look["ink"], 7) if seoul else "") + marker(cx, cy, look) + "".join(lab.svg)
+    # 오른쪽: 그 도시 가까이
+    span = a.span or 1.5
+    dlat = span * (H / W) / math.cos(math.radians(a.lat))
+    rv = View([a.lat - dlat / 2, a.lat + dlat / 2], [a.lon - span / 2, a.lon + span / 2], W, H, pad=0)
+    lab = Labels(W, H)
+    x, y = rv.xy(a.lat, a.lon)
+    lab.block((x - 15, y - 15, x + 15, y + 15))
+    near = []
+    for name, la, lo in near_list(a.near):
+        nx, ny = rv.xy(la, lo)
+        if 8 < nx < W - 8 and 8 < ny < H - 8:
+            lab.block((nx - 7, ny - 7, nx + 7, ny + 7))
+            near.append((name, nx, ny))
+    lab.city(a.city, x, y, 28, look["ink"], 800, 13)
+    for name, nx, ny in near:
+        lab.city(name, nx, ny, 20, look["ink2"], 600, 6)
+    prov_labels(rv, lab, 20, skip_home=False)
+    right = "".join(land(rv)) + "".join(dot(nx, ny, look["ink2"]) for _, nx, ny in near) + marker(x, y, look) + "".join(lab.svg)
+    return (f'<div style="padding:44px 40px 40px;width:1200px;box-sizing:border-box;background:#fff;color:{look["ink"]};'
+            f'font-family:Pretendard,sans-serif">'
+            f'<div style="font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.25">{html.escape(title)}</div>'
+            f'<div style="margin-top:10px;font-size:23px;color:{look["ink2"]}">{html.escape(sub)}</div>'
+            f'<div style="margin-top:30px;display:flex;gap:20px">{panel(left, W, H, look)}{panel(right, W, H, look)}</div>'
+            f'<div style="margin-top:14px;font-size:16px;color:#9aa0a6">지도: Natural Earth</div></div>')
+
+
 def shoot(body, out):
     tmp = Path(tempfile.mkdtemp())
     page = tmp / "map.html"
@@ -372,7 +465,7 @@ def shoot(body, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("site", choices=sorted(LOOKS))
-    ap.add_argument("iso", help="나라 ISO3 (Natural Earth ADM0_A3, 예: AUT · HKG · ITA)")
+    ap.add_argument("iso", help="나라 ISO3 (Natural Earth ADM0_A3, 예: AUT · HKG · ITA) · black_lukey 는 시도 코드 (KR-48)")
     ap.add_argument("city")
     ap.add_argument("lat", type=float)
     ap.add_argument("lon", type=float)
@@ -383,6 +476,10 @@ def main():
     ap.add_argument("--sub", default="")
     a = ap.parse_args()
     feats = load("ne_10m_admin_0_countries")
+    if a.site == "black_lukey":
+        shoot(korea(a, feats, load("ne_10m_admin_1_states_provinces")), a.out)
+        print(a.out)
+        return
     feat = next((f for f in feats if f["properties"]["ADM0_A3"] == a.iso), None)
     if feat is None:
         raise SystemExit(f"{a.iso}: Natural Earth 에 없는 나라 코드")

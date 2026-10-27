@@ -425,6 +425,22 @@ class LocatorMapTests(TestCase):
         self.assertIn("## 위치 지도", prompt.build(pl))
         pl.site_category = SiteCategory.objects.create(blog=travel.blog, name="주식")
         self.assertNotIn("## 위치 지도", prompt.build(pl))
+        # 0038: 사이트별 지도 모양까지 자세히 + 국내 지역 놀거리 (위치 지도 → 여는 말)
+        local = SiteCategory.objects.filter(blog__platform="naver", name="지역 놀거리", parent=None).first() or \
+            SiteCategory.objects.create(blog=Blog.objects.get(platform="naver"), name="지역 놀거리")
+        local.concept = "지역 놀거리 글 모양\n- 순서: 맨 위 인용 상자(결론) → 공감 한 줄 → 하루 시간표 표 → 마무리.\n- 마무리: 서술형."
+        local.save()
+        importlib.import_module("apps.blog_types.migrations.0038_locator_map_concepts").forward(live_apps, None)
+        for cat in (travel, world, local):
+            cat.refresh_from_db()
+        self.assertTrue(travel.concept.startswith("- 위치 지도 (2026-10-27 사용자: 어디인지 감이 안 온다): 맨 위 인용"))
+        self.assertIn("서울에서 그 도시까지 점선", travel.concept)
+        self.assertIn("N km from London", world.concept)
+        self.assertNotIn("- 위치 지도: 맨 위", world.concept)
+        lines = local.concept.split("\n")
+        self.assertEqual(lines[1], "- 순서: 맨 위 인용 상자(결론) → 위치 지도 → 여는 말 → 하루 시간표 표 → 마무리.")
+        self.assertTrue(lines[2].startswith("- 위치 지도 (2026-10-27 사용자)") and lines[3].startswith("- 여는 말"))
+        self.assertEqual(lines[-1], "- 마무리: 서술형.")
 
     def test_hero_skips_locator(self):
         from .views import _hero
