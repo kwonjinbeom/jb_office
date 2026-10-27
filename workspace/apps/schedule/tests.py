@@ -32,8 +32,9 @@ class ScheduleTests(TestCase):
         from datetime import timedelta
         from django.utils import timezone
 
+        Event.objects.exclude(repeat="").update(done=True)  # 매일 알림(코스피)은 test_daily_alarm 에서
         now = timezone.localtime()
-        past = Event.objects.create(date=now.date(), time=(now - timedelta(minutes=1)).time(), title="지난 일정")
+        past =Event.objects.create(date=now.date(), time=(now - timedelta(minutes=1)).time(), title="지난 일정")
         Event.objects.create(date=now.date(), time=(now + timedelta(hours=1)).time() if now.hour < 23 else None, title="나중 일정")
         Event.objects.create(date=now.date(), title="종일 일정")
         ids = [a["id"] for a in self.client.get(reverse("schedule:alarms")).json()["alarms"]]
@@ -61,3 +62,40 @@ class ScheduleTests(TestCase):
         self.client.post(reverse("schedule:delete", args=[e.pk]))
         self.assertFalse(Event.objects.filter(pk=e.pk).exists())
         self.assertTrue(Event.all_objects.filter(pk=e.pk).exists())  # 휴지통
+
+    def test_daily_alarm(self):
+        """매일 알림: 달력엔 없고 따로 목록에, 날마다 알리고 오늘 확인만 센다, 평일은 주말에 쉰다 (2026-10-27 사용자)"""
+        from datetime import datetime, timedelta
+        from unittest import mock
+        from django.utils import timezone
+
+        kospi = Event.objects.get(title="코스피 장 마감")  # 처음 넣어 둔 매일 알림
+        self.assertEqual((kospi.repeat, kospi.time.strftime("%H:%M")), ("weekday", "15:40"))
+        res = self.client.get(INDEX, {"m": "2026-10", "d": "2026-10-27"})
+        self.assertEqual([e.title for e in res.context["daily_events"]], ["코스피 장 마감"])
+        self.assertEqual(res.context["day_events"].count(), 0)
+        self.assertNotContains(res, "<b>15:40</b> 코스피", html=False)  # 달력 칸에는 안 나온다
+
+        def due_at(when):
+            with mock.patch("apps.schedule.views.timezone.localtime", return_value=when):
+                return [a["id"] for a in self.client.get(reverse("schedule:alarms")).json()["alarms"]]
+
+        tue = datetime(2026, 10, 27, 15, 41, tzinfo=timezone.get_current_timezone())
+        self.assertEqual(due_at(tue - timedelta(minutes=2)), [])  # 15:39 아직
+        self.assertEqual(due_at(tue), [kospi.pk])
+        Event.objects.filter(pk=kospi.pk).update(alarm_ack=tue)
+        self.assertEqual(due_at(tue), [])  # 오늘 확인함
+        self.assertEqual(due_at(tue + timedelta(days=1)), [kospi.pk])  # 다음 날 다시
+        self.assertEqual(due_at(tue + timedelta(days=4)), [])  # 토요일은 평일 알림 쉼
+        Event.objects.filter(pk=kospi.pk).update(repeat="daily")
+        self.assertEqual(due_at(tue + timedelta(days=4)), [kospi.pk])  # 매일은 주말에도
+        self.client.post(reverse("schedule:done", args=[kospi.pk]))  # 끄기
+        self.assertEqual(due_at(tue + timedelta(days=4)), [])
+
+        self.client.post(reverse("schedule:save"), {"date": "2026-10-27", "title": "시각 없음", "repeat": "daily"})
+        self.assertFalse(Event.objects.filter(title="시각 없음").exists())  # 매일 알림은 시각이 있어야
+        nxt = INDEX + "?m=2026-10&d=2026-10-20"
+        res = self.client.post(reverse("schedule:save"), {"date": "2026-10-27", "time": "08:00", "title": "아침 확인",
+                                                          "repeat": "daily", "next": nxt})
+        self.assertRedirects(res, nxt, fetch_redirect_response=False)  # 보던 날 그대로
+        self.assertEqual(Event.objects.get(title="아침 확인").repeat, "daily")

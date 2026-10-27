@@ -26,7 +26,7 @@
     el.type = "button";
     el.className = "alarm";
     el.title = "누르면 닫혀요";
-    el.innerHTML = '<span class="alarm-k"><svg class="ic"><use href="#i-clock"/></svg>' + esc(a.time) + " 일정</span>" +
+    el.innerHTML = '<span class="alarm-k"><svg class="ic"><use href="#i-clock"/></svg>' + esc(a.time) + " " + esc(a.kind || "일정") + "</span>" +
       '<span class="alarm-t">' + esc(a.title) + "</span>" + (a.note ? '<span class="alarm-n">' + esc(a.note) + "</span>" : "");
     el.addEventListener("click", function () {
       fetch(a.ack, { method: "POST", credentials: "same-origin", headers: { "X-CSRFToken": cfg.csrfToken } });

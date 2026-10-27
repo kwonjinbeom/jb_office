@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{# 일정관리: 위 큰 월 달력 · 아래 왼쪽 고른 날 일정 · 아래 오른쪽 입력·수정 폼 (2026-10-22 사용자) #}
+{# 일정관리: 위 큰 월 달력 · 아래 고른 날 일정 · 매일 알림 · 입력·수정 폼 (2026-10-22·27 사용자) #}
 
 {% block heading %}일정관리{% endblock %}
 
@@ -56,6 +56,27 @@
 
     <section class="card">
       <div class="card-head">
+        <h2 class="card-title">{% include "includes/ic.html" with name="refresh" %}매일 알림</h2>
+        <span class="cnt">{{ daily_events|length }}</span>
+      </div>
+      <div class="sc-list">
+        {% for e in daily_events %}
+        <div class="sc-row{% if e.done %} off{% endif %}{% if e == editing %} on{% endif %}">
+          <form method="post" action="{% url 'schedule:done' e.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ back }}">
+            <button class="sc-check sc-bell" title="{% if e.done %}알림 켜기{% else %}알림 끄기{% endif %}" aria-label="{% if e.done %}알림 켜기{% else %}알림 끄기{% endif %}">{% if e.done %}{% include "includes/ic.html" with name="pause" %}{% else %}{% include "includes/ic.html" with name="clock" %}{% endif %}</button>
+          </form>
+          <span class="sc-time">{{ e.time|time:"H:i" }}</span>
+          <a class="sc-title" href="{{ back }}&amp;e={{ e.pk }}">{{ e.title }}{% if e.note %}<span class="sc-note">{{ e.note|truncatechars:40 }}</span>{% endif %}</a>
+          <span class="sc-kind">{{ e.get_repeat_display }}</span>
+        </div>
+        {% empty %}
+        <div class="empty small"><p>매일 알림이 없습니다.</p></div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
         <h2 class="card-title">{% include "includes/ic.html" with name="edit" %}{% if editing %}일정 고치기{% else %}새 일정{% endif %}</h2>
         {% if editing %}<a class="btn ghost sm" href="{{ back }}">새로 쓰기</a>{% endif %}
       </div>
@@ -70,6 +91,7 @@
         <div class="form-foot">
           {% if editing %}<button class="btn ghost sm danger-text" formaction="{% url 'schedule:delete' editing.pk %}" formnovalidate>{% include "includes/ic.html" with name="trash" %}삭제</button>{% endif %}
           <span style="margin-left:auto"></span>
+          {{ form.repeat }}
           <button class="btn primary sm">{% include "includes/ic.html" with name="save" %}저장</button>
         </div>
       </form>
