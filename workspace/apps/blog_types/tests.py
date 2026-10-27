@@ -1463,6 +1463,10 @@ class WordpressLooksTests(TestCase):
                          {"산과 캠핑": "wp_mountain", "드라이브·자동차": "wp_car", "Korea Travel": "wp_travel", "World Travel": "wp_travel"})
         self.assertIn("기관별 절정일 비교", cats["산과 캠핑"].concept)
         self.assertIn("C. 기능·노하우", cats["드라이브·자동차"].concept)
+        # 0036 (2026-10-27 사용자): 차 소재는 신차·제도 말고도 무궁무진 — 상시 소재 E~H
+        self.assertIn("E. 차 종류·구조 해설", cats["드라이브·자동차"].concept)
+        self.assertLess(cats["드라이브·자동차"].concept.index("H. 상식·통계"), cats["드라이브·자동차"].concept.index("- 숫자는 제조사"))
+        self.assertIn("차 한 대 깊게", Category.objects.get(section__name="워드프레스", name="드라이브·자동차").direction)
         self.assertIn("## 日本語まとめ", cats["Korea Travel"].concept)
         self.assertIn("Entry & Money Checklist", cats["World Travel"].concept)
         self.assertIn("코드 편집기", PlatformFormat.objects.get(platform="wordpress").guide)
