@@ -39,14 +39,17 @@ class BlogRulesTests(TestCase):
         old = Rule.all_objects.filter(blog__isnull=True)
         self.assertTrue(old.exists())
         self.assertFalse(old.filter(deleted_at__isnull=True).exists())
-        self.assertEqual(TrashEntry.objects.filter(model_label="blog_rules.rule").count(), old.count())
+        keys = [str(pk) for pk in old.values_list("pk", flat=True)]
+        self.assertEqual(TrashEntry.objects.filter(model_label="blog_rules.rule", object_key__in=keys).count(), old.count())
+        # 0042: 지금과 안 맞는 체크도 휴지통 (2026-10-27 사용자)
+        self.assertFalse(Rule.objects.filter(body__in=["하루 편수 정하기", "RSS 공개 설정 확인 (지금 공개 글 0편)"]).exists())
 
     def test_page_shows_sites_and_checks(self):
         res = self.client.get(INDEX)
         self.assertEqual(res.status_code, 200)
         self.assertEqual((res.context["mode"], res.context["target_total"]), ("day", 6))  # 운영 중인 다섯: 1 + 1 + 1 + 밤밤 2편 + 워드프레스 1 (0030)
         self.assertEqual(res.context["accounts"], [("카카오 계정 1", 2)])
-        for text in ["jinbaam.tistory.com", "nunip.tistory.com", "쇼핑커넥트 링크는", "하루 편수 정하기", "하루 1편 · 애드센스",
+        for text in ["jinbaam.tistory.com", "nunip.tistory.com", "쇼핑커넥트 링크는", "품질은 눈잎 다음", "하루 1편 · 애드센스",
                      "발행", "임시저장", "일별", "월별", "data-open-picker"]:
             self.assertContains(res, text)
         self.assertNotContains(res, "기출문제")  # 일반 규칙은 화면에 없다

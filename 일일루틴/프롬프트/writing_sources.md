@@ -112,15 +112,6 @@
 | 넷플릭스 TOP 10 | https://www.netflix.com/tudum/top10 | 국가별 이번 주 순위 | 바로 |
 | KOBIS 영화관입장권 | https://www.kobis.or.kr/ | 박스오피스·개봉 예정 | 바로 |
 
-### 세일 이벤트
-| 사이트 | 주소 | 무엇을 보나 | 읽기 |
-|---|---|---|---|
-| 코리아세일페스타 | https://www.koreasalefesta.kr/ | 국가 세일 기간·참여사 | 확인 전 |
-| 올리브영 | https://www.oliveyoung.co.kr/ | 올영세일 기간·혜택 (이벤트 공지) | 확인 전 |
-| 무신사 | https://www.musinsa.com/ | 무신사 블랙프라이데이 등 기획전 | 확인 전 |
-| 유니클로 | https://www.uniqlo.com/kr/ko/ | 감사제·한정 특가 기간 | 확인 전 |
-| 다나와 | https://danawa.com/ | 가격 추이 (세일이 진짜 싼지) | 바로 |
-
 ## 밤밤 (구글 블로거)
 ### 코스피 시황 노트 · 나스닥 시황 노트 (2026-10-26 두 시리즈)
 | 사이트 | 주소 | 무엇을 보나 | 읽기 |

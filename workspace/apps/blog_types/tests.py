@@ -167,17 +167,17 @@ class SiteCategoryTests(TestCase):
 
     def test_seed_real_categories(self):
         names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
-        self.assertEqual(names, ["Vue.js, Node.js", "Java", "Database", "Android Studio", "Make",
-                                 "공모전 및 프로젝트", "자격증", "일상생활", "기타", "AI"])  # AI 는 0021 (2026-10-23)
+        self.assertEqual(names, ["AI"])  # AI 는 0021 (2026-10-23). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자)
+        self.assertTrue(SiteCategory.all_objects.filter(blog=self.memorily, name="Java", deleted_at__isnull=False).exists())
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
-        self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)
+        self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)  # 낙서장 · videolog (시험 DB 의 옛 값)
         self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 생활 (0040)
 
     def test_tree_shows_both_grids(self):
         res = self.client.get(INDEX)
         self.assertContains(res, "글 분류")
         self.assertContains(res, "사이트 카테고리")
-        self.assertContains(res, "Android Studio")
+        self.assertContains(res, "Korea Travel")
         self.assertContains(res, "카테고리 없음")  # 눈잎·밤밤
         res = self.client.get(INDEX, {"sel": self.memorily.sel})
         self.assertContains(res, "https://jinbaam.tistory.com/")
@@ -196,7 +196,7 @@ class SiteCategoryTests(TestCase):
         top.refresh_from_db()
         self.assertEqual((top.name, top.note), ("AI 개발기", "새 축"))
         self.client.post(reverse("blog_types:move", args=["sitecat", top.pk]), {"dir": "up"})
-        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[9].name, "AI 개발기")
+        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[0].name, "AI 개발기")
         res = self.client.get(reverse("blog_types:delete", args=["sitecat", top.pk]))
         self.assertContains(res, "하위 카테고리 1개")
         self.client.post(reverse("blog_types:delete", args=["sitecat", top.pk]))
@@ -292,7 +292,7 @@ class PostManageTests(TestCase):
 
     def test_place_post_in_site_category(self):
         memorily = Blog.objects.get(name="memorily")
-        java = SiteCategory.objects.get(blog=memorily, name="Java")
+        java = SiteCategory.objects.get_or_create(blog=memorily, name="Java")[0]
         post = self.TistoryPost.objects.create(title="자바 정리", stage="post")
         self.TistoryPost.objects.create(title="임시 글", stage="temp")
         res = self.client.get(INDEX, {"sel": java.sel})
@@ -335,7 +335,7 @@ class PostManageTests(TestCase):
         self.assertEqual({(p.tistory_post_id, p.naver_post_id) for p in Placement.objects.all()}, {(t.pk, None), (None, n.pk)})
 
     def test_trashing_post_takes_placement_along(self):
-        java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        java = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="memorily"), name="Java")[0]
         post = self.TistoryPost.objects.create(title="자바 정리", stage="post")
         Placement.objects.create(site_category=java, tistory_post=post)
         post.delete()
@@ -555,11 +555,11 @@ class PostHubTests(TestCase):
 
     def test_unclassified_node_and_place_from_class_side(self):
         p = self.T.objects.create(title="분류 없는 포스트", stage="post")
+        java = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="memorily"), name="Java")[0]
         tree = self.client.get(INDEX).context["tree"]
         self.assertEqual(tree["unclassified"], 1)
         res = self.client.get(INDEX, {"sel": "u"})
         self.assertEqual([x.title for x in res.context["posts"]], ["분류 없는 포스트"])
-        java = SiteCategory.objects.get(blog__name="memorily", name="Java")
         options = [pk for _, rows in res.context["posts"][0].site_groups for pk, _ in rows]
         self.assertIn(java.pk, options)
         self.assertIn(SiteCategory.objects.get(name="낙서장").pk, options)  # 모든 사이트
@@ -583,7 +583,7 @@ class MappingPanesTests(TestCase):
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         from apps.writing.models import Post
-        self.java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        self.java = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="memorily"), name="Java")[0]
         self.post = Post.objects.create(title="자바 정리", stage="post")
         Placement.objects.create(site_category=self.java, tistory_post=self.post)
 
@@ -625,7 +625,7 @@ class SitePublishTests(TestCase):
         from apps.naver_writing.models import Post as NaverPost
         from apps.writing.models import Post
         self.T, self.N = Post, NaverPost
-        self.java = SiteCategory.objects.get(blog__name="memorily", name="Java")
+        self.java = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="memorily"), name="Java")[0]
         self.a = Post.objects.create(title="자바 정리", stage="post", target="memorily")
         self.b = NaverPost.objects.create(title="패딩 고르기", stage="post", target="black_lukey")
         self.pl = Placement.objects.create(site_category=self.java, tistory_post=self.a)
