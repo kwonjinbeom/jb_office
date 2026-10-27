@@ -33,6 +33,10 @@
 :is(div.contents_style.jb-post,#jb-x#jb-y) :is(td,th) p{margin:0!important;font-size:inherit!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) hr{height:0!important;margin:28px 0!important;border:0!important;border-top:1px solid #e5e7eb!important;background:none!important}
 :is(div.contents_style.jb-post,#jb-x#jb-y) figure{margin:18px 0!important}
+/* 사진은 가운데 (2026-10-27 사용자): 티스토리가 붙여넣은 사진 문단의 가운데 정렬을 지워 620 사진이 왼쪽에 붙었고,
+   직접 올린 사진(figure.imageblock)은 위 margin 0 때문에 왼쪽에 붙었다. 이미 올린 글도 여기서 함께 맞춘다 */
+:is(div.contents_style.jb-post,#jb-x#jb-y) p>img:only-child{display:block!important;margin-left:auto!important;margin-right:auto!important}
+:is(div.contents_style.jb-post,#jb-x#jb-y) figure.imageblock{margin-left:auto!important;margin-right:auto!important}
 /* 빈 줄 없이 붙인 예전 글: 문단·블록 아래를 빈 줄 하나(16px × 1.9)만큼 */
 :is(div.contents_style.jb-airy,#jb-x#jb-y) :is(p,ul,ol,table,figure){margin-bottom:30px!important}
 :is(div.contents_style.jb-airy,#jb-x#jb-y) :is(li,td,th,blockquote) p{margin-bottom:0!important}
