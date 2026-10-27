@@ -441,6 +441,15 @@ class LocatorMapTests(TestCase):
         self.assertEqual(lines[1], "- 순서: 맨 위 인용 상자(결론) → 위치 지도 → 여는 말 → 하루 시간표 표 → 마무리.")
         self.assertTrue(lines[2].startswith("- 위치 지도 (2026-10-27 사용자)") and lines[3].startswith("- 여는 말"))
         self.assertEqual(lines[-1], "- 마무리: 서술형.")
+        # 0039: 워드프레스 Korea Travel
+        korea = SiteCategory.objects.filter(blog__platform="wordpress", name="Korea Travel", parent=None).first() or \
+            SiteCategory.objects.create(blog=world.blog, name="Korea Travel")
+        korea.concept = "순서: 리드 → `## {City} at a Glance` → Sources."
+        korea.save()
+        importlib.import_module("apps.blog_types.migrations.0039_korea_travel_locator_map").forward(live_apps, None)
+        korea.refresh_from_db()
+        self.assertTrue(korea.concept.startswith("순서: 리드 → 위치 지도 → `## {City} at a Glance`"))
+        self.assertIn("우리나라 작은 지도", korea.concept)
 
     def test_hero_skips_locator(self):
         from .views import _hero
