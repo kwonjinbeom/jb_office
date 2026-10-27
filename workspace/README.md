@@ -38,15 +38,17 @@ workspace/
     routines/             일일루틴 (실행·전체 실행·추가 실행, 커스텀 글쓰기, 프롬프트 관리). PC 터미널 claude 실행(local_run)
     writing/              글 (티스토리 쪽 편집기·원고 가져오기·붙여넣기 HTML 렌더)
     naver_writing/        글 (네이버 쪽 편집기·붙여넣기 HTML 렌더)
-    blog_types/           글 관리(posts: 임시글 → 검토글 → 발행예정글) · 카테고리 관리(글 분류 · 사이트 카테고리에 넣기)
+    blog_types/           글 관리(posts: 임시글 → 검토글 → 발행예정글 → 게시글 관리) · 카테고리 관리(글 분류 · 사이트 카테고리에 넣기)
     site_templates/       사이트별 템플릿(컨셉·규칙 보기) · 변환(요청문 · 변환 화면 · 붙여넣기 포맷)
     blog_rules/           사이트(Blog)와 사이트 체크 — 데이터는 여러 앱이 쓴다. 화면은 메뉴에서 뺐다
-    blog_ops/             모니터링: 사이트 × 요일 발행 수(한 주씩) · RSS 발행 확인(PC 가 읽어 보냄) · 발행 완료 자동 처리
-    series/ · anime/      memorily 티스토리 (블로그 자동화 연재 · 애니 총정리)
+    blog_ops/             통계현황(사이트별 방문자·공감·댓글) · 모니터링(확인할 것 · 사이트별 파이프라인 · 발행 실적 · RSS 발행 확인 · 발행 완료 자동 처리)
+    series/ · anime/ · anime_seasons/   memorily 티스토리 (블로그 자동화 연재 · 애니 총정리 · 분기별 애니 추천 및 후기)
     content/              블로그·카페 / 영상 콘텐츠 소재 목록
     daily_ideas/          일일 아이디어 (날짜별 JSON) · 검색 표준
     ideas/ · tasks/ · evidence/   내 아이디어와 그 단계·할 일·증거 링크
-    discussions/          논의 현황 · 진행현황 (논의/ 폴더의 md)
+    studio/               창작콘텐츠 (인스타 카툰 · 숏폼 영상 · 쓰레드 글 · AI 이미지 설정집 · 검증 기록)
+    schedule/             일정관리 (월 달력 · 매일 알림 · 반복)
+    discussions/          진행현황 (논의/ 폴더의 md)
     memos/                메모
     docs/                 시장조사 md 문서 읽기 전용 뷰어
   templates/              base.html + 앱별 템플릿
@@ -80,9 +82,9 @@ workspace/
 저장할 때마다 버전(v1, v2 …)이 DB 에 쌓인다. 조사를 맡길 때는 화면의 '요청문 복사'를 대화에 붙여 넣는다 — 에이전트는 서버 DB 를 직접 읽지 않는다.
 조사 결과 JSON 의 `standard_version` 으로 어느 버전을 따랐는지 남기고, 일일 아이디어 화면에 표시된다. 항목 구성은 `apps/daily_ideas/standard.py`.
 
-## 논의 현황 · 진행현황
+## 진행현황
 
-대구분은 메뉴 이름(아이디어 · 블로그·카페 · 영상 콘텐츠), 중구분은 상위 주제. 각 메뉴 아래 '논의 현황'은 그 대구분만, '진행현황'은 전체.
+대구분은 메뉴 이름(아이디어 · 블로그·카페 · 영상 콘텐츠), 중구분은 상위 주제. 메뉴마다 있던 '논의 현황'은 뺐다 (2026-10-23) — 진행현황 한곳에서 본다.
 목록은 한 줄 제목만, 들어가면 정리한 글이 게시글처럼 보인다. 글은 저장소 `논의/<대구분>/` 의 md 로 쓰고 push 한다 (형식은 `논의/README.md`).
 
 ## 메뉴 추가 방법
@@ -90,7 +92,7 @@ workspace/
 1. `python manage.py startapp <이름> apps/<이름>` 으로 앱을 만들고 `config/settings.py` 의 `INSTALLED_APPS` 에 `apps.<이름>` 추가
 2. `apps/<이름>/urls.py` 에 `app_name = "<이름>"` 지정, `config/urls.py` 에 include
 3. `apps/core/menus.py` 의 `MENUS` 에 항목 추가 → 홈 카드와 좌측 메뉴에 자동 표시
-   - 하위 메뉴는 그 항목의 `children=(Menu(...), ...)` 에 넣는다 → 좌측 메뉴에서 트리로 펼쳐진다 (블로그·카페, 영상 콘텐츠 아래의 '논의 현황').
+   - 하위 메뉴는 그 항목의 `children=(Menu(...), ...)` 에 넣는다 → 좌측 메뉴에서 트리로 펼쳐진다 (예: 블로그·카페 › 글 관리 › 임시·검토글).
      하위 메뉴 화면의 뷰에서 `request.nav_key = "<key>"` 를 넣으면 그 항목이 강조된다.
 4. 템플릿은 `templates/<이름>/` 에 두고 `{% extends "base.html" %}`
 
