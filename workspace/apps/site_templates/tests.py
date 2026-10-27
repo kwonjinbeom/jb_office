@@ -225,6 +225,22 @@ class PasteFormatTests(TestCase):
         self.assertEqual(json.loads(res.context["paste_all"][len(ALL_MARK):])["tags"], ["태그1", "태그2"])
         self.assertNotIn("<p>&nbsp;</p>", res.context["paste_html"])  # 티스토리는 네이버식 빈 줄이 아니라 티스토리식 (data-ke-size)
 
+    def test_wrapped_image_unwrapped_on_save(self):
+        """그림 줄을 <div> 로 감싸면 마크다운이 풀리지 않아 주소가 글자로 보인다 (2026-10-27 코스피 시황 노트) → 저장할 때 벗긴다."""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from .paste import unwrap_images
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        img = "![지수 카드](https://raw.githubusercontent.com/x/y.png)"
+        self.assertEqual(unwrap_images(f'앞\n\n<div style="text-align:center">\n\n{img}\n\n</div>\n\n뒤'), f"앞\n\n{img}\n\n뒤")
+        self.assertEqual(unwrap_images(f"<p>{img}\n*사진: 가 · Pexels*</p>"), f"{img}\n*사진: 가 · Pexels*")
+        self.assertEqual(unwrap_images("<div>표</div>"), "<div>표</div>")  # 그림이 아니면 그대로
+        pl = self.place("밤밤")
+        self.client.post(reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok",
+                         {"body": f'첫 줄\n\n<div style="text-align:center">\n\n{img}\n\n</div>'})
+        pl.refresh_from_db()
+        self.assertEqual(pl.converted_body, f"첫 줄\n\n{img}")
+        self.assertIn('<img', self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"])
+
     def test_planned_row_copy(self):
         """발행예정글 표의 '복사' (2026-10-27 사용자): 누르면 변환글 보기의 '한 번에 복사'와 같은 내용을 받는다. 워드프레스는 없다."""
         import json
