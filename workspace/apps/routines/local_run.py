@@ -9,6 +9,7 @@ convert: 글 관리의 '변환'·'전체 변환'·'재변환'. 안내문은 '# �
 루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
 anime: 애니 총정리의 '글쓰기·변환' (2026-10-23 사용자). 일일루틴과 따로, 작품마다 새 터미널을 차례로 (전체 실행과 같은 차례 창).
 안내문은 '# 애니 총정리' 로 시작하고 (apps/anime/run.py), 루틴 현황은 남기지 않는다.
+클립보드에 없으면 링크의 key 로 서버(settings.SERVER_URL)에서 받는다 (2026-10-27, anime_brief).
 feeds: 모니터링의 '발행 확인' (2026-10-22 사용자). claude 없이 PC 가 사이트마다 RSS 를 읽어 서버로 보낸다 (check_feeds).
 서버(PythonAnywhere 무료)는 티스토리·네이버에 못 나가서다. '전체 실행' 안내문에도 같은 것이 숨어 있어(FEEDS_MARK) 매일 같이 한다.
 """
@@ -317,8 +318,10 @@ def start(link, text):
             raise ValueError("클립보드에 발행 확인 안내가 없습니다. 모니터링에서 '발행 확인'을 다시 누르세요.")
         return "발행 확인을 마쳤습니다. 모니터링 화면이 곧 새로고침됩니다.\n" + check_feeds(json.loads(text[len(FEEDS_HEAD):].strip()))
     if kind == "anime":
-        if not text.startswith(ANIME_HEAD):
-            raise ValueError("클립보드에 애니 총정리 안내문이 없습니다. 애니 총정리에서 '글쓰기·변환'을 다시 누르세요.")
+        if not text.startswith(ANIME_HEAD):  # 클립보드가 비었거나 그새 다른 걸 복사했으면 서버에서 받는다
+            text, why = anime_brief(key)
+            if not text:
+                raise ValueError(f"애니 글쓰기·변환 안내문을 받지 못했습니다 ({why}). 애니 총정리에서 '글쓰기·변환'을 다시 누르세요.")
         return _start_anime(text, day, find_claude() if WINDOWS else "claude")
     if kind == "convert":
         if not text.startswith(CONVERT_HEAD):
@@ -363,6 +366,17 @@ def start(link, text):
     (folder / name).write_text(text, encoding="utf-8")
     manual = open_terminal(name, title, claude)
     return f"저장소 폴더에서 실행하세요: {manual}" if manual else done
+
+
+def anime_brief(key):
+    """서버에 잠깐 둔 애니 글쓰기·변환 안내문 (apps/anime/views.brief). (안내문, 못 받은 이유)."""
+    url = f"{settings.SERVER_URL.rstrip('/')}/anime/brief/{key}/"
+    try:
+        with urllib.request.urlopen(url, timeout=30) as res:
+            text = res.read().decode("utf-8").replace("\r\n", "\n")
+    except Exception as e:  # noqa: BLE001 — 404(30분 지남·다시 누름)·네트워크 오류는 이유만 알린다
+        return "", f"클립보드에 없고 서버에서도 못 받음: {e}"
+    return (text, "") if text.startswith(ANIME_HEAD) else ("", "클립보드에 없고 서버 응답도 안내문이 아님")
 
 
 def _start_anime(text, day, claude):

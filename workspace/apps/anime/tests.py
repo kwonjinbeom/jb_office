@@ -152,3 +152,32 @@ class AnimeWriteRunTests(TestCase):
             self.assertIn("애니 글쓰기·변환 1/1 진격의 거인", chain)
             self.assertIn("Bash(python *)", (folder / "settings-extra.json").read_text(encoding="utf-8"))
             popen.assert_called_once()
+
+    def test_brief_gives_prompt_once_to_pc(self):
+        """2026-10-27: 클립보드에 안내문이 없어 PC 창이 꺼졌다 → PC 가 링크의 key 로 서버에서 한 번 받아 간다."""
+        j = self.client.post(reverse("anime:write_run")).json()
+        self.assertRegex(j["key"], r"^an-[0-9a-f]{20}$")
+        self.client.logout()  # PC 실행기는 로그인 없이 받는다
+        self.assertEqual(self.client.get(reverse("anime:brief", args=["an-x"])).status_code, 404)
+        res = self.client.get(reverse("anime:brief", args=[j["key"]]))
+        self.assertEqual(res.content.decode("utf-8"), j["prompt"])
+        self.assertEqual(self.client.get(reverse("anime:brief", args=[j["key"]])).status_code, 404)  # 한 번만
+
+    def test_local_run_takes_brief_from_server_when_clipboard_lacks_it(self):
+        from io import BytesIO
+
+        from apps.routines.local_run import start
+
+        j = self.client.post(reverse("anime:write_run")).json()
+        link = f"jbroutine:anime?key={j['key']}&day=2026-10-27"
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), \
+                patch("apps.routines.local_run.WINDOWS", True), patch("apps.routines.local_run.find_claude", return_value="claude"), \
+                patch("apps.routines.local_run.subprocess.Popen"), \
+                patch("apps.routines.local_run.urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value = BytesIO(j["prompt"].encode("utf-8"))
+            self.assertIn("1작품", start(link, "JBPASTE1\n{}"))  # 그새 다른 글을 복사한 클립보드
+            self.assertIn(f"/anime/brief/{j['key']}/", urlopen.call_args[0][0])
+            self.assertTrue((Path(tmp) / ".routine" / f"anime-2026-10-27-1-a{self.aot.pk}.md").exists())
+            urlopen.side_effect = OSError("404")
+            with self.assertRaisesRegex(ValueError, "안내문을 받지 못했습니다"):
+                start(link, "")
