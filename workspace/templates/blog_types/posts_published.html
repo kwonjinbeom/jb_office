@@ -35,12 +35,12 @@
       <thead>
         <tr>
           <th style="width:40px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
-          <th>제목</th><th class="wr-c-site">사이트</th><th class="wr-c-cat">카테고리</th><th class="wr-c-chg">수정</th><th class="wr-c-pub">발행</th><th class="wr-c-date">발행일</th>
+          <th>제목</th><th class="wr-c-site">사이트</th><th class="wr-c-cat">카테고리</th><th class="wr-c-chg">수정</th><th class="wr-c-pub">발행</th><th class="wr-c-made">작성일</th><th class="wr-c-date">발행일</th>
         </tr>
       </thead>
       <tbody>
         {% for p in posts %}
-        {% if p.group_head %}<tr class="wr-day-row"><td colspan="7"><span class="wr-day">{{ p.group_head.0 }}</span><span class="cnt">{{ p.group_head.1 }}편</span></td></tr>{% endif %}
+        {% if p.group_head %}<tr class="wr-day-row"><td colspan="8"><span class="wr-day">{{ p.group_head.0 }}</span><span class="cnt">{{ p.group_head.1 }}편</span></td></tr>{% endif %}
         <tr {% trash_attrs p %} data-trash-norow>
           <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.ref }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
           <td class="title-cell mid"><a href="{% url 'site_templates:post' %}?p={{ p.ref }}&amp;back={{ request.get_full_path|urlencode }}" title="{{ p.title }}">{{ p.title }}</a></td>
@@ -48,9 +48,10 @@
           <td class="mid small">{% for pl in p.placements.all %}<div class="bt-chip bt-cut" title="{{ pl.site_category.blog.name }} › {{ pl.site_category }}">{{ pl.site_category }}</div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
           <td class="mid small">{% for pl in p.placements.all %}<div class="pl-chg">{% if pl.changed_at %}<form method="post" action="{% url 'blog_types:place_seen' pl.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="pl-lamp on" title="{{ pl.changed_note }} · {{ pl.changed_at|date:'m-d H:i' }} — {{ pl.site_category.blog.name }}에 다시 붙여 넣었으면 눌러서 끕니다">수정됨</button></form>{% else %}<span class="pl-lamp" title="발행한 뒤 바뀐 것 없음">그대로</span>{% endif %}</div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
           <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% else %}{% include "writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% endif %}</td>
+          <td class="mid small num muted">{{ p.created_at|date:"Y-m-d" }}</td>
           <td class="mid small num muted">{{ p.published_on|date:"Y-m-d"|default:"-" }}</td>
         </tr>
-        {% empty %}<tr><td colspan="7" class="grid-empty">{% if filtered %}조건에 맞는 글이 없습니다.{% else %}발행 완료한 글이 없습니다.{% endif %}</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="8" class="grid-empty">{% if filtered %}조건에 맞는 글이 없습니다.{% else %}발행 완료한 글이 없습니다.{% endif %}</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

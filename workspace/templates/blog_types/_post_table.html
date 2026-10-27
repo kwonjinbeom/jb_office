@@ -1,16 +1,16 @@
 {# 글 관리 목록 표 하나 (posts.html). rows: 글들, empty: 비었을 때 문구(없으면 기본) #}
 <div class="grid-wrap">
-  <table class="grid wrap clickable wr-grid wr-compact{% if table_stage %} wr-fit{% endif %}"{% if not table_stage %} style="min-width:720px"{% endif %}>
+  <table class="grid wrap clickable wr-grid wr-compact{% if table_stage %} wr-fit{% endif %}"{% if not table_stage %} style="min-width:800px"{% endif %}>
     <thead>
       <tr>
         <th style="width:48px"><input type="checkbox" class="checkbox" data-check-all="ids" form="ph-bulk" title="모두 선택" aria-label="모두 선택"></th>
         <th>제목</th>
-        {% if table_stage %}<th class="wr-c-site">사이트</th><th class="wr-c-cat">카테고리</th><th class="wr-c-cv">변환</th><th class="wr-c-pub">발행</th><th class="wr-c-date">{% if stage == 'done' %}발행일{% else %}발행 예정일{% endif %}</th>
-        {% else %}<th style="width:240px">분류</th><th style="width:140px">사이트</th><th style="width:112px">{% if stage == 'temp' %}만든 날{% else %}수정일{% endif %}</th>{% endif %}
+        {% if table_stage %}<th class="wr-c-site">사이트</th><th class="wr-c-cat">카테고리</th><th class="wr-c-cv">변환</th><th class="wr-c-pub">발행</th><th class="wr-c-made">작성일</th><th class="wr-c-date">{% if stage == 'done' %}발행일{% else %}발행 예정일{% endif %}</th>
+        {% else %}<th style="width:240px">분류</th><th style="width:140px">사이트</th><th style="width:112px">작성일</th><th style="width:112px">수정일</th>{% endif %}
       </tr>
     </thead>
     <tbody>
-      {% for p in rows %}{% if p.day_head and table_stage %}{# 발행 예정일 묶음 머리 (2026-10-23 사용자: 날짜별로 그날 쓸 글을 본다) #}<tr class="wr-day-row{% if p.day_head.today %} is-today{% elif p.day_head.past %} is-past{% endif %}"><td colspan="7"><span class="wr-day">{{ p.day_head.day|date:"m-d" }} ({{ p.day_head.dow }})</span>{% if p.day_head.today %}<span class="wr-day-tag">오늘</span>{% elif p.day_head.past %}<span class="wr-day-tag">지남</span>{% endif %}<span class="cnt">{{ p.day_head.count }}편</span></td></tr>{% endif %}{% if table_stage %}{% include "blog_types/_post_row.html" %}{% else %}{% include "blog_types/_draft_row.html" %}{% endif %}{% empty %}<tr><td colspan="{% if table_stage %}7{% else %}5{% endif %}" class="grid-empty">{% if empty %}{{ empty }}{% elif q or today or custom or site_filter %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
+      {% for p in rows %}{% if p.day_head and table_stage %}{# 발행 예정일 묶음 머리 (2026-10-23 사용자: 날짜별로 그날 쓸 글을 본다) #}<tr class="wr-day-row{% if p.day_head.today %} is-today{% elif p.day_head.past %} is-past{% endif %}"><td colspan="8"><span class="wr-day">{{ p.day_head.day|date:"m-d" }} ({{ p.day_head.dow }})</span>{% if p.day_head.today %}<span class="wr-day-tag">오늘</span>{% elif p.day_head.past %}<span class="wr-day-tag">지남</span>{% endif %}<span class="cnt">{{ p.day_head.count }}편</span></td></tr>{% endif %}{% if table_stage %}{% include "blog_types/_post_row.html" %}{% else %}{% include "blog_types/_draft_row.html" %}{% endif %}{% empty %}<tr><td colspan="{% if table_stage %}8{% else %}6{% endif %}" class="grid-empty">{% if empty %}{{ empty }}{% elif q or today or custom or site_filter %}조건에 맞는 글이 없습니다.{% else %}이 단계에 글이 없습니다.{% endif %}</td></tr>{% endfor %}
     </tbody>
   </table>
 </div>
