@@ -15,7 +15,7 @@ class SiteTemplateTests(TestCase):
         user = get_user_model().objects.create_user("tester", password="pw-test-1234")
         self.client.force_login(user)
         self.memorily = Blog.objects.get(name="memorily")
-        self.java = SiteCategory.objects.get(blog=self.memorily, name="Java")
+        self.java = SiteCategory.objects.get_or_create(blog=self.memorily, name="Java")[0]  # 옛 카테고리는 0042 에서 지웠다 — 시험용으로 만든다
         self.post = Post.objects.create(title="자바 정리", stage="post", body="## 소제목\n본문")
         self.pl = Placement.objects.create(site_category=self.java, tistory_post=self.post)
 
