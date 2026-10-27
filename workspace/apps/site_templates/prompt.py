@@ -62,6 +62,18 @@ PHOTOS = f"""## 사진·그림 (변환이 끝까지 채운다 · 원문에 자�
   - `{FIGURE_DIR}/<글 번호>/<이름>.png` 로 저장해 그 폴더만 git add · commit · push (main). 주소는 `{FIGURE_URL}<경로를 퍼센트 인코딩>` — curl 로 200 을 확인하고 `![설명](주소)` 한 줄로.
 - 점검 기록에 `- 사진: 설명 · 사진 페이지 주소` · `- 그림: 파일 이름 · 무엇을 보여 주나` · `- 지움: 찾지 못한 자리` 로 남긴다."""
 
+# 해외여행 글 맨 위 위치 지도 (2026-10-27 사용자: "나는 사실 어딘지도 몰라 너가 쓰는 지역들이"). 카테고리 컨셉에 '위치 지도'가
+# 있으면 붙는다 (밤밤 › 해외여행 · 워드프레스 › World Travel, blog_types 0037). 대표 사진에서는 빠진다 (views._hero).
+LOCATOR_NAME = "위치지도.png"
+LOCATOR = f"""## 위치 지도 (원문에 자리가 없어도 꼭)
+- 맨 위 인용 바로 다음에 한 장 — 인용 아래 대표 사진이 있으면 그 사진 다음. 다른 사진·그림과 별개로 센다.
+- 그리는 법 (Natural Earth 지도, 사이트마다 모양이 다르다):
+  `python {FIGURE_DIR}/위치지도.py <밤밤|워드프레스> <나라 ISO3> <도시> <위도> <경도> {FIGURE_DIR}/<글 번호>/{LOCATOR_NAME} --near "<이웃 도시:위도:경도>,…"`
+  - 도시 이름은 글의 말로 (밤밤 한국어, 워드프레스 영어). `--near` 는 그 나라 안팎에서 독자가 알 만한 도시 3~5곳 (같은 말로).
+  - 나라가 작아 가까운 지도가 너무 좁으면 `--span 3` 처럼 가로 폭(경도)을 넓힌다 (홍콩·싱가포르·마카오).
+- 다른 가공이미지처럼 그 폴더만 커밋·push 하고 `![<도시> 위치 지도](주소)` 한 줄로 (밤밤은 '비엔나 위치 지도', 워드프레스는 'Map: where Rome is'). 캡션 줄은 달지 않는다 (지도 안에 출처가 있다).
+- 점검 기록에 `- 그림: {LOCATOR_NAME} · <도시> 위치` 한 줄."""
+
 
 def template_for(blog):
     tpl, _ = SiteTemplate.objects.get_or_create(blog=blog)
@@ -89,6 +101,8 @@ def build(placement):
     ]
     if blog.platform in PHOTO_PLATFORMS:
         parts.append(PHOTOS)
+        if "위치 지도" in _category_part(cat):
+            parts.append(LOCATOR)
     if (cat.look or (cat.parent.look if cat.parent_id else "")) == "yudi":
         parts.append(looks.PROMPT)
     if blog.platform == "blogger":

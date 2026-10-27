@@ -394,6 +394,34 @@ class BloggerLabelTests(TestCase):
         self.assertNotIn("## 블로거 라벨", prompt.build(pl))
 
 
+class LocatorMapTests(TestCase):
+    """해외여행 글 맨 위 위치 지도 (2026-10-27 사용자: 어디인지 감이 안 온다)."""
+
+    def test_prompt_by_concept(self):
+        import importlib
+        from django.apps import apps as live_apps
+        travel = SiteCategory.objects.create(blog=Blog.objects.get(name="밤밤"), name="해외여행")
+        world = SiteCategory.objects.create(blog=Blog.objects.get(platform="wordpress"), name="World Travel",
+                                            concept="순서: 리드 → `## Trip at a Glance` → Sources.")
+        importlib.import_module("apps.blog_types.migrations.0037_travel_locator_map").forward(live_apps, None)
+        travel.refresh_from_db()
+        world.refresh_from_db()
+        self.assertTrue(travel.concept.startswith("- 위치 지도: 맨 위 인용 바로 다음"))
+        self.assertIn("순서: 리드 → 위치 지도 → `## Trip at a Glance`", world.concept)
+        pl = Placement.objects.create(site_category=travel, tistory_post=Post.objects.create(title="홍콩 3박 4일", body="본문"))
+        self.assertIn("## 위치 지도", prompt.build(pl))
+        pl.site_category = SiteCategory.objects.create(blog=travel.blog, name="주식")
+        self.assertNotIn("## 위치 지도", prompt.build(pl))
+
+    def test_hero_skips_locator(self):
+        from .views import _hero
+        fig = prompt.FIGURE_URL + "%EB%B3%80%ED%99%98%EA%B7%B8%EB%A6%BC/66/"
+        body = (f"> 리드\n\n![Map: where Rome is]({fig}%EC%9C%84%EC%B9%98%EC%A7%80%EB%8F%84.png)\n\n"
+                f"## Day 1\n\n![Colosseum]({fig}colosseum.jpg)")
+        self.assertEqual(_hero(body), {"src": f"{fig}colosseum.jpg", "alt": "Colosseum"})
+        self.assertIsNone(_hero(f"> 리드\n\n![지도]({fig}%EC%9C%84%EC%B9%98%EC%A7%80%EB%8F%84.png)"))
+
+
 class PanelPublishTests(TestCase):
     """변환본 창의 '발행 완료' ('변환 화면 따로 열기' 자리, 2026-10-23 사용자)."""
 
