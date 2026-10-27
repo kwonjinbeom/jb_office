@@ -8,6 +8,8 @@
 - 워드프레스: class 를 단 HTML 을 '사용자 정의 HTML' 블록 하나로 (<!-- wp:html -->) → 코드 편집기에 붙인다.
   모양은 콘텐츠/블로그_카페/워드프레스/글모양.css 를 그 블록 안 <style> 로 함께 넣는다 (wp_looks, 2026-10-26 — '추가 CSS'는 편집 화면에 안 보인다)
 """
+import re
+
 import markdown
 
 PLATFORMS = {
@@ -121,6 +123,15 @@ def _bookmarklet(source):
 # - 블로거: 제목 칸 · HTML 보기(CodeMirror)에 본문. 라벨 칸을 누르고 다시 누르면 라벨을 쉼표로
 # - 네이버: 스마트에디터 ONE 제목·본문에 붙여넣기 이벤트 (PC 에서 못 열어 본 화면 — 안 되면 알리고 Ctrl+V 로).
 #   발행 창 태그 칸을 누르고 다시 누르면 태그를 하나씩 Enter
+# 변환본의 그림 줄을 감싼 <div>·<p>·<center> 를 벗긴다 (2026-10-27 사용자: 코스피 시황 노트에 그림 대신 주소가 보였다 —
+# HTML 블록 안의 ![설명](주소) 는 마크다운으로 풀리지 않는다. 가운데 정렬은 서버가 한다).
+_WRAPPED_IMAGE = re.compile(r"<(div|p|center)\b[^>]*>\s*(!\[[^\]\n]*\]\([^)\s]+\)(?:\s*\n\*[^\n]+\*)?)\s*</\1>", re.I)
+
+
+def unwrap_images(text):
+    return _WRAPPED_IMAGE.sub(lambda m: m.group(2), text or "")
+
+
 ALL_MARK = "JBPASTE1\n"
 PASTE_JS = """(async()=>{
 var MARK='JBPASTE1';
@@ -150,11 +161,12 @@ if(/(^|\\.)blogger\\.com$/.test(host)){
 if(need())return;
 if(el&&el.tagName==='TEXTAREA'&&/라벨|label/i.test((el.placeholder||'')+(el.getAttribute('aria-label')||''))){
 el.select();document.execCommand('insertText',false,tags.join(', '));note('라벨 '+tags.length+'개를 넣었습니다.');return;}
-var bt=document.querySelector('input[aria-label="제목"],input[aria-label="Title"]');
+var bt=[].filter.call(document.querySelectorAll('input[aria-label="제목"],input[aria-label="Title"]'),function(i){return i.offsetParent;})[0];
 var cm=[].filter.call(document.querySelectorAll('.CodeMirror'),function(c){return c.offsetParent&&c.CodeMirror;})[0];
 if(!bt){alert('블로거 글쓰기 화면에서 눌러 주세요.');return;}
 if(!cm){alert('왼쪽 위 연필 → HTML 보기로 바꾼 뒤 다시 눌러 주세요.');return;}
-setVal(bt,data.title);bt.blur();cm.CodeMirror.setValue(data.html);
+function putTitle(){bt.focus();bt.select();try{document.execCommand('insertText',false,data.title);}catch(e){}if(bt.value!==data.title)setVal(bt,data.title);bt.dispatchEvent(new Event('change',{bubbles:true}));bt.blur();}
+putTitle();cm.CodeMirror.setValue(data.html);await wait(400);if(bt.value!==data.title)putTitle();
 note('제목·본문을 넣었습니다. 라벨 칸을 누르고 북마크를 한 번 더 누르세요.');return;}
 if(/(^|\\.)naver\\.com$/.test(host)){
 if(el&&el.tagName==='INPUT'&&!el.closest('.se-documentTitle')){
