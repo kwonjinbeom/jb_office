@@ -9,9 +9,14 @@ md 는 Claude 가 저장소에서 고치고 main 에 올린다 — 서버는 git
 주소: ?d=<md 이름> (md 보기) · a=<번호> (md 가 아직 없는 담은 작품).
 
 2026-10-23 사용자: '글쓰기·변환' — 원고 없는 담은 작품(대기·작업 중)을 PC 터미널 claude 가 글쓰기부터 변환까지 (run.py).
+2026-10-27 사용자: 작품 2개를 담고 눌렀는데 PC 창이 "클립보드에 애니 총정리 안내문이 없습니다"로 꺼졌다.
+→ 안내문을 서버에도 잠깐 두고(BRIEF_KEY), PC 가 클립보드에서 못 찾으면 링크의 key 로 brief 에서 받아 간다.
 """
 import hmac
+import json
 import re
+import secrets
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import markdown
@@ -37,6 +42,8 @@ STATUS_KEYS = {key for key, _ in AnimeTitle.STATUS}
 TO_WRITE = ("todo", "doing")  # '글쓰기·변환' 대상: 담은 작품 중 원고가 아직 없는 것
 FOLDER = re.compile(r"T\d+_[^/\\.]+")  # 원고 폴더 (경로 문자·점 없이)
 DOC = re.compile(r"\d{2}_[^/\\.]+")  # 애니총정리 작품 md 이름
+BRIEF_KEY = "anime_brief"  # 마지막 '글쓰기·변환' 안내문 {key, prompt, at} (PC 가 한 번 받아 가면 지운다)
+BRIEF_TTL = timedelta(minutes=30)
 
 
 def _docs():
@@ -144,8 +151,23 @@ def write_run(request):
             a.status = "doing"
             a.save(update_fields=["status", "updated_at"])
     now = timezone.localtime()
-    return JsonResponse({"prompt": anime_run.launcher(request, titles, token), "key": f"an-{now:%H%M%S}",
-                         "day": now.date().isoformat(), "count": len(titles)})
+    prompt, key = anime_run.launcher(request, titles, token), f"an-{secrets.token_hex(10)}"  # key 는 brief 를 받는 열쇠라 짐작 못 하게
+    AppSetting.set(BRIEF_KEY, json.dumps({"key": key, "prompt": prompt, "at": now.isoformat()}, ensure_ascii=False))
+    return JsonResponse({"prompt": prompt, "key": key, "day": now.date().isoformat(), "count": len(titles)})
+
+
+@login_not_required
+def brief(request, key):
+    """PC 실행기(routines/local_run)가 클립보드에서 안내문을 못 찾았을 때 받아 간다. 링크의 key 가 맞고 30분 안이면 한 번만."""
+    try:
+        saved = json.loads(AppSetting.get(BRIEF_KEY) or "{}")
+        fresh = timezone.now() - datetime.fromisoformat(saved["at"]) < BRIEF_TTL
+    except (ValueError, KeyError):
+        saved, fresh = {}, False
+    if not fresh or not hmac.compare_digest(key, saved.get("key", "")):
+        return HttpResponse("안내문 없음 (30분이 지났거나 다시 눌렀습니다)", status=404)
+    AppSetting.objects.filter(key=BRIEF_KEY).delete()
+    return HttpResponse(saved["prompt"], content_type="text/plain; charset=utf-8")
 
 
 @csrf_exempt
