@@ -542,7 +542,7 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 6, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020)
+        self.assertEqual(self.by_section(a), {"눈잎": 6, "black_lukey": 6, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020), 생활 (blog_types 0040)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
@@ -671,11 +671,11 @@ class FixedTopicTests(Login):
         self.assertEqual(res.context["ACTIVE_MENU"], "routine_topics")
         groups = res.context["groups"]
         self.assertEqual([g["name"] for g in groups[:3]], ["눈잎", "black_lukey", "밤밤"])  # 글 분류의 사이트 순서
-        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 6, 3])  # 일일루틴 글쓰기가 보는 소재 그대로
+        self.assertEqual([len(g["cats"]) for g in groups[:3]], [6, 6, 3])  # 일일루틴 글쓰기가 보는 소재 그대로
         ipo = next(c for c in groups[0]["cats"] if c.name == "공모주")
         self.assertEqual([t.name for t in ipo.topics], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 고정 주제는 소재 아래
         self.assertNotContains(res, f'value="c{ipo.pk}"')  # 고정 주제가 있는 소재는 머리 줄만 (고르지 않는다)
-        self.assertEqual(groups[0]["count"], 6)  # 청년·신혼 1 + 주택 1 + 공모주 2 + 일본 + 그 외
+        self.assertEqual(groups[0]["count"], 7)  # 청년·신혼 1 + 주택 1 + 공모주 2 + 일본 + 생활 + 그 외
         shown = [t.pk for g in groups for t in g["topics"]] + [t.pk for g in groups for c in g["cats"] for t in c.topics]
         self.assertEqual(sorted(shown), sorted(FixedTopic.objects.values_list("pk", flat=True)))
         nunip = next(c for c in groups[0]["cats"] if not c.topics)
