@@ -94,6 +94,8 @@ DOCS_DIRS = [REPO_ROOT / "시장조사", REPO_ROOT]
 DAILY_IDEAS_DIR = REPO_ROOT / "시장조사" / "일일아이디어"
 # 일일루틴 로컬 현황을 보는 PC 서버 화면 (실서버 일일루틴의 'PC 화면에서 보기')
 ROUTINE_LOCAL_URL = _env("ROUTINE_LOCAL_URL", "http://127.0.0.1:8000")
+# 실서버 주소. PC 실행기가 클립보드에 안내문이 없을 때 서버에서 받아 온다 (apps/routines/local_run, 애니 글쓰기·변환)
+SERVER_URL = _env("JB_SERVER_URL", "https://jbkwon.pythonanywhere.com")
 # 논의 글(md). Claude·Codex 가 쓰고 push 하면 논의 현황·진행현황에 올라온다 (apps/discussions/docs.py)
 DISCUSSIONS_DIR = REPO_ROOT / "논의"
 # memorily 티스토리 › 블로그 자동화(연재) 회차별 화면 사진: EP01/<순서>_<말머리>_<설명>.jpg (apps/series)
