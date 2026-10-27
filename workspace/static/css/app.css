@@ -1831,7 +1831,7 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .sc-ev b { font-weight: 600; color: var(--text); }
 .sc-ev.done { text-decoration: line-through; color: var(--text-3); }
 .sc-more { flex: none; font-size: 11px; color: var(--text-3); padding: 0 5px; }
-.sc-bottom { min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sc-bottom { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr); gap: 12px; }
 .sc-bottom > .card { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .sc-list { flex: 1; min-height: 0; overflow-y: auto; }
 .sc-row { display: flex; align-items: center; gap: 10px; padding: 7px 16px; border-top: 1px solid var(--border); }
@@ -1844,13 +1844,23 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .sc-title { min-width: 0; flex: 1; color: var(--text); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sc-row.done .sc-title { color: var(--text-3); text-decoration: line-through; }
 .sc-note { margin-left: 8px; font-size: 12px; color: var(--text-3); }
+.sc-bell { color: var(--accent); }
+.sc-row.off .sc-bell, .sc-row.off .sc-time, .sc-row.off .sc-title { color: var(--text-3); }
+.sc-kind { flex: none; font-size: 11.5px; color: var(--text-3); }
+.sc-repeat { width: auto; }
 .sc-list .empty { padding: 24px 16px; }
 .sc-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.sc-fields { flex: 1; display: grid; grid-template-columns: 150px 130px minmax(0, 1fr); gap: 8px 10px; align-content: start; padding: 10px 16px; }
+.sc-fields { flex: 1; display: grid; grid-template-columns: 140px 112px minmax(0, 1fr); gap: 8px 10px; align-content: start; padding: 10px 16px; }
 .sc-fields .field { margin: 0; }
 .sc-fields .sc-wide { grid-column: 1 / -1; }
 .sc-form .form-foot { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
 .danger-text { color: var(--danger); }
+@media (min-width: 901px) and (max-width: 1280px) {
+  .sc { grid-template-rows: minmax(0, 1fr) 256px; }
+  .sc-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sc-fields .field:nth-child(3) { grid-column: 1 / -1; }
+  .sc-fields .field:nth-child(3) label { display: none; }
+}
 @media (max-width: 900px) {
   .sc { display: flex; flex-direction: column; overflow-y: auto; }
   .sc-cal { flex: none; }
