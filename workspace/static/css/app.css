@@ -2011,54 +2011,66 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 /* 변환본 창의 발행 완료 (2026-10-23 사용자) */
 .cv-publish { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 auto; }
 
-/* 블로그·카페 › 통계현황 (blog_ops/stats.html): 사이트 카드 → 꺾은선 → 기간 요약 → 직접 넣기 */
-.ss-bar { gap: 10px; }
-.ss-page { display: grid; gap: 14px; }
-.ss-checked { white-space: nowrap; }
-.ss-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-.ss-card { display: grid; gap: 6px; padding: 14px 16px 12px; }
-.ss-card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.ss-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ss-card-head .br-plat { margin-left: auto; }
-.ss-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; margin-right: 6px; vertical-align: 1px; }
-.ss-card-head .ss-dot { margin-right: 0; }
-.ss-big { display: flex; align-items: baseline; gap: 8px; }
-.ss-big strong { font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -.5px; font-variant-numeric: tabular-nums; color: var(--text); }
-.ss-sub { display: flex; align-items: center; gap: 10px; min-height: 18px; }
-.ss-delta { font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
-.ss-delta.up { color: var(--ok); }
-.ss-delta.down { color: var(--danger); }
-.ss-spark { display: block; width: 100%; height: 32px; }
-.ss-spark-empty { border-bottom: 1px dashed var(--line-soft); height: 16px; margin-bottom: 16px; }
-.ss-state { font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ss-state.is-bad { color: var(--warn); }
-.ss-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-left: auto; font-size: 12.5px; color: var(--text-2); }
-.ss-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.ss-legend i { width: 14px; height: 3px; border-radius: 2px; }
-.ss-chart { position: relative; padding: 8px 12px 4px; }
-.ss-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
-.ss-grid { stroke: var(--line-soft); stroke-width: 1; }
-.ss-ylabel, .ss-xlabel { font-size: 11px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
-.ss-cross { stroke: var(--border-strong); stroke-width: 1; }
-.ss-cross[hidden] { display: none; }  /* SVG 는 hidden 속성만으로 안 숨는다 */
-.ss-hit { fill: transparent; cursor: crosshair; }
-.ss-tip { position: absolute; top: 10px; min-width: 150px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 18px rgba(15, 23, 42, .12); font-size: 12px; pointer-events: none; z-index: 2; }
-.ss-tip b { display: block; margin-bottom: 4px; color: var(--text); }
-.ss-tip div { display: flex; align-items: center; gap: 6px; color: var(--text-2); line-height: 1.7; }
-.ss-tip i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.ss-tip strong { margin-left: auto; padding-left: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
-.ss-table { table-layout: fixed; width: 100%; }
-.ss-table td { height: 40px; }
-.ss-hand > summary { cursor: pointer; list-style: none; gap: 12px; }
-.ss-hand > summary::-webkit-details-marker { display: none; }
-.ss-hand:not([open]) > summary { border-bottom: 0; }
-.ss-hand-form { padding: 12px 16px 14px; display: grid; gap: 10px; }
-.ss-hand-top { display: flex; align-items: center; gap: 8px; }
-.ss-hand-top .input { width: 160px; }
-.ss-hand-table { max-width: 640px; }
-.ss-hand-table .input { width: 120px; text-align: right; }
-.ss-hand-foot { display: flex; }
-@media (max-width: 900px) { .ss-table { min-width: 680px; } .ss-page > .card { overflow-x: auto; } }
+/* 블로그·카페 › 통계현황 (blog_ops/stats.html, 2026-10-27 사용자: 쉽게 싹 갈아엎기): 사이트 칸 한 줄 → 하루 방문자 | 많이 본 글 · 어디서 왔나. 한 화면에 */
+.page-body.sv-body { display: flex; flex-direction: column; overflow: hidden; }
+.sv-page { flex: 1; min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
+.sv-checked { white-space: nowrap; }
+.sv-tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.sv-tile { display: grid; gap: 4px; padding: 12px 14px 10px; min-width: 0; }
+.sv-tile-all { background: var(--muted-weak); color: var(--text-2); }
+.sv-tile-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.sv-name { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-src { margin-left: auto; font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.sv-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.sv-big { display: flex; align-items: baseline; gap: 6px; font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+.sv-big small { font-size: 11.5px; font-weight: 500; letter-spacing: 0; color: var(--text-3); }
+.sv-sub { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+.sv-sub b { color: var(--text-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sv-spark { display: block; width: 100%; height: 26px; }
+.sv-foot { min-height: 16px; font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.sv-main { min-height: 0; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 12px; }
+.sv-chart-card { display: flex; flex-direction: column; min-height: 0; }
+.sv-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-left: auto; font-size: 12px; color: var(--text-2); }
+.sv-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sv-legend i { width: 14px; height: 3px; border-radius: 2px; }
+.sv-chart { position: relative; flex: 1; min-height: 0; padding: 8px 12px 6px; }
+.sv-chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.sv-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
+.sv-axis { font-size: 13px; fill: var(--text-3); font-variant-numeric: tabular-nums; }
+.sv-cross { stroke: var(--border-strong); stroke-width: 1; }
+.sv-cross[hidden] { display: none; }  /* SVG 는 hidden 속성만으로 안 숨는다 */
+.sv-hit { fill: transparent; cursor: crosshair; }
+.sv-tip { position: absolute; top: 10px; min-width: 150px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); box-shadow: 0 6px 18px rgba(15, 23, 42, .12); font-size: 12px; pointer-events: none; z-index: 2; }
+.sv-tip b { display: block; margin-bottom: 4px; color: var(--text); }
+.sv-tip div { display: flex; align-items: center; gap: 6px; color: var(--text-2); line-height: 1.7; }
+.sv-tip i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.sv-tip strong { margin-left: auto; padding-left: 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+.sv-empty, .sv-none { padding: 18px 16px; color: var(--text-3); font-size: 12.5px; }
+.sv-empty { flex: 1; display: flex; align-items: center; justify-content: center; }
+.sv-side { min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 12px; }
+.sv-top { display: flex; flex-direction: column; min-height: 0; }
+.sv-list { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 4px 0; list-style: none; }
+.sv-list li { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 16px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+.sv-list li:last-child { border-bottom: 0; }
+.sv-list a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.sv-list b { font-variant-numeric: tabular-nums; color: var(--text); }
+.sv-rank { width: 16px; text-align: right; font-size: 12px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.sv-list li.sv-none { height: auto; border: 0; }
+.sv-bar { display: flex; height: 10px; margin: 12px 16px 4px; border-radius: 5px; overflow: hidden; background: var(--line-soft); }
+.sv-bar i { display: block; height: 100%; }
+.sv-chan { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin: 0; padding: 8px 16px 12px; list-style: none; font-size: 12.5px; color: var(--text-2); }
+.sv-chan li { display: flex; align-items: center; gap: 6px; line-height: 1.9; }
+.sv-chan i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.sv-chan b { margin-left: auto; color: var(--text); font-variant-numeric: tabular-nums; }
+.sv-chan span { width: 34px; text-align: right; color: var(--text-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+@media (max-width: 1100px) { .sv-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1100px), (max-height: 720px) {
+  .page-body.sv-body { overflow: auto; }
+  .sv-page { flex: none; grid-template-rows: auto auto; }
+  .sv-main { grid-template-columns: 1fr; }
+  .sv-chart { height: 260px; flex: none; }
+  .sv-list { max-height: 360px; }
+}
 
 /* 게시글 관리 › 수정됨 불 (2026-10-26 사용자): 발행한 뒤 글이 바뀌면 켜진다. 다시 붙여 넣었으면 눌러서 끈다 */
 .pl-chg { display: flex; align-items: center; min-height: 22px; }

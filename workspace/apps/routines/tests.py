@@ -992,7 +992,8 @@ class SiteViewsTests(TestCase):
                 return {"rows": [{"dimensionValues": [{"value": "/kyoto"}, {"value": "교토 3일"}],
                                   "metricValues": [{"value": "12"}, {"value": "7"}]}]}
             if dims == ["date"]:
-                return {"rows": [{"dimensionValues": [{"value": "20261026"}], "metricValues": [{"value": "12"}, {"value": "7"}, {"value": "8"}]}]}
+                vals = [{"value": "12"}, {"value": "7"}, {"value": "8"}][:len(body["metrics"])]
+                return {"rows": [{"dimensionValues": [{"value": "20261026"}], "metricValues": vals}]}
             return {"rows": [{"dimensionValues": [{"value": "Organic Search"}], "metricValues": [{"value": "8"}]}]}
         return call
 
@@ -1014,8 +1015,21 @@ class SiteViewsTests(TestCase):
             self.assertIn("교토 3일", (search_perf.out_dir() / "조회수.md").read_text(encoding="utf-8"))
 
     def test_skips_without_auth(self):
+        from . import site_views
         with tempfile.TemporaryDirectory() as tmp, self.settings(BASE_DIR=Path(tmp)), \
                 patch.dict("os.environ", {"GSC_CLIENT_ID": "id", "GSC_CLIENT_SECRET": "sec"}):
             out = StringIO()
             call_command("site_views", stdout=out)
             self.assertIn("인증 전", out.getvalue())
+            self.assertEqual(site_views.collect(), [])  # 통계현황 수집은 인증이 없어도 멈추지 않는다
+
+    def test_collect_for_stats_page(self):
+        """통계현황으로 보낼 것 (2026-10-27): 날짜별 [날짜, 조회, 사용자] · 글 · 유입"""
+        from . import search_perf, site_views
+        with patch.object(search_perf, "access_token", return_value="a"), \
+                patch.object(site_views, "_call", side_effect=self._api([])):
+            got = site_views.collect(today=date(2026, 10, 27))
+        self.assertEqual(got[0]["host"], "jinbaam.com")
+        self.assertEqual(got[0]["daily"], [["2026-10-26", 12, 7]])
+        self.assertEqual(got[0]["pages"], [["/kyoto", "교토 3일", 12, 7]])
+        self.assertEqual(got[0]["channels"], [["Organic Search", 8]])

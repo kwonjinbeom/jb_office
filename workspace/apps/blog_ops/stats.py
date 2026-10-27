@@ -7,13 +7,16 @@ PC 가 RSS 와 같이 읽어 보낸다 (routines/local_run.check_feeds → views
   예전 방문자 그래프(NVisitorgp4Ajax)는 2026-10-24 확인 때 빈 응답(204)이었다 — 오늘 숫자만 오고, 어제는 누적으로 마저 채운다.
 - 티스토리: 방문자는 스킨의 숨은 칸 `#jb-stat`(애니환산기/스킨에_붙일것.html), 없으면 스킨 사이드바의 'Today : n · Yesterday : n'.
   공감·댓글은 RSS 의 최근 글마다 공개 주소(GET /reaction?entryId= · /m/api/<글>/comment)로 합계 (2026-10-24 마저 개발).
-- 블로거: 댓글은 공개 피드(alt=json)의 글마다 댓글 수 합계. 공감은 없고, 방문자는 공개된 곳이 없어 직접 넣는다.
-- 워드프레스: 댓글은 공개 REST(wp-json/wp/v2/comments)의 수, 공감은 없고, 방문자는 공개된 곳이 없어 직접 넣는다 (2026-10-26).
+- 블로거: 댓글은 공개 피드(alt=json)의 글마다 댓글 수 합계. 공감은 없다.
+- 워드프레스: 댓글은 공개 REST(wp-json/wp/v2/comments)의 수, 공감은 없다 (2026-10-26).
 공감·댓글 합계는 최근 글 범위의 합이라, 그날 공감·댓글 = 오늘 합계 − 앞 수집 합계 (줄면 0).
+- GA4 (2026-10-27): 티스토리·블로거·워드프레스는 같은 PC 실행에서 GA4 날짜별 사용자(= 방문자)·조회, 최근 30일 많이 본 글·유입을
+  받는다 (routines.site_views.collect → record_ga4). GA4 가 채운 날은 위 공개 숫자가 방문자를 덮지 않는다. 네이버는 GA4 를 못 붙여 공개 숫자만.
 """
 import json
 import re
 import urllib.error
+from collections import Counter
 import urllib.request
 from datetime import date, timedelta
 
@@ -29,7 +32,6 @@ TISTORY_COMMENTS = "{addr}/m/api/{id}/comment?reverse=true"
 BLOGGER_FEED = "{addr}/feeds/posts/default?alt=json&max-results=30"
 WP_COMMENTS = "{addr}/wp-json/wp/v2/comments?per_page=100&_fields=id"
 RECENT = 20  # 티스토리 공감·댓글을 볼 최근 글 수 (글마다 두 번 읽는다)
-METRICS = [("visitors", "방문자"), ("likes", "공감"), ("comments", "댓글")]
 # 사이트 색: 운영 화면의 사이트 순서대로 고정 (거른 뒤에도 색이 바뀌지 않게). dataviz 기본 범주 색 1~8.
 COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]
 
@@ -171,7 +173,7 @@ def collect(site, fetch=None, today=None):
             out["comments_total"] = len(json.loads(_get(WP_COMMENTS.format(addr=addr.rstrip("/")), "", fetch).decode("utf-8")))
             out["likes_total"] = 0  # 워드프레스는 공감이 없다
         else:
-            out["message"] = "공개된 숫자가 없어 직접 넣어요"
+            out["message"] = "공개된 숫자가 없어요"
             return out
     except urllib.error.HTTPError as e:
         out["message"] = f"응답 오류 {e.code}"
@@ -185,7 +187,7 @@ def collect(site, fetch=None, today=None):
     out["ok"] = bool(out["visitors"]) or out["likes_total"] is not None or out["comments_total"] is not None
     parts = [f"방문자 {len(out['visitors'])}일치"] if out["visitors"] else []
     if site.get("platform") in ("blogger", "wordpress"):
-        parts.append("댓글 · 방문자는 직접" if out["comments_total"] is not None else "방문자는 직접")
+        parts.append("댓글 · 방문자는 GA4" if out["comments_total"] is not None else "방문자는 GA4")
     elif out["likes_total"] is not None:
         parts.append("공감·댓글")
     if site.get("platform") == "tistory" and not out["visitors"]:
@@ -206,7 +208,7 @@ def _fill_yesterday(blog, result, today):
     row.save(update_fields=["visitors_total", "updated_at"])
     prev = SiteStat.objects.filter(blog=blog, day=today - timedelta(days=1)).first()
     if ((today - timedelta(days=1)).isoformat() in (result.get("visitors") or {}) or prev is None or prev.hand
-            or prev.visitors is None or prev.visitors_total is None):
+            or prev.views is not None or prev.visitors is None or prev.visitors_total is None):
         return
     full = (total - today_n) - (prev.visitors_total - prev.visitors)
     if full >= prev.visitors:
@@ -226,7 +228,7 @@ def record(blog, result, today=None):
         if not isinstance(n, int) or n < 0 or day > today:
             continue
         row, _ = SiteStat.objects.get_or_create(blog=blog, day=day)
-        if not row.hand:
+        if not row.hand and row.views is None:  # GA4 가 채운 날은 GA4 숫자를 둔다
             row.visitors = n
             row.save(update_fields=["visitors", "updated_at"])
     _fill_yesterday(blog, result, today)
@@ -244,6 +246,45 @@ def record(blog, result, today=None):
     state.stat_message = str(result.get("message") or "")[:200]
     state.save(update_fields=["stat_checked_at", "stat_ok", "stat_message"])
     return state
+
+
+def ga4_blogs(blogs):
+    """GA4 가 보내는 host(jinbaam.tistory.com) → 사이트"""
+    from apps.routines.site_views import host
+    return {host(b.address): b for b in blogs if b.address}
+
+
+def record_ga4(blog, r, today=None):
+    """PC 가 받은 GA4 숫자: 날짜별 조회·사용자(= 방문자), 최근 30일 글별 조회, 유입. 직접 넣은 날은 그대로."""
+    from .models import FeedState, SiteStat, SitePage
+    today = today or timezone.localdate()
+    days = 0
+    for row in r.get("daily") or []:
+        try:
+            day, views, users = date.fromisoformat(row[0]), int(row[1]), int(row[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if day > today or views < 0 or users < 0:
+            continue
+        stat, _ = SiteStat.objects.get_or_create(blog=blog, day=day)
+        stat.views = views
+        if not stat.hand:
+            stat.visitors = users
+        stat.save(update_fields=["views", "visitors", "updated_at"])
+        days += 1
+    pages = []
+    for row in r.get("pages") or []:
+        try:
+            pages.append(SitePage(blog=blog, path=str(row[0])[:500], title=str(row[1])[:300], views=int(row[2]), users=int(row[3])))
+        except (TypeError, ValueError, IndexError):
+            continue
+    SitePage.objects.filter(blog=blog).delete()
+    SitePage.objects.bulk_create(pages)
+    state, _ = FeedState.objects.get_or_create(blog=blog)
+    state.ga_checked_at = timezone.now()
+    state.ga_channels = [[str(c[0]), _num(c[1]) or 0] for c in r.get("channels") or [] if isinstance(c, list) and len(c) == 2]
+    state.save(update_fields=["ga_checked_at", "ga_channels"])
+    return f"GA4 {days}일 · 글 {len(pages)}"
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +326,7 @@ def chart(series, days, width=960, height=260):
                 cur.append(f"{x[i]:.1f},{pad_t + h - h * v / top:.1f}")
         if cur:
             segs.append(cur)
-        lines.append({**s, "segs": [" ".join(c) for c in segs], "dots": pts if n <= 31 else [],
+        lines.append({**s, "segs": [" ".join(c) for c in segs], "dots": pts if n <= 14 else [],
                       "end": pts[-1] if pts else None})
     every = 1 if n <= 10 else (5 if n <= 35 else 14)
     xlabels = [(round(x[i], 1), d) for i, d in enumerate(days) if (n - 1 - i) % every == 0]
@@ -306,31 +347,49 @@ def spark(values, width=120, height=32):
     return " ".join(pts)
 
 
-def page_data(blogs, all_order, days, metric):
-    """통계현황 화면: 사이트 카드 · 꺾은선 · 기간 요약 표"""
-    from .models import FeedState, SiteStat
+CHANNELS = {"Organic Search": "검색", "Direct": "직접", "Referral": "다른 사이트", "Organic Social": "SNS", "Unassigned": "알 수 없음",
+            "Paid Search": "검색 광고", "Email": "메일", "Organic Video": "동영상", "Display": "광고", "Organic Shopping": "쇼핑"}
+TOP_PAGES = 10
+
+
+def _sum(vals):
+    got = [v for v in vals if v is not None]
+    return sum(got) if got else None
+
+
+def page_data(blogs, all_order, days, today):
+    """통계현황 화면 (2026-10-27 사용자: 보기 편하게 싹 갈아엎기).
+    사이트 칸(기간 방문자 · 어제·오늘 · 조회·공감·댓글) → 하루 방문자 꺾은선 → 많이 본 글 · 어디서 왔나."""
+    from .models import FeedState, SitePage, SiteStat
     rows = {(r.blog_id, r.day): r for r in SiteStat.objects.filter(blog__in=blogs, day__range=(days[0], days[-1]))}
     states = {s.blog_id: s for s in FeedState.objects.filter(blog__in=blogs)}
-    cards, series, table = [], [], []
+    yday = today - timedelta(days=1)
+    tiles, series = [], []
     for b in blogs:
-        vals = {m: [getattr(rows.get((b.pk, d)), m, None) for d in days] for m, _ in METRICS}
-        cur = vals[metric]
-        known = [(d, v) for d, v in zip(days, cur) if v is not None]
-        last = known[-1] if known else None
-        before = known[-2][1] if len(known) > 1 else None
-        delta = None
-        if last and before:
-            delta = round((last[1] - before) * 100 / before)
+        vals = {m: [getattr(rows.get((b.pk, d)), m, None) for d in days] for m in ("visitors", "views", "likes", "comments")}
         color = color_of(b, all_order)
-        cards.append({"blog": b, "color": color, "last": last, "before": before, "delta": delta,
-                      "delta_abs": abs(delta) if delta is not None else None,
-                      "sum": sum(v for _, v in known), "spark": spark(cur), "state": states.get(b.pk)})
-        series.append({"name": b.name, "color": color, "values": cur})
-        summary = {"blog": b, "color": color}
-        for m, _ in METRICS:
-            got = [v for v in vals[m] if v is not None]
-            summary[m] = {"sum": sum(got) if got else None, "avg": round(sum(got) / len(got)) if got else None,
-                          "max": max(got) if got else None, "days": len(got)}
-        table.append(summary)
-    return {"cards": cards, "chart": chart(series, days), "table": table,
-            "has_data": any(c["last"] for c in cards)}
+        state = states.get(b.pk)
+        tiles.append({"blog": b, "color": color, "visitors": _sum(vals["visitors"]), "views": _sum(vals["views"]),
+                      "likes": _sum(vals["likes"]), "comments": _sum(vals["comments"]),
+                      "today": getattr(rows.get((b.pk, today)), "visitors", None),
+                      "yesterday": getattr(rows.get((b.pk, yday)), "visitors", None),
+                      "spark": spark(vals["visitors"]),
+                      "source": "GA4" if _sum(vals["views"]) is not None else ("공개 숫자" if _sum(vals["visitors"]) is not None else ""),
+                      "state": state})
+        series.append({"name": b.name, "color": color, "values": vals["visitors"]})
+    total = {k: _sum([t[k] for t in tiles]) for k in ("visitors", "views", "today", "yesterday")}
+    total["spark"] = spark([_sum(col) for col in zip(*[s["values"] for s in series])] if series else [])
+    colors = {t["blog"].pk: t["color"] for t in tiles}
+    top = []
+    for p in SitePage.objects.filter(blog__in=blogs).select_related("blog")[:TOP_PAGES]:
+        top.append({"blog": p.blog, "color": colors.get(p.blog_id), "title": p.title or p.path, "views": p.views,
+                    "url": (p.blog.address or "").rstrip("/") + p.path})
+    counts = Counter()
+    for s in states.values():
+        for name, n in s.ga_channels or []:
+            counts[CHANNELS.get(name, name)] += n
+    whole = sum(counts.values())
+    channels = [{"name": name, "n": n, "pct": round(n * 100 / whole), "color": COLORS[i % len(COLORS)]}
+                for i, (name, n) in enumerate(counts.most_common(6))] if whole else []
+    return {"tiles": tiles, "total": total, "chart": chart(series, days, height=420), "top": top, "channels": channels,
+            "has_data": total["visitors"] is not None}
