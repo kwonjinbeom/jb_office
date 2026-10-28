@@ -1037,3 +1037,22 @@ class SiteViewsTests(TestCase):
         self.assertEqual(got[0]["daily"], [["2026-10-26", 12, 7]])
         self.assertEqual(got[0]["pages"], [["/kyoto", "교토 3일", 12, 7]])
         self.assertEqual(got[0]["channels"], [["Organic Search", 8]])
+
+
+class WritingAheadTests(TestCase):
+    """글쓰기를 앞날짜로 돌리면 그날 올릴 글을 미리 쓴다 (2026-10-28 사용자: 워크숍 전에 29·30일 글을 써 두고 예약 발행)."""
+
+    def test_future_day_adds_ahead_block(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from .views import AHEAD_TITLE
+        writing = Routine.objects.get(key="writing")
+        today = timezone.localdate()
+        ahead = launcher(writing, today + timedelta(days=1))
+        tomorrow = (today + timedelta(days=1)).isoformat()
+        self.assertIn(f"## {AHEAD_TITLE}", ahead)
+        self.assertIn(f"`| 발행 예정 | {tomorrow} (예약) |`", ahead)
+        self.assertIn("장 마감 시황", ahead)
+        self.assertLess(ahead.index(AHEAD_TITLE), ahead.index("아래 md 를 읽고"))  # md 보다 먼저 읽힌다
+        self.assertNotIn(AHEAD_TITLE, launcher(writing, today))  # 오늘·지난 날은 그대로
+        self.assertNotIn(AHEAD_TITLE, launcher(Routine.objects.get(key="daily_ideas"), today + timedelta(days=1)))  # 글쓰기만
