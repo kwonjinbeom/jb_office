@@ -91,6 +91,12 @@ class SiteTemplateTests(TestCase):
         self.assertNotIn("Itinerary Overview", [it["name"] for it in design])
         for d in design:
             self.assertNotIn(":::", d["doc"])  # 카드가 다 그려진다
+        # 영화·OTT: 작품 소제목 왼쪽 회색 막대는 아래에 '::: 작품' 카드가 있어야 그려진다 → 한 칸에 같이 (2026-10-28 사용자)
+        from apps.naver_writing.render import WORK_BAR
+        ott = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="black_lukey"), name="영화·OTT 공개")[0]
+        work = next(it for it in self.client.get(url, {"site": ott.sel}).context["design"] if it["name"] == "작품마다")
+        self.assertIn(WORK_BAR, work["doc"])
+        self.assertIn('alt="포스터 견본 시리즈"', work["doc"])
 
     def test_reconvert_with_comment(self):
         """재변환 (2026-10-22 사용자): 글 관리에서 체크한 글 하나 + 코멘트. 변환 완료여도 다시, 지난 변환본을 코멘트대로"""
