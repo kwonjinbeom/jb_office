@@ -32,7 +32,7 @@ from apps.core import briefs
 from apps.core.context_processors import _asset_version
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from . import design, looks, paste, prompt
+from . import design, looks, nunip_look, paste, prompt
 
 BRIEF_KEY = "convert_brief"  # 마지막 변환·재변환 안내문 (apps/core/briefs)
 
@@ -423,6 +423,8 @@ def _render_cat(cat, text):
     out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
     if look == "yudi":  # 유디 메모지 (2026-10-23 사용자, 눈잎 › 일본 여행 · 2026-10-28 밤밤 › 해외여행 — 블로거는 글꼴도 HTML 에)
         out = looks.yudi_html(out, fonts=platform == Blog.Platform.BLOGGER)
+    elif look == "nunip":  # 눈잎 정갈 (2026-10-28 사용자, 눈잎 정책·주택·공모주·생활)
+        out = nunip_look.nunip_html(out)
     elif _heading_bar(cat):
         out = re.sub(r"<h2(?![^>]*\bstyle=)", f'<h2 style="{HEADING_BAR}"', out)
     if platform == Blog.Platform.TISTORY:  # 사진·캡션 가운데 정렬이 붙여넣을 때 풀리지 않게 (2026-10-25)
