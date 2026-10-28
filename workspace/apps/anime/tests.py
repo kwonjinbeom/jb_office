@@ -107,6 +107,7 @@ class AnimeWriteRunTests(TestCase):
         self.assertIn("진격의 거인 <그 말이 든 질문>? 화수 환산기", j["prompt"])  # 그 작품에만 있는 말로 묻는 질문형 (2026-10-28)
         self.assertIn("쓰지 않는 예 `슬램덩크 애니 몇 화까지 만화 몇 권?", j["prompt"])
         self.assertNotIn("진격의 거인 회차정리", j["prompt"])
+        self.assertIn("회차 제목 화면(타이틀 카드", j["prompt"])  # 명장면 사진에 제목 화면을 넣지 않는다 (2026-10-29)
         self.assertIn("(시험)", j["prompt"])  # 카테고리 컨셉이 들어간다
         self.assertIn(reverse("anime:api_place", args=[self.aot.pk]) + "?token=tok", j["prompt"])
         self.assertEqual(j["count"], 1)
