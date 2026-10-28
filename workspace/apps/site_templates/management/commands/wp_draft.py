@@ -2,6 +2,7 @@
 
     workspace/.venv/Scripts/python.exe workspace/manage.py wp_draft "<서버 api/wp/<번호>/?token=… 주소>"
     workspace/.venv/Scripts/python.exe workspace/manage.py wp_draft --check     # 비밀번호·연결 확인
+    workspace/.venv/Scripts/python.exe workspace/manage.py wp_draft --restyle "<api/wp 주소>"  # 올린 글 본문만 지금 글 모양으로
 
 workspace/.env 에 WP_USER · WP_APP_PASSWORD 가 없으면 건너뛴다 (변환은 그대로 끝난다).
 """
@@ -18,8 +19,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("url", nargs="?", default="")
         parser.add_argument("--check", action="store_true")
+        parser.add_argument("--restyle", action="store_true", help="이미 올린 글(발행 포함)의 본문만 지금 글 모양으로 다시 그린다")
 
-    def handle(self, url, check, **options):
+    def handle(self, url, check, restyle=False, **options):
         conf = wp_rest.config()
         if conf is None:
             self.stdout.write("건너뜀 · workspace/.env 에 WP_USER · WP_APP_PASSWORD 가 없습니다 (사이트_꾸미기.md '초안 자동 올리기')")
@@ -34,6 +36,9 @@ class Command(BaseCommand):
                 return
             if not url:
                 raise CommandError("서버 api/wp 주소를 주거나 --check")
+            if restyle:
+                self.stdout.write(wp_rest.restyle(url, client))
+                return
             self.stdout.write(wp_rest.draft(url, client, log=self.stdout.write))
         except wp_rest.WPError as e:
             raise CommandError(f"워드프레스가 거절했습니다: {e}") from None

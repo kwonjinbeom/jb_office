@@ -163,3 +163,14 @@ def draft(api_url, client, log=print):
     report(api_url, post["id"])
     edit = f"{client.site}/wp-admin/post.php?post={post['id']}&action=edit"
     return f"ok · 번호 {job['id']} · 워드프레스 초안 {post['id']} {'고침' if post_id else '새로 만듦'} · {edit}"
+
+
+def restyle(api_url, client):
+    """이미 올린 글(발행한 글도)의 본문 HTML 만 지금 글 모양으로 다시 (2026-10-28 사용자: 여행 '주황 티켓'을 올라간 글에도).
+    제목·상태·태그·대표 이미지·발췌는 건드리지 않는다. 워드프레스 글이 서버 변환본과 같을 때만 쓴다 (손으로 고친 글은 덮어쓰게 된다)."""
+    job = fetch_job(api_url)
+    post_id = job.get("wp_post_id")
+    if not post_id:
+        return f"건너뜀 · 번호 {job['id']} · 올린 워드프레스 글 번호가 없습니다"
+    post = client.call("POST", f"/posts/{post_id}", {"content": job["content"]})
+    return f"ok · 번호 {job['id']} · 워드프레스 글 {post['id']} 본문 다시 그림 ({post.get('status')}) · {post.get('link', '')}"
