@@ -1614,6 +1614,10 @@ a.od-label:hover { color: var(--accent); text-decoration: none; }
 .st-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 .st-col { display: grid; gap: 14px; min-width: 0; }
 .st-preview { max-height: 70vh; overflow: auto; border-top: 1px solid var(--line-soft); }
+/* 변환본 사진마다 복사·받기 (2026-10-28) — 마우스를 올리면 오른쪽 위에 */
+.st-photo { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+.st-photo-tools { position: absolute; top: 8px; right: 8px; display: none; gap: 4px; line-height: normal; }
+.st-photo:hover .st-photo-tools, .st-photo:focus-within .st-photo-tools { display: flex; }
 .st-where { margin: 0 0 10px; }
 /* 변환 화면 비교: 원문 ↔ 변환본 같은 크기·높이, 각자 스크롤 */
 .st-compare { align-items: stretch; margin-bottom: 14px; }

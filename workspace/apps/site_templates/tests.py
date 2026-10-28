@@ -319,33 +319,6 @@ class PasteFormatTests(TestCase):
         self.assertEqual(pl.converted_body, f"첫 줄\n\n{img}")
         self.assertIn('<img', self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"])
 
-    def test_paste_all_carries_hero_photo(self):
-        """대표 사진 (2026-10-28 사용자): 붙여넣은 바깥 주소 사진은 티스토리·네이버 대표 사진이 안 된다 → '한 번에 복사'에
-        첫 사진 주소를 담아 북마크가 받아 같은 주소 <img> 자리에 직접 올린다. 그림(.png)보다 실제 사진을 고른다."""
-        import html
-        import json
-        import re
-        from .paste import ALL_MARK
-        photo = "https://images.unsplash.com/photo-9?w=620&q=80"
-        body = ("> 리드\n\n![지도](https://raw.githubusercontent.com/x/route.png)\n\n본문\n\n"
-                f"![통영 케이블카]({photo})\n*사진: 가 · Unsplash*\n\n끝")
-        for name in ("memorily", "black_lukey"):
-            pl = self.place(name)
-            pl.converted_body = body
-            pl.save()
-            ctx = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context
-            data = json.loads(ctx["paste_all"][len(ALL_MARK):])
-            self.assertEqual(data["hero"], {"src": photo, "name": "photo-9.jpg"})
-            srcs = re.findall(r'<img[^>]*\bsrc="([^"]+)"', data["html"])
-            self.assertIn(photo, [html.unescape(s) for s in srcs])  # 북마크는 getAttribute('src') 로 같은 사진을 찾는다
-            self.assertEqual(self.client.get(reverse("site_templates:paste_data", args=[pl.pk])).json()["plain"], ctx["paste_all"])
-        blogger = self.place("밤밤")
-        blogger.converted_body = body
-        blogger.save()
-        ctx = self.client.get(reverse("site_templates:convert", args=[blogger.pk])).context
-        self.assertNotIn("hero", json.loads(ctx["paste_all"][len(ALL_MARK):]))  # 블로거는 바깥 사진도 썸네일이 된다
-        self.assertIn("heroPut", ctx["paste_bookmarklet"])
-
     def test_planned_row_copy(self):
         """발행예정글 표의 '복사' (2026-10-27 사용자): 누르면 변환글 보기의 '한 번에 복사'와 같은 내용을 받는다. 워드프레스는 없다."""
         import json
@@ -1197,6 +1170,21 @@ class HeroPhotoTests(TestCase):
         with mock.patch("urllib.request.urlopen", side_effect=OSError):  # 서버가 못 받으면 사진 주소로 (브라우저에서 저장)
             res = self.client.get(self.url())
         self.assertRedirects(res, "https://images.unsplash.com/photo-123abc?w=620", fetch_redirect_response=False)
+
+    def test_any_photo_by_src(self):
+        """사진마다 복사·받기 (2026-10-28 사용자: 원하는 사진을 대표로): ?src= 로 그 글의 아무 사진이나. 글에 없는 주소는 안 준다."""
+        from unittest import mock
+        second = "https://images.unsplash.com/photo-2?w=620"
+        self.assertContains(self.client.get(reverse("site_templates:convert", args=[self.pl.pk])), f'data-photo-url="{self.url()}"')
+        with mock.patch("urllib.request.urlopen", side_effect=OSError):
+            res = self.client.get(self.url(), {"src": second})
+        self.assertRedirects(res, second, fetch_redirect_response=False)  # 둘째 사진 (서버가 못 받으면 그 주소로)
+        self.assertEqual(self.client.get(self.url(), {"src": "https://evil.example/x.jpg"}).status_code, 404)
+        self.pl.converted_body = '<p><img src="https://images.unsplash.com/photo-3?w=620&amp;q=80"></p>'
+        self.pl.save()
+        with mock.patch("urllib.request.urlopen", side_effect=OSError):  # HTML 변환본의 &amp; 는 풀어서 맞춘다
+            res = self.client.get(self.url(), {"src": "https://images.unsplash.com/photo-3?w=620&q=80"})
+        self.assertEqual(res.status_code, 302)
 
     def test_no_photo_404(self):
         self.pl.converted_body = "사진 없음"
