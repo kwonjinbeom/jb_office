@@ -33,7 +33,7 @@ PLATFORMS = {
         ],
         "tags": "발행 창의 태그 칸 (붙여넣기로는 한 태그로 붙는다 → '블로그 넣기' 북마크나 태그 하나씩 복사 + Enter)",
         "after": "맨 위 결론 인용은 네이버 '따옴표' 인용구로 바뀐다 (그대로 둔다) · 소제목 줄을 '소제목'으로 다시 지정 · "
-                 "대표 사진: '블로그 넣기' 북마크가 첫 사진을 직접 올린다 — '📷 대표 사진 자리' 글자가 남았으면 거기에 '대표 사진'으로 받은 파일을 올리고 글자 지우기 "
+                 "대표 사진: '블로그 넣기' 북마크가 첫 사진을 올리거나, 못 올리면 사진을 복사해 두고 '📷 대표 사진 자리'를 골라 둔다 — 알림이 뜨면 바로 Ctrl+V, 남은 글자는 지우기 "
                  "(붙여넣은 사진은 바깥 주소라 대표 사진·홈 썸네일이 안 된다) · 남은 사진 자리에 직접 업로드(빈 1칸 표 지우기) · 코드는 소스코드 칸에 · "
                  "지도: 정보 카드의 📍 장소 이름을 에디터 '장소' 버튼으로 검색해 그 단락 아래에 넣기 (붙여넣기로는 지도 칸이 생기지 않는다) · "
                  "스티커·링크 카드는 에디터에서 · 본문에 의도치 않은 #태그 없는지",
@@ -139,7 +139,7 @@ PASTE_JS = """(async()=>{
 var MARK='JBPASTE1';
 function act(d){var a=d.activeElement;while(a&&a.tagName==='IFRAME'){try{d=a.contentDocument;a=d.activeElement;}catch(e){break;}}return a;}
 function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
-function note(m){var b=document.createElement('div');b.textContent=m;b.style.cssText='position:fixed;z-index:2147483647;left:50%;top:16px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25)';document.body.appendChild(b);setTimeout(function(){b.remove();},4000);}
+function note(m,ms){var b=document.createElement('div');b.textContent=m;b.style.cssText='position:fixed;z-index:2147483647;left:50%;top:16px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25)';document.body.appendChild(b);setTimeout(function(){b.remove();},ms||4000);}
 function setVal(el,v){var p=Object.getPrototypeOf(el);el.focus();Object.getOwnPropertyDescriptor(p,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 async function enterTags(el,tags){var w=el.ownerDocument.defaultView,set=Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype,'value').set;
 function key(type){var ev=new w.KeyboardEvent(type,{key:'Enter',code:'Enter',bubbles:true,cancelable:true});
@@ -166,6 +166,7 @@ await more[k](f.node.parentNode,w);if(await grew(count,before,8000))return true;
 return false;}
 var raw='';try{raw=await navigator.clipboard.readText();}catch(e){}
 var data=null;if(raw.indexOf(MARK)===0){try{data=JSON.parse(raw.slice(MARK.length));}catch(e){}}
+if(data)window.__jbPaste=data;else if(window.__jbPaste)data=window.__jbPaste;
 var tags=data?data.tags:raw.split(/[#,\\n]+/).map(function(t){return t.replace(/\\s+/g,'');}).filter(Boolean);
 tags=tags.slice(0,30);
 var host=location.hostname,el=act(document);
@@ -209,8 +210,6 @@ var hf=await heroFile(data.hero),hm=hf&&heroMark(data.html,data.hero),html=hm?hm
 var before=d.body.innerText.length;paste(tp,'',data.title);await wait(300);var x=d.createElement('div');x.innerHTML=html;paste(bp,html,x.textContent);await wait(500);
 if(d.body.innerText.length-before<data.title.length){alert('네이버 에디터가 붙여넣기를 받지 않았습니다. 제목은 ① 제목, 본문은 Ctrl+V 로 붙여 주세요 (서식 그대로 붙습니다).');return;}
 var up=false;if(hm){var root=d.querySelector('.se-components-wrap')||d.body;
-var drop=async function(el,w){var dt=dtOf(w,hf);['dragenter','dragover','drop'].forEach(function(t){
-el.dispatchEvent(new w.DragEvent(t,{dataTransfer:dt,bubbles:true,cancelable:true}));});};
 var button=async function(el,w){var b=d.querySelector('button[data-name="image"]')||[].filter.call(d.querySelectorAll('button'),function(x){
 return x.offsetParent&&/^\\s*사진\\s*$/.test(x.textContent);})[0];if(!b)return;
 var wins=[w,window].filter(function(v,i,a){return a.indexOf(v)===i;}),olds=wins.map(function(v){return v.HTMLInputElement.prototype.click;});
@@ -218,10 +217,15 @@ function back(){wins.forEach(function(v,i){v.HTMLInputElement.prototype.click=ol
 wins.forEach(function(v,i){v.HTMLInputElement.prototype.click=function(){if(this.type!=='file')return olds[i].apply(this,arguments);back();
 try{this.files=dtOf(v,hf).files;}catch(e){}this.dispatchEvent(new v.Event('input',{bubbles:true}));this.dispatchEvent(new v.Event('change',{bubbles:true}));};});
 b.click();await wait(1500);back();};
-up=await heroPut(root,hf,function(){return d.querySelectorAll('.se-component.se-image').length;},[drop,button]);
+up=await heroPut(root,hf,function(){return d.querySelectorAll('.se-component.se-image').length;},[button]);
 var g=up&&findText(root,HERO);if(g){pick(g,HERO);d.execCommand('delete');}}
-note('제목·본문을 넣었습니다. '+(hm?(up?'첫 사진을 직접 올렸습니다 (대표 사진). ':'첫 사진을 못 올렸습니다 — 「'+HERO+'」에 대표 사진 버튼으로 받은 파일을 올리세요 (사진 창이 열렸으면 닫기). '):'')
-+'발행 창 태그 칸을 누르고 북마크를 한 번 더 누르세요.');return;}
+var copied=false;if(hm&&!up){try{var bmp=await createImageBitmap(hf),cv=document.createElement('canvas');cv.width=bmp.width;cv.height=bmp.height;
+cv.getContext('2d').drawImage(bmp,0,0);var png=await new Promise(function(r){cv.toBlob(r,'image/png');});
+var g2=findText(root,HERO);if(g2){var pe=g2.node.parentNode.closest('[contenteditable]')||g2.node.parentNode;try{pe.focus();}catch(e){}pick(g2,HERO);}
+var cws=[w,window];for(var ci=0;ci<cws.length&&!copied;ci++){try{await cws[ci].navigator.clipboard.write([new cws[ci].ClipboardItem({'image/png':png})]);copied=true;}catch(e){}}
+}catch(e){}}
+note('제목·본문을 넣었습니다. '+(hm?(up?'첫 사진을 직접 올렸습니다 (대표 사진). ':copied?'첫 사진을 복사해 두었어요 — 지금 바로 Ctrl+V 를 누르면 「'+HERO+'」에 올라가요 (남은 글자는 지우기). ':'첫 사진을 못 올렸습니다 — 「'+HERO+'」에 대표 사진 버튼으로 받은 파일을 올리세요 (사진 창이 열렸으면 닫기). '):'')
++'그다음 발행 창 태그 칸을 누르고 북마크를 한 번 더 누르세요.',copied?15000:0);return;}
 alert('티스토리·블로거·네이버 글쓰기 화면에서 눌러 주세요.');
 })();"""
 
