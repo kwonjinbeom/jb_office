@@ -22,7 +22,7 @@ PLATFORMS = {
              "hint": "HTML 모드를 쓰기 어려울 때"},
         ],
         "tags": "발행 화면의 태그 칸",
-        "after": "대표 이미지: '블로그 넣기' 북마크가 첫 사진을 직접 올린다 — 안 됐다고 뜨면 첫 사진을 지우고 '대표 사진'으로 받은 파일을 그 자리에 · 남은 사진 자리에 사진 올리기 · 링크·유튜브 주소 줄에서 Enter · 접은글·인용·구분선 모양은 버튼으로 · "
+        "after": "대표 이미지는 첫 사진을 내려받아 직접 올려 지정 · 남은 사진 자리에 사진 올리기 · 링크·유튜브 주소 줄에서 Enter · 접은글·인용·구분선 모양은 버튼으로 · "
                  "코드블럭 언어 지정 · 기본/HTML 모드를 여러 번 오가지 않기",
     },
     "naver": {
@@ -33,8 +33,7 @@ PLATFORMS = {
         ],
         "tags": "발행 창의 태그 칸 (붙여넣기로는 한 태그로 붙는다 → '블로그 넣기' 북마크나 태그 하나씩 복사 + Enter)",
         "after": "맨 위 결론 인용은 네이버 '따옴표' 인용구로 바뀐다 (그대로 둔다) · 소제목 줄을 '소제목'으로 다시 지정 · "
-                 "대표 사진: '블로그 넣기' 북마크가 첫 사진을 올리거나, 못 올리면 사진을 복사해 두고 '📷 대표 사진 자리'를 골라 둔다 — 알림이 뜨면 바로 Ctrl+V, 남은 글자는 지우기 "
-                 "(붙여넣은 사진은 바깥 주소라 대표 사진·홈 썸네일이 안 된다) · 남은 사진 자리에 직접 업로드(빈 1칸 표 지우기) · 코드는 소스코드 칸에 · "
+                 "첫 사진을 지우고 '대표 사진'으로 받은 파일을 그 자리에 올리기 (붙여넣은 사진은 바깥 주소라 대표 사진·홈 썸네일이 안 된다) · 남은 사진 자리에 직접 업로드(빈 1칸 표 지우기) · 코드는 소스코드 칸에 · "
                  "지도: 정보 카드의 📍 장소 이름을 에디터 '장소' 버튼으로 검색해 그 단락 아래에 넣기 (붙여넣기로는 지도 칸이 생기지 않는다) · "
                  "스티커·링크 카드는 에디터에서 · 본문에 의도치 않은 #태그 없는지",
     },
@@ -139,34 +138,15 @@ PASTE_JS = """(async()=>{
 var MARK='JBPASTE1';
 function act(d){var a=d.activeElement;while(a&&a.tagName==='IFRAME'){try{d=a.contentDocument;a=d.activeElement;}catch(e){break;}}return a;}
 function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
-function note(m,ms){var b=document.createElement('div');b.textContent=m;b.style.cssText='position:fixed;z-index:2147483647;left:50%;top:16px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25)';document.body.appendChild(b);setTimeout(function(){b.remove();},ms||4000);}
+function note(m){var b=document.createElement('div');b.textContent=m;b.style.cssText='position:fixed;z-index:2147483647;left:50%;top:16px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 16px;border-radius:8px;font:14px sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.25)';document.body.appendChild(b);setTimeout(function(){b.remove();},4000);}
 function setVal(el,v){var p=Object.getPrototypeOf(el);el.focus();Object.getOwnPropertyDescriptor(p,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 async function enterTags(el,tags){var w=el.ownerDocument.defaultView,set=Object.getOwnPropertyDescriptor(w.HTMLInputElement.prototype,'value').set;
 function key(type){var ev=new w.KeyboardEvent(type,{key:'Enter',code:'Enter',bubbles:true,cancelable:true});
 Object.defineProperty(ev,'keyCode',{get:function(){return 13;}});Object.defineProperty(ev,'which',{get:function(){return 13;}});el.dispatchEvent(ev);}
 for(var i=0;i<tags.length;i++){el.focus();set.call(el,tags[i]);el.dispatchEvent(new w.Event('input',{bubbles:true}));
 key('keydown');key('keypress');key('keyup');await wait(150);}}
-var HERO='📷 대표 사진 자리';
-async function heroFile(h){if(!h||!h.src)return null;try{var r=await fetch(h.src,{mode:'cors'});if(!r.ok)return null;var b=await r.blob();
-if(!/^image\\//.test(b.type))return null;return new File([b],h.name||'photo.jpg',{type:b.type});}catch(e){return null;}}
-function heroMark(html,h){var x=document.createElement('div');x.innerHTML=html;
-var img=[].filter.call(x.querySelectorAll('img'),function(i){return i.getAttribute('src')===h.src;})[0];if(!img)return null;
-var orig=img.outerHTML;img.replaceWith(document.createTextNode(HERO));return {html:x.innerHTML,orig:orig};}
-function findText(root,s){var t=root.ownerDocument.createTreeWalker(root,4),n;while((n=t.nextNode())){var i=n.data.indexOf(s);if(i>=0)return {node:n,i:i};}return null;}
-function pick(f,s){var d=f.node.ownerDocument,w=d.defaultView,r=d.createRange();r.setStart(f.node,f.i);r.setEnd(f.node,f.i+s.length);
-var sel=w.getSelection();sel.removeAllRanges();sel.addRange(r);}
-function dtOf(w,file){var dt=new w.DataTransfer();dt.items.add(new w.File([file],file.name,{type:file.type}));return dt;}
-async function grew(count,before,ms){for(var i=0;i<ms/250&&count()<=before;i++)await wait(250);return count()>before;}
-async function heroPut(root,file,count,more){var f=findText(root,HERO);if(!f)return false;var before=count();pick(f,HERO);
-var el=f.node.parentNode,w=el.ownerDocument.defaultView;
-el.dispatchEvent(new w.ClipboardEvent('paste',{clipboardData:dtOf(w,file),bubbles:true,cancelable:true}));
-if(await grew(count,before,more?3000:10000))return true;
-for(var k=0;more&&k<more.length;k++){f=findText(root,HERO);if(!f)return false;pick(f,HERO);
-await more[k](f.node.parentNode,w);if(await grew(count,before,8000))return true;}
-return false;}
 var raw='';try{raw=await navigator.clipboard.readText();}catch(e){}
 var data=null;if(raw.indexOf(MARK)===0){try{data=JSON.parse(raw.slice(MARK.length));}catch(e){}}
-if(data)window.__jbPaste=data;else if(window.__jbPaste)data=window.__jbPaste;
 var tags=data?data.tags:raw.split(/[#,\\n]+/).map(function(t){return t.replace(/\\s+/g,'');}).filter(Boolean);
 tags=tags.slice(0,30);
 var host=location.hostname,el=act(document);
@@ -175,13 +155,9 @@ if(/(^|\\.)tistory\\.com$/.test(host)){
 if(need())return;var t=document.querySelector('#post-title-inp');
 if(!t||!window.tinymce||!tinymce.activeEditor){alert('티스토리 글쓰기 화면에서 눌러 주세요.');return;}
 if([].some.call(document.querySelectorAll('.CodeMirror'),function(c){return c.offsetParent;})){alert('기본모드로 바꾼 뒤 다시 눌러 주세요.');return;}
-var hf=await heroFile(data.hero),hm=hf&&heroMark(data.html,data.hero);
-setVal(t,data.title);var ed=tinymce.activeEditor;ed.setContent(hm?hm.html:data.html);ed.undoManager.add();ed.fire('change');ed.setDirty(true);
-var up=false;if(hm){var body=ed.getBody();up=await heroPut(body,hf,function(){return body.querySelectorAll('img').length;});
-var g=findText(body,HERO);if(up&&g)g.node.data=g.node.data.replace(HERO,'');else if(!up)ed.setContent(ed.getContent().replace(HERO,hm.orig));
-ed.undoManager.add();ed.fire('change');}
+setVal(t,data.title);var ed=tinymce.activeEditor;ed.setContent(data.html);ed.undoManager.add();ed.fire('change');ed.setDirty(true);
 var tg=document.querySelector('#tagText');if(tg&&tags.length)await enterTags(tg,tags);
-note('제목·본문·태그 '+tags.length+'개를 넣었습니다. '+(up?'첫 사진을 직접 올렸습니다 (대표 이미지).':'첫 사진은 바깥 주소 그대로입니다 — 대표 사진 버튼으로 받아 그 자리에 올리세요.'));return;}
+note('제목·본문·태그 '+tags.length+'개를 넣었습니다. 사진·대표 이미지를 확인하세요.');return;}
 if(/(^|\\.)blogger\\.com$/.test(host)){
 if(need())return;
 if(el&&el.tagName==='TEXTAREA'&&/라벨|label/i.test((el.placeholder||'')+(el.getAttribute('aria-label')||''))){
@@ -206,26 +182,9 @@ function paste(p,html,text){['mousedown','mouseup','click'].forEach(function(t){
 var s=w.getSelection(),r=d.createRange();r.selectNodeContents(p);r.collapse(false);s.removeAllRanges();s.addRange(r);
 var dt=new w.DataTransfer();if(html)dt.setData('text/html',html);dt.setData('text/plain',text);
 (act(d)||p).dispatchEvent(new w.ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));}
-var hf=await heroFile(data.hero),hm=hf&&heroMark(data.html,data.hero),html=hm?hm.html:data.html;
-var before=d.body.innerText.length;paste(tp,'',data.title);await wait(300);var x=d.createElement('div');x.innerHTML=html;paste(bp,html,x.textContent);await wait(500);
+var before=d.body.innerText.length;paste(tp,'',data.title);await wait(300);var x=d.createElement('div');x.innerHTML=data.html;paste(bp,data.html,x.textContent);await wait(500);
 if(d.body.innerText.length-before<data.title.length){alert('네이버 에디터가 붙여넣기를 받지 않았습니다. 제목은 ① 제목, 본문은 Ctrl+V 로 붙여 주세요 (서식 그대로 붙습니다).');return;}
-var up=false;if(hm){var root=d.querySelector('.se-components-wrap')||d.body;
-var button=async function(el,w){var b=d.querySelector('button[data-name="image"]')||[].filter.call(d.querySelectorAll('button'),function(x){
-return x.offsetParent&&/^\\s*사진\\s*$/.test(x.textContent);})[0];if(!b)return;
-var wins=[w,window].filter(function(v,i,a){return a.indexOf(v)===i;}),olds=wins.map(function(v){return v.HTMLInputElement.prototype.click;});
-function back(){wins.forEach(function(v,i){v.HTMLInputElement.prototype.click=olds[i];});}
-wins.forEach(function(v,i){v.HTMLInputElement.prototype.click=function(){if(this.type!=='file')return olds[i].apply(this,arguments);back();
-try{this.files=dtOf(v,hf).files;}catch(e){}this.dispatchEvent(new v.Event('input',{bubbles:true}));this.dispatchEvent(new v.Event('change',{bubbles:true}));};});
-b.click();await wait(1500);back();};
-up=await heroPut(root,hf,function(){return d.querySelectorAll('.se-component.se-image').length;},[button]);
-var g=up&&findText(root,HERO);if(g){pick(g,HERO);d.execCommand('delete');}}
-var copied=false;if(hm&&!up){try{var bmp=await createImageBitmap(hf),cv=document.createElement('canvas');cv.width=bmp.width;cv.height=bmp.height;
-cv.getContext('2d').drawImage(bmp,0,0);var png=await new Promise(function(r){cv.toBlob(r,'image/png');});
-var g2=findText(root,HERO);if(g2){var pe=g2.node.parentNode.closest('[contenteditable]')||g2.node.parentNode;try{pe.focus();}catch(e){}pick(g2,HERO);}
-var cws=[w,window];for(var ci=0;ci<cws.length&&!copied;ci++){try{await cws[ci].navigator.clipboard.write([new cws[ci].ClipboardItem({'image/png':png})]);copied=true;}catch(e){}}
-}catch(e){}}
-note('제목·본문을 넣었습니다. '+(hm?(up?'첫 사진을 직접 올렸습니다 (대표 사진). ':copied?'첫 사진을 복사해 두었어요 — 지금 바로 Ctrl+V 를 누르면 「'+HERO+'」에 올라가요 (남은 글자는 지우기). ':'첫 사진을 못 올렸습니다 — 「'+HERO+'」에 대표 사진 버튼으로 받은 파일을 올리세요 (사진 창이 열렸으면 닫기). '):'')
-+'그다음 발행 창 태그 칸을 누르고 북마크를 한 번 더 누르세요.',copied?15000:0);return;}
+note('제목·본문을 넣었습니다. 발행 창 태그 칸을 누르고 북마크를 한 번 더 누르세요.');return;}
 alert('티스토리·블로거·네이버 글쓰기 화면에서 눌러 주세요.');
 })();"""
 
@@ -234,13 +193,9 @@ def paste_bookmarklet():
     return _bookmarklet(PASTE_JS)
 
 
-def paste_all(title, html, tags, hero=None):
-    """'한 번에 복사' 글자칸: 북마크가 읽는 표시 + JSON. 태그는 '#가 #나'·'가, 나' 어느 꼴이든 목록으로.
-    hero = {'src', 'name'}: 북마크가 이 사진을 받아 본문의 같은 주소 사진 자리에 직접 올린다 (대표 사진, 티스토리·네이버)."""
+def paste_all(title, html, tags):
+    """'한 번에 복사' 글자칸: 북마크가 읽는 표시 + JSON. 태그는 '#가 #나'·'가, 나' 어느 꼴이든 목록으로."""
     import json
     import re
     items = [t.strip() for t in re.split(r"[#,\n]+", tags or "") if t.strip()]
-    data = {"title": title, "html": html, "tags": items}
-    if hero:
-        data["hero"] = hero
-    return ALL_MARK + json.dumps(data, ensure_ascii=False)
+    return ALL_MARK + json.dumps({"title": title, "html": html, "tags": items}, ensure_ascii=False)

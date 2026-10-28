@@ -165,6 +165,30 @@
     var x = e.target.closest(".toast .x");
     if (x) { hideToast(x.closest(".toast")); return; }
 
+    // 변환본 사진 '복사' (2026-10-28 사용자: 첫 사진 말고 원하는 사진을 대표 사진으로). 링크 없이 그림(png)만 클립보드에 —
+    // 블로그 글쓰기에서 Ctrl+V 하면 파일로 올라간다 (브라우저의 '이미지 복사'는 주소가 같이 가서 바깥 링크로 붙는다).
+    var pc = e.target.closest("[data-photo-copy]");
+    if (pc) {
+      var png = fetch(pc.getAttribute("data-photo-copy"), { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); })
+        .then(function (b) {
+          if (b.type === "image/png") return b;
+          return createImageBitmap(b).then(function (bm) {
+            var c = document.createElement("canvas");
+            c.width = bm.width; c.height = bm.height; c.getContext("2d").drawImage(bm, 0, 0);
+            return new Promise(function (res) { c.toBlob(res, "image/png"); });
+          });
+        });
+      if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write && window.isSecureContext) {
+        navigator.clipboard.write([new ClipboardItem({ "image/png": png })]).then(
+          function () { toast("사진을 복사했습니다. 글쓰기에서 넣을 자리를 누르고 Ctrl+V — 파일로 올라가 대표 사진으로 고를 수 있습니다.", "ok"); },
+          function () { toast("사진을 복사하지 못했습니다. '받기'로 파일을 받아 끌어다 놓으세요.", "warn"); });
+      } else {
+        toast("이 브라우저는 사진 복사를 못 합니다. '받기'로 파일을 받으세요.", "warn");
+      }
+      return;
+    }
+
     // 서식 그대로 복사: data-copy-rich="#HTML원본" (+ data-copy-plain="#글원본").
     // 블로그 에디터에 붙여넣으면 소제목·굵게·표·상자 서식이 따라간다.
     var rich = e.target.closest("[data-copy-rich]");
@@ -231,6 +255,28 @@
     if (String(window.getSelection && window.getSelection())) return;  // 글자를 긁는 중
     if (e.ctrlKey || e.metaKey) { window.open(row.getAttribute("data-href"), "_blank"); return; }
     window.location.href = row.getAttribute("data-href");
+  });
+
+  // 변환본 사진에 마우스를 올리면 '복사 · 받기' (data-photo-url = 사진 받는 주소, ?src= 로 그 사진). 글 관리 펼침 칸처럼
+  // 나중에 그려지는 변환본도 있어 올릴 때 붙인다. 붙여넣을 HTML(숨은 칸)은 건드리지 않는다.
+  document.addEventListener("mouseover", function (e) {
+    var img = e.target.closest && e.target.closest("[data-photo-url] img");
+    if (!img || img.parentNode.classList.contains("st-photo")) return;
+    var src = img.getAttribute("src") || "";
+    if (!/^https?:/.test(src)) return;
+    var url = img.closest("[data-photo-url]").getAttribute("data-photo-url") + "?src=" + encodeURIComponent(src);
+    var wrap = document.createElement("span");
+    wrap.className = "st-photo";
+    img.parentNode.insertBefore(wrap, img);
+    wrap.appendChild(img);
+    var tools = document.createElement("span");
+    tools.className = "st-photo-tools";
+    tools.innerHTML = '<button type="button" class="btn sm">복사</button><a class="btn sm" download>받기</a>';
+    tools.firstChild.setAttribute("data-photo-copy", url);
+    tools.firstChild.title = "이 사진을 그림으로 복사 — 글쓰기에서 Ctrl+V";
+    tools.lastChild.href = url;
+    tools.lastChild.title = "이 사진을 파일로 받기";
+    wrap.appendChild(tools);
   });
 
   // ---- 입력 편의
