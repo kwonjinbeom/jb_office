@@ -14,6 +14,7 @@ HERE = Path(__file__).parent
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 key, color, last_line = sys.argv[1:4]
 w = json.load(open(HERE / "data" / f"{key}.json", encoding="utf-8"))
+NM = w.get("short", w["name"])  # 이름이 길면 그림에는 짧은 이름 (data 의 "short")
 out = tempfile.mkdtemp()
 DK, MID, LT, GR = "#1F2937", "#4B5563", "#9CA3AF", "#D9DCE1"
 HEAD = ('<!doctype html><meta charset="utf-8"><link rel="stylesheet" '
@@ -48,8 +49,8 @@ if len(series) == 1:  # 시리즈가 하나면 '만화 전체 중 애니가 따�
               f'<span>애니 {len(series[0]["eps"])}화 = 만화 {r[1]}화까지</span><span>만화 {w["last"]}화</span></div>')
 cover = (f'<div class="f" style="height:325px;padding:44px 50px">'
          f'<div style="width:30px;height:4px;border-radius:2px;background:{color}"></div>'
-         f'<div style="margin-top:18px;font-size:16px;font-weight:600;color:#6B7280">{w["name"]} · 애니 ↔ 만화</div>'
-         f'<div style="margin-top:6px;font-size:{38 if len(w["name"]) > 9 else 44}px;font-weight:800;letter-spacing:-1px">{w["name"]} 회차정리</div>'
+         f'<div style="margin-top:18px;font-size:16px;font-weight:600;color:#6B7280">{NM} · 애니 ↔ 만화</div>'
+         f'<div style="margin-top:6px;font-size:{38 if len(NM) > 9 else 44}px;font-weight:800;letter-spacing:-1px">{NM} 회차정리</div>'
          f'<div style="margin-top:10px;font-size:18px;color:#374151">환산기 · 애니 오리지널 회차 · 명장면 몇 화</div>'
          f'<div style="position:absolute;left:50px;right:50px;bottom:40px"><div style="display:flex;gap:8px">{bars}</div>'
          f'<div style="display:flex;gap:8px;margin-top:8px">{labels}</div></div></div>')
@@ -73,7 +74,7 @@ legend = (f'<div style="margin-top:8px;display:flex;gap:14px;font-size:12px;colo
           f'<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:{color};vertical-align:-1px"></i> 만화 내용</span>'
           f'<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:{GR};vertical-align:-1px"></i> 애니 오리지널</span></div>')
 chart = (f'<div class="f" style="padding:34px 50px 30px"><div style="font-size:21px;font-weight:800;letter-spacing:-0.5px">'
-         f'{w["name"]} 애니, 어디까지 만화 내용일까</div>{legend}{rows}'
+         f'{NM} 애니, 어디까지 만화 내용일까</div>{legend}{rows}'
          f'<div style="margin-top:20px;font-size:12px;color:#6B7280">{last_line}</div></div>')
 open(f"{out}/{key}-chart.html", "w", encoding="utf-8").write(HEAD + chart)
 
