@@ -398,6 +398,7 @@ REPORT_PC = 'workspace/.venv/Scripts/python workspace/manage.py routine_report {
 REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --data-urlencode "step=<한 줄>"'
 EXTRA_TITLE = "이번에 할 것 (추가 실행)"
 DAILY_TOPICS_TITLE = "매일 쓰는 고정 주제 (전체 실행)"
+AHEAD_TITLE = "미리 쓰기 — 예약 발행분"
 ALL_ORDER = ("prompt_update", "writing", "daily_ideas")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
 
 
@@ -433,7 +434,7 @@ def launcher(routine, day, report=None, extra="", tree=False):
             picks, custom = day_picks(routine, day)
             amount = f"{sum(picks.values())}{routine.unit}" if custom else f"최대 {sum(picks.values())}{routine.unit}, 소재 있는 것만"
         head = [f"# 일일루틴 · {routine.name} — {day}", "", f"오늘 할 일: {routine.task} — {amount}."]
-    lines = head + ["아래 md 를 읽고 그대로 따른다.", ""]
+    lines = head + _ahead(routine, day) + ["아래 md 를 읽고 그대로 따른다.", ""]
     lines.append(f"- `{routine.prompt_doc}` (이 루틴의 프롬프트)" if routine.prompt_doc else "- (프롬프트 md 가 아직 없습니다)")
     keys = routine.data_keys
     if keys:
@@ -450,6 +451,22 @@ def launcher(routine, day, report=None, extra="", tree=False):
     if not extra and routine.key == "writing":
         lines += _daily_topics(day)
     return "\n".join(lines).rstrip() + "\n" + _report(routine, day, report)
+
+
+def _ahead(routine, day):
+    """글쓰기를 앞날짜로 돌리면 그날 올릴 글을 미리 쓰는 것 (2026-10-28 사용자: 워크숍 전에 29·30일 글을 써 두고 예약 발행).
+    글의 '오늘'·글감은 그 날짜에 맞추고, 그날이 지나야 알 수 있는 글(장 마감 시황 등)은 건너뛴다."""
+    today = timezone.localdate()
+    if "picks" not in routine.data_keys or day <= today:
+        return []
+    return [f"## {AHEAD_TITLE}",
+            f"오늘은 {today} 이고, 이 실행은 {day} 에 올릴 글을 미리 쓴다 (사용자가 예약 발행한다).",
+            f"- 글의 '오늘'은 {day} 다. 기준일·'왜 지금'·남은 날짜·요일·'이번 주말' 같은 말을 {day} 에서 맞게 쓰고, "
+            f"원고 표에 `| 발행 예정 | {day} (예약) |` 한 줄을 넣는다.",
+            f"- 글감도 {day} 에 읽혀 맞는 것으로 고른다: 그 무렵의 일정·마감·개장·계절 글, 날짜를 타지 않는 정보 글.",
+            f"- {day} 가 지나야 알 수 있는 글(그날 장 마감 시황, 그날 발표·결과, 실시간 순위·날씨)은 쓰지 않는다. "
+            "그 분류는 '미리 못 씀' 한 줄로 보고하고 넘어간다.",
+            f"- 숫자·일정은 지금 확인하고, 확인한 날은 실제 날짜({today.month}월 {today.day}일 확인)로 적는다.", ""]
 
 
 def _daily_topics(day):
