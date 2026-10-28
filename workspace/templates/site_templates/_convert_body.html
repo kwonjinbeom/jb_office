@@ -18,9 +18,9 @@
     {% for b in paste.body %}
     <button type="button" class="btn{% if forloop.first and not paste_all %} primary{% endif %}" {% if b.kind == 'rich' %}data-copy-rich="#st-paste-{{ pl.pk }}" data-copy-plain="#st-plain-{{ pl.pk }}"{% elif b.kind == 'raw' %}data-copy="#st-raw-{{ pl.pk }}"{% else %}data-copy="#st-html-{{ pl.pk }}"{% endif %} data-copy-msg="{{ b.msg }}" title="{{ b.hint }}">{% include "includes/ic.html" with name="copy" %}② {{ b.label }}</button>
     {% endfor %}
-    {% if hero %}{# 워드프레스 대표 이미지 (2026-10-26 사용자): 첫 사진을 파일로 받아 '대표 이미지 설정 → 파일 업로드'에 #}
-    <a class="btn" href="{% url 'site_templates:hero_photo' pl.pk %}" title="첫 사진을 파일로 받습니다. 대표 이미지 설정 → 파일 업로드에 끌어다 놓으세요." target="_blank" rel="noopener">{% include "includes/ic.html" with name="download" %}대표 사진</a>
-    {% if hero.alt %}<button type="button" class="btn ghost" data-copy-text="{{ hero.alt }}" data-copy-msg="대체 텍스트를 복사했습니다. 대표 이미지의 대체 텍스트 칸에 붙여넣으세요." title="{{ hero.alt }}">대체 텍스트</button>{% endif %}
+    {% if hero %}{# 대표 이미지 (2026-10-26 워드프레스 · 2026-10-28 네이버): 첫 사진을 파일로 받아 직접 올린다 #}
+    <a class="btn" href="{% url 'site_templates:hero_photo' pl.pk %}" title="{% if is_naver %}첫 사진을 파일로 받습니다. 붙여넣은 본문의 첫 사진을 지우고 그 자리에 이 파일을 올리면 대표 사진이 됩니다.{% else %}첫 사진을 파일로 받습니다. 대표 이미지 설정 → 파일 업로드에 끌어다 놓으세요.{% endif %}" target="_blank" rel="noopener">{% include "includes/ic.html" with name="download" %}대표 사진</a>
+    {% if hero.alt and not is_naver %}<button type="button" class="btn ghost" data-copy-text="{{ hero.alt }}" data-copy-msg="대체 텍스트를 복사했습니다. 대표 이미지의 대체 텍스트 칸에 붙여넣으세요." title="{{ hero.alt }}">대체 텍스트</button>{% endif %}
     {% endif %}
     {% if pl.converted_tags %}<button type="button" class="btn" data-copy="#st-tags-{{ pl.pk }}" data-copy-msg="{% if is_naver %}태그를 복사했습니다. 네이버 발행 창의 태그 칸을 누르고 {% if paste_all %}'블로그 넣기'{% else %}'네이버 태그 넣기'{% endif %} 북마크를 누르세요.{% else %}태그를 복사했습니다. {{ paste.tags }}에 붙여넣으세요.{% endif %}">{% include "includes/ic.html" with name="copy" %}③ 태그</button>{% endif %}
   </div>

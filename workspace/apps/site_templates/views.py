@@ -535,12 +535,15 @@ def convert_context(placement, form=None):
         "paste_bookmarklet": paste.paste_bookmarklet() if one_shot else "",
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
-        "hero": _hero(placement.converted_body) if placement.site_category.blog.platform == Blog.Platform.WORDPRESS else None,
+        "hero": _hero(placement.converted_body) if placement.site_category.blog.platform in HERO_PLATFORMS else None,
     }
 
 
 # 대표 사진 내려받기 (2026-10-26 사용자, 워드프레스): 대표 이미지는 미디어 라이브러리에 올린 사진만 고를 수 있어
 # 변환본의 첫 사진을 파일로 내려받아 '대표 이미지 설정 → 파일 업로드'에 끌어다 놓는다.
+# 네이버도 (2026-10-28 사용자: 프롤로그에 사진이 하나도 안 뜬다) — 붙여넣은 바깥 주소 사진은 대표 사진·썸네일이 되지 않아
+# 본문 첫 사진을 지우고 이 파일을 그 자리에 직접 올린다.
+HERO_PLATFORMS = (Blog.Platform.WORDPRESS, Blog.Platform.NAVER)
 _HERO_MD = re.compile(r"!\[([^\]\n]*)\]\((https?://[^)\s]+)\)")
 _HERO_IMG = re.compile(r'<img\b[^>]*?\bsrc="(https?://[^"]+)"[^>]*>')
 HERO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
