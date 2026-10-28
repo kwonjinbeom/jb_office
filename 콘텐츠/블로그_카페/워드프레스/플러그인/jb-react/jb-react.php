@@ -194,8 +194,9 @@ add_action('wp_footer', function () {
   function phoneShare(el) {
     navigator.share({ title: title, url: link }).catch(function (e) { if (!e || e.name !== "AbortError") copyLink(el); });
   }
-  function kakaoSdk() {
-    return new Promise(function (ok, no) {
+  var sdk = null;
+  function kakaoSdk() {  // 한 번만 받는다
+    return sdk || (sdk = new Promise(function (ok, no) {
       if (window.Kakao) return ok(window.Kakao);
       var s = document.createElement("script");
       s.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.8.4/kakao.min.js";
@@ -204,7 +205,12 @@ add_action('wp_footer', function () {
       s.onload = function () { window.Kakao ? ok(window.Kakao) : no(); };
       s.onerror = no;
       document.head.appendChild(s);
-    });
+    }));
+  }
+  if (kakaoKey) {  // 공유 줄에 손이 가면 미리 받아 둔다 — 누를 때 받으면 PC 의 카카오 공유 창이 팝업 차단에 걸릴 수 있다
+    var warm = function () { kakaoSdk().catch(function () {}); box.removeEventListener("pointerover", warm); box.removeEventListener("touchstart", warm); };
+    box.addEventListener("pointerover", warm);
+    box.addEventListener("touchstart", warm, { passive: true });
   }
   var kakao = box.querySelector(".jb-kakao");
   kakao.addEventListener("click", function () {
