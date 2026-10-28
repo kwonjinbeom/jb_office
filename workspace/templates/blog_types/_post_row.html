@@ -1,7 +1,7 @@
 {# 글 관리 › 발행예정글 표 한 줄 (posts.html). 줄 끝 버튼 없이, 체크하고 위 버튼으로 (2026-10-22 사용자) #}
 {% load trash_tags %}
 <tr {% trash_attrs p %} data-trash-norow>
-  <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" aria-label="{{ p.title }} 선택"></td>
+  <td class="mid"><input type="checkbox" class="checkbox" name="ids" value="{{ p.writer }}:{{ p.pk }}" form="ph-bulk" data-cv="{% for pl in p.placements.all %}{% if pl.convert_status == 'none' or pl.convert_status == 'requested' %}{{ pl.pk }},{% endif %}{% endfor %}" aria-label="{{ p.title }} 선택"></td>
   {# 제목 (2026-10-22 사용자): 변환 화면(원문 ↔ 변환본 · 사실 점검 · 붙여넣기 · 고치기)을 연다 #}
   <td class="title-cell mid"><a href="{% url 'site_templates:post' %}?p={{ p.ref }}&amp;back={{ request.get_full_path|urlencode }}" title="{{ p.title }}">{{ p.title }}</a></td>
   <td class="mid">{% include "blog_types/_site_pick.html" with ref=p.ref current=p.target label=p.title %}</td>
@@ -11,8 +11,8 @@
   </form>{% empty %}<form method="post" action="{% url 'blog_types:place_add' %}" class="wr-cat-pick">{% csrf_token %}<input type="hidden" name="post" value="{{ p.ref }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
     <select class="input sm" name="site_category" data-autosubmit aria-label="{{ p.title }} 넣을 사이트 카테고리"><option value="" disabled selected>카테고리 고르기</option>{% for site_name, rows in p.site_groups %}<optgroup label="{{ site_name }}{% if site_name == p.target %} (이 글의 사이트){% endif %}">{% for pk, label in rows %}<option value="{{ pk }}">{{ site_name }} › {{ label }}</option>{% endfor %}</optgroup>{% endfor %}</select>
   </form>{% endfor %}</td>
-  {# 변환 (2026-10-22 사용자): 상태 + 변환 버튼 (미변환·요청 중) #}
-  <td class="mid small wr-cv">{% for pl in p.placements.all %}<div class="wr-cv-line"><span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% if pl.convert_status == 'none' or pl.convert_status == 'requested' %}<button type="button" class="btn sm" data-st-run="{{ pl.pk }}" data-st-url="{% url 'site_templates:run' %}" title="PC 터미널 claude 로 {{ pl.site_category.blog.name }} › {{ pl.site_category.name }} 변환">{% if pl.convert_status == 'requested' %}다시{% else %}변환{% endif %}</button>{% elif stage == 'post' and pl.convert_status == 'done' and pl.site_category.blog.platform != 'wordpress' %}<button type="button" class="btn sm" data-copy-url="{% url 'site_templates:paste_data' pl.pk %}" title="{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} 제목·본문·태그 복사 (변환글 보기의 '한 번에 복사'와 같다)">복사</button>{% endif %}</div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
+  {# 변환 (2026-10-22 사용자): 상태. 변환은 줄을 체크하고 위 '변환' (2026-10-28 사용자: 줄마다 '다시' 버튼은 불편) #}
+  <td class="mid small wr-cv">{% for pl in p.placements.all %}<div class="wr-cv-line"><span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>{% if stage == 'post' and pl.convert_status == 'done' and pl.site_category.blog.platform != 'wordpress' %}<button type="button" class="btn sm" data-copy-url="{% url 'site_templates:paste_data' pl.pk %}" title="{{ pl.site_category.blog.name }} › {{ pl.site_category.name }} 제목·본문·태그 복사 (변환글 보기의 '한 번에 복사'와 같다)">복사</button>{% endif %}</div>{% empty %}<span class="muted">-</span>{% endfor %}</td>
   <td class="mid">{% if p.writer == 'naver' %}{% include "naver_writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% else %}{% include "writing/_status.html" with post=p field="publish_status" current=p.publish_status choices=publish_choices %}{% endif %}</td>
   {# 발행 예정일 (2026-10-22 사용자): 줄마다 날짜를 정해 그 순서로 늘어놓는다. 게시글 관리에서는 발행일 #}
   <td class="mid small num muted">{{ p.created_at|date:"Y-m-d" }}</td>{# 작성일 (2026-10-27 사용자) #}

@@ -203,8 +203,6 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
         post.list_url = _view_url(post, list_q)
         post.path_label = classify.label_of(post)
         post.site_groups = sorted(groups, key=lambda g, t=post.target: g[0] != t)  # 그 글의 사이트를 맨 위에
-    # 변환 가능 글 전체 변환 (2026-10-22 사용자): 보이는 글 중 넣은 곳이 미변환인 것
-    ready = [str(pl.pk) for post in posts for pl in post.placements.all() if pl.convert_status == "none"]
     planned = [x for x in posts if x.planned_on]
     _day_heads(planned)
     # 예정일 없는 글은 작성일(최근이 위)로 묶는다. 같은 날 안에서는 사이트 순 그대로 (정렬이 안정적)
@@ -225,7 +223,6 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
         "site_filter": p["site"],
         "path": [label for label, _ in _path(kind, obj)][1:] if kind else [],  # 맨 앞 '모든 글'은 빼고
         "posts": posts,
-        "ready_ids": ",".join(ready), "ready_count": len(ready),
         "site_names": sites.names(),
         "publish_choices": PUBLISH_SHORT,
         **(extra or {}),

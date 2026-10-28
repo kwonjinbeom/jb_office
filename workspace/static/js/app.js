@@ -259,15 +259,15 @@
     var q = new URLSearchParams({ key: f.key, day: f.day, name: f.name || "" });
     if (f.keys) q.set("keys", f.keys);
     var link = "jbroutine:" + (f.kind || "run") + "?" + q.toString();
-    copyText(prompt).then(
-      function () {
-        window.location.href = link;
-        toast(f.msg || "PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
-        if (reload) setTimeout(function () { location.reload(); }, 4000);
-      },
-      function () { toast("안내문을 복사하지 못했습니다. 다시 눌러 보세요.", "warn"); }
-    );
+    function open() {
+      window.location.href = link;
+      toast(f.msg || "PC 터미널에서 claude 를 엽니다. 안 열리면 PC 에서 workspace\\routine_link.bat 을 한 번 실행하세요.", "ok");
+      if (reload) setTimeout(function () { location.reload(); }, 4000);
+    }
+    // 변환·애니는 서버에도 안내문을 둬서(apps/core/briefs) 복사가 막혀도 PC 가 링크의 key 로 받아 간다 (2026-10-28)
+    copyText(prompt).then(open, SERVER_BRIEF[f.kind] ? open : function () { toast("안내문을 복사하지 못했습니다. 다시 눌러 보세요.", "warn"); });
   }
+  var SERVER_BRIEF = { convert: true, anime: true };
   window.App.rtLaunch = rtLaunch;
   document.addEventListener("submit", function (e) {
     var form = e.target;
@@ -556,7 +556,8 @@
 /* 변환 (2026-10-22 사용자: 사이트별 템플릿의 변환을 글 관리로).
    - 칸 펼치기: <button data-cv-open="주소" data-cv-target="#상자"> 는 그 상자에 변환 칸(원문 ↔ 변환본)을 받아 넣는다 (글 상세 화면).
    - 넣은 곳 고르기: 칸 안의 data-cv-tab 은 그 칸만 다시 받는다.
-   - 변환: data-st-run="매핑 번호,…" (+ data-st-url, data-st-count) → 서버가 변환 요청으로 바꾸고 안내문을 주면 PC 터미널 claude 를 연다. */
+   - 변환: data-st-run="매핑 번호,…" (+ data-st-url, data-st-count) → 서버가 변환 요청으로 바꾸고 안내문을 주면 PC 터미널 claude 를 연다.
+     data-st-checked="ids" 는 체크한 줄 체크박스의 data-cv(매핑 번호들)를 모아 같은 일을 한다 (발행예정글 '변환'). */
 (function () {
   function load(box, url) {
     box.innerHTML = '<div class="cv-loading muted small">변환 칸을 여는 중…</div>';
@@ -578,13 +579,22 @@
   });
 
   document.addEventListener("click", function (e) {
-    var go = e.target.closest("[data-st-run]");
+    var go = e.target.closest("[data-st-run], [data-st-checked]");
     if (!go || go.disabled) return;
-    var n = Number(go.getAttribute("data-st-count") || 0);
+    var ids = go.getAttribute("data-st-run") || "", n = Number(go.getAttribute("data-st-count") || 0);
+    if (go.hasAttribute("data-st-checked")) {
+      // 발행예정글 '변환' (2026-10-28 사용자): 체크한 줄의 미변환·요청 중인 넣은 곳 (줄 체크박스의 data-cv)
+      var boxes = document.querySelectorAll('input[name="' + go.getAttribute("data-st-checked") + '"][form="ph-bulk"]:checked');
+      if (!boxes.length) { window.App.toast("변환할 글을 체크하세요.", "warn"); return; }
+      var picked = [];
+      boxes.forEach(function (b) { (b.getAttribute("data-cv") || "").split(",").forEach(function (x) { if (x) picked.push(x); }); });
+      if (!picked.length) { window.App.toast("체크한 글은 이미 변환했거나 카테고리에 넣지 않았습니다.", "warn"); return; }
+      ids = picked.join(","); n = picked.length;
+    }
     if (n > 1 && !confirm(n + "편을 변환합니다. PC 터미널에서 claude 가 차례로 변환해 서버로 보냅니다.")) return;
     var data = new FormData();
     data.set("csrfmiddlewaretoken", (window.APP || {}).csrfToken || "");
-    data.set("ids", go.getAttribute("data-st-run"));
+    data.set("ids", ids);
     go.disabled = true;
     fetch(go.getAttribute("data-st-url") || "/blog/site-templates/run/", { method: "POST", body: data, credentials: "same-origin" })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })

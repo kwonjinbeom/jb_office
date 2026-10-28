@@ -345,8 +345,10 @@ def start(link, text):
                 raise ValueError(f"애니 글쓰기·변환 안내문을 받지 못했습니다 ({why}). 애니 총정리에서 '글쓰기·변환'을 다시 누르세요.")
         return _start_anime(text, day, find_claude() if WINDOWS else "claude")
     if kind == "convert":
-        if not text.startswith(CONVERT_HEAD):
-            raise ValueError("클립보드에 사이트 변환 안내문이 없습니다. 글 관리에서 '변환'을 다시 누르세요.")
+        if not text.startswith(CONVERT_HEAD):  # 브라우저가 복사를 거절했거나 그새 다른 걸 복사했으면 서버에서 받는다 (2026-10-28)
+            text, why = server_brief(f"blog/site-templates/brief/{key}/", CONVERT_HEAD)
+            if not text:
+                raise ValueError(f"사이트 변환 안내문을 받지 못했습니다 ({why}). 발행예정글에서 '변환'을 다시 누르세요.")
     elif not text.startswith(PROMPT_HEAD):
         raise ValueError("클립보드에 일일루틴 안내문이 없습니다. 화면에서 '실행'을 다시 누르세요.")
     claude = find_claude() if WINDOWS else "claude"  # 못 찾으면 현황을 남기기 전에 멈춘다
@@ -391,13 +393,18 @@ def start(link, text):
 
 def anime_brief(key):
     """서버에 잠깐 둔 애니 글쓰기·변환 안내문 (apps/anime/views.brief). (안내문, 못 받은 이유)."""
-    url = f"{settings.SERVER_URL.rstrip('/')}/anime/brief/{key}/"
+    return server_brief(f"anime/brief/{key}/", ANIME_HEAD)
+
+
+def server_brief(path, head):
+    """서버에 잠깐 둔 안내문 (apps/core/briefs). (안내문, 못 받은 이유)."""
+    url = f"{settings.SERVER_URL.rstrip('/')}/{path}"
     try:
         with urllib.request.urlopen(url, timeout=30) as res:
             text = res.read().decode("utf-8").replace("\r\n", "\n")
     except Exception as e:  # noqa: BLE001 — 404(30분 지남·다시 누름)·네트워크 오류는 이유만 알린다
         return "", f"클립보드에 없고 서버에서도 못 받음: {e}"
-    return (text, "") if text.startswith(ANIME_HEAD) else ("", "클립보드에 없고 서버 응답도 안내문이 아님")
+    return (text, "") if text.startswith(head) else ("", "클립보드에 없고 서버 응답도 안내문이 아님")
 
 
 def _start_anime(text, day, claude):
