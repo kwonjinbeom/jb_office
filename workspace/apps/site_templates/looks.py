@@ -67,7 +67,9 @@ GAP = '<p data-ke-size="size16">&nbsp;</p>'
 CARD = re.compile(r'<table style="border-collapse:collapse;width:100%;font-size:15px;margin:18px 0"><tbody>(.*?)</tbody></table>', re.S)
 CELL = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
 IMG_P = r'<p style="text-align:center;margin:18px 0">(<img [^>]*>)</p>'
-CAP_P = r'<p style="text-align:center;color:#6b7280;font-size:14px;margin-top:-8px">(.*?)</p>'
+# 캡션 한 문단만 (다른 문단을 넘지 않게). 2026-10-29: (.*?) 가 PHOTO_RUN 안에서 다음 사진까지 늘어나
+# '1일차 마지막 사진 → 본문·카드·## 2일차 → 2일차 첫 사진'을 사진 묶음 하나로 먹어 2일차 소제목·본문이 사라졌다 (밤밤 해외여행 2편)
+CAP_P = r'<p style="text-align:center;color:#6b7280;font-size:14px;margin-top:-8px">((?:(?!</?p\b).)*?)</p>'
 PHOTO_RUN = re.compile(rf"(?:{IMG_P}\s*(?:{CAP_P}\s*)?){{2,}}", re.S)
 
 
