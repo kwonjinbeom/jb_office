@@ -1001,6 +1001,16 @@ class HeroPhotoTests(TestCase):
                                            convert_status="done")
         self.assertNotContains(self.client.get(reverse("site_templates:convert", args=[tistory.pk])), "대표 사진")
 
+    def test_button_on_naver_convert_screen(self):
+        """네이버 (2026-10-28 사용자): 붙여넣은 바깥 주소 사진은 대표 사진이 안 돼 프롤로그가 비었다 → 첫 사진을 받아 직접 올린다."""
+        naver = Placement.objects.create(site_category=SiteCategory.objects.filter(blog__platform="naver").first(),
+                                         tistory_post=self.post, convert_status="done",
+                                         converted_body="> 리드\n\n![통영 케이블카](https://images.unsplash.com/photo-3?w=620)")
+        res = self.client.get(reverse("site_templates:convert", args=[naver.pk]))
+        self.assertContains(res, self.url(naver))
+        self.assertContains(res, "첫 사진을 지우고 그 자리에")
+        self.assertNotContains(res, 'data-copy-text="통영 케이블카"')  # 대체 텍스트 칸은 워드프레스에만
+
     def test_repo_figure_served_from_disk(self):
         with override_settings(REPO_ROOT=self.tmp.name):
             res = self.client.get(self.url())
