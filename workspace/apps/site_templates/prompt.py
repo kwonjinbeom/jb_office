@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from apps.blog_rules.models import Blog
 
-from . import looks, paste
+from . import looks, nunip_look, paste
 from .models import PlatformFormat, SiteTemplate
 
 LAUNCH_HEAD = "# 사이트 변환"  # local_run 이 이걸로 변환 안내문인지 본다
@@ -116,8 +116,11 @@ def build(placement):
         parts.append(PHOTOS)
         if "위치 지도" in _category_part(cat):
             parts.append(LOCATOR)
-    if (cat.look or (cat.parent.look if cat.parent_id else "")) == "yudi":
+    look = cat.look or (cat.parent.look if cat.parent_id else "")
+    if look == "yudi":
         parts.append(looks.PROMPT)
+    elif look == "nunip":  # 눈잎 정갈 (2026-10-28)
+        parts.append(nunip_look.PROMPT)
     if blog.platform == "blogger":
         parts.append(BLOGGER_TAGS)
     if blog.platform == "wordpress":  # 워드프레스 글 모양 (2026-10-26)

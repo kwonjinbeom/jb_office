@@ -745,6 +745,63 @@ class YudiLookTests(TestCase):
         self.assertIn(locator, travel.concept)
 
 
+class NunipCleanLookTests(TestCase):
+    """눈잎 정갈 (0045, 2026-10-28 사용자: 미리캔버스 강연 발표자료의 느낌을 블로그 글에 녹인 도안 — 일본 여행 말고 네 카테고리에 앞으로)"""
+
+    BODY = "\n".join([
+        "> 10월 27일 발표 기준이에요.", "> 신청은 12월 31일까지예요.", "",
+        "## 1. 우리 집도 받나", "", "*두 줄 다 해당하면 대상이에요*", "", "생계급여를 **하나라도** 받으면 통과예요.", "",
+        "| 주택형 | 월 | 접수 |", "|---|---|---|", "| 49A | 283,920원 | 11월 16일(월) |", "",
+        "## 얼마 받나", "", "- **신청** 6월 15일 ~ 12월 31일", "", "- **어디서** 행정복지센터", "",
+        "놓치기 쉬운 것", "", "- **블로그마다 숫자가 달라요.** 공고 원문 기준이에요.", "",
+        "> 가운데 인용", "", "참고: [기관](https://a.com) (10월 28일)",
+    ])
+
+    def test_four_categories_and_render(self):
+        from .views import _render_for
+        cats = {c.name: c for c in SiteCategory.objects.filter(blog__name="눈잎")}
+        for name in ("청년·신혼 정책", "주택 공고", "공모주", "생활"):
+            self.assertEqual(cats[name].look, "nunip", name)
+            self.assertEqual(cats[name].concept.count("화면 모양 (눈잎 정갈"), 1)
+        self.assertEqual(cats["일본 여행"].look, "yudi")  # 일본 여행 · 일상은 그대로
+        self.assertEqual(cats["일상"].look, "yudi")
+        pl = Placement.objects.create(site_category=cats["생활"], tistory_post=Post.objects.create(title="바우처", body="본문"))
+        out = _render_for(pl, self.BODY)[1]
+        self.assertIn('<p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#3b598d;letter-spacing:.3px">한눈에_</p>', out)
+        self.assertEqual(out.count("한눈에_"), 1)  # 맨 위 인용만
+        self.assertIn('<span style="font-size:14px;color:#3b598d;margin-right:8px">01</span>우리 집도 받나<span style="color:#3b598d">_</span>', out)
+        self.assertIn(">02</span>얼마 받나", out)  # 번호가 없으면 차례대로
+        self.assertIn("border-bottom:1px solid #eeeeee;font-size:14px;color:#9ca3af\">두 줄 다 해당하면 대상이에요</p>", out)  # 설명 줄
+        self.assertIn("border-top:2px solid #3b598d;vertical-align:top;text-align:left\">주택형</th>", out)  # 표 머리
+        self.assertIn("text-align:right\">283,920원</td>", out)  # 금액 칸 오른쪽
+        self.assertIn("text-align:left\">11월 16일(월)</td>", out)  # 날짜는 왼쪽
+        self.assertIn('color:#3b598d">신청</span>6월 15일 ~ 12월 31일</p>', out)  # 이름표 줄 (빈 줄로 띄운 목록도)
+        self.assertIn('color:#3b598d">어디서</span>행정복지센터</p>', out)
+        self.assertIn('<li style="margin:0 0 8px"><strong', out)  # 문장 목록은 보통 목록
+        self.assertIn("border-top:1px solid #eeeeee;font-size:13px;color:#9ca3af\">참고:", out)
+        self.assertNotIn('data-ke-size="size16">&nbsp;', out)
+        self.assertNotIn("font-family", out)  # 글꼴은 눈잎 스킨이 정한다
+        text = prompt.build(pl)
+        self.assertIn("눈잎 정갈", text)
+        self.assertNotIn("유디 메모지", text)
+        self.assertNotIn("눈잎 정갈", prompt.build(Placement(site_category=cats["일본 여행"], tistory_post=pl.tistory_post)))
+
+    def test_migration_is_idempotent_and_reversible(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+        migration = import_module("apps.blog_types.migrations.0045_nunip_clean_look")
+        life = SiteCategory.objects.get(blog__name="눈잎", name="생활")
+        before = life.concept
+        migration.forward(django_apps, None)
+        life.refresh_from_db()
+        self.assertEqual(life.concept, before)
+        migration.backward(django_apps, None)
+        life.refresh_from_db()
+        self.assertEqual(life.look, "")
+        self.assertNotIn("눈잎 정갈", life.concept)
+
+
 class CloudConvertApiTests(TestCase):
     """클라우드 claude 가 토큰으로 글 관리의 글을 읽고, 카테고리에 넣고, 변환 안내문을 받는다 (2026-10-25)"""
 
