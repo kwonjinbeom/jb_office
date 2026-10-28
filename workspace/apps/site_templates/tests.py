@@ -75,6 +75,22 @@ class SiteTemplateTests(TestCase):
         self.assertEqual([it["key"] for it in design][-2:], ["day", "lang"])
         self.assertIn('class="jb-toc"', next(it for it in design if it["key"] == "toc")["doc"])
         self.assertIn("jb-card--food", next(it for it in design if it["key"] == "card")["doc"])
+        # 같은 날 사용자 (너무 공통스럽다): 컨셉이 있는 카테고리는 그 컨셉의 글 모양대로 — 사이트·카테고리마다 다르다
+        self.assertFalse(self.client.get(url, {"site": travel.sel}).context["design_own"])  # 시험 사이트는 공통 견본
+        wp = Blog.objects.get(name="워드프레스")
+        travel = SiteCategory.objects.get_or_create(blog=wp, name="World Travel", defaults={"look": "wp_travel"})[0]
+        res = self.client.get(url, {"site": travel.sel})
+        self.assertTrue(res.context["design_own"])
+        names = [it["name"] for it in res.context["design"]]
+        self.assertIn("Itinerary Overview", names)
+        self.assertIn("Entry & Money", names)
+        self.assertIn('alt="Map: where Rome is"', res.context["design"][1]["doc"])
+        mountain = SiteCategory.objects.get_or_create(blog=wp, name="산과 캠핑", defaults={"look": "wp_mountain"})[0]
+        design = self.client.get(url, {"site": mountain.sel}).context["design"]
+        self.assertIn("jb-card--camp", next(it for it in design if it["name"] == "산 아래에서")["doc"])
+        self.assertNotIn("Itinerary Overview", [it["name"] for it in design])
+        for d in design:
+            self.assertNotIn(":::", d["doc"])  # 카드가 다 그려진다
 
     def test_reconvert_with_comment(self):
         """재변환 (2026-10-22 사용자): 글 관리에서 체크한 글 하나 + 코멘트. 변환 완료여도 다시, 지난 변환본을 코멘트대로"""
@@ -679,6 +695,48 @@ class YudiLookTests(TestCase):
         launch = prompt.launcher(RequestFactory().get("/"), [pl], "tok")
         self.assertIn("## 지난 변환본 (사진·사실 점검은 살리고", launch)
         self.assertIn("::: 제품 | 가습기 A", launch)
+
+    def test_bambam_travel_follows_japan(self):
+        """밤밤 › 해외여행 = 눈잎 › 일본 여행 컨셉·유디 모양 (0043, 2026-10-28 사용자: 계산형이 딱딱하다). 블로거는 글꼴을 HTML 에,
+        위치 지도는 자르지도 콜라주로 묶지도 않는다."""
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from .views import _render_for
+        bam = Blog.objects.get(name="밤밤")
+        bam.content = "코스피 시황 노트 · 해외여행(경비·패스 계산형)"
+        bam.save()
+        locator = "- 위치 지도 (2026-10-27 사용자: 어디인지 감이 안 온다): 맨 위 인용 바로 다음에 1장, 사용자가 고친 줄."
+        travel = SiteCategory.objects.create(blog=bam, name="해외여행", concept="해외 나라·도시 한 곳을 숫자로 소개한다 (계산형).\n" + locator)
+        migration = import_module("apps.blog_types.migrations.0043_bambam_travel_yudi")
+        migration.forward(django_apps, None)
+        travel.refresh_from_db()
+        bam.refresh_from_db()
+        self.assertEqual(travel.look, "yudi")
+        self.assertIn("## N일차 · 그날 지역", travel.concept)
+        self.assertIn("화면 모양", travel.concept)
+        self.assertIn(locator, travel.concept)  # 위치 지도 줄은 고친 그대로
+        self.assertNotIn("숫자로 소개한다 (계산형)", travel.concept)
+        self.assertIn("눈잎 일본 여행 짜임", bam.content)
+        migration.forward(django_apps, None)  # 두 번 돌아도 그대로
+        travel.refresh_from_db()
+        self.assertEqual(travel.concept.count("화면 모양"), 1)
+
+        post = Post.objects.create(title="비엔나", body="본문", stage="post")
+        pl = Placement.objects.create(site_category=travel, tistory_post=post)
+        body = "> 비엔나 3박 4일\n\n![비엔나 위치 지도](https://a.com/map.png)\n\n![성](https://a.com/1.jpg)\n\n![정원](https://a.com/2.jpg)"
+        out = _render_for(pl, body)[1]
+        self.assertTrue(out.startswith("<style>@import"))  # 블로거는 나눔스퀘어를 HTML 이 불러온다
+        self.assertIn('<img style="display:block;width:620px;max-width:100%;height:auto;border-radius:12px', out)  # 지도는 자르지 않는다
+        self.assertEqual(out.count("width:50%"), 2)  # 사진 두 장만 콜라주 (지도는 끼지 않는다)
+        self.assertIn("유디 메모지", prompt.build(pl))
+        japan = Placement(site_category=SiteCategory.objects.get(blog__name="눈잎", name="일본 여행"), tistory_post=post)
+        self.assertFalse(_render_for(japan, body)[1].startswith("<style>"))  # 티스토리는 스킨이 글꼴을 불러온다
+        migration.backward(django_apps, None)
+        travel.refresh_from_db()
+        self.assertEqual(travel.look, "")
+        self.assertIn(locator, travel.concept)
 
 
 class CloudConvertApiTests(TestCase):

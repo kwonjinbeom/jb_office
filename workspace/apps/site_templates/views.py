@@ -114,11 +114,12 @@ def _design(cat, request=None):
             f'<div class="wr-article st-converted{wrap}">')
     out = []
     photos = {k: request.build_absolute_uri(static(v)) if request else static(v) for k, v in design.PHOTOS.items()}
-    for it in design.items(platform, look, _heading_bar(cat), photos):
+    top = cat.parent or cat
+    for it in design.items(platform, look, _heading_bar(cat), photos, (cat.blog.name, top.name)):
         it["doc"] = head + _render_cat(cat, it["md"])[0] + "</div></body>"
         out.append(it)
     looks_ = dict(SiteCategory._meta.get_field("look").choices)
-    return {"design": out, "design_look": looks_.get(look, look)}
+    return {"design": out, "design_look": looks_.get(look, look), "design_own": (cat.blog.name, top.name) in design.CATS}
 
 
 def _cats_of(blog):
@@ -420,8 +421,8 @@ def _render_cat(cat, text):
     look = _look(cat)
     html = render_body(looks.yudi_source(text) if look == "yudi" else text)
     out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
-    if look == "yudi":  # 유디 메모지 (2026-10-23 사용자, 눈잎 › 일본 여행)
-        out = looks.yudi_html(out)
+    if look == "yudi":  # 유디 메모지 (2026-10-23 사용자, 눈잎 › 일본 여행 · 2026-10-28 밤밤 › 해외여행 — 블로거는 글꼴도 HTML 에)
+        out = looks.yudi_html(out, fonts=platform == Blog.Platform.BLOGGER)
     elif _heading_bar(cat):
         out = re.sub(r"<h2(?![^>]*\bstyle=)", f'<h2 style="{HEADING_BAR}"', out)
     if platform == Blog.Platform.TISTORY:  # 사진·캡션 가운데 정렬이 붙여넣을 때 풀리지 않게 (2026-10-25)

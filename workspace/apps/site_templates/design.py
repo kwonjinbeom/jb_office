@@ -1,11 +1,16 @@
 """사이트별 템플릿 › 카테고리의 디자인 컨셉 (2026-10-28 사용자: 그 카테고리 글에 쓰는 표·메모·소제목·색을 한곳에).
 
+카테고리마다 컨셉의 '글 모양'대로 적은 견본은 design_cats.CATS (같은 날 사용자: 너무 공통스럽다 — 각 컨셉을 정확히).
+거기 없는 카테고리만 아래 공통 견본 (글 모양별 요소).
+
 견본은 손으로 그리지 않는다. 요소마다 짧은 마크다운을 변환과 같은 코드(views._render_cat)로 그린다 —
 글 모양(looks · wp_looks · writing.render)을 고치면 견본도 저절로 따라온다. 색은 화면이 그려진 견본을 읽어 모은다
 (templates/site_templates/index.html 스크립트).
 """
 from apps.blog_rules.models import Blog
 from apps.writing.render import CARD_KINDS
+
+from .design_cats import CATS
 
 # 정보 카드 종류: 그 글 모양의 카테고리 컨셉이 쓰는 것 (wp_looks.PROMPT · 글모양.css 의 테마별 카드)
 WP_KINDS = {
@@ -18,7 +23,9 @@ ENGLISH = {"wp_travel"}  # Korea Travel · World Travel 은 영어 글
 
 # 견본 사진 (static/img): 본문 정리가 http 주소 그림만 남기므로 views 가 절대 주소로 바꿔 넣는다
 PHOTO_A, PHOTO_B = "{photo_a}", "{photo_b}"
-PHOTOS = {"photo_a": "img/design-sample-a.svg", "photo_b": "img/design-sample-b.svg"}
+PHOTOS = {"photo_a": "img/design-sample-a.svg", "photo_b": "img/design-sample-b.svg", "map_red": "img/design-map-red.svg",
+          "map_green": "img/design-map-green.svg", "map_wp": "img/design-map-wp.svg", "figure": "img/design-figure.svg",
+          "poster": "img/design-poster.svg"}
 
 KO = {
     "heading": ("소제목", "## 소제목 · ### 작은 소제목",
@@ -63,8 +70,19 @@ def _cards(kinds, english=False):
     return "\n\n".join(f"::: {k} | {name} {k}\n{rows}\n:::" for k in kinds)
 
 
-def items(platform, look, heading_bar=False, photos=None):
-    """그 카테고리 글에 나오는 요소 (이름, 쓰는 법, 견본 마크다운) — 화면에 나오는 순서대로. photos: PHOTOS 의 절대 주소"""
+def items(platform, look, heading_bar=False, photos=None, key=None):
+    """그 카테고리 글에 나오는 요소 (이름, 쓰는 법, 견본 마크다운) — 화면에 나오는 순서대로.
+    key: (사이트 이름, 카테고리 이름) — design_cats 에 있으면 그 카테고리 견본. photos: PHOTOS 의 절대 주소"""
+    photos = photos or {k: "https://example.com/" + v for k, v in PHOTOS.items()}
+    own = CATS.get(key)
+    rows = [dict(it, key=f"c{n}") for n, it in enumerate(own)] if own else _common(platform, look, heading_bar)
+    for it in rows:
+        for name, url in photos.items():
+            it["md"] = it["md"].replace("{" + name + "}", url)
+    return rows
+
+
+def _common(platform, look, heading_bar):
     wp = platform == Blog.Platform.WORDPRESS
     english = look in ENGLISH
     src = EN if english else KO
@@ -89,6 +107,4 @@ def items(platform, look, heading_bar=False, photos=None):
         keys[3:3] = ["toc"]
         if look == "wp_travel":
             keys += ["day", "lang"]
-    photos = photos or {k: "https://example.com/" + v for k, v in PHOTOS.items()}
-    return [{"key": k, "name": out[k][0], "how": out[k][1], "md": out[k][2].format(**photos) if k == "photo" else out[k][2]}
-            for k in keys]
+    return [{"key": k, "name": out[k][0], "how": out[k][1], "md": out[k][2]} for k in keys]

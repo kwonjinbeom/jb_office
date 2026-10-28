@@ -136,7 +136,7 @@
 
     {# 디자인 컨셉 (2026-10-28 사용자): 이 카테고리 글에 나오는 소제목·표·카드·색. 견본은 변환과 같은 코드로 그린다 (design.py), 색은 아래 스크립트가 견본에서 읽는다 #}
     <section class="card st-design" data-st-design>
-      <div class="card-head"><h3 class="card-title">디자인 컨셉</h3><span class="hint">{{ blog.get_platform_display }} · {{ design_look }} — 붙여 넣는 HTML 그대로</span></div>
+      <div class="card-head"><h3 class="card-title">디자인 컨셉</h3><span class="hint">{{ blog.get_platform_display }} · {{ design_look }} · {% if design_own %}이 카테고리 컨셉의 글 모양대로{% else %}공통 견본{% endif %} — 숫자·이름은 견본</span></div>
       <div class="st-dz-grid">
         <div class="st-dz">
           <div class="st-dz-head"><strong>색 · 글꼴</strong><code>견본에 쓰인 색 · 어디에</code></div>
@@ -146,7 +146,7 @@
         {% for it in design %}
         <div class="st-dz">
           <div class="st-dz-head"><strong>{{ it.name }}</strong><code title="{{ it.how }}">{{ it.how }}</code></div>
-          <iframe srcdoc="{{ it.doc }}" title="{{ it.name }} 견본" data-st-dz="{{ it.name }}" data-st-key="{{ it.key }}"></iframe>
+          <iframe srcdoc="{{ it.doc }}" title="{{ it.name }} 견본" data-st-dz="{{ it.name }}"></iframe>
           <div class="st-dz-colors" data-st-colors></div>
         </div>
         {% endfor %}
@@ -228,9 +228,13 @@
         if (!all[h]) { all[h] = []; order.push(h); }
         r.found[h].forEach(function (role) { if (all[h].indexOf(role) < 0) all[h].push(role); });
       });
-      if (f.getAttribute("data-st-key") === "text") {  /* 문단 견본의 글꼴 */
-        var p = doc.querySelector(".wr-article p"), cs = p && doc.defaultView.getComputedStyle(p);
-        if (cs) box.querySelector("[data-st-font]").textContent = cs.fontFamily.split(",")[0].replace(/["']/g, "") + " · " +
+      var fontBox = box.querySelector("[data-st-font]");
+      var p = !fontBox.textContent && [].find.call(doc.querySelectorAll(".wr-article p"), function (x) {  /* 표·카드 밖 첫 글 문단의 글꼴 */
+        return x.textContent.trim().length > 8 && !x.closest("table, dl, blockquote");
+      });
+      var cs = p && doc.defaultView.getComputedStyle(p);
+      if (cs) {
+        fontBox.textContent = cs.fontFamily.split(",")[0].replace(/["']/g, "") + " · " +
           cs.fontSize + " · 줄 " + (parseFloat(cs.lineHeight) / parseFloat(cs.fontSize) || 0).toFixed(2).replace(/\.?0+$/, "");
       }
       done();

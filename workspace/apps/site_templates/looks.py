@@ -49,6 +49,9 @@ S = {
     "photo_img": "display:block;width:100%;height:240px;object-fit:cover;border-radius:12px",
     "photo_one": "display:block;width:620px;max-width:100%;height:400px;object-fit:cover;border-radius:12px;margin:0 auto",
     "caption": "text-align:center;color:#999999;font-size:13px;margin:6px 0 26px",
+    # 위치 지도 (2026-10-28 사용자: 밤밤 › 해외여행도 유디로 — 맨 위 지도는 자르지도, 사진과 콜라주로 묶지도 않는다)
+    "map": "display:block;width:620px;max-width:100%;height:auto;border-radius:12px;margin:0 auto",
+    "map_p": "text-align:center;margin:26px 0",
     "a": f"color:{TEAL};font-weight:700",
 }
 
@@ -99,7 +102,7 @@ def _photos(m):
 def _one_photo(m):
     """콜라주에 안 든 사진 한 장: width·style 을 떼고 620 × 400 고정. 콜라주 사진·포스터는 그대로."""
     tag = m.group(0)
-    if S["photo_img"] in tag or S["photo_one"] in tag or 'alt="포스터' in tag:
+    if S["photo_img"] in tag or S["photo_one"] in tag or S["map"] in tag or 'alt="포스터' in tag:
         return tag
     tag = re.sub(r'\s(?:width="\d+"|style="[^"]*")', "", tag)
     return tag.replace("<img ", f'<img style="{S["photo_one"]}" ', 1)
@@ -117,9 +120,21 @@ def _table(m):
     return f'<table style="{S["table"]}"><tbody>{"".join(out)}</tbody></table>'
 
 
-def yudi_html(body_html):
-    """티스토리용 HTML(tistory_html 결과) → 유디 메모지 모양. 빈 줄 문단은 빼고 간격은 각 블록의 margin 이 맡는다."""
+MAP_P = re.compile(IMG_P.replace("(<img [^>]*>)", r'(<img [^>]*alt="[^"]*위치 지도"[^>]*>)'))
+FONTS = ('<style>@import url("https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css");'
+         '@import url("https://hangeul.pstatic.net/hangeul_static/css/nanum-square-round.css");</style>')
+
+
+def _map(m):
+    tag = re.sub(r'\s(?:width="\d+"|style="[^"]*")', "", m.group(1)).replace("<img ", f'<img style="{S["map"]}" ', 1)
+    return f'<p style="{S["map_p"]}">{tag}</p>'
+
+
+def yudi_html(body_html, fonts=False):
+    """티스토리용 HTML(tistory_html 결과) → 유디 메모지 모양. 빈 줄 문단은 빼고 간격은 각 블록의 margin 이 맡는다.
+    fonts: 글꼴을 HTML 안에서 불러온다 — 스킨에 글모양.css 를 넣을 수 없는 블로거 (밤밤 › 해외여행, 2026-10-28)."""
     out = body_html.replace(GAP, "")
+    out = MAP_P.sub(_map, out)  # 위치 지도는 콜라주·620 × 400 자르기 전에 빼 둔다
     out = CARD.sub(_memo, out)
     out = PHOTO_RUN.sub(_photos, out)
     # 한 장짜리 사진: 620 × 400 고정 (포스터는 그대로)
@@ -137,7 +152,7 @@ def yudi_html(body_html):
     out = re.sub(r"<strong>", f'<strong style="{S["strong"]}">', out)
     out = re.sub(r"<u>(.*?)</u>", lambda m: f'<span style="{S["mark"]}">{m.group(1)}</span>', out, flags=re.S)
     out = re.sub(r"<a (?![^>]*\bstyle=)", f'<a style="{S["a"]}" ', out)
-    return f'<div style="{S["wrap"]}">\n{out}\n</div>'
+    return (FONTS if fonts else "") + f'<div style="{S["wrap"]}">\n{out}\n</div>'
 
 
 PROMPT = """## 글 모양 — 유디 메모지 (이 카테고리만, 2026-10-23 사용자: 내용이 아니라 화면 짜임을 유디 블로그처럼)
