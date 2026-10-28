@@ -2,7 +2,7 @@
 /**
  * Plugin Name: jinbaam 좋아요·공유
  * Description: 글 끝에 좋아요(로그인 없이 한 번)와 공유 줄. 파일 하나, 외부 서비스·추적 없음. 좋아요 수는 글 정보(_jb_likes)에 둔다.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Author: jinbaam
  * License: GPL-2.0-or-later
  *
@@ -103,7 +103,7 @@ add_filter('the_content', function ($html) {
         'pinterest' => 'M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z',
     ];
     $svg = function ($k) use ($paths) {
-        if ($k === 'link') {  // 선 아이콘 (Feather, MIT)
+        if ($k === 'link') {  // 선 아이콘 (Lucide link, ISC)
             return '<svg class="jb-st" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>'
                 . '<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
         }
@@ -125,7 +125,8 @@ add_filter('the_content', function ($html) {
         $share .= $a('pinterest', 'Pinterest', "https://www.pinterest.com/pin/create/button/?url={$url}&media=" . rawurlencode($img) . "&description={$title}");
     }
     $share .= $b('link', 'jb-copy', $t['copy'], $t['done']);
-    $heart = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.2-4.4-9.5-8.9C1 8.6 2.7 5 6.1 4.5c2-.3 3.8.7 4.8 2.3L12 8.4l1.1-1.6c1-1.6 2.8-2.6 4.8-2.3 3.4.5 5.1 4.1 3.6 7.1-2.3 4.5-9.5 8.9-9.5 8.9z"/></svg>';
+    // 하트는 Lucide heart (ISC, 2026-10-28 사용자가 고름)
+    $heart = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>';
     $count = (int) get_post_meta($id, JB_REACT_META, true);
     return $html
         . '<div class="jb-react" data-id="' . $id . '" data-api="' . esc_url(rest_url('jb/v1/like/' . $id)) . '"'
@@ -148,7 +149,7 @@ add_action('wp_footer', function () {
 .jb-react button{font:inherit;cursor:pointer}
 .jb-like,.jb-ic{display:inline-flex;align-items:center;justify-content:center;padding:0;border:0;background:none;color:var(--jr-ink-3)}
 .jb-like{gap:6px}
-.jb-like svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;transition:transform .15s}
+.jb-like svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
 .jb-like:hover{color:var(--jr-accent)}
 .jb-like.on{color:var(--jr-accent);cursor:default}
 .jb-like.on svg{fill:currentColor;transform:scale(1.08)}
