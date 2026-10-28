@@ -1085,6 +1085,8 @@ class PostPlanSplitTests(TestCase):
     def test_two_grids_and_bulk_plan(self):
         from datetime import date
 
+        from django.utils import timezone
+
         from apps.naver_writing.models import Post as NaverPost
         from apps.writing.models import Post
         a = Post.objects.create(title="가", stage="post", target="눈잎")
@@ -1102,7 +1104,10 @@ class PostPlanSplitTests(TestCase):
         self.assertEqual([p.title for p in res.context["planned"]], ["가", "나", "다"])  # 날짜 → 사이트(눈잎 · 밤밤) 순
         self.client.post(reverse("posts:bulk"), {"ids": [f"tistory:{c.pk}"], "plan": "1", "plan_day": "", "next": url})
         c.refresh_from_db()
-        self.assertIsNone(c.planned_on)  # 비우면 지운다
+        self.assertEqual(c.planned_on, timezone.localdate())  # 날짜를 안 고르면 오늘 (2026-10-28 사용자)
+        self.client.post(reverse("posts:plan"), {"post": f"tistory:{c.pk}", "day": ""})
+        c.refresh_from_db()
+        self.assertIsNone(c.planned_on)  # 지우기는 줄의 날짜 칸을 비워서
 
 
 @override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")

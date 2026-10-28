@@ -464,17 +464,17 @@ def bulk(request):
     if not posts:
         messages.warning(request, "먼저 글을 체크하세요.")
         return back
-    if request.POST.get("plan"):  # 발행 예정일 한꺼번에 (2026-10-22 사용자). 날짜를 비우면 지운다
+    if request.POST.get("plan"):  # 발행 예정일 한꺼번에 (2026-10-22 사용자). 날짜를 안 고르면 오늘 (2026-10-28 사용자) — 지우기는 줄의 날짜 칸
         raw = request.POST.get("plan_day", "").strip()
         try:
-            day = timezone.datetime.fromisoformat(raw).date() if raw else None
+            day = timezone.datetime.fromisoformat(raw).date() if raw else timezone.localdate()
         except ValueError:
             messages.warning(request, "날짜를 YYYY-MM-DD 로 넣으세요.")
             return back
         for post in posts:
             post.planned_on = day
             post.save(update_fields=["planned_on", "updated_at"])
-        messages.success(request, f"{len(posts)}건의 발행 예정일을 {day:%Y-%m-%d}(으)로 정했습니다." if day else f"{len(posts)}건의 발행 예정일을 지웠습니다.")
+        messages.success(request, f"{len(posts)}건의 발행 예정일을 {'오늘 ' if not raw else ''}{day:%Y-%m-%d}(으)로 정했습니다.")
         return back
     publish = request.POST.get("publish")
     if publish in ("done", "todo"):
