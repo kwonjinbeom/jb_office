@@ -104,7 +104,8 @@ class AnimeWriteRunTests(TestCase):
         j = self.client.post(reverse("anime:write_run")).json()
         self.assertTrue(j["prompt"].startswith("# 애니 총정리"))
         self.assertIn(f"<!-- 애니 총정리 작품: a{self.aot.pk} -->", j["prompt"])
-        self.assertIn("진격의 거인 <그 질문>? 화수 환산기", j["prompt"])  # 제목은 검색 질문형 (2026-10-26)
+        self.assertIn("진격의 거인 <그 말이 든 질문>? 화수 환산기", j["prompt"])  # 그 작품에만 있는 말로 묻는 질문형 (2026-10-28)
+        self.assertIn("쓰지 않는 예 `슬램덩크 애니 몇 화까지 만화 몇 권?", j["prompt"])
         self.assertNotIn("진격의 거인 회차정리", j["prompt"])
         self.assertIn("(시험)", j["prompt"])  # 카테고리 컨셉이 들어간다
         self.assertIn(reverse("anime:api_place", args=[self.aot.pk]) + "?token=tok", j["prompt"])
@@ -182,3 +183,38 @@ class AnimeWriteRunTests(TestCase):
             urlopen.side_effect = OSError("404")
             with self.assertRaisesRegex(ValueError, "안내문을 받지 못했습니다"):
                 start(link, "")
+
+
+class TitleOwnWordsTests(TestCase):
+    """anime 0006 (2026-10-28 사용자: 이누야샤·슬램덩크 제목이 형식적이다): 컨셉 제목 규칙 · 발행 전 두 글 제목."""
+
+    def test_rule_and_titles(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.blog_rules.models import Blog
+        from apps.blog_types.models import Placement, SiteCategory
+        from apps.writing.models import Post
+        from apps.writing.views import draft_sig
+        mig = import_module("apps.anime.migrations.0006_title_own_words")
+        cat = SiteCategory.objects.create(blog=Blog.objects.get(name="memorily"), name="애니 시험", concept="말투\n- " + mig.OLD_RULE + "\n- 끝")
+        (old, new), (old2, new2) = mig.TITLES
+        linked = Post.objects.create(title=old, body="본문", tags="가", summary="", source="T176_슬램덩크환산기", source_sig="옛 지문")
+        pl = Placement.objects.create(site_category=cat, tistory_post=linked, converted_title=old, converted_body="본문", convert_status="done")
+        loose = Post.objects.create(title=old2, body="본문2")
+        from apps.writing import drafts
+        draft = drafts.Draft(key="T176_슬램덩크환산기", title=new, body="새 본문", tags="가, 나", summary="소개", modified=0.0)
+        with patch("apps.writing.drafts.list_drafts", return_value=[draft]):
+            mig.forward(django_apps, None)
+        cat.refresh_from_db()
+        self.assertEqual(cat.concept, "말투\n- " + mig.NEW_RULE + "\n- 끝")
+        mig.forward(django_apps, None)  # 두 번 돌아도 그대로
+        cat.refresh_from_db()
+        self.assertEqual(cat.concept.count("그 작품에만 있는 말로 묻는다"), 1)
+        for o in (linked, pl, loose):
+            o.refresh_from_db()
+        self.assertEqual((linked.title, pl.converted_title, loose.title), (new, new, new2))
+        self.assertEqual(linked.source_sig, draft_sig(new, "새 본문", "가, 나", "소개"))  # 원고 지문 그대로 — '수정됨'·미변환이 안 된다
+        self.assertEqual(loose.source_sig, "")  # 원고와 이어지지 않은 글은 지문을 두지 않는다
+        self.assertEqual(pl.convert_status, "done")
