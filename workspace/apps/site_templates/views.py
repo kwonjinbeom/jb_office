@@ -28,10 +28,13 @@ from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
 from apps.blog_types.models import Placement, SiteCategory
+from apps.core import briefs
 from apps.core.context_processors import _asset_version
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
 from . import design, looks, paste, prompt
+
+BRIEF_KEY = "convert_brief"  # 마지막 변환·재변환 안내문 (apps/core/briefs)
 
 
 class _Styled(forms.ModelForm):
@@ -146,9 +149,7 @@ def run(request):
     for pl in pls:
         pl.convert_status = Placement.Convert.REQUESTED
         pl.save(update_fields=["convert_status", "updated_at"])
-    now = timezone.localtime()
-    return JsonResponse({"prompt": prompt.launcher(request, pls, token), "key": f"cv-{now:%H%M%S}",
-                         "day": now.date().isoformat(), "count": len(pls)})
+    return _launch(prompt.launcher(request, pls, token), "cv", len(pls))
 
 
 def _form_fields(request):
@@ -191,9 +192,23 @@ def reconvert(request):
     for pl in pls:
         pl.convert_status = Placement.Convert.REQUESTED
         pl.save(update_fields=["convert_status", "updated_at"])
-    now = timezone.localtime()
-    return JsonResponse({"prompt": prompt.launcher(request, pls, token, redo=note), "key": f"rc-{now:%H%M%S}",
-                         "day": now.date().isoformat(), "count": len(pls)})
+    return _launch(prompt.launcher(request, pls, token, redo=note), "rc", len(pls))
+
+
+def _launch(text, prefix, count):
+    """변환 안내문 JSON. 서버에도 잠깐 둔다 (2026-10-28 사용자: 전체 변환에서 '안내문을 복사하지 못했습니다' —
+    안내문을 만드는 사이 브라우저가 복사를 거절했다). 복사가 막혀도 PC 가 링크의 key 로 brief 에서 받아 간다."""
+    return JsonResponse({"prompt": text, "key": briefs.keep(BRIEF_KEY, prefix, text),
+                         "day": timezone.localdate().isoformat(), "count": count})
+
+
+@login_not_required
+def brief(request, key):
+    """PC 실행기(routines/local_run)가 클립보드에서 변환 안내문을 못 찾았을 때 받아 간다. 30분 안에 한 번만."""
+    text = briefs.take(BRIEF_KEY, key)
+    if text is None:
+        return HttpResponse("안내문 없음 (30분이 지났거나 다시 눌렀습니다)", status=404)
+    return HttpResponse(text, content_type="text/plain; charset=utf-8")
 
 
 @csrf_exempt

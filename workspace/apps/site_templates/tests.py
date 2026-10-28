@@ -97,6 +97,37 @@ class SiteTemplateTests(TestCase):
         lone = T.objects.create(title="안 넣은 글", stage="post")
         self.assertEqual(self.client.post(url, {"p": f"tistory:{lone.pk}", "note": "x"}).status_code, 400)
 
+    def test_convert_brief_when_copy_fails(self):
+        """2026-10-28 사용자: 전체 변환에서 '안내문을 복사하지 못했습니다' → 서버에도 두고, PC 가 링크의 key 로 한 번 받아 간다."""
+        import tempfile
+        from io import BytesIO
+        from pathlib import Path
+        from unittest.mock import patch
+
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from apps.routines.local_run import start
+
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        j = self.client.post(reverse("site_templates:run"), {"ids": str(self.pl.pk)}).json()
+        self.assertRegex(j["key"], r"^cv-[0-9a-f]{20}$")
+        self.client.logout()  # PC 실행기는 로그인 없이 받는다
+        self.assertEqual(self.client.get(reverse("site_templates:brief", args=["cv-x"])).status_code, 404)
+        res = self.client.get(reverse("site_templates:brief", args=[j["key"]]))
+        self.assertEqual(res.content.decode("utf-8"), j["prompt"])
+        self.assertEqual(self.client.get(reverse("site_templates:brief", args=[j["key"]])).status_code, 404)  # 한 번만
+        link = f"jbroutine:convert?key={j['key']}&day={j['day']}"
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), \
+                patch("apps.routines.local_run.WINDOWS", True), patch("apps.routines.local_run.find_claude", return_value="claude"), \
+                patch("apps.routines.local_run.open_terminal", return_value=""), \
+                patch("apps.routines.local_run.urllib.request.urlopen") as urlopen:
+            urlopen.return_value.__enter__.return_value = BytesIO(j["prompt"].encode("utf-8"))
+            self.assertIn("사이트 변환을 시작", start(link, ""))  # 클립보드가 비었다
+            self.assertIn(f"/blog/site-templates/brief/{j['key']}/", urlopen.call_args[0][0])
+            self.assertTrue((Path(tmp) / ".routine" / f"{j['key']}-{j['day']}.md").read_text(encoding="utf-8").startswith("# 사이트 변환"))
+            urlopen.side_effect = OSError("404")
+            with self.assertRaisesRegex(ValueError, "안내문을 받지 못했습니다"):
+                start(link, "")
+
     def test_run_needs_token_then_launches_and_api_saves(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
         run = reverse("site_templates:run")

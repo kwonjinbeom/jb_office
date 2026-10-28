@@ -769,14 +769,17 @@ class SitePublishTests(TestCase):
         self.assertNotContains(res, "체크한 것을")
         self.assertNotContains(res, 'id="rc-note"')  # 재변환 코멘트는 뺐다 (2026-10-23 사용자)
         self.assertContains(res, "data-feeds-check")  # 갱신: 사이트에 올라온 글로 발행 완료
-        self.assertContains(res, f'data-st-run="{self.pl.pk}"')  # 줄의 변환 버튼
+        # 2026-10-28 사용자: 줄마다 '변환·다시' 버튼 대신 체크하고 위 '변환' — 줄 체크박스가 넣은 곳 번호를 든다
+        self.assertNotContains(res, f'data-st-run="{self.pl.pk}"')
+        self.assertContains(res, f'data-cv="{self.pl.pk},"')
+        self.assertContains(res, 'data-st-checked="ids"')
+        self.assertNotContains(res, "전체 변환")
         page = self.client.get(reverse("site_templates:post"), {"p": f"tistory:{self.a.pk}", "back": "/blog/posts/view/?stage=post"})
         self.assertEqual(page.context["ACTIVE_MENU"], "posts_view")
         self.assertContains(page, "아직 변환본이 없습니다")
         self.assertContains(page, 'href="/blog/posts/view/?stage=post"')  # 글 관리로 돌아가기
         nocat = self.client.get(reverse("site_templates:post"), {"p": f"naver:{self.b.pk}"})
         self.assertContains(nocat, "카테고리 고르기")  # 넣은 곳이 없으면 여기서 바로 넣는다
-        self.assertEqual((res.context["ready_ids"], res.context["ready_count"]), (str(self.pl.pk), 1))  # 전체 변환
         self.assertNotContains(res, f'data-href="{self.a.get_absolute_url()}')
         panel = self.client.get(reverse("site_templates:panel"), {"p": f"tistory:{self.a.pk}", "next": "/blog/posts/view/?stage=post"})
         self.assertContains(panel, "원문")
