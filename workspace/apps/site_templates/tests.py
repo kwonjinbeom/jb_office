@@ -832,6 +832,55 @@ class WordpressLookTests(TestCase):
         self.assertIn('<p class="jb-source">', out)
         self.assertNotIn("style=", out)  # 블록 에디터가 지우는 인라인 style 은 쓰지 않는다
 
+    TICKET = "\n".join([
+        "> Busan in 2 days.", "", "## Getting There", "",
+        "::: Route | Seoul Station → Busan Station (KTX)", "🚆 Train | KTX", ":::", "",
+        "::: Route | Airport to city", "🚆 Train | AREX", ":::", "",
+        "## Day 1 · Friday 6 Nov: Gamcheon, Nampo", "", "| Time | Stop | Time there | Move |", "|---|---|---|---|",
+        "| 10:30 | Busan Station | 20 min | Subway Line 1 |", "| 19:00 | Dinner (감천) | | — |", "",
+        "## Day 2 · Haeundae", "", "## Budget", "", "| Item | Budget |", "|---|---|", "| Stay | ₩70,000 |", "",
+        "## Entry & Money Checklist", "", "- [ ] K-ETA: exempt", "- [x] Cash for stalls", "",
+        "## FAQ", "", "**Do I need a seat?**", "No. The beach is free.", "", "### What if it rains?", "", "Check the notice.", "",
+        "## 日本語まとめ", "", "- どこ：釜山", "", "Sources: [Korail](https://www.letskorail.com)",
+    ])
+
+    def test_travel_ticket(self):
+        """여행 '주황 티켓' (2026-10-28 사용자: 미리캔버스 '주황 심플 이탈리아 여행'): 탑승권 머리 · 점선 타임라인 · 경로선 · FAQ 탭 · 체크 목록."""
+        from . import wp_looks
+        out = wp_looks.render(self.TICKET, "wp_travel")
+        self.assertIn('lang="en"', out)  # 한글 장소 이름이 있어도 여행은 영어 글
+        self.assertIn('<h2 id="day-1-friday-6-nov-gamcheon-nampo" class="jb-day"><span class="jb-day__no"><small>DAY</small>01</span>'
+                      '<span class="jb-day__main"><small>Friday 6 Nov · Day 1 of 2</small>Gamcheon, Nampo</span></h2>', out)
+        self.assertIn('<span class="jb-day__main"><small>Day 2 of 2</small>Haeundae</span>', out)
+        self.assertIn('<a href="#day-1-friday-6-nov-gamcheon-nampo">Day 1 · Friday 6 Nov: Gamcheon, Nampo</a>', out)  # 목차는 원래 소제목
+        self.assertIn('<ol class="jb-time"><li><time>10:30</time><div><b>Busan Station</b><span class="jb-time__stay">20 min</span>'
+                      '<span class="jb-time__move">Subway Line 1</span></div></li><li><time>19:00</time><div><b>Dinner (감천)</b></div></li></ol>', out)
+        self.assertIn("<th>Item</th>", out)  # Time 으로 시작하지 않는 표는 표 그대로
+        self.assertIn('<div class="jb-route"><b>SEOUL STATION</b><i aria-hidden="true"></i><b>BUSAN STATION</b></div>', out)
+        self.assertEqual(out.count('class="jb-route"'), 1)  # 'to' 로 쓴 이동 카드는 경로선 없이
+        self.assertIn('<ul class="jb-check">\n<li>K-ETA: exempt</li>\n<li>Cash for stalls</li>\n</ul>', out)
+        self.assertIn('<div class="jb-faq__item"><p class="jb-faq__q">Do I need a seat?</p><div class="jb-faq__a"><p>No. The beach is free.</p></div></div>', out)
+        self.assertIn('<div class="jb-faq__a"><p>No. The beach is free.</p></div></div><div class="jb-faq__item"><p class="jb-faq__q">What if it rains?</p>'
+                      '<div class="jb-faq__a"><p>Check the notice.</p></div></div></div>', out)  # 두 가지 질문 꼴이 섞여도 순서대로 다
+        self.assertNotIn("<h3>What if it rains?", out)
+        odd = wp_looks.render("## FAQ\n\n### Q one?\n\nA one.\n\n| x | y |\n|---|---|\n| 1 | 2 |\n\n### Q two?\n\nA two.", "wp_travel")
+        self.assertNotIn("jb-faq", odd)  # 틀에 안 맞는 것이 끼면 그대로 둔다 (글이 빠지지 않게)
+        self.assertIn("A two.", odd)
+        self.assertIn('<section class="jb-lang">', out)  # FAQ 다음 다른 언어 요약 · 출처가 살아 있다
+        self.assertIn('<p class="jb-source">', out)
+        self.assertIn("<dt>Train</dt>", out)  # 줄 머리 이모지는 뺀다
+        self.assertNotIn("style=", out)
+
+    def test_other_looks_keep_plain_day(self):
+        from . import wp_looks
+        out = wp_looks.render(self.TICKET, "wp_mountain")
+        self.assertNotIn("jb-day__no", out)
+        self.assertNotIn("jb-time", out)
+        self.assertIn("<dt>🚆 Train</dt>", out)
+        css = wp_looks.css_min()
+        self.assertIn(".jb-post.jb-travel h2.jb-day{", css)
+        self.assertNotIn("\x08", wp_looks.FAQ_HEAD.pattern)
+
     def test_convert_screen_for_wordpress(self):
         from apps.writing.models import Post
         wp = Blog.objects.get(platform="wordpress")
@@ -993,6 +1042,21 @@ class WordpressDraftTests(TestCase):
         # 변환 화면에 초안 열기
         self.client.force_login(get_user_model().objects.create_user("tester", password="pw-test-1234"))
         self.assertContains(self.client.get(reverse("site_templates:convert", args=[self.pl.pk])), "wp-admin/post.php?post=77&amp;action=edit")
+
+    def test_restyle_updates_only_content(self):
+        """올린 글(발행 포함) 본문만 다시 그린다 (2026-10-28 여행 '주황 티켓')."""
+        from unittest import mock
+        from . import wp_rest
+        client = mock.Mock(site="https://jinbaam.com")
+        client.call.return_value = {"id": 59, "status": "publish", "link": "https://jinbaam.com/busan/"}
+        with mock.patch.object(wp_rest, "fetch_job", return_value={"id": 67, "wp_post_id": 59, "content": "<!-- wp:html -->x", "title": "T"}):
+            out = wp_rest.restyle("http://x/api/wp/67/", client)
+        client.call.assert_called_once_with("POST", "/posts/59", {"content": "<!-- wp:html -->x"})
+        self.assertIn("본문 다시 그림 (publish)", out)
+        client.reset_mock()
+        with mock.patch.object(wp_rest, "fetch_job", return_value={"id": 68, "wp_post_id": None, "content": "x"}):
+            self.assertIn("건너뜀", wp_rest.restyle("http://x/api/wp/68/", client))
+        client.call.assert_not_called()
 
     def test_launcher_adds_slug_and_draft_for_wordpress(self):
         launch = prompt.launcher(RequestFactory().get("/"), [self.pl], "tok")

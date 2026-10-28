@@ -2,6 +2,7 @@
    글 본문은 그 HTML 을 붙인 '사용자 정의 HTML' 블록이다:
    <div class="jb-post jb-mountain|jb-car|jb-travel"> … </div>  — 그 안에서만 적용되어 테마의 다른 곳은 건드리지 않는다.
    만드는 곳: workspace/apps/site_templates/wp_looks.py (class 이름을 바꾸면 둘 다 고친다). */
+@import url("https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=IBM+Plex+Mono:wght@500;600&display=swap");  /* 여행 모양: DAY 01 · 경로선 · 번호 */
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
 
 .jb-post {
@@ -170,20 +171,106 @@
 .jb-post.jb-car .jb-table th { background: #2b3137; color: #ffffff; }
 .jb-post.jb-car .jb-table td, .jb-post.jb-car .jb-card__rows dd { font-variant-numeric: tabular-nums; }
 
-/* 여행 (Korea Travel · World Travel): 테라코타·구운 벽돌·모래, 사프란은 두 곳만 (2026-10-26 조사: 자동차 남색과 겹치지 않게) */
-.jb-post.jb-travel { --jb-ink: #2e2723; --jb-ink-2: #5a4f48; --jb-accent: #b4532a; --jb-accent-2: #7a3a1f; --jb-tint: #faf4ec; --jb-line: #eadccd; }
-.jb-post.jb-travel h2, .jb-post.jb-travel .jb-card__name { font-family: Georgia, "Iowan Old Style", "Times New Roman", "Noto Serif KR", serif; letter-spacing: 0; }
-.jb-post.jb-travel h2 { font-weight: 700; }
-.jb-post.jb-travel h2::after { background: #d99a2b; }
-.jb-post.jb-travel h2.jb-day { background: #7a3a1f; }
-.jb-post.jb-travel .jb-toc__title { color: #b4532a; }
-.jb-post.jb-travel .jb-card--food .jb-card__head { background: #8f3b1c; }
-.jb-post.jb-travel .jb-card--stay .jb-card__head { background: #6b4f3a; }
-.jb-post.jb-travel .jb-card--route .jb-card__head { background: #4a3f38; }
-.jb-post.jb-travel .jb-card--cost .jb-card__head { background: #d99a2b; color: #2e2723; }
-.jb-post.jb-travel .jb-card--cost .jb-card__head .jb-card__name, .jb-post.jb-travel .jb-card--cost .jb-card__kind { color: #2e2723; border-color: rgba(46, 39, 35, 0.4); }
-.jb-post.jb-travel .jb-card--info .jb-card__head { background: #5a4f48; }
-.jb-post.jb-travel .jb-table th { background: #f4e9dc; color: #7a3a1f; }
+/* 여행 (Korea Travel · World Travel): 주황 티켓 (2026-10-28 사용자 — 미리캔버스 '주황 심플 이탈리아 여행'의 디테일).
+   주황 #c4572f · 먹 #3a3633 · 연한 판 #efeae2, 줄은 점선. 소제목 위 ✈ 01, 날짜 머리는 탑승권, 시간표는 점선 타임라인,
+   이동 카드는 A ····✈···· B 경로선, 카드 머리는 각진 탭 라벨, FAQ 는 질문 탭 + 답 판. 아이콘: Lucide (ISC).
+   이 모양을 만드는 HTML 은 wp_looks.render(look='wp_travel') 가 만든다. 바탕(글 화면 크림 #f6f2ea)은 사이트 것 그대로. */
+.jb-post.jb-travel { --jb-ink: #3a3633; --jb-ink-2: #5d554e; --jb-ink-3: #8f857a; --jb-accent: #c4572f; --jb-accent-2: #3a3633; --jb-tint: #efeae2; --jb-line: #ddd2c4;
+  --jb-page: #f6f2ea; --jb-dot: #d9c9b8; counter-reset: jbsec; }
+.jb-post.jb-travel h2 { margin: 2.6em 0 0.9em; padding: 0; border: 0; color: #3a3633; font-size: 1.5em; font-weight: 700; letter-spacing: -0.02em; }
+.jb-post.jb-travel h2::after { display: none; }
+.jb-post.jb-travel h2:not(.jb-day):not(.jb-lang-head) { counter-increment: jbsec; }
+.jb-post.jb-travel h2:not(.jb-day):not(.jb-lang-head)::before { content: counter(jbsec, decimal-leading-zero); display: block; margin-bottom: 6px; padding-left: 22px;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23c4572f%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M17.8%2019.2%2016%2011l3.5-3.5C21%206%2021.5%204%2021%203c-1-.5-3%200-4.5%201.5L13%208%204.8%206.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1%201%20.3%201.3L9%2012l-2%203H4l-1%201%203%202%202%203%201-1v-3l3-2%203.5%205.3c.3.4.8.5%201.3.3l.5-.2c.4-.3.6-.7.5-1.2z%22%20%2F%3E%3C%2Fsvg%3E") left center / 15px no-repeat; color: #c4572f; font: 600 12.5px/1.4 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.08em; }
+.jb-post.jb-travel h3 { color: #3a3633; }
+.jb-post.jb-travel h3::before { content: ""; display: inline-block; width: 8px; height: 8px; margin: 0 10px 2px 0; border-radius: 50%; background: #c4572f; }
+
+/* 맨 위 리드: TRIP NOTE */
+.jb-post.jb-travel blockquote.jb-lead { border: 0; border-radius: var(--jb-radius); background: var(--jb-tint); }
+.jb-post.jb-travel blockquote.jb-lead::before { content: "TRIP NOTE"; display: block; margin-bottom: 6px; padding-left: 22px; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23c4572f%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M17.8%2019.2%2016%2011l3.5-3.5C21%206%2021.5%204%2021%203c-1-.5-3%200-4.5%201.5L13%208%204.8%206.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1%201%20.3%201.3L9%2012l-2%203H4l-1%201%203%202%202%203%201-1v-3l3-2%203.5%205.3c.3.4.8.5%201.3.3l.5-.2c.4-.3.6-.7.5-1.2z%22%20%2F%3E%3C%2Fsvg%3E") left center / 15px no-repeat;
+  color: #c4572f; font: 600 12px/1.4 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.1em; }
+
+/* 목차: 번호 · 점선 */
+.jb-post.jb-travel .jb-toc { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.jb-post.jb-travel .jb-toc__title { padding-left: 22px; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23c4572f%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M17.8%2019.2%2016%2011l3.5-3.5C21%206%2021.5%204%2021%203c-1-.5-3%200-4.5%201.5L13%208%204.8%206.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1%201%20.3%201.3L9%2012l-2%203H4l-1%201%203%202%202%203%201-1v-3l3-2%203.5%205.3c.3.4.8.5%201.3.3l.5-.2c.4-.3.6-.7.5-1.2z%22%20%2F%3E%3C%2Fsvg%3E") left center / 15px no-repeat; color: #c4572f; font: 600 12px/1.4 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.1em; }
+.jb-post.jb-travel .jb-toc ul { counter-reset: jbtoc; margin-top: 4px; }
+.jb-post.jb-travel .jb-toc li { counter-increment: jbtoc; margin: 0; padding: 8px 0 8px 30px; border-bottom: 1px dashed var(--jb-dot); }
+.jb-post.jb-travel .jb-toc li::before { content: counter(jbtoc, decimal-leading-zero); position: absolute; left: 0; top: 0.95em; width: auto; height: auto; background: none; line-height: 1;
+  color: #c4572f; font: 600 12px "IBM Plex Mono", ui-monospace, monospace; }
+.jb-post.jb-travel .jb-toc a { color: #3a3633; }
+
+/* 정보 카드: 연한 판 + 각진 탭 라벨 (장소·음식·비용은 주황, 이동·숙소·안내·투어는 먹) */
+.jb-post.jb-travel .jb-card { border: 0; background: var(--jb-tint); box-shadow: none; }
+.jb-post.jb-travel .jb-card__head { flex-wrap: wrap; gap: 8px 12px; padding: 18px 22px 8px; background: transparent; color: #3a3633; }
+.jb-post.jb-travel .jb-card__kind { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 10px; border: 0; border-radius: 0; background: #c4572f; color: #fff;
+  font-size: 0.76em; letter-spacing: 0.02em; }
+.jb-post.jb-travel .jb-card__kind::before { content: ""; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M20%2010c0%204.993-5.539%2010.193-7.399%2011.799a1%201%200%200%201-1.202%200C9.539%2020.193%204%2014.993%204%2010a8%208%200%200%201%2016%200%22%20%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2210%22%20r%3D%223%22%20%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+.jb-post.jb-travel .jb-card--food .jb-card__kind::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M3%202v7c0%201.1.9%202%202%202h4a2%202%200%200%200%202-2V2%22%20%2F%3E%3Cpath%20d%3D%22M7%202v20%22%20%2F%3E%3Cpath%20d%3D%22M21%2015V2a5%205%200%200%200-5%205v6c0%201.1.9%202%202%202h3Zm0%200v7%22%20%2F%3E%3C%2Fsvg%3E"); }
+.jb-post.jb-travel .jb-card--stay .jb-card__kind::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M2%2020v-8a2%202%200%200%201%202-2h16a2%202%200%200%201%202%202v8%22%20%2F%3E%3Cpath%20d%3D%22M4%2010V6a2%202%200%200%201%202-2h12a2%202%200%200%201%202%202v4%22%20%2F%3E%3Cpath%20d%3D%22M12%204v6%22%20%2F%3E%3Cpath%20d%3D%22M2%2018h20%22%20%2F%3E%3C%2Fsvg%3E"); }
+.jb-post.jb-travel .jb-card--route .jb-card__kind::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M8%203.1V7a4%204%200%200%200%208%200V3.1%22%20%2F%3E%3Cpath%20d%3D%22m9%2015-1-1%22%20%2F%3E%3Cpath%20d%3D%22m15%2015%201-1%22%20%2F%3E%3Cpath%20d%3D%22M9%2019c-2.8%200-5-2.2-5-5v-4a8%208%200%200%201%2016%200v4c0%202.8-2.2%205-5%205Z%22%20%2F%3E%3Cpath%20d%3D%22m8%2019-2%203%22%20%2F%3E%3Cpath%20d%3D%22m16%2019%202%203%22%20%2F%3E%3C%2Fsvg%3E"); }
+.jb-post.jb-travel .jb-card--tour .jb-card__kind::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%20%2F%3E%3Cpath%20d%3D%22m16.24%207.76-1.804%205.411a2%202%200%200%201-1.265%201.265L7.76%2016.24l1.804-5.411a2%202%200%200%201%201.265-1.265z%22%20%2F%3E%3C%2Fsvg%3E"); }
+.jb-post.jb-travel .jb-card--cost .jb-card__kind::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M19%207V4a1%201%200%200%200-1-1H5a2%202%200%200%200%200%204h15a1%201%200%200%201%201%201v4h-3a2%202%200%200%200%200%204h3a1%201%200%200%200%201-1v-2a1%201%200%200%200-1-1%22%20%2F%3E%3Cpath%20d%3D%22M3%205v14a2%202%200%200%200%202%202h15a1%201%200%200%200%201-1v-4%22%20%2F%3E%3C%2Fsvg%3E"); }
+.jb-post.jb-travel .jb-card--info .jb-card__kind::before { background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%20%2F%3E%3Cpath%20d%3D%22M12%2016v-4%22%20%2F%3E%3Cpath%20d%3D%22M12%208h.01%22%20%2F%3E%3C%2Fsvg%3E"); }
+.jb-post.jb-travel :is(.jb-card--route, .jb-card--stay, .jb-card--info, .jb-card--tour) .jb-card__kind { background: #3a3633; }
+.jb-post.jb-travel .jb-card__name, .jb-post.jb-travel .jb-card__name a { color: #3a3633; font-size: 1.06em; }
+.jb-post.jb-travel .jb-card__rows { padding: 2px 22px 12px; }
+.jb-post.jb-travel .jb-card__rows > div, .jb-post.jb-travel .jb-card__rows > div:nth-child(even) { grid-template-columns: 9em minmax(0, 1fr); border-top: 1px dashed var(--jb-dot); background: transparent; }
+.jb-post.jb-travel .jb-card__rows > div:first-child { border-top: 1px dashed var(--jb-dot); }
+.jb-post.jb-travel .jb-card__rows dt { padding: 10px 12px 10px 0; color: var(--jb-ink-2); font-size: 0.88em; }
+.jb-post.jb-travel .jb-card__rows dd { padding: 10px 0; }
+
+/* 이동 카드: A ····✈···· B */
+.jb-post.jb-travel .jb-route { display: flex; align-items: center; gap: 14px; margin: 4px 22px 8px; }
+.jb-post.jb-travel .jb-route b { color: #3a3633; font: 700 1.45em/1.15 Oswald, "Arial Narrow", sans-serif; letter-spacing: 0.02em; }
+.jb-post.jb-travel .jb-route i { flex: 1; min-width: 60px; height: 18px; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23c4572f%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M17.8%2019.2%2016%2011l3.5-3.5C21%206%2021.5%204%2021%203c-1-.5-3%200-4.5%201.5L13%208%204.8%206.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1%201%20.3%201.3L9%2012l-2%203H4l-1%201%203%202%202%203%201-1v-3l3-2%203.5%205.3c.3.4.8.5%201.3.3l.5-.2c.4-.3.6-.7.5-1.2z%22%20%2F%3E%3C%2Fsvg%3E") center / 18px no-repeat,
+  radial-gradient(circle, #c4572f 1.2px, transparent 1.6px) center / 8px 4px repeat-x; }
+
+/* 날짜 머리: 탑승권 (왼쪽 DAY 01 · 점선 · 지역, 가운데 위아래 반달 홈) */
+.jb-post.jb-travel h2.jb-day { position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: stretch; margin-top: 2.8em; padding: 0;
+  border-radius: var(--jb-radius); background: #3a3633; color: #fff; font-size: 1em; overflow: hidden; }
+.jb-post.jb-travel .jb-day__no { display: grid; place-content: center; justify-items: center; padding: 16px 0; background: #c4572f; color: #fff; font: 700 2.6em/0.95 Oswald, "Arial Narrow", sans-serif; }
+.jb-post.jb-travel .jb-day__no small { font: 600 0.3em/1.6 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.2em; }
+.jb-post.jb-travel .jb-day__main { align-self: center; padding: 16px 22px 16px 26px; border-left: 2px dashed rgba(255, 255, 255, 0.5); font-size: 1.3em; font-weight: 700; line-height: 1.35; }
+.jb-post.jb-travel .jb-day__main small { display: block; margin-bottom: 4px; color: #f2b25e; font: 500 0.5em/1.5 "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+.jb-post.jb-travel h2.jb-day::before, .jb-post.jb-travel h2.jb-day::after { content: ""; position: absolute; left: 104px; width: 16px; height: 16px; border-radius: 50%; background: var(--jb-page); }
+.jb-post.jb-travel h2.jb-day::before { top: -8px; }
+.jb-post.jb-travel h2.jb-day::after { display: block; bottom: -8px; }
+
+/* 시간표: 점선 타임라인 */
+.jb-post.jb-travel ol.jb-time { position: relative; margin: 1.2em 0 1.6em; padding: 0; list-style: none; }
+.jb-post.jb-travel ol.jb-time::before { content: ""; position: absolute; left: 76px; top: 14px; bottom: 14px; border-left: 2px dotted #c4572f; }
+.jb-post.jb-travel ol.jb-time li { position: relative; display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 36px; align-items: baseline; margin: 0; padding: 8px 0; }
+.jb-post.jb-travel ol.jb-time li::marker { content: ""; }
+.jb-post.jb-travel ol.jb-time li::before { content: ""; position: absolute; left: 70px; top: 15px; width: 14px; height: 14px; border-radius: 50%; background: var(--jb-page); box-shadow: inset 0 0 0 3px #c4572f; }
+.jb-post.jb-travel ol.jb-time li:first-child::before { background: #c4572f; }
+.jb-post.jb-travel ol.jb-time time { color: #c4572f; font: 600 0.92em "IBM Plex Mono", ui-monospace, monospace; text-align: right; white-space: nowrap; }
+.jb-post.jb-travel ol.jb-time b { display: block; color: #3a3633; }
+.jb-post.jb-travel ol.jb-time span { display: inline-block; margin: 2px 14px 0 0; padding-left: 18px; color: var(--jb-ink-3); font-size: 0.86em; line-height: 1.5; }
+.jb-post.jb-travel .jb-time__stay { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238f857a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%20%2F%3E%3Cpath%20d%3D%22M12%206v6l4%202%22%20%2F%3E%3C%2Fsvg%3E") left 0.2em / 13px no-repeat; }
+.jb-post.jb-travel .jb-time__move { background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%238f857a%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M5%2012h14%22%20%2F%3E%3Cpath%20d%3D%22m12%205%207%207-7%207%22%20%2F%3E%3C%2Fsvg%3E") left 0.2em / 13px no-repeat; }
+.jb-post.jb-travel .jb-time__note { padding-left: 0; }
+
+/* 표: 주황 머리 줄 · 점선 · 아래 먹선 */
+.jb-post.jb-travel .jb-table { border: 0; border-radius: 0; }
+.jb-post.jb-travel .jb-table th { border: 0; background: #c4572f; color: #fff; }
+.jb-post.jb-travel .jb-table td, .jb-post.jb-travel .jb-table tbody tr:nth-child(even) td { border-top: 1px dashed var(--jb-dot); background: transparent; }
+.jb-post.jb-travel .jb-table td:first-child { color: #3a3633; font-weight: 700; }
+.jb-post.jb-travel .jb-table tbody tr:last-child td { border-bottom: 2px solid #3a3633; }
+
+/* 체크 목록 · FAQ · 다른 언어 요약 · 출처 */
+.jb-post.jb-travel ul.jb-check { padding: 6px 22px; border-radius: var(--jb-radius); background: var(--jb-tint); list-style: none; }
+.jb-post.jb-travel ul.jb-check li { margin: 0; padding: 9px 0 9px 30px; border-top: 1px dashed var(--jb-dot); background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23c4572f%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Cpath%20d%3D%22M20%206%209%2017l-5-5%22%20%2F%3E%3C%2Fsvg%3E") left 0.85em / 18px no-repeat; }
+.jb-post.jb-travel ul.jb-check li:first-child { border-top: 0; }
+.jb-post.jb-travel ul.jb-check li::marker { content: ""; }
+.jb-post.jb-travel .jb-faq__item { margin: 0 0 12px; }
+.jb-post.jb-travel .jb-faq__q { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 7px 14px 7px 10px; background: #c4572f; color: #fff; font-weight: 700; font-size: 0.95em; line-height: 1.45; }
+.jb-post.jb-travel .jb-faq__item:nth-child(even) .jb-faq__q { background: #3a3633; }
+.jb-post.jb-travel .jb-faq__q::before { content: ""; flex: none; width: 16px; height: 16px; background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%20%2F%3E%3Cpath%20d%3D%22M9.09%209a3%203%200%200%201%205.83%201c0%202-3%203-3%203%22%20%2F%3E%3Cpath%20d%3D%22M12%2017h.01%22%20%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
+.jb-post.jb-travel .jb-faq__a { padding: 14px 18px 2px; background: var(--jb-tint); }
+.jb-post.jb-travel .jb-faq__a p { margin: 0 0 12px; }
+.jb-post.jb-travel section.jb-lang { background: var(--jb-tint); }
+.jb-post.jb-travel h2.jb-lang-head { display: inline-block; margin: 0 0 10px; padding: 3px 10px; background: #3a3633; color: #fff; font-size: 0.8em; }
+.jb-post.jb-travel .jb-source { border-top: 2px dotted var(--jb-dot); }
 
 @media (max-width: 560px) {
   .jb-post { font-size: 16px; }
@@ -192,4 +279,17 @@
   .jb-post .jb-card__rows > div { grid-template-columns: 1fr; }
   .jb-post .jb-card__rows dt { padding: 9px 16px 0; }
   .jb-post .jb-card__rows dd { padding: 2px 16px 10px; }
+  .jb-post.jb-travel h2.jb-day { grid-template-columns: 84px minmax(0, 1fr); }
+  .jb-post.jb-travel .jb-day__no { font-size: 2.1em; }
+  .jb-post.jb-travel .jb-day__main { padding: 14px 16px 14px 20px; font-size: 1.12em; }
+  .jb-post.jb-travel h2.jb-day::before, .jb-post.jb-travel h2.jb-day::after { left: 76px; }
+  .jb-post.jb-travel ol.jb-time::before { left: 62px; }
+  .jb-post.jb-travel ol.jb-time li { grid-template-columns: 50px minmax(0, 1fr); gap: 30px; }
+  .jb-post.jb-travel ol.jb-time li::before { left: 56px; }
+  .jb-post.jb-travel .jb-card__head, .jb-post.jb-travel .jb-card__rows { padding-left: 16px; padding-right: 16px; }
+  .jb-post.jb-travel .jb-card__rows > div, .jb-post.jb-travel .jb-card__rows > div:nth-child(even) { grid-template-columns: 1fr; }
+  .jb-post.jb-travel .jb-card__rows dt { padding: 9px 0 0; }
+  .jb-post.jb-travel .jb-card__rows dd { padding: 2px 0 10px; }
+  .jb-post.jb-travel .jb-route { margin: 4px 16px 8px; gap: 10px; }
+  .jb-post.jb-travel .jb-route b { font-size: 1.1em; }
 }
