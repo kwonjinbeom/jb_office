@@ -155,10 +155,15 @@ var orig=img.outerHTML;img.replaceWith(document.createTextNode(HERO));return {ht
 function findText(root,s){var t=root.ownerDocument.createTreeWalker(root,4),n;while((n=t.nextNode())){var i=n.data.indexOf(s);if(i>=0)return {node:n,i:i};}return null;}
 function pick(f,s){var d=f.node.ownerDocument,w=d.defaultView,r=d.createRange();r.setStart(f.node,f.i);r.setEnd(f.node,f.i+s.length);
 var sel=w.getSelection();sel.removeAllRanges();sel.addRange(r);}
-async function heroPut(root,file,count){var f=findText(root,HERO);if(!f)return false;var before=count();pick(f,HERO);
-var el=f.node.parentNode,w=el.ownerDocument.defaultView,dt=new w.DataTransfer();dt.items.add(new w.File([file],file.name,{type:file.type}));
-el.dispatchEvent(new w.ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));
-for(var i=0;i<40&&count()<=before;i++)await wait(250);return count()>before;}
+function dtOf(w,file){var dt=new w.DataTransfer();dt.items.add(new w.File([file],file.name,{type:file.type}));return dt;}
+async function grew(count,before,ms){for(var i=0;i<ms/250&&count()<=before;i++)await wait(250);return count()>before;}
+async function heroPut(root,file,count,more){var f=findText(root,HERO);if(!f)return false;var before=count();pick(f,HERO);
+var el=f.node.parentNode,w=el.ownerDocument.defaultView;
+el.dispatchEvent(new w.ClipboardEvent('paste',{clipboardData:dtOf(w,file),bubbles:true,cancelable:true}));
+if(await grew(count,before,more?3000:10000))return true;
+for(var k=0;more&&k<more.length;k++){f=findText(root,HERO);if(!f)return false;pick(f,HERO);
+await more[k](f.node.parentNode,w);if(await grew(count,before,8000))return true;}
+return false;}
 var raw='';try{raw=await navigator.clipboard.readText();}catch(e){}
 var data=null;if(raw.indexOf(MARK)===0){try{data=JSON.parse(raw.slice(MARK.length));}catch(e){}}
 var tags=data?data.tags:raw.split(/[#,\\n]+/).map(function(t){return t.replace(/\\s+/g,'');}).filter(Boolean);
@@ -204,9 +209,18 @@ var hf=await heroFile(data.hero),hm=hf&&heroMark(data.html,data.hero),html=hm?hm
 var before=d.body.innerText.length;paste(tp,'',data.title);await wait(300);var x=d.createElement('div');x.innerHTML=html;paste(bp,html,x.textContent);await wait(500);
 if(d.body.innerText.length-before<data.title.length){alert('네이버 에디터가 붙여넣기를 받지 않았습니다. 제목은 ① 제목, 본문은 Ctrl+V 로 붙여 주세요 (서식 그대로 붙습니다).');return;}
 var up=false;if(hm){var root=d.querySelector('.se-components-wrap')||d.body;
-up=await heroPut(root,hf,function(){return root.querySelectorAll('.se-component.se-image').length;});
+var drop=async function(el,w){var dt=dtOf(w,hf);['dragenter','dragover','drop'].forEach(function(t){
+el.dispatchEvent(new w.DragEvent(t,{dataTransfer:dt,bubbles:true,cancelable:true}));});};
+var button=async function(el,w){var b=d.querySelector('button[data-name="image"]')||[].filter.call(d.querySelectorAll('button'),function(x){
+return x.offsetParent&&/^\\s*사진\\s*$/.test(x.textContent);})[0];if(!b)return;
+var wins=[w,window].filter(function(v,i,a){return a.indexOf(v)===i;}),olds=wins.map(function(v){return v.HTMLInputElement.prototype.click;});
+function back(){wins.forEach(function(v,i){v.HTMLInputElement.prototype.click=olds[i];});}
+wins.forEach(function(v,i){v.HTMLInputElement.prototype.click=function(){if(this.type!=='file')return olds[i].apply(this,arguments);back();
+try{this.files=dtOf(v,hf).files;}catch(e){}this.dispatchEvent(new v.Event('input',{bubbles:true}));this.dispatchEvent(new v.Event('change',{bubbles:true}));};});
+b.click();await wait(1500);back();};
+up=await heroPut(root,hf,function(){return d.querySelectorAll('.se-component.se-image').length;},[drop,button]);
 var g=up&&findText(root,HERO);if(g){pick(g,HERO);d.execCommand('delete');}}
-note('제목·본문을 넣었습니다. '+(hm?(up?'첫 사진을 직접 올렸습니다 (대표 사진). ':'첫 사진을 못 올렸습니다 — 「'+HERO+'」에 대표 사진 버튼으로 받은 파일을 올리세요. '):'')
+note('제목·본문을 넣었습니다. '+(hm?(up?'첫 사진을 직접 올렸습니다 (대표 사진). ':'첫 사진을 못 올렸습니다 — 「'+HERO+'」에 대표 사진 버튼으로 받은 파일을 올리세요 (사진 창이 열렸으면 닫기). '):'')
 +'발행 창 태그 칸을 누르고 북마크를 한 번 더 누르세요.');return;}
 alert('티스토리·블로거·네이버 글쓰기 화면에서 눌러 주세요.');
 })();"""
