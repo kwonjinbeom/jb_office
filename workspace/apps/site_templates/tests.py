@@ -885,6 +885,55 @@ class RedLookTests(TestCase):
         self.assertNotIn("빨강 정갈", ott.concept)
 
 
+class NaverLineTablesTests(TestCase):
+    """black_lukey › 지역 놀거리 · 축제·행사 표 (0047, 2026-10-28 사용자: 일반 표는 가는 선, 장소 카드는 모노 + 초록 / 주황 포인트)."""
+
+    BODY = "\n".join([
+        "> 단양은 하루면 돼요.", "", "## 하루 시간표", "",
+        "| 시간 | 동선 |", "|---|---|", "| 06:27 → 07:54 | 청량리 → 단양역 |", "",
+        "| 항목 | 금액 |", "|---|---|", "| KTX | 18,600원 |", "| **합계** | **39,150원** |", "",
+        "## 1. 도담삼봉: 물안개", "", "::: 장소 | 도담삼봉", "💳 입장료 | 무료", ":::",
+    ])
+
+    def test_migration_and_render(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.naver_writing.models import Post as NaverPost
+
+        from .views import _render_for
+        blog = Blog.objects.get(name="black_lukey")
+        local = SiteCategory.objects.get_or_create(blog=blog, name="지역 놀거리")[0]
+        fest = SiteCategory.objects.get_or_create(blog=blog, name="축제·행사")[0]
+        migration = import_module("apps.blog_types.migrations.0047_naver_line_tables")
+        migration.forward(django_apps, None)
+        migration.forward(django_apps, None)
+        local.refresh_from_db()
+        fest.refresh_from_db()
+        self.assertEqual((local.look, fest.look), ("line_green", "line_orange"))
+        self.assertEqual(local.concept.count("화면 모양 (가는 선 표"), 1)
+        self.assertIn("초록 윗줄", local.concept)
+        self.assertIn("주황 윗줄", fest.concept)
+        post = NaverPost.objects.create(title="단양", body="본문")
+        out = _render_for(Placement.objects.create(site_category=local, naver_post=post), self.BODY)[1]
+        self.assertIn("border-top:2px solid #222222;border-bottom:1px solid #222222;color:#222222;font-weight:bold;text-align:left;width:20%\">시간", out)  # 머리 줄 · 시각 칸 너비
+        self.assertIn("border:1px solid #ffffff;border-bottom:1px solid #e6e6e6", out)  # 세로줄 없이 가로줄만
+        self.assertIn("border-top:1px solid #222222;border-bottom:2px solid #222222;color:#222222;font-weight:bold;text-align:left\">", out)  # 합계 줄
+        self.assertIn("text-align:right\"><strong>39,150원</strong>", out)  # 숫자 칸 오른쪽
+        self.assertIn("border-top:3px solid #1f6f5c;background-color:#ffffff;color:#1f6f5c", out)  # 카드 초록 포인트
+        self.assertIn("background-color:#f6f6f6;color:#444444;font-weight:bold\">💳 입장료", out)  # 연회색 이름표 칸
+        self.assertNotIn("background-color:#1f6f5c", out)  # 진초록 머리 칸은 없다
+        out = _render_for(Placement(site_category=fest, naver_post=post), self.BODY)[1]
+        self.assertIn("border-top:3px solid #f0561d", out)  # 축제는 주황
+        ott = SiteCategory.objects.get_or_create(blog=blog, name="영화·OTT 공개")[0]
+        self.assertNotIn("border-top:3px solid", _render_for(Placement(site_category=ott, naver_post=post), self.BODY)[1])
+        migration.backward(django_apps, None)
+        local.refresh_from_db()
+        self.assertEqual(local.look, "")
+        self.assertNotIn("가는 선 표", local.concept)
+
+
 class CloudConvertApiTests(TestCase):
     """클라우드 claude 가 토큰으로 글 관리의 글을 읽고, 카테고리에 넣고, 변환 안내문을 받는다 (2026-10-25)"""
 

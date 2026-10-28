@@ -115,11 +115,13 @@ class SiteCategory(TrashableModel):
     # 2026-10-26 사용자 (워드프레스): 카테고리마다 글모양 CSS 의 테마 — site_templates.wp_looks
     # 2026-10-28 사용자 (눈잎 정책·주택·공모주·생활): 남색 포인트·연회색·가는 줄 — site_templates.nunip_look
     # 2026-10-28 사용자 (black_lukey › 영화·OTT 공개): 같은 디테일에 빨강 — site_templates.red_look (네이버 붙여넣기 HTML)
+    # 2026-10-28 사용자 (black_lukey › 지역 놀거리 · 축제·행사): 표 두 종류만 — site_templates.naver_line
     look = models.CharField("글 모양", max_length=20, blank=True,
                             choices=[("", "기본"), ("yudi", "유디 메모지"), ("wp_mountain", "워드프레스 · 산"),
                                      ("wp_car", "워드프레스 · 자동차"), ("wp_travel", "워드프레스 · 여행"),
                                      ("nunip", "눈잎 정갈 (남색·회색)"),
-                                     ("red", "빨강 정갈 (네이버)")],
+                                     ("red", "빨강 정갈 (네이버)"), ("line_green", "네이버 · 가는 선 표 + 초록 카드"),
+                                     ("line_orange", "네이버 · 가는 선 표 + 주황 카드")],
                             help_text="붙여넣는 HTML 의 화면 모양 (가운데 정렬·메모지 상자 등). 하위 카테고리도 따른다")
     order = models.PositiveIntegerField("순서", default=0)
 
