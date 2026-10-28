@@ -976,6 +976,35 @@ class TrimAiNewsTests(TestCase):
         self.assertEqual(Post.all_objects.filter(pk__in=[p.pk for p in old], deleted_at__isnull=False).count(), 5)
 
 
+class WordpressAsofLineTests(TestCase):
+    """blog_types 0048 (2026-10-28 사용자): 워드프레스 글 끝 'YYYY-MM-DD 기준, 바뀌면 고칩니다.' 줄을 규칙·원고·변환본에서 지운다."""
+
+    def test_line_dropped(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.writing.models import Post
+        wp = Blog.objects.get(platform="wordpress")
+        car = SiteCategory.objects.create(blog=wp, name="시험 자동차",
+                                          concept="공통: 본문 → `참고:` 출처(기관·문서·날짜) → 기준일 줄('2026-10-26 기준, 바뀌면 고칩니다').\n둘째 줄")
+        post = Post.objects.create(title="겨울 점검", body="본문\r\n\r\n참고: 가 (https://a.com)\r\n\r\n2026-10-26 기준, 바뀌면 고칩니다.\r\n<!-- 본문 끝 -->")
+        md = Placement.objects.create(site_category=car, tistory_post=post, converted_body="본문\n\n참고: 가\n\n2026-10-27 기준, 바뀌면 고칩니다.")
+        html = Placement.objects.create(site_category=car, tistory_post=post,
+                                        converted_body="<p>본문</p>\n<p>참고: 가</p>\n<p>2026-10-28 기준, 바뀌면 고칩니다.</p>")
+        tistory = Placement.objects.create(site_category=SiteCategory.objects.create(blog=Blog.objects.get(platform="tistory", name="눈잎"), name="시험"),
+                                           tistory_post=post, converted_body="끝\n\n2026-10-26 기준, 바뀌면 고칩니다.")
+        import_module("apps.blog_types.migrations.0048_wordpress_drop_asof_line").forward(django_apps, None)
+        for o in (car, post, md, html, tistory):
+            o.refresh_from_db()
+        self.assertEqual(car.concept, "공통: 본문 → `참고:` 출처(기관·문서·날짜).\n둘째 줄")
+        self.assertEqual(post.body, "본문\r\n\r\n참고: 가 (https://a.com)\r\n<!-- 본문 끝 -->")
+        self.assertEqual(md.converted_body, "본문\n\n참고: 가")
+        self.assertEqual(html.converted_body, "<p>본문</p>\n<p>참고: 가</p>")
+        self.assertIn("바뀌면 고칩니다", tistory.converted_body)  # 워드프레스만
+        self.assertEqual(md.changed_at, None)  # 발행 글은 PC 가 REST 로 고쳤다 — '수정됨' 불은 켜지 않는다
+
+
 @override_settings(WRITING_DRAFTS_DIR=settings.BASE_DIR / "없는-원고-폴더")
 class PostPlanTests(TestCase):
     """발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일을 정해 그 순서로 본다."""
