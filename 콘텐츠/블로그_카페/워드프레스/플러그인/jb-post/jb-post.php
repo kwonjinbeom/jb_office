@@ -2,7 +2,7 @@
 /**
  * Plugin Name: jinbaam 글 화면
  * Description: 글 맨 위는 대표 사진 머리(흐린 사진 바탕 · 제목 · 사진, 메뉴는 그 위에 투명하게), 본문은 크림 종이, 글 끝(좋아요 줄부터)은 모래색 종이. 파일 하나.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: jinbaam
  * License: GPL-2.0-or-later
  *
@@ -87,15 +87,15 @@ add_action('generate_after_entry_content', function () {
         return;
     }
     $cards = '';
-    foreach ([[get_previous_post(), '← 이전 기록', 'jb-card'], [get_next_post(), '다음 기록 →', 'jb-card jb-card--next']] as [$p, $label, $cls]) {
+    foreach ([[get_previous_post(), '← 이전 기록', 'jb-navc'], [get_next_post(), '다음 기록 →', 'jb-navc jb-navc--next']] as [$p, $label, $cls]) {
         if (!$p) {
             $cards .= '<span></span>';
             continue;
         }
         $thumb = get_the_post_thumbnail($p, 'thumbnail', ['loading' => 'lazy', 'alt' => '']);
-        $text = '<span class="jb-card-t"><i>' . $label . '</i>' . esc_html(get_the_title($p)) . '</span>';
-        $cards .= sprintf('<a class="%s%s" href="%s">%s</a>', $cls, $thumb ? '' : ' jb-card--text', esc_url(get_permalink($p)),
-            $cls === 'jb-card' ? $thumb . $text : $text . $thumb);
+        $text = '<span class="jb-navc-t"><i>' . $label . '</i>' . esc_html(get_the_title($p)) . '</span>';
+        $cards .= sprintf('<a class="%s%s" href="%s">%s</a>', $cls, $thumb ? '' : ' jb-navc--text', esc_url(get_permalink($p)),
+            $cls === 'jb-navc' ? $thumb . $text : $text . $thumb);
     }
     echo '<nav class="jb-nav" aria-label="Posts">' . $cards . '</nav>';
 }, 20);
@@ -166,12 +166,12 @@ body.single-post { --jb-sand: #ebe2d2; --jb-sand-line: #d8ccb8; --jb-amber: #c77
 .single-post .tags-links a { color: #7d7466; }
 .single-post .tags-links a::before { color: #a99f90; }
 .jb-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0 0; }
-.jb-card { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px; border: 1px solid var(--jb-sand-line); border-radius: 14px; background: var(--d-paper); color: var(--d-ink); font-family: var(--d-serif); font-size: 14.5px; font-weight: 700; line-height: 1.5; text-decoration: none; }
-.jb-card--next { grid-template-columns: minmax(0, 1fr) 84px; text-align: right; }
-.jb-card--text { grid-template-columns: minmax(0, 1fr); }
-.jb-card:hover, .jb-card:focus { border-color: var(--d-ink); color: var(--d-ink); }
-.jb-card img { display: block; width: 84px; height: 64px; object-fit: cover; border-radius: 9px; background: #fff; }
-.jb-card i { display: block; margin-bottom: 4px; color: var(--jb-amber); font-family: var(--d-mono); font-size: 11.5px; font-style: normal; font-weight: 400; }
+.jb-navc { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px; border: 1px solid var(--jb-sand-line); border-radius: 14px; background: var(--d-paper); color: var(--d-ink); font-family: var(--d-serif); font-size: 14.5px; font-weight: 700; line-height: 1.5; text-decoration: none; }
+.jb-navc--next { grid-template-columns: minmax(0, 1fr) 84px; text-align: right; }
+.jb-navc--text { grid-template-columns: minmax(0, 1fr); }
+.jb-navc:hover, .jb-navc:focus { border-color: var(--d-ink); color: var(--d-ink); }
+.jb-navc img { display: block; width: 84px; height: 64px; object-fit: cover; border-radius: 9px; background: #fff; }
+.jb-navc i { display: block; margin-bottom: 4px; color: var(--jb-amber); font-family: var(--d-mono); font-size: 11.5px; font-style: normal; font-weight: 400; }
 .separate-containers.single-post .comments-area:not(#jb) { margin: 36px 0 0; padding: 26px 0 0; border-top: 1px solid var(--jb-sand-line); }
 .single-post .comment-form input:not([type="submit"]):not([type="checkbox"]), .single-post .comment-form textarea { border: 1px solid var(--jb-sand-line); border-radius: 10px; background: var(--d-paper); }
 .single-post .comment-form textarea { height: 110px; }
