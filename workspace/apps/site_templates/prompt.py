@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from apps.blog_rules.models import Blog
 
-from . import looks, nunip_look, paste
+from . import looks, nunip_look, paste, red_look
 from .models import PlatformFormat, SiteTemplate
 
 LAUNCH_HEAD = "# 사이트 변환"  # local_run 이 이걸로 변환 안내문인지 본다
@@ -121,6 +121,8 @@ def build(placement):
         parts.append(looks.PROMPT)
     elif look == "nunip":  # 눈잎 정갈 (2026-10-28)
         parts.append(nunip_look.PROMPT)
+    elif look == "red":  # 빨강 정갈 (2026-10-28, black_lukey › 영화·OTT 공개)
+        parts.append(red_look.PROMPT)
     if blog.platform == "blogger":
         parts.append(BLOGGER_TAGS)
     if blog.platform == "wordpress":  # 워드프레스 글 모양 (2026-10-26)
