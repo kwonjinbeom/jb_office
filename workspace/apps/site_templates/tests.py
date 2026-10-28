@@ -934,6 +934,34 @@ class NaverLineTablesTests(TestCase):
         self.assertNotIn("가는 선 표", local.concept)
 
 
+class KeepPublishedLookTests(TestCase):
+    """2026-10-28 사용자: "기존에 있던 글은 두라고 — 앞으로 쓸 글이랑 발행예정글만". 오늘 생긴 글 모양은 그 전에 변환해 이미 발행한 글에는 입히지 않는다."""
+
+    BODY = "> 요약이에요.\n\n## 달력\n\n| 공개일 | 작품 |\n|---|---|\n| 11/4 | 재혼 황후 |"
+
+    def test_old_published_keeps_old_look(self):
+        from datetime import datetime
+
+        from django.utils import timezone
+
+        from apps.naver_writing.models import Post as NaverPost
+
+        from .views import _render_for
+        ott = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="black_lukey"), name="영화·OTT 공개")[0]
+        ott.look = "red"
+        ott.save()
+        post = NaverPost.objects.create(title="11월", body="본문")
+        before = timezone.make_aware(datetime(2026, 10, 26, 9, 0))
+        after = timezone.make_aware(datetime(2026, 10, 28, 18, 0))
+        old = Placement(site_category=ott, naver_post=post, status="published", converted_at=before)
+        self.assertNotIn("#e50914", _render_for(old, self.BODY)[1])  # 예전에 변환해 발행한 글 → 예전 모양
+        self.assertIn("<blockquote", _render_for(old, self.BODY)[1])
+        planned = Placement(site_category=ott, naver_post=post, status="unsaved", converted_at=before)
+        self.assertIn("#e50914", _render_for(planned, self.BODY)[1])  # 발행예정글은 새 모양
+        new = Placement(site_category=ott, naver_post=post, status="published", converted_at=after)
+        self.assertIn("#e50914", _render_for(new, self.BODY)[1])  # 새 모양으로 변환해 발행한 글은 발행 뒤에도 새 모양
+
+
 class CloudConvertApiTests(TestCase):
     """클라우드 claude 가 토큰으로 글 관리의 글을 읽고, 카테고리에 넣고, 변환 안내문을 받는다 (2026-10-25)"""
 

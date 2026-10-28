@@ -8,6 +8,7 @@
 - requests.json: 변환 요청인 글의 요청문 (Claude 가 읽는다)
 """
 import hmac
+from datetime import datetime
 import re
 from urllib.parse import parse_qsl, quote
 
@@ -398,31 +399,53 @@ def site(request, pk):
 
 
 def _render_for(placement, text):
-    return _render_cat(placement.site_category, text)
+    return _render_cat(placement.site_category, text, _look_for(placement))
 
 
-def _render_cat(cat, text):
+# 2026-10-28 사용자: "기존에 있던 글은 두라고 — 앞으로 쓸 글이랑 발행예정글만 수정하라고". 오늘 생긴 글 모양은 그 모양이 생기기 전에
+# 변환해 이미 발행한 글에는 입히지 않는다 (그 글의 변환 화면·복사는 예전 모양 그대로). 이 카테고리들의 예전 모양은 모두 기본("").
+LOOK_SINCE = {
+    "nunip": datetime(2026, 10, 28, 13, 30),  # 눈잎 정갈 (0045)
+    "red": datetime(2026, 10, 28, 15, 0),  # 영화·OTT 빨강 정갈 (0046)
+    "line_green": datetime(2026, 10, 28, 15, 30),  # 지역 놀거리 · 축제·행사 표 (0047)
+    "line_orange": datetime(2026, 10, 28, 15, 30),
+}
+BAMBAM_YUDI_SINCE = datetime(2026, 10, 28, 10, 0)  # 밤밤 › 해외여행 유디 (0043)
+
+
+def _look_for(placement):
+    cat = placement.site_category
+    look = _look(cat)
+    since = BAMBAM_YUDI_SINCE if look == "yudi" and cat.blog.name == "밤밤" else LOOK_SINCE.get(look)
+    if since and placement.status == Placement.Status.PUBLISHED:
+        since = timezone.make_aware(since)
+        if placement.converted_at is None or placement.converted_at < since:
+            return ""
+    return look
+
+
+def _render_cat(cat, text, look=None):
     """그 카테고리(사이트 플랫폼 · 글 모양)에 맞는 (미리보기 HTML, 서식 복사용 HTML, 글자만, 복사용 HTML).
     네이버는 네이버 글쓰기와, 티스토리·블로거는 티스토리 글쓰기와 같은 인라인 style HTML 을 쓴다.
     꾸밈 없는 HTML 을 붙이면 표 테두리·머리글 색이 빠지고 머리글 줄이 표 밖으로 빠진다 (2026-10-20 사용자).
-    워드프레스는 class HTML + 글모양 CSS (블록 에디터가 인라인 style 을 지운다, wp_looks — 2026-10-26)."""
+    워드프레스는 class HTML + 글모양 CSS (블록 에디터가 인라인 style 을 지운다, wp_looks — 2026-10-26).
+    look: 글마다 정한 모양 (_look_for — 이미 발행한 글은 예전 모양). 없으면 카테고리 모양."""
     platform = cat.blog.platform
+    look = _look(cat) if look is None else look
     if platform == Blog.Platform.NAVER:  # 미리보기도 붙여넣을 HTML 그대로 (문단 사이 빈 줄까지 네이버와 같게)
         from apps.naver_writing.render import CONVERT_FONT, needs_gaps, paste_html, plain_text, render_body
         html = render_body(text)
         rich = paste_html(html, gaps=needs_gaps(text, html), font=CONVERT_FONT)
-        if _look(cat) == "red":  # 빨강 정갈 (2026-10-28 사용자, black_lukey › 영화·OTT 공개)
+        if look == "red":  # 빨강 정갈 (2026-10-28 사용자, black_lukey › 영화·OTT 공개)
             rich = red_look.red_html(rich)
-        elif _look(cat) in naver_line.ACCENTS:  # 가는 선 표 + 모노 카드 (2026-10-28 사용자, 지역 놀거리 초록 · 축제·행사 주황)
-            rich = naver_line.line_html(rich, _look(cat))
+        elif look in naver_line.ACCENTS:  # 가는 선 표 + 모노 카드 (2026-10-28 사용자, 지역 놀거리 초록 · 축제·행사 주황)
+            rich = naver_line.line_html(rich, look)
         return rich, rich, plain_text(html), paste.clean_html(text)
     from apps.writing.render import plain_text, render_body, tistory_align, tistory_html
     if platform == Blog.Platform.WORDPRESS:
         from . import wp_looks
-        look = _look(cat)
         html = wp_looks.render(text, look)
         return wp_looks.preview_html(text, look), html, plain_text(html), wp_looks.paste_html(text, look)
-    look = _look(cat)
     html = render_body(looks.yudi_source(text) if look == "yudi" else text)
     out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
     if look == "yudi":  # 유디 메모지 (2026-10-23 사용자, 눈잎 › 일본 여행 · 2026-10-28 밤밤 › 해외여행 — 블로거는 글꼴도 HTML 에)
