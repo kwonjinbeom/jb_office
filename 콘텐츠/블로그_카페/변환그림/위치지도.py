@@ -506,7 +506,7 @@ def shoot(body, out):
     page.write_text(f'<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="{FONT}">'
                     f'<style>body{{margin:0;background:#fff}}</style><body>{body}</body>', encoding="utf-8")
     shot = tmp / "shot.png"
-    subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={tmp / 'prof'}", "--window-size=1260,1400", "--virtual-time-budget=6000",
+    subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=1", f"--user-data-dir={tmp / 'prof'}", "--window-size=1260,1400", "--virtual-time-budget=6000",
                     f"--screenshot={shot}", page.as_uri()], check=True, capture_output=True)
     im = Image.open(shot).convert("RGB").crop((0, 0, 1200, 1400))
     gray = im.convert("L")
