@@ -433,6 +433,8 @@ class RepoTests(Login):
             self.assertNotIn("# 일일루틴 · 프롬프트 최신화", bodies[1])
             self.assertEqual(bodies[1].count("## 진행 보고"), 1)
             self.assertIn("`workspace/.routine/done/all-2026-10-16-2-writing.md` 파일을 만든다", bodies[1])
+            self.assertIn("첫 줄은 `실패`", bodies[1])  # 실패면 창을 열어 두고 사유를 보여 준다 (2026-10-28 사용자)
+            self.assertIn("## 실패한 것", bodies[1])
             self.assertFalse((folder / "done" / names[1]).exists())  # 다시 누르면 처음부터
             # 차례 창: 루틴 터미널을 하나씩 열고, 끝 표시나 창 닫힘을 기다린 뒤 다음
             raw = (folder / "all-chain.ps1").read_bytes()
@@ -445,6 +447,8 @@ class RepoTests(Login):
             self.assertIn("-File", popen.call_args[0][0])
             self.assertIn("taskkill /PID $script:prev.Id /T /F", chain)  # 끝난 루틴 창은 닫는다 (2026-10-20 사용자)
             self.assertEqual(chain.count("Close-Done 90"), 4)  # 루틴마다 + 마지막
+            self.assertEqual(chain.count("-like '실패*'"), 3)  # 끝 표시 첫 줄이 실패면 그 창은 닫을 차례에 넣지 않는다
+            self.assertIn("if ($kept) {", chain)  # 실패가 있으면 차례 창도 Enter 를 기다린다
             self.assertNotIn("-NoExit", popen.call_args[0][0])  # 다 끝나면 차례 창도 닫힌다
         windows = [c for c in popen.call_args_list if c[0][0][0] == "powershell.exe"]
         self.assertEqual(len(windows), 1)  # 창은 차례 창 하나만 바로 연다 (나머지는 원고 가져오기의 git)
