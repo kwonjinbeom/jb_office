@@ -81,7 +81,7 @@ open(f"{out}/{key}-chart.html", "w", encoding="utf-8").write(HEAD + chart)
 
 def capture(kind):
     png = Path(out) / f"{key}-{kind}.png"
-    subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={out}/prof",
+    subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--force-device-scale-factor=1", f"--user-data-dir={out}/prof",
                     "--window-size=680,1000", "--virtual-time-budget=6000", f"--screenshot={png}",
                     (Path(out) / f"{key}-{kind}.html").as_uri()], capture_output=True, timeout=120)
     im = Image.open(png).convert("RGB")
