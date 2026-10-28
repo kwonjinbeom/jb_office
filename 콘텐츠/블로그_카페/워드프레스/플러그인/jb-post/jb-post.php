@@ -120,7 +120,7 @@ add_action('generate_after_do_template_part', function ($template) {
     }
     echo '<div class="jb-sign"><div><p class="jb-sign-t">걸어온 길, 적어 둔 날들</p><p class="jb-sign-e">Roads I’ve walked, days I’ve written down.</p></div>'
         . '<nav class="jb-sign-cats" aria-label="Categories">' . $cats . '</nav></div>'
-        . '<p class="jb-copy">© ' . esc_html(wp_date('Y')) . ' ' . esc_html(get_bloginfo('name')) . ($links ? ' · ' . implode(' · ', $links) : '') . '</p>';
+        . '<p class="jb-foot">© ' . esc_html(wp_date('Y')) . ' ' . esc_html(get_bloginfo('name')) . ($links ? ' · ' . implode(' · ', $links) : '') . '</p>';
 }, 20);
 
 add_action('wp_head', function () {
@@ -162,7 +162,7 @@ body.single-post { --jb-sand: #ebe2d2; --jb-sand-line: #d8ccb8; --jb-amber: #c77
 /* 글 끝: 좋아요 줄부터 모래색 종이, 위에 먹선 한 줄 */
 .single-post .entry-content .jb-react { margin: 48px 0 0; padding: 34px 0 0; border: 0; border-image: linear-gradient(var(--d-ink) 0 1px, var(--jb-sand) 1px) fill 0 / / 0 100vmax; --jr-ink-3: #6f675b; --jr-accent: var(--jb-amber); }
 .single-post footer.entry-meta:not(#jb) { margin: 24px 0 0; padding: 0; border: 0; }
-.single-post footer.entry-meta:not(#jb) .cat-links::before { color: var(--jb-amber); }
+.single-post footer.entry-meta:not(#jb) .cat-links::before { position: static; width: auto; margin: 0; color: var(--jb-amber); }
 .single-post .tags-links a { color: #7d7466; }
 .single-post .tags-links a::before { color: #a99f90; }
 .jb-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0 0; }
@@ -184,8 +184,8 @@ body.single-post { --jb-sand: #ebe2d2; --jb-sand-line: #d8ccb8; --jb-amber: #c77
 .jb-sign-cats a { display: inline-flex; align-items: center; gap: 6px; color: #3d3a35; font-size: 13px; text-decoration: none; }
 .jb-sign-cats a:hover { color: var(--jb-amber); }
 .jb-sign-cats svg { width: 15px; height: 15px; color: var(--jb-amber); }
-.jb-copy { margin: 26px 0 0; color: #7d7466; font-family: var(--d-mono); font-size: 12px; }
-.jb-copy a { color: inherit; }
+.jb-foot { margin: 26px 0 0; color: #7d7466; font-family: var(--d-mono); font-size: 12px; }
+.jb-foot a { color: inherit; }
 
 @media (max-width: 768px) {
   .admin-bar.single-post .site-header { top: 46px; }
