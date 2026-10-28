@@ -874,7 +874,11 @@ class RedLookTests(TestCase):
         self.assertIn("text-align:right\">116</td>", out)  # 숫자 칸 오른쪽
         self.assertIn("border:1px solid #e50914;background-color:#e50914;width:5px", out)  # 작품 제목 막대 빨강
         self.assertIn(">🎬 종류·장르</td>", out)  # 이모지 이름표 그대로
-        self.assertIn("border-right:1px solid #eeeeee;color:#e50914;font-weight:bold", out)  # 이름표와 값 사이 세로 줄
+        # 작품 카드 B 레드 라인 (같은 날 사용자가 예시안에서 고름): 흰 머리 줄 빨간 윗줄·검정 아랫줄, '작품 정보'만 빨강, 이름표 검정 · 세로 줄 · 맨 아래 검정 2px
+        self.assertIn("border-top:3px solid #e50914;border-bottom:1px solid #141414;background-color:#ffffff;font-weight:bold;color:#e50914;text-align:center\">작품 정보", out)
+        self.assertIn("border-right:1px solid #eeeeee;background-color:#fafafa;color:#333333;font-weight:bold\">🎬 종류·장르", out)
+        self.assertIn("border-bottom:2px solid #141414", out)
+        self.assertNotIn("color:#e50914;font-weight:bold\">🎬", out)  # 이름표 글자는 빨강이 아니다
         self.assertIn('<strong style="color:#e50914">볼 포인트</strong>', out)
         self.assertIn("빨강 정갈", prompt.build(pl))
         fest = SiteCategory.objects.get_or_create(blog=ott.blog, name="축제·행사")[0]  # 다른 네이버 카테고리는 그대로
