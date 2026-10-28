@@ -3,10 +3,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
 /* jinbaam 홈 — 걷기 일기장 (2026-10-26 사용자: 3번 위주 + 작은 사진 + 카테고리별 날짜 목록, 1번의 명조·종이·선 조금).
+   첫 화면은 숲속 텐트 불빛 사진 · 아이콘 차례 · 주황 강조 (2026-10-28 사용자: 사진 도안 5).
    이 블록 안에 둔다: 추가 CSS(사이트.css)가 없어도, 홈으로 지정하기 전 주소(/홈/)에서도 같은 모양.
    날짜는 워드프레스 설정 › 일반 › 날짜 형식을 Y.m.d 로 두면 2026.10.26 처럼 나온다. */
 :root { --d-ink: #26231f; --d-ink-2: #5d574f; --d-ink-3: #8f887d; --d-line: #ddd5c6; --d-line-2: #e9e2d5; --d-paper: #f6f2ea;
-  --d-date: #a0522d; --d-serif: "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
+  --d-date: #c7782a; --d-serif: "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", Georgia, serif;
   --d-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --d-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
 body:has(.jb-home-hero) { background: var(--d-paper); }
@@ -19,21 +20,38 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
 .entry-content:has(.jb-home-hero) :is(h1, h2, h3) { color: var(--d-ink); }
 .entry-content:has(.jb-home-hero) a { color: var(--d-ink); text-decoration: none; }
 
-/* 머리: 일기장 표지 */
-.jb-home-hero { padding: 36px 0 30px; border-bottom: 1px solid var(--d-ink); }
+/* 첫 화면: 숲속 텐트 불빛 사진 (2026-10-28 사용자: 사진 도안 5) — 사진을 화면 폭 가득, 머리 메뉴는 사진 위에 투명하게.
+   사진: Luca Baggio / Unsplash (미디어 77, home-tent-blue-hour.jpg). 텐트가 글 뒤에 깔리지 않게 소개 글 폭을 좁힌다. */
+html:has(.jb-home-hero) { overflow-x: clip; }
+body:has(.jb-home-hero) .site-header { position: absolute; left: 0; right: 0; top: 0; z-index: 30; background: transparent; border-bottom: 1px solid rgba(255, 255, 255, 0.24); -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.admin-bar:has(.jb-home-hero) .site-header { top: 32px; }
+body:has(.jb-home-hero) .main-title a, body:has(.jb-home-hero) .main-navigation .main-nav ul li a, body:has(.jb-home-hero) .main-navigation .menu-toggle { color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.28); }
+body:has(.jb-home-hero) .main-navigation .main-nav ul li a:hover { color: #f2b25e; }
+body:has(.jb-home-hero) .main-navigation .main-nav ul li a[href*="/category/"]::before { color: #f2b25e; }
+body:has(.jb-home-hero) .main-navigation.toggled .main-nav ul li a { color: var(--d-ink); text-shadow: none; }  /* 휴대폰 메뉴를 펼치면 종이 바탕 */
+.site-main:has(.jb-home-hero):not(#jb) { margin-top: 0; }
+.jb-home-hero { position: relative; width: 100vw; height: 660px; margin-left: calc(50% - 50vw); padding: 0; border: 0;
+  background: #1b2147 url("https://jinbaam.com/wp-content/uploads/2026/10/home-tent-blue-hour.jpg") center 70% / cover no-repeat; overflow: hidden; }
+.jb-home-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10, 14, 40, 0.45) 0%, rgba(10, 14, 40, 0.1) 55%, rgba(10, 14, 40, 0) 70%); }
+.jb-hero-in { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; padding: 180px 24px 0; }
 .jb-eyebrow { margin: 0 0 18px; color: var(--d-date); font-family: var(--d-mono); font-size: 12.5px; letter-spacing: 0.08em; }
-.jb-home-hero h1 { margin: 0; font-family: var(--d-serif); font-size: 50px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; }
-.jb-home-hero .jb-en--title { margin: 10px 0 22px; color: var(--d-ink-2); font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-style: italic; }
-.jb-home-hero p.jb-hero-sub { max-width: 700px; margin: 0; color: var(--d-ink-2); font-size: 16px; line-height: 1.8; }
-.jb-home-hero p.jb-hero-sub.jb-en { margin-top: 6px; color: var(--d-ink-3); font-size: 14.5px; line-height: 1.7; word-break: normal; }
+.jb-home-hero .jb-eyebrow { color: #f2b25e; }
+.jb-home-hero h1 { margin: 0; color: #fff; font-family: var(--d-serif); font-size: 50px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.25); }
+.entry-content .jb-home-hero h1 { color: #fff; }
+.jb-home-hero .jb-en--title { margin: 10px 0 22px; color: rgba(255, 255, 255, 0.88); font-family: Georgia, "Times New Roman", serif; font-size: 19px; font-style: italic; }
+.jb-home-hero p.jb-hero-sub { max-width: 440px; margin: 0; color: rgba(255, 255, 255, 0.92); font-size: 16px; line-height: 1.8; }
+.jb-home-hero p.jb-hero-sub.jb-en { margin-top: 6px; color: rgba(255, 255, 255, 0.72); font-size: 14.5px; line-height: 1.7; word-break: normal; }
+.jb-hero-credit { position: absolute; right: 22px; bottom: 16px; z-index: 1; color: rgba(255, 255, 255, 0.7); font-family: var(--d-mono); font-size: 11.5px; }
 
-/* 차례: 카테고리 넷 (색 타일 대신 일기장 차례) */
+/* 차례: 카테고리 넷 — 텐트 불빛 주황 아이콘 칸 (2026-10-28) */
 .jb-index { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0 0 44px; border-bottom: 1px solid var(--d-line); }
-.entry-content .jb-index a { display: block; padding: 18px 18px 20px; border-left: 1px solid var(--d-line); }
+.entry-content .jb-index a { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 14px; padding: 22px 18px; border-left: 1px solid var(--d-line); }
 .entry-content .jb-index a:first-child { padding-left: 0; border-left: 0; }
+.jb-index__ic { grid-row: span 3; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #f6e7d4; color: var(--d-date); }
+.jb-index__ic svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .jb-index__no { display: block; color: var(--d-date); font-family: var(--d-mono); font-size: 12px; }
-.jb-index__name { display: block; margin: 6px 0 4px; font-family: var(--d-serif); font-size: 20px; font-weight: 700; }
-.jb-index__desc { display: block; color: var(--d-ink-3); font-size: 13px; line-height: 1.5; }
+.jb-index__name { display: block; margin: 3px 0 2px; font-family: var(--d-serif); font-size: 19px; font-weight: 700; }
+.jb-index__desc { display: block; color: var(--d-ink-3); font-size: 12.5px; line-height: 1.5; }
 .entry-content .jb-index a:hover .jb-index__name { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 
 /* 칸 머리: 01 — 산과 캠핑 ……… 전체 보기 */
@@ -86,12 +104,17 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
 .jb-about p.jb-about__text.jb-en { margin-top: 8px; color: var(--d-ink-3); font-size: 14px; line-height: 1.7; word-break: normal; }
 
 @media (max-width: 768px) {
-  .site-main:has(.jb-home-hero):not(#jb) { margin: 8px auto 48px; padding: 0 16px; }
-  .jb-home-hero { padding: 16px 0 24px; }
+  .site-main:has(.jb-home-hero):not(#jb) { margin: 0 auto 48px; padding: 0 16px; }
+  body.admin-bar:has(.jb-home-hero) .site-header { top: 46px; }
+  .jb-home-hero { height: 600px; background-position: 64% 78%; }
+  .jb-home-hero::after { background: linear-gradient(180deg, rgba(10, 14, 40, 0.55) 0%, rgba(10, 14, 40, 0.15) 60%, rgba(10, 14, 40, 0) 80%); }
+  .jb-hero-in { padding: 110px 16px 0; }
   .jb-home-hero h1 { font-size: 34px; }
+  .jb-home-hero p.jb-hero-sub.jb-en { display: none; }
   .jb-home-hero .jb-en--title { font-size: 16px; }
   .jb-index { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .entry-content .jb-index a, .entry-content .jb-index a:first-child { padding: 14px 12px 16px 0; border-left: 0; border-top: 1px solid var(--d-line); }
+  .entry-content .jb-index a, .entry-content .jb-index a:first-child { grid-template-columns: 1fr; padding: 14px 12px 16px 0; border-left: 0; border-top: 1px solid var(--d-line); }
+  .jb-index__ic { grid-row: auto; width: 34px; height: 34px; margin-bottom: 8px; }
   .entry-content .jb-index a:nth-child(even) { padding-left: 14px; border-left: 1px solid var(--d-line); }
   .entry-content .jb-index a:nth-child(-n+2) { border-top: 0; }
   .jb-index__name { font-size: 18px; }
@@ -107,17 +130,20 @@ body:has(.jb-home-hero) .site-content .content-area { width: 100%; }
 }
 </style>
 <section class="jb-home-hero">
+  <div class="jb-hero-in">
   <p class="jb-eyebrow">FIELD NOTES — 산 · 길 · 여행</p>
   <h1>걸어온 길,<br>적어 둔 날들</h1>
   <p class="jb-en jb-en--title">Roads I’ve walked, days I’ve written down.</p>
   <p class="jb-hero-sub">여행과 짜릿한 순간을 좋아하는 스물아홉 한국 청년입니다. 한국은 외국 친구에게 소개하듯 쉽게, 해외는 처음 가는 사람의 눈으로 꼼꼼하게 담아요.</p>
   <p class="jb-hero-sub jb-en">A 29-year-old Korean who lives for travel and a good thrill. I show you Korea the way I’d show a visiting friend, and explore the world with first-timer eyes.</p>
+  </div>
+  <span class="jb-hero-credit">Photo · Luca Baggio / Unsplash</span>
 </section>
 <nav class="jb-index" aria-label="카테고리">
-  <a href="/category/mountain-camping/"><span class="jb-index__no">01</span><span class="jb-index__name">산과 캠핑</span><span class="jb-index__desc">계절 산 · 등산 코스 · 야영장</span></a>
-  <a href="/category/drive-car/"><span class="jb-index__no">02</span><span class="jb-index__name">드라이브·자동차</span><span class="jb-index__desc">점검 · 신차 · 드라이브 코스</span></a>
-  <a href="/category/korea-travel/"><span class="jb-index__no">03</span><span class="jb-index__name">Korea Travel</span><span class="jb-index__desc">Guides for visitors · 日本語 · 中文</span></a>
-  <a href="/category/world-travel/"><span class="jb-index__no">04</span><span class="jb-index__name">World Travel</span><span class="jb-index__desc">N-day itineraries in English</span></a>
+  <a href="/category/mountain-camping/"><span class="jb-index__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 21 14 3"/><path d="M20.5 21 10 3"/><path d="M15.5 21 12 15l-3.5 6"/><path d="M2 21h20"/></svg></span><span class="jb-index__no">01</span><span class="jb-index__name">산과 캠핑</span><span class="jb-index__desc">계절 산 · 등산 코스 · 야영장</span></a>
+  <a href="/category/drive-car/"><span class="jb-index__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8"/><path d="M7 14h.01"/><path d="M17 14h.01"/><rect width="18" height="8" x="3" y="10" rx="2"/><path d="M5 18v2"/><path d="M19 18v2"/></svg></span><span class="jb-index__no">02</span><span class="jb-index__name">드라이브·자동차</span><span class="jb-index__desc">점검 · 신차 · 드라이브 코스</span></a>
+  <a href="/category/korea-travel/"><span class="jb-index__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 18v-7"/><path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/></svg></span><span class="jb-index__no">03</span><span class="jb-index__name">Korea Travel</span><span class="jb-index__desc">Guides for visitors · 日本語 · 中文</span></a>
+  <a href="/category/world-travel/"><span class="jb-index__ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></span><span class="jb-index__no">04</span><span class="jb-index__name">World Travel</span><span class="jb-index__desc">N-day itineraries in English</span></a>
 </nav>
 <div class="jb-sec-head"><span class="jb-sec-head__no">Today</span><h2>오늘의 기록</h2><span class="jb-sec-head__en">Latest entry</span></div>
 <!-- /wp:html -->
