@@ -592,6 +592,14 @@ class LocatorMapTests(TestCase):
         self.assertEqual(_hero(body), {"src": f"{fig}colosseum.jpg", "alt": "Colosseum"})
         self.assertIsNone(_hero(f"> 리드\n\n![지도]({fig}%EC%9C%84%EC%B9%98%EC%A7%80%EB%8F%84.png)"))
 
+    def test_hero_prefers_photo_over_figure(self):
+        from .views import _hero
+        fig = prompt.FIGURE_URL + "%EB%B3%80%ED%99%98%EA%B7%B8%EB%A6%BC/68/"
+        course = f"{fig}%EC%BD%94%EC%8A%A4.png"
+        body = f"![코스 순서]({course})\n\n<img src=\"{fig}dosolcheon.jpg\" alt=\"도솔천 단풍\">"
+        self.assertEqual(_hero(body), {"src": f"{fig}dosolcheon.jpg", "alt": "도솔천 단풍"})
+        self.assertEqual(_hero(f"![코스 순서]({course})")["src"], course)
+
 
 class PanelPublishTests(TestCase):
     """변환본 창의 '발행 완료' ('변환 화면 따로 열기' 자리, 2026-10-23 사용자)."""

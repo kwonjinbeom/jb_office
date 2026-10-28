@@ -569,17 +569,18 @@ def paste_data(request, pk):
 
 
 def _hero(text):
-    """변환본의 첫 사진 {'src', 'alt'} — 없으면 None. 해외여행 글 맨 위 위치 지도는 대표 사진이 아니라 건너뛴다 (2026-10-27)."""
+    """변환본의 첫 사진 {'src', 'alt'} — 없으면 None. 해외여행 글 맨 위 위치 지도는 대표 사진이 아니라 건너뛴다 (2026-10-27).
+    직접 그린 그림(.png · .svg)보다 실제 사진을 먼저 고른다 — 그림뿐이면 첫 그림 (2026-10-28 사용자: 선운산 글 대표가 하얀 코스 그림)."""
     from urllib.parse import unquote
     text = text or ""
     found = [(m.start(), m[2], m[1]) for m in _HERO_MD.finditer(text)]
     for m in _HERO_IMG.finditer(text):
         alt = re.search(r'\balt="([^"]*)"', m[0])
         found.append((m.start(), m[1], alt[1] if alt else ""))
-    for _, src, alt in sorted(found):
-        if not unquote(src.split("?", 1)[0]).endswith("/" + prompt.LOCATOR_NAME):
-            return {"src": src, "alt": alt.strip()}
-    return None
+    shots = [(unquote(src.split("?", 1)[0]).lower(), src, alt) for _, src, alt in sorted(found)]
+    shots = [s for s in shots if not s[0].endswith("/" + prompt.LOCATOR_NAME.lower())]
+    shots.sort(key=lambda s: s[0].endswith((".png", ".svg")))
+    return {"src": shots[0][1], "alt": shots[0][2].strip()} if shots else None
 
 
 def _hero_name(src, pk, ext=""):
