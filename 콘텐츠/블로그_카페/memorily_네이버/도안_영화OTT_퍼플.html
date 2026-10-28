@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영화·OTT 퍼플 도안</title>
+<!-- black_lukey(네이버) › 영화·OTT 공개 글 모양 도안 세 가지 (2026-10-28 사용자: 표·제목·테마가 기본 PPT 같다 →
+     미리캔버스 '퍼플 모던 마케팅 프레젠테이션'의 지적이고 깔끔한 느낌 — 군데군데 번진 퍼플, 가는 선 — 을 표·테이블·테마 전체에).
+     네이버 스마트에디터는 붙여 넣을 때 글자색·바탕색·글꼴(나눔스퀘어·나눔바른고딕)·크기·굵게·표 칸 테두리만 남긴다
+     (naver_writing.render.safe_style). 둥근 모서리·그라데이션·알약은 사라진다 → 퍼플 글로우·알약 태그는 '그림'(가공이미지)으로,
+     나머지는 표와 글자로만 그렸다. 견본 글: T146 '11월 개봉작·OTT 공개작 달력' 원고. -->
+<link rel="stylesheet" href="https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css">
+<link rel="stylesheet" href="https://hangeul.pstatic.net/hangeul_static/css/nanum-barun-gothic.css">
+<style>
+  :root { --bg: #e9e9ee; }
+  body { margin: 0; background: var(--bg); font-family: "NanumBarunGothic", "Malgun Gothic", sans-serif; color: #333; }
+  .frame { max-width: 760px; margin: 0 auto; padding: 24px 16px 60px; }
+  .tabs { display: flex; gap: 8px; margin: 0 0 10px; flex-wrap: wrap; }
+  .tabs button { font: inherit; font-size: 14px; padding: 7px 14px; border: 1px solid #c9c8d6; background: #fff; border-radius: 999px; cursor: pointer; color: #444; }
+  .tabs button.on { background: #3a3a40; color: #fff; border-color: #3a3a40; }
+  .note { font-size: 12.5px; color: #6b6b78; margin: 0 0 14px; line-height: 1.6; }
+  .post { background: #fff; padding: 36px 34px 44px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .v { display: none; } .v.on { display: block; }
+  .img-tag { display: block; text-align: right; font-size: 11px; color: #a3a3b5; margin: 4px 0 0; }
+  @media (max-width: 600px) { .post { padding: 22px 14px 30px; } }
+</style>
+</head>
+<body>
+<div class="frame">
+<div class="tabs">
+  <button class="on" data-v="a">A · 라벤더 글로우</button>
+  <button data-v="b">B · 차콜 아웃라인</button>
+  <button data-v="c">C · 글로우 섹션 카드</button>
+</div>
+<p class="note" data-note="a">퍼플은 표 머리 칸과 번호에만 연하게. 맨 위 표지 한 장만 글로우 그림. 가장 무난하고 깔끔한 쪽.</p>
+<p class="note" data-note="b" hidden>흰 바탕 + 차콜 가는 선이 주인공, 퍼플은 '이번 주' 줄과 Part 태그에만. 지적이고 단단한 느낌 (템플릿의 선처리에 가장 가깝다).</p>
+<p class="note" data-note="c" hidden>소제목마다 글로우 카드 그림, 표는 테두리 없이 연보라 줄무늬. 가장 화사하지만 그림이 소제목 수만큼 필요.</p>
+
+<!-- ================================================================== A -->
+<div class="post v on" id="a">
+<div style="font-family:'NanumBarunGothic',sans-serif;font-size:16px;line-height:1.8;color:#333333">
+
+<!-- 표지: 그림 (연회색 바탕 + 라벤더 글로우 두 곳 + 굵은 차콜 제목 + 알약 태그) -->
+<div style="position:relative;overflow:hidden;background:#f6f6f8;padding:34px 30px 26px;margin:0 0 6px">
+  <div style="position:absolute;width:320px;height:220px;left:-60px;top:-90px;background:radial-gradient(closest-side,#cfcbff,rgba(207,203,255,0));"></div>
+  <div style="position:absolute;width:360px;height:240px;right:-90px;bottom:-120px;background:radial-gradient(closest-side,#d9d6ff,rgba(217,214,255,0));"></div>
+  <div style="position:relative">
+    <p style="margin:0 0 18px;display:flex;justify-content:space-between;font-size:12px;color:#55555f;font-weight:700"><span>■ black_lukey</span><span>2026.11</span></p>
+    <p style="margin:0;font-family:'NanumSquareExtraBold','NanumSquare',sans-serif;font-weight:800;font-size:38px;line-height:1.15;color:#3a3a40;letter-spacing:-1px">11월 개봉·OTT<br>공개 달력</p>
+    <p style="margin:14px 0 18px;font-size:14px;color:#55555f">극장 30편 · OTT 한국 신작 6편을 날짜별로</p>
+    <div style="border-top:1px solid #3a3a40;padding-top:12px;display:flex;gap:8px">
+      <span style="border:1px solid #3a3a40;border-radius:999px;padding:2px 12px;font-size:12px;font-weight:700;background:#e3e0ff">11/4 가장 붐벼요</span>
+      <span style="border:1px solid #3a3a40;border-radius:999px;padding:2px 12px;font-size:12px;font-weight:700">스포 없음</span>
+    </div>
+  </div>
+</div>
+<span class="img-tag">↑ 그림 (가공이미지) · 이 글의 대표 사진</span>
+
+<!-- 맨 위 요약: 인용(>) 은 네이버가 따옴표 인용구로 바꾼다 → 한 칸 표 -->
+<table style="width:100%;border-collapse:collapse;margin:22px 0 26px"><tr><td style="background-color:#f4f3ff;border:1px solid #dcd9f5;padding:16px 20px;font-size:15px;line-height:1.8;color:#3a3a40">
+10월 26일 KOBIS 개봉예정과 각 OTT 공지 기준, 11월 극장 개봉작은 <b>30편</b>, OTT 한국 신작은 <b>6편</b>이에요.<br>
+가장 붐비는 날은 <b>11월 4일(수)</b> — 디즈니+ 재혼 황후와 극장 9편이 같이 나와요.
+</td></tr></table>
+
+<p style="margin:0 0 30px">11월은 극장도 OTT도 한꺼번에 몰려서 뭐가 언제 나오는지 헷갈리기 쉬워요. 날짜순 표 하나로 먼저 보고, 기대작은 카드로 짚어 볼게요.</p>
+
+<!-- 소제목: 작은 퍼플 번호 + 나눔스퀘어 굵게(네이버 글꼴 그대로) + 가는 차콜 줄 -->
+<p style="margin:0;font-size:13px;font-weight:700;color:#6c63e6">01</p>
+<p style="margin:0 0 4px;font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:24px;color:#3a3a40">11월 날짜별 공개 달력</p>
+<p style="margin:0 0 14px;font-size:13px;color:#8a8a96;border-bottom:1px solid #3a3a40;padding-bottom:10px">확인일 10월 26일 · 개봉일은 배급 사정으로 바뀔 수 있어요</p>
+
+<!-- 표: 라벤더 머리 칸 + 가는 연보라 선 -->
+<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 34px">
+  <tr>
+    <td style="background-color:#e9e7ff;border:1px solid #d6d3f3;padding:9px 12px;font-weight:700;color:#3a3a40">공개일</td>
+    <td style="background-color:#e9e7ff;border:1px solid #d6d3f3;padding:9px 12px;font-weight:700;color:#3a3a40">작품</td>
+    <td style="background-color:#e9e7ff;border:1px solid #d6d3f3;padding:9px 12px;font-weight:700;color:#3a3a40">볼 곳</td>
+    <td style="background-color:#e9e7ff;border:1px solid #d6d3f3;padding:9px 12px;font-weight:700;color:#3a3a40">길이</td>
+  </tr>
+  <tr><td style="border:1px solid #d6d3f3;padding:9px 12px;color:#6c63e6;font-weight:700">11/4(수)</td><td style="border:1px solid #d6d3f3;padding:9px 12px">재혼 황후</td><td style="border:1px solid #d6d3f3;padding:9px 12px">디즈니+</td><td style="border:1px solid #d6d3f3;padding:9px 12px">10부작</td></tr>
+  <tr><td style="border:1px solid #d6d3f3;padding:9px 12px;color:#6c63e6;font-weight:700">11/4(수)</td><td style="border:1px solid #d6d3f3;padding:9px 12px">와일드 호스 나인</td><td style="border:1px solid #d6d3f3;padding:9px 12px">극장</td><td style="border:1px solid #d6d3f3;padding:9px 12px">116분</td></tr>
+  <tr><td style="border:1px solid #d6d3f3;padding:9px 12px;color:#6c63e6;font-weight:700">11/6(금)</td><td style="border:1px solid #d6d3f3;padding:9px 12px">옆자리, 프란체스카</td><td style="border:1px solid #d6d3f3;padding:9px 12px">웨이브</td><td style="border:1px solid #d6d3f3;padding:9px 12px">회차 미정</td></tr>
+  <tr><td style="border:1px solid #d6d3f3;padding:9px 12px;color:#6c63e6;font-weight:700">11/20(금)</td><td style="border:1px solid #d6d3f3;padding:9px 12px">푸른길</td><td style="border:1px solid #d6d3f3;padding:9px 12px">넷플릭스</td><td style="border:1px solid #d6d3f3;padding:9px 12px">8부작</td></tr>
+</table>
+
+<!-- 작품 소제목: 번호 칸(연보라) + 이름(굵게) + 공개일(작게) -->
+<table style="width:100%;border-collapse:collapse;margin:0 0 14px"><tr>
+  <td style="width:44px;background-color:#e9e7ff;border:1px solid #3a3a40;text-align:center;font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:16px;color:#3a3a40">02</td>
+  <td style="border:1px solid #3a3a40;border-left:0;padding:8px 16px"><span style="font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:22px;color:#3a3a40">재혼 황후</span>&nbsp;&nbsp;<span style="font-size:13px;color:#8a8a96">11월 4일 · 디즈니+</span></td>
+</tr></table>
+<div style="width:220px;height:310px;margin:0 auto 6px;background:linear-gradient(160deg,#5c5470,#2c2838);color:#d8d4ee;display:flex;align-items:center;justify-content:center;font-size:13px">포스터 (너비 300)</div>
+<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#8a8a96">포스터: 디즈니+</p>
+<p style="margin:0 0 18px">황제에게 이혼을 통보받은 황후 나비에가 재혼 승인을 요구하면서 시작되는 로맨스 판타지예요. 첫날 1~4회, 매주 수요일 2회씩이라 11월 25일에 10회까지 다 나와요.</p>
+
+<!-- 작품 카드: 이름표 칸 연보라 · 값 칸 흰색 · 가는 연보라 선 (이모지 이름표는 빼고 글자만) -->
+<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 36px">
+  <tr><td style="width:28%;background-color:#f4f3ff;border:1px solid #d6d3f3;padding:9px 14px;color:#6c63e6;font-weight:700">종류</td><td style="border:1px solid #d6d3f3;padding:9px 14px">한국 시리즈 · 로맨스 판타지</td></tr>
+  <tr><td style="background-color:#f4f3ff;border:1px solid #d6d3f3;padding:9px 14px;color:#6c63e6;font-weight:700">공개</td><td style="border:1px solid #d6d3f3;padding:9px 14px">11월 4일(수) 1~4회 · 매주 수요일 2회 · 11월 25일 완결</td></tr>
+  <tr><td style="background-color:#f4f3ff;border:1px solid #d6d3f3;padding:9px 14px;color:#6c63e6;font-weight:700">볼 곳</td><td style="border:1px solid #d6d3f3;padding:9px 14px"><u>디즈니+</u></td></tr>
+  <tr><td style="background-color:#f4f3ff;border:1px solid #d6d3f3;padding:9px 14px;color:#6c63e6;font-weight:700">출연</td><td style="border:1px solid #d6d3f3;padding:9px 14px">신민아 · 주지훈 · 이종석 · 이세영</td></tr>
+</table>
+
+<p style="margin:0 0 14px">극장은 4일, OTT는 4·6·20일에 몰려 있어요. 주말 계획은 이 세 날짜만 기억해 두면 돼요.</p>
+<p style="margin:0;font-size:13px;color:#8a8a96">참고: KOBIS 개봉예정 · 디즈니+ · 넷플릭스 · 웨이브 공지 (10월 26일 확인)</p>
+</div>
+</div>
+
+<!-- ================================================================== B -->
+<div class="post v" id="b">
+<div style="font-family:'NanumBarunGothic',sans-serif;font-size:16px;line-height:1.8;color:#333333">
+
+<!-- 표지: 그림 (흰 바탕 · 오른쪽 아래만 옅은 글로우 · 아주 굵은 제목 + 가는 줄 + 정보 세 칸) -->
+<div style="position:relative;overflow:hidden;background:#fafafb;border:1px solid #3a3a40;padding:30px 28px 20px;margin:0 0 6px">
+  <div style="position:absolute;width:380px;height:260px;right:-110px;bottom:-130px;background:radial-gradient(closest-side,#d4d0ff,rgba(212,208,255,0));"></div>
+  <div style="position:relative">
+    <p style="margin:0;font-family:'NanumSquareExtraBold','NanumSquare',sans-serif;font-weight:800;font-size:44px;line-height:1.05;color:#3a3a40;letter-spacing:-1.5px">NOVEMBER</p>
+    <p style="margin:2px 0 16px;font-family:'NanumSquareExtraBold','NanumSquare',sans-serif;font-weight:800;font-size:28px;color:#3a3a40">11월 개봉·OTT 달력</p>
+    <div style="border-top:1px solid #3a3a40;padding-top:10px;display:grid;grid-template-columns:repeat(3,1fr);font-size:12px;color:#55555f">
+      <span>극장<br><b style="color:#3a3a40;font-size:15px">30편</b></span><span>OTT 한국 신작<br><b style="color:#3a3a40;font-size:15px">6편</b></span><span>가장 붐비는 날<br><b style="color:#3a3a40;font-size:15px">11/4(수)</b></span>
+    </div>
+  </div>
+</div>
+<span class="img-tag">↑ 그림 (가공이미지)</span>
+
+<table style="width:100%;border-collapse:collapse;margin:22px 0 26px"><tr>
+  <td style="width:6px;background-color:#6c63e6;border:0"></td>
+  <td style="border:0;padding:4px 18px;font-size:15px;color:#3a3a40">10월 26일 KOBIS·OTT 공지 기준, 극장 <b>30편</b>·OTT 한국 신작 <b>6편</b>. 가장 붐비는 날은 <b>11월 4일(수)</b>이에요.</td>
+</tr></table>
+
+<!-- 소제목: Part 태그 칸 + 큰 제목 (표 한 줄) -->
+<table style="border-collapse:collapse;margin:0 0 4px"><tr>
+  <td style="background-color:#e9e7ff;border:1px solid #3a3a40;padding:1px 12px;font-size:13px;font-weight:700;color:#3a3a40">Part 1</td>
+  <td style="border:0;padding:0 0 0 12px;font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:24px;color:#3a3a40">날짜별 공개 달력</td>
+</tr></table>
+<p style="margin:0 0 14px;font-size:13px;color:#8a8a96">확인일 10월 26일</p>
+
+<!-- 표: 차콜 가는 선 · 머리 칸 흰 바탕 굵은 글자 · '이번 주' 줄만 연보라 -->
+<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 34px">
+  <tr>
+    <td style="border:1px solid #3a3a40;padding:9px 12px;font-weight:700;color:#3a3a40">공개일</td><td style="border:1px solid #3a3a40;padding:9px 12px;font-weight:700;color:#3a3a40">작품</td><td style="border:1px solid #3a3a40;padding:9px 12px;font-weight:700;color:#3a3a40">볼 곳</td><td style="border:1px solid #3a3a40;padding:9px 12px;font-weight:700;color:#3a3a40">길이</td>
+  </tr>
+  <tr><td style="background-color:#ecebff;border:1px solid #3a3a40;padding:9px 12px;font-weight:700">11/4(수)</td><td style="background-color:#ecebff;border:1px solid #3a3a40;padding:9px 12px">재혼 황후</td><td style="background-color:#ecebff;border:1px solid #3a3a40;padding:9px 12px">디즈니+</td><td style="background-color:#ecebff;border:1px solid #3a3a40;padding:9px 12px">10부작</td></tr>
+  <tr><td style="border:1px solid #3a3a40;padding:9px 12px">11/4(수)</td><td style="border:1px solid #3a3a40;padding:9px 12px">와일드 호스 나인</td><td style="border:1px solid #3a3a40;padding:9px 12px">극장</td><td style="border:1px solid #3a3a40;padding:9px 12px">116분</td></tr>
+  <tr><td style="border:1px solid #3a3a40;padding:9px 12px">11/6(금)</td><td style="border:1px solid #3a3a40;padding:9px 12px">옆자리, 프란체스카</td><td style="border:1px solid #3a3a40;padding:9px 12px">웨이브</td><td style="border:1px solid #3a3a40;padding:9px 12px">회차 미정</td></tr>
+  <tr><td style="border:1px solid #3a3a40;padding:9px 12px">11/20(금)</td><td style="border:1px solid #3a3a40;padding:9px 12px">푸른길</td><td style="border:1px solid #3a3a40;padding:9px 12px">넷플릭스</td><td style="border:1px solid #3a3a40;padding:9px 12px">8부작</td></tr>
+</table>
+
+<!-- 작품 소제목: 번호 + 큰 이름, 아래 차콜 줄 -->
+<p style="margin:0;font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:22px;color:#3a3a40"><span style="color:#6c63e6">02</span>&nbsp; 재혼 황후</p>
+<p style="margin:0 0 16px;font-size:13px;color:#8a8a96;border-bottom:1px solid #3a3a40;padding-bottom:8px">11월 4일 · 디즈니+ · 10부작</p>
+<div style="width:220px;height:310px;margin:0 auto 6px;background:linear-gradient(160deg,#5c5470,#2c2838);color:#d8d4ee;display:flex;align-items:center;justify-content:center;font-size:13px">포스터 (너비 300)</div>
+<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#8a8a96">포스터: 디즈니+</p>
+<p style="margin:0 0 18px">황제에게 이혼을 통보받은 황후 나비에가 재혼 승인을 요구하면서 시작되는 로맨스 판타지예요.</p>
+
+<!-- 작품 카드: 네 칸 격자 (템플릿의 Keyword 네모 네 개) — 첫 칸만 연보라 -->
+<table style="width:100%;border-collapse:collapse;font-size:14px;margin:0 0 36px">
+  <tr>
+    <td style="width:50%;background-color:#e9e7ff;border:1px solid #3a3a40;padding:12px 14px;vertical-align:top"><span style="font-size:13px;color:#6c63e6;font-weight:700">① 종류</span><br><b style="font-size:15px;color:#3a3a40">한국 시리즈 · 로맨스 판타지</b></td>
+    <td style="border:1px solid #3a3a40;padding:12px 14px;vertical-align:top"><span style="font-size:13px;color:#6c63e6;font-weight:700">② 공개</span><br><b style="font-size:15px;color:#3a3a40">11/4 1~4회 · 매주 수 2회</b></td>
+  </tr>
+  <tr>
+    <td style="border:1px solid #3a3a40;padding:12px 14px;vertical-align:top"><span style="font-size:13px;color:#6c63e6;font-weight:700">③ 볼 곳</span><br><b style="font-size:15px;color:#3a3a40"><u>디즈니+</u></b></td>
+    <td style="border:1px solid #3a3a40;padding:12px 14px;vertical-align:top"><span style="font-size:13px;color:#6c63e6;font-weight:700">④ 출연</span><br><b style="font-size:15px;color:#3a3a40">신민아 · 주지훈 · 이종석</b></td>
+  </tr>
+</table>
+
+<p style="margin:0 0 14px">극장은 4일, OTT는 4·6·20일에 몰려 있어요.</p>
+<p style="margin:0;font-size:13px;color:#8a8a96">참고: KOBIS 개봉예정 · 각 OTT 공지 (10월 26일 확인)</p>
+</div>
+</div>
+
+<!-- ================================================================== C -->
+<div class="post v" id="c">
+<div style="font-family:'NanumBarunGothic',sans-serif;font-size:16px;line-height:1.8;color:#333333">
+
+<div style="position:relative;overflow:hidden;background:#f6f6f8;padding:40px 30px 34px;margin:0 0 6px;text-align:center">
+  <div style="position:absolute;width:420px;height:260px;left:50%;top:-120px;transform:translateX(-50%);background:radial-gradient(closest-side,#cdc8ff,rgba(205,200,255,0));"></div>
+  <div style="position:relative">
+    <p style="margin:0 0 6px;font-size:12px;color:#6c63e6;font-weight:700;letter-spacing:2px">MOVIE · OTT</p>
+    <p style="margin:0;font-family:'NanumSquareExtraBold','NanumSquare',sans-serif;font-weight:800;font-size:34px;line-height:1.25;color:#3a3a40">11월에 뭐 보지?</p>
+    <p style="margin:10px 0 0;font-size:14px;color:#55555f">극장 30편 · OTT 6편 날짜별 달력</p>
+  </div>
+</div>
+<span class="img-tag">↑ 그림 (가공이미지)</span>
+
+<p style="margin:22px 0 26px;text-align:center;font-size:15px;color:#55555f">10월 26일 KOBIS·OTT 공지 기준이에요.<br>가장 붐비는 날은 <b style="color:#6c63e6">11월 4일(수)</b>이에요.</p>
+
+<!-- 소제목 카드: 그림 (가는 테두리 + 아래쪽 글로우 + 번호 동그라미) -->
+<div style="position:relative;overflow:hidden;border:1px solid #3a3a40;background:#fbfbfc;padding:16px 20px;margin:0 0 6px;display:flex;align-items:center;gap:14px">
+  <div style="position:absolute;width:300px;height:160px;right:-60px;bottom:-110px;background:radial-gradient(closest-side,#d6d2ff,rgba(214,210,255,0));"></div>
+  <span style="position:relative;width:28px;height:28px;border:1px solid #3a3a40;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">1</span>
+  <span style="position:relative;font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:22px;color:#3a3a40">날짜별 공개 달력</span>
+</div>
+<span class="img-tag">↑ 그림 (소제목마다 한 장)</span>
+
+<!-- 표: 테두리는 흰색(보이지 않게) · 연보라 줄무늬 · 머리 글자 보라 -->
+<table style="width:100%;border-collapse:collapse;font-size:15px;margin:14px 0 34px">
+  <tr>
+    <td style="border:1px solid #ffffff;border-bottom:2px solid #3a3a40;padding:9px 12px;font-weight:700;color:#6c63e6">공개일</td><td style="border:1px solid #ffffff;border-bottom:2px solid #3a3a40;padding:9px 12px;font-weight:700;color:#6c63e6">작품</td><td style="border:1px solid #ffffff;border-bottom:2px solid #3a3a40;padding:9px 12px;font-weight:700;color:#6c63e6">볼 곳</td><td style="border:1px solid #ffffff;border-bottom:2px solid #3a3a40;padding:9px 12px;font-weight:700;color:#6c63e6">길이</td>
+  </tr>
+  <tr><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px">11/4(수)</td><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px"><b>재혼 황후</b></td><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px">디즈니+</td><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px">10부작</td></tr>
+  <tr><td style="border:1px solid #ffffff;padding:9px 12px">11/4(수)</td><td style="border:1px solid #ffffff;padding:9px 12px"><b>와일드 호스 나인</b></td><td style="border:1px solid #ffffff;padding:9px 12px">극장</td><td style="border:1px solid #ffffff;padding:9px 12px">116분</td></tr>
+  <tr><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px">11/6(금)</td><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px"><b>옆자리, 프란체스카</b></td><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px">웨이브</td><td style="background-color:#f4f3ff;border:1px solid #ffffff;padding:9px 12px">회차 미정</td></tr>
+  <tr><td style="border:1px solid #ffffff;padding:9px 12px">11/20(금)</td><td style="border:1px solid #ffffff;padding:9px 12px"><b>푸른길</b></td><td style="border:1px solid #ffffff;padding:9px 12px">넷플릭스</td><td style="border:1px solid #ffffff;padding:9px 12px">8부작</td></tr>
+</table>
+
+<div style="position:relative;overflow:hidden;border:1px solid #3a3a40;background:#fbfbfc;padding:16px 20px;margin:0 0 6px;display:flex;align-items:center;gap:14px">
+  <div style="position:absolute;width:300px;height:160px;right:-60px;bottom:-110px;background:radial-gradient(closest-side,#d6d2ff,rgba(214,210,255,0));"></div>
+  <span style="position:relative;width:28px;height:28px;border:1px solid #3a3a40;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">2</span>
+  <span style="position:relative;font-family:'NanumSquareBold','NanumSquare',sans-serif;font-weight:700;font-size:22px;color:#3a3a40">재혼 황후</span>
+  <span style="position:relative;margin-left:auto;border:1px solid #3a3a40;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:700;background:#e6e3ff">11/4 디즈니+</span>
+</div>
+<span class="img-tag">↑ 그림 (작품마다 한 장)</span>
+<div style="width:220px;height:310px;margin:14px auto 6px;background:linear-gradient(160deg,#5c5470,#2c2838);color:#d8d4ee;display:flex;align-items:center;justify-content:center;font-size:13px">포스터 (너비 300)</div>
+<p style="margin:0 0 18px;text-align:center;font-size:13px;color:#8a8a96">포스터: 디즈니+</p>
+<p style="margin:0 0 18px">황제에게 이혼을 통보받은 황후 나비에가 재혼 승인을 요구하면서 시작되는 로맨스 판타지예요.</p>
+
+<!-- 작품 카드: 이름표 보라 글자 · 줄 사이 가는 회색 선만 -->
+<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 36px">
+  <tr><td style="width:24%;border:1px solid #ffffff;border-top:2px solid #3a3a40;border-bottom:1px solid #e3e1f0;padding:9px 4px;color:#6c63e6;font-weight:700">종류</td><td style="border:1px solid #ffffff;border-top:2px solid #3a3a40;border-bottom:1px solid #e3e1f0;padding:9px 4px">한국 시리즈 · 로맨스 판타지</td></tr>
+  <tr><td style="border:1px solid #ffffff;border-bottom:1px solid #e3e1f0;padding:9px 4px;color:#6c63e6;font-weight:700">공개</td><td style="border:1px solid #ffffff;border-bottom:1px solid #e3e1f0;padding:9px 4px">11월 4일(수) 1~4회 · 매주 수요일 2회</td></tr>
+  <tr><td style="border:1px solid #ffffff;border-bottom:1px solid #e3e1f0;padding:9px 4px;color:#6c63e6;font-weight:700">볼 곳</td><td style="border:1px solid #ffffff;border-bottom:1px solid #e3e1f0;padding:9px 4px"><u>디즈니+</u></td></tr>
+  <tr><td style="border:1px solid #ffffff;border-bottom:2px solid #3a3a40;padding:9px 4px;color:#6c63e6;font-weight:700">출연</td><td style="border:1px solid #ffffff;border-bottom:2px solid #3a3a40;padding:9px 4px">신민아 · 주지훈 · 이종석 · 이세영</td></tr>
+</table>
+
+<p style="margin:0;font-size:13px;color:#8a8a96;text-align:center">참고: KOBIS 개봉예정 · 각 OTT 공지 (10월 26일 확인)</p>
+</div>
+</div>
+
+</div>
+<script>
+document.querySelectorAll(".tabs button").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var v = b.dataset.v;
+    document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.toggle("on", x === b); });
+    document.querySelectorAll(".v").forEach(function (x) { x.classList.toggle("on", x.id === v); });
+    document.querySelectorAll("[data-note]").forEach(function (x) { x.hidden = x.dataset.note !== v; });
+  });
+});
+</script>
+</body>
+</html>
