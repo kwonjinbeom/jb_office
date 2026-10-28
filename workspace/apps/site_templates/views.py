@@ -531,7 +531,8 @@ def convert_context(placement, form=None):
         "flat": placement.site_category.blog.platform in (Blog.Platform.TISTORY, Blog.Platform.BLOGGER),  # 빈 줄로 간격
         "tag_items": [t.lstrip("#") for t in _tags_for(placement).split()] if naver else [],
         "tag_bookmarklet": paste.naver_tag_bookmarklet(),
-        "paste_all": paste.paste_all(placement.converted_title or post.title, rich, _tags_for(placement)) if one_shot else "",
+        "paste_all": paste.paste_all(placement.converted_title or post.title, rich, _tags_for(placement),
+                                     _paste_hero(placement)) if one_shot else "",
         "paste_bookmarklet": paste.paste_bookmarklet() if one_shot else "",
         "check_html": _check_html(placement.converted_check),
         "request_text": prompt.build(placement),
@@ -541,9 +542,19 @@ def convert_context(placement, form=None):
 
 # 대표 사진 내려받기 (2026-10-26 사용자, 워드프레스): 대표 이미지는 미디어 라이브러리에 올린 사진만 고를 수 있어
 # 변환본의 첫 사진을 파일로 내려받아 '대표 이미지 설정 → 파일 업로드'에 끌어다 놓는다.
-# 네이버도 (2026-10-28 사용자: 프롤로그에 사진이 하나도 안 뜬다) — 붙여넣은 바깥 주소 사진은 대표 사진·썸네일이 되지 않아
-# 본문 첫 사진을 지우고 이 파일을 그 자리에 직접 올린다.
-HERO_PLATFORMS = (Blog.Platform.WORDPRESS, Blog.Platform.NAVER)
+# 네이버·티스토리도 (2026-10-28 사용자: 프롤로그에 사진이 하나도 안 뜬다 · 티스토리도 첫 사진을 지우고 다시 올려야 대표로 잡힌다)
+# — 붙여넣은 바깥 주소 사진은 대표 사진·썸네일이 되지 않는다. '블로그 넣기' 북마크가 이 사진을 받아 첫 사진 자리에 직접 올리고
+# (paste.PASTE_JS heroPut), 안 되면 이 파일을 그 자리에 손으로 올린다.
+HERO_PLATFORMS = (Blog.Platform.WORDPRESS, Blog.Platform.NAVER, Blog.Platform.TISTORY)
+AUTO_HERO_PLATFORMS = (Blog.Platform.NAVER, Blog.Platform.TISTORY)
+
+
+def _paste_hero(placement):
+    """'한 번에 복사'에 담을 대표 사진 {'src', 'name'} — 북마크가 받아 본문의 같은 주소 사진 자리에 올린다. 티스토리·네이버만."""
+    if placement.site_category.blog.platform not in AUTO_HERO_PLATFORMS:
+        return None
+    hero = _hero(placement.converted_body)
+    return {"src": hero["src"], "name": _hero_name(hero["src"], placement.pk)} if hero else None
 _HERO_MD = re.compile(r"!\[([^\]\n]*)\]\((https?://[^)\s]+)\)")
 _HERO_IMG = re.compile(r'<img\b[^>]*?\bsrc="(https?://[^"]+)"[^>]*>')
 HERO_TYPES = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif"}
@@ -567,7 +578,8 @@ def paste_data(request, pk):
         return HttpResponseBadRequest("복사할 변환본이 없습니다")
     _, rich, _, _ = _render_for(placement, placement.converted_body)
     title = placement.converted_title or placement.post.title
-    return JsonResponse({"html": rich, "plain": paste.paste_all(title, rich, _tags_for(placement)), "msg": PASTE_MSG[platform]},
+    return JsonResponse({"html": rich, "plain": paste.paste_all(title, rich, _tags_for(placement), _paste_hero(placement)),
+                         "msg": PASTE_MSG[platform]},
                         json_dumps_params={"ensure_ascii": False})
 
 
