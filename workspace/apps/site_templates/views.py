@@ -19,6 +19,7 @@ from django.db.models import Prefetch
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import escape
@@ -27,9 +28,10 @@ from django.views.decorators.http import require_POST
 
 from apps.blog_rules.models import Blog
 from apps.blog_types.models import Placement, SiteCategory
+from apps.core.context_processors import _asset_version
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from . import looks, paste, prompt
+from . import design, looks, paste, prompt
 
 
 class _Styled(forms.ModelForm):
@@ -89,7 +91,7 @@ def index(request):
         ctx.update(tpl=tpl, fmt=fmt, cats=_cats_of(blog))
         if kind == "sitecat":
             ctx.update(parent_concept=obj.parent.concept if obj.parent_id else "",
-                       kids=list(obj.children.all()) if not obj.parent_id else [])
+                       kids=list(obj.children.all()) if not obj.parent_id else [], **_design(obj, request))
     else:
         for b in ctx["sites"]:
             b.tpl = prompt.template_for(b)
@@ -97,6 +99,23 @@ def index(request):
             b.cats_done = sum(1 for c in b.cats_all if c.concept.strip())
         ctx["requested"] = Placement.objects.filter(convert_status=Placement.Convert.REQUESTED).count()
     return render(request, "site_templates/index.html", ctx)
+
+
+def _design(cat, request=None):
+    """카테고리 › 디자인 컨셉 (2026-10-28 사용자): 요소마다 견본 마크다운을 변환과 같은 코드로 그린 iframe 문서.
+    감싸는 class 는 변환 화면 미리보기와 같다 (네이버 st-naver · 티스토리·블로거 st-flat)."""
+    platform, look = cat.blog.platform, _look(cat)
+    wrap = {Blog.Platform.NAVER: " st-naver", Blog.Platform.TISTORY: " st-flat", Blog.Platform.BLOGGER: " st-flat"}.get(platform, "")
+    head = (f'<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="{static("css/app.css")}?v={_asset_version()}">'
+            '<body style="height:auto;margin:0;padding:14px 16px;background:#fff;zoom:.8">'  # 칸이 좁아 0.8 배로 (본문 폭 그대로 보이게)
+            f'<div class="wr-article st-converted{wrap}">')
+    out = []
+    photos = {k: request.build_absolute_uri(static(v)) if request else static(v) for k, v in design.PHOTOS.items()}
+    for it in design.items(platform, look, _heading_bar(cat), photos):
+        it["doc"] = head + _render_cat(cat, it["md"])[0] + "</div></body>"
+        out.append(it)
+    looks_ = dict(SiteCategory._meta.get_field("look").choices)
+    return {"design": out, "design_look": looks_.get(look, look)}
 
 
 def _cats_of(blog):
@@ -363,11 +382,15 @@ def site(request, pk):
 
 
 def _render_for(placement, text):
-    """그 사이트 플랫폼에 맞는 (미리보기 HTML, 서식 복사용 HTML, 글자만, 복사용 HTML).
+    return _render_cat(placement.site_category, text)
+
+
+def _render_cat(cat, text):
+    """그 카테고리(사이트 플랫폼 · 글 모양)에 맞는 (미리보기 HTML, 서식 복사용 HTML, 글자만, 복사용 HTML).
     네이버는 네이버 글쓰기와, 티스토리·블로거는 티스토리 글쓰기와 같은 인라인 style HTML 을 쓴다.
     꾸밈 없는 HTML 을 붙이면 표 테두리·머리글 색이 빠지고 머리글 줄이 표 밖으로 빠진다 (2026-10-20 사용자).
     워드프레스는 class HTML + 글모양 CSS (블록 에디터가 인라인 style 을 지운다, wp_looks — 2026-10-26)."""
-    platform = placement.site_category.blog.platform
+    platform = cat.blog.platform
     if platform == Blog.Platform.NAVER:  # 미리보기도 붙여넣을 HTML 그대로 (문단 사이 빈 줄까지 네이버와 같게)
         from apps.naver_writing.render import CONVERT_FONT, needs_gaps, paste_html, plain_text, render_body
         html = render_body(text)
@@ -376,15 +399,15 @@ def _render_for(placement, text):
     from apps.writing.render import plain_text, render_body, tistory_align, tistory_html
     if platform == Blog.Platform.WORDPRESS:
         from . import wp_looks
-        look = _look(placement.site_category)
+        look = _look(cat)
         html = wp_looks.render(text, look)
         return wp_looks.preview_html(text, look), html, plain_text(html), wp_looks.paste_html(text, look)
-    look = _look(placement.site_category)
+    look = _look(cat)
     html = render_body(looks.yudi_source(text) if look == "yudi" else text)
     out = tistory_html(html)  # 문단 사이 빈 줄 · 사진 가운데 620 (2026-10-22). 미리보기도 붙여넣을 HTML 그대로
     if look == "yudi":  # 유디 메모지 (2026-10-23 사용자, 눈잎 › 일본 여행)
         out = looks.yudi_html(out)
-    elif _heading_bar(placement.site_category):
+    elif _heading_bar(cat):
         out = re.sub(r"<h2(?![^>]*\bstyle=)", f'<h2 style="{HEADING_BAR}"', out)
     if platform == Blog.Platform.TISTORY:  # 사진·캡션 가운데 정렬이 붙여넣을 때 풀리지 않게 (2026-10-25)
         out = tistory_align(out)

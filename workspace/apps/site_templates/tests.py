@@ -50,6 +50,31 @@ class SiteTemplateTests(TestCase):
         res = self.client.get(url, {"site": self.memorily.sel})
         self.assertNotContains(res, "<textarea")
         self.assertContains(res, "개발자")
+        self.assertNotContains(res, "디자인 컨셉")  # 사이트 화면에는 없다
+
+    def test_category_design(self):
+        """카테고리 › 디자인 컨셉 (2026-10-28 사용자): 요소마다 변환과 같은 코드로 그린 견본 — 글 모양에 따라 요소가 다르다"""
+        url = reverse("site_templates:index")
+        res = self.client.get(url, {"site": self.java.sel})
+        self.assertContains(res, "디자인 컨셉")
+        keys = [it["key"] for it in res.context["design"]]
+        self.assertEqual(keys, ["heading", "text", "lead", "table", "card", "photo", "hr", "source"])
+        card = next(it for it in res.context["design"] if it["key"] == "card")
+        self.assertIn("가 볼 곳", card["doc"])  # 티스토리 정보 카드 그대로
+        photo = next(it for it in res.context["design"] if it["key"] == "photo")
+        self.assertIn('src="http://testserver/static/img/design-sample-a.svg"', photo["doc"])  # 사진이 걸러지지 않는다
+        self.assertContains(res, "<iframe srcdoc=")
+        self.java.look = "yudi"
+        self.java.save()
+        card = self.client.get(url, {"site": self.java.sel}).context["design"][4]
+        self.assertEqual(card["name"], "메모지 상자")
+        self.assertIn("border:3px solid #bfe9e3", card["doc"])
+        wp = Blog.objects.create(name="시험 워드프레스", platform=Blog.Platform.WORDPRESS)
+        travel = SiteCategory.objects.create(blog=wp, name="World Travel", look="wp_travel")
+        design = self.client.get(url, {"site": travel.sel}).context["design"]
+        self.assertEqual([it["key"] for it in design][-2:], ["day", "lang"])
+        self.assertIn('class="jb-toc"', next(it for it in design if it["key"] == "toc")["doc"])
+        self.assertIn("jb-card--food", next(it for it in design if it["key"] == "card")["doc"])
 
     def test_reconvert_with_comment(self):
         """재변환 (2026-10-22 사용자): 글 관리에서 체크한 글 하나 + 코멘트. 변환 완료여도 다시, 지난 변환본을 코멘트대로"""

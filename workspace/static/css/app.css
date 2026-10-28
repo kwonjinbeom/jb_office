@@ -1621,6 +1621,21 @@ a.od-label:hover { color: var(--accent); text-decoration: none; }
 .st-compare .st-preview { height: calc(100vh - 230px); min-height: 360px; max-height: none; }
 .st-compare .st-ptitle { margin: 0 0 .8em; }
 .st-compare .st-ptags { margin: 1.6em 0 0; font-size: 14px; color: var(--text-3); }
+/* 사이트별 템플릿 › 카테고리 › 디자인 컨셉 (2026-10-28 사용자): 요소마다 같은 크기 칸 — 이름·쓰는 법 / 견본(안에서 스크롤) / 쓰인 색 */
+.st-dz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; padding: 12px 14px 14px; }
+.st-dz { display: grid; grid-template-rows: auto 240px 30px; min-width: 0; border: 1px solid var(--line-soft); border-radius: 10px; overflow: hidden; background: var(--panel); }
+.st-dz-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 8px 12px; border-bottom: 1px solid var(--line-soft); }
+.st-dz-head strong { flex: none; font-size: 13px; }
+.st-dz-head code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11.5px; color: var(--text-3); }
+.st-dz iframe { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+.st-dz-colors { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0 12px; overflow: hidden; white-space: nowrap; border-top: 1px solid var(--line-soft);
+  font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+.st-sw { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.st-sw i, .st-pal-row i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, .14); }
+.st-dz-pal { display: grid; align-content: start; gap: 5px; padding: 10px 12px; overflow: auto; font-size: 12px; }
+.st-pal-row { display: grid; grid-template-columns: 12px 58px minmax(0, 1fr); gap: 8px; align-items: center; }
+.st-pal-row code { font-family: var(--mono); font-size: 11.5px; }
+.st-pal-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
 @media (max-width: 900px) { .st-cols { grid-template-columns: minmax(0, 1fr); } .st-compare .st-preview { height: 60vh; } }
 /* 원문 접기 (2026-10-23 사용자: 때때로 변환본만 크게). html.st-solo 는 app.js 가 기억해 둔 대로 붙인다 */
 .st-solo-btn { margin-left: auto; flex: none; }
