@@ -9,12 +9,16 @@ T88 부터(일일루틴 글쓰기, 2026-10-22 임시글 정리 뒤)는 글 관�
   제작 정보의 `사이트: …` · `분류: 대 > 중 > 소` 줄(일일루틴 글쓰기)은 가져올 때 사이트·글 분류로 쓴다.
   제작 정보 표의 `| 넣을 카테고리 | 사이트 › 카테고리 |` 는 발행예정글로 옮길 때 기본으로 넣는 곳 (blog_types.sites.place_defaults).
   `고정주제: …` · `커스텀: …` 줄이 있으면 커스텀 글 (일일루틴 하루 분량이 아닌 글, 글 관리의 '커스텀'으로 따로 본다).
+  제작 정보 표의 `| 발행 예정 | 2026-10-29 (예약) |` (앞날짜로 미리 쓴 글) 또는 그날 기획표의 `### T178 · 사이트 > 소재 · …` 가
+  그 글의 '글쓰기 날짜'가 된다 (written_at · 2026-10-28 사용자: 29일로 미리 쓴 글이 28일 결과에 들어갔다).
 """
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from functools import lru_cache
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 
@@ -41,6 +45,7 @@ class Draft:
     topic: str = ""  # 고정 주제 이름 (`고정주제: AI 소식` 줄). 일일루틴 글쓰기 결과에서 'memorily > AI 소식' 처럼 보인다
     old_titles: tuple = ()  # `옛 제목: …` 줄 (2026-10-26: 이미 있는 글을 허브로 바꾸며 제목을 고칠 때, 그 글을 알아보게)
     change: str = ""  # `고친 내용: …` 줄 — 변환글 보기 맨 위 '수정됨' 한 줄에 붙는다 (2026-10-26 사용자)
+    for_day: str = ""  # `| 발행 예정 | YYYY-MM-DD |` — 앞날짜로 미리 쓴 글의 날 (2026-10-28)
 
     @property
     def code(self) -> str:
@@ -72,6 +77,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
     topic = re.search(r"^[-*\s]*`?고정주제:\s*([^`\n]+)`?\s*$", head, re.M)
     place = re.search(r"^\|\s*넣을 카테고리\s*\|\s*([^|\n]+?)\s*\|", head, re.M)
     change = re.search(r"^[-*\s]*`?고친 내용:\s*([^`\n]+)`?\s*$", head, re.M)
+    ahead = re.search(r"^\|\s*발행 예정\s*\|\s*(\d{4}-\d{2}-\d{2})", head, re.M)
     old_titles = tuple(t.strip()[:200] for t in re.findall(r"^[-*\s]*`?옛 제목:\s*([^`\n]+)`?\s*$", head, re.M) if t.strip())
     return Draft(
         key=key,
@@ -86,6 +92,7 @@ def parse(text: str, key: str = "", modified: float = 0.0) -> Draft | None:
         topic=topic.group(1).strip()[:60] if topic else "",
         old_titles=old_titles,
         change=change.group(1).strip()[:120] if change else "",
+        for_day=ahead.group(1) if ahead else "",
         place=re.sub(r"\s*\([^)]*\)\s*$", "", place.group(1)).strip()[:120] if place else "",  # '(신설 제안)' 같은 꼬리는 뺀다
     )
 
@@ -105,17 +112,59 @@ def list_drafts(root: Path | None = None) -> list[Draft]:
     return out
 
 
-def written_at(draft: "Draft", root: Path | None = None) -> datetime:
-    """원고를 쓴 때 = 원고.md 가 git 에 처음 올라온 시각 (없으면 파일 수정 시각).
+PLAN_HEAD = re.compile(r"^###\s*(T\d+)\s*·\s*([^·\n]+?)\s*·", re.M)
 
-    가져온 글의 '만든 날'로 쓴다 — 가져온 때로 찍으면 밤에 쓴 원고가 다음 날 글이 된다 (2026-10-16 사용자).
-    """
+
+def _bare(label: str) -> str:
+    return re.sub(r"\s+", "", label)
+
+
+@lru_cache(maxsize=8)
+def _plans(folder: str, stamp: float) -> dict:
+    """주제기획/<날짜>[_N].md 의 '### T178 · 사이트 > 소재 · …' → {(T번호, 사이트>소재): 날짜}. stamp 는 캐시 무효화용."""
+    out = {}
+    for f in sorted(Path(folder).glob("*.md")):
+        m = re.fullmatch(r"(\d{4}-\d{2}-\d{2})(_\d+)?\.md", f.name)
+        if not m:
+            continue
+        for code, label in PLAN_HEAD.findall(f.read_text(encoding="utf-8")):
+            out[(code, _bare(label))] = date.fromisoformat(m.group(1))
+    return out
+
+
+def plan_day(draft: "Draft", root: Path | None = None) -> date | None:
+    """그 글이 어느 날 분량인가: 원고의 '발행 예정' 줄 → 그날 기획표에 같은 T번호·사이트>소재로 있으면 그 날 → 없으면 None.
+    T번호는 다른 루틴(애니)과 겹칠 수 있어 사이트>소재까지 맞춘다."""
+    if draft.for_day:
+        return date.fromisoformat(draft.for_day)
+    folder = (root or drafts_dir()).parent / "주제기획"
+    if not folder.is_dir() or not draft.classification:
+        return None
+    label = _bare(" > ".join(draft.classification.split(">")[:2]))
+    stamp = max((f.stat().st_mtime for f in folder.glob("*.md")), default=0.0)
+    return _plans(str(folder), stamp).get((draft.code, label))
+
+
+def written_at(draft: "Draft", root: Path | None = None) -> datetime:
+    """원고를 쓴 때 = 원고.md 가 git 에 처음 올라온 시각 (없으면 파일 수정 시각). 가져온 글의 '만든 날'로 쓴다 —
+    가져온 때로 찍으면 밤에 쓴 원고가 다음 날 글이 된다 (2026-10-16 사용자).
+    그 글이 다른 날 분량이면(앞날짜로 미리 씀 · 자정 넘어 씀) 날짜만 그 날로 바꾼다 — 일일루틴 횟수·글쓰기 결과가 그 날에 남게 (2026-10-28)."""
     f = (root or drafts_dir()) / draft.key / "원고.md"
+    at = None
     try:
         out = subprocess.run(["git", "log", "--diff-filter=A", "--format=%cI", "-1", "--", f.name],
                              cwd=f.parent, capture_output=True, text=True, timeout=10).stdout.strip()
         if out:
-            return datetime.fromisoformat(out)
+            at = datetime.fromisoformat(out)
     except (OSError, subprocess.SubprocessError, ValueError):
         pass
-    return datetime.fromtimestamp(draft.modified, tz=timezone.utc)
+    at = at or datetime.fromtimestamp(draft.modified, tz=timezone.utc)
+    return on_day(at, plan_day(draft, root))
+
+
+def on_day(at: datetime, day: date | None) -> datetime:
+    """at 의 한국 시각에서 날짜만 day 로 (day 가 없거나 같으면 그대로)."""
+    local = at.astimezone(ZoneInfo(settings.TIME_ZONE))
+    if day is None or local.date() == day:
+        return at
+    return local.replace(year=day.year, month=day.month, day=day.day)

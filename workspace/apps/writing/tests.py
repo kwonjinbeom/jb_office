@@ -534,3 +534,44 @@ class TrashNunipKospiTests(TestCase):
         self.assertFalse(Post.objects.filter(pk=post.pk).exists())
         self.assertFalse(Placement.objects.filter(pk=pl.pk).exists())
         self.assertTrue(Post.objects.filter(pk=keep.pk).exists())
+
+
+class PlanDayTests(TestCase):
+    """글쓰기 날짜 (2026-10-28 사용자: 29일로 미리 쓴 글이 28일 횟수·결과에 들어갔다) — 원고 '발행 예정' 줄 · 그날 기획표."""
+
+    def _draft(self, root, key, cls, extra=""):
+        folder = root / "원고" / key
+        folder.mkdir(parents=True)
+        (folder / "원고.md").write_text(f"# [원고] {key}\n\n분류: {cls}\n\n| 항목 | 내용 |\n|---|---|\n{extra}\n"
+                                        "<!-- 본문 시작 -->\n# 제목 " + key + "\n본문\n<!-- 본문 끝 -->\n", encoding="utf-8")
+
+    def test_plan_day_and_written_at(self):
+        import tempfile
+        from datetime import date, datetime, timezone as tz
+        from pathlib import Path
+        from apps.writing import drafts
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "주제기획").mkdir()
+            (root / "주제기획" / "2026-10-29.md").write_text("## 원고\n\n### T178 · 눈잎 > 주택 공고 · 계산\n- …\n", encoding="utf-8")
+            self._draft(root, "T178_유보라", "눈잎 > 주택 공고 > 계산")
+            self._draft(root, "T178_블랙클로버", "")  # 같은 T번호의 애니 글 (기획 밖)
+            self._draft(root, "T200_미리", "워드프레스 > 산과 캠핑 > 코스", "| 발행 예정 | 2026-10-30 (예약) |")
+            with self.settings(WRITING_DRAFTS_DIR=root / "원고"):
+                found = {d.key: d for d in drafts.list_drafts()}
+                self.assertEqual(drafts.plan_day(found["T178_유보라"]), date(2026, 10, 29))
+                self.assertIsNone(drafts.plan_day(found["T178_블랙클로버"]))
+                self.assertEqual(drafts.plan_day(found["T200_미리"]), date(2026, 10, 30))  # 발행 예정 줄이 먼저
+                at = datetime(2026, 10, 28, 14, 5, tzinfo=tz.utc)  # 한국 28일 23:05 에 씀
+                moved = drafts.on_day(at, date(2026, 10, 29))
+                self.assertEqual((moved.date().isoformat(), moved.hour, moved.minute), ("2026-10-29", 23, 5))
+                self.assertIs(drafts.on_day(at, None), at)
+
+    def test_results_count_on_plan_day(self):
+        from datetime import date, datetime
+        from zoneinfo import ZoneInfo
+        from apps.routines.results import _posts
+        p = Post.objects.create(title="계양 유보라", stage="temp", body="b", target="눈잎")
+        Post.all_objects.filter(pk=p.pk).update(created_at=datetime(2026, 10, 29, 23, 5, tzinfo=ZoneInfo("Asia/Seoul")))
+        self.assertTrue(any("계양 유보라" == t for rows in _posts(date(2026, 10, 29)).values() for t, _ in rows))
+        self.assertFalse(_posts(date(2026, 10, 28)))

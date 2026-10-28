@@ -75,6 +75,15 @@ class TempRepoTests(Login):
         self.assertEqual((r.result, r.state, r.fixed), (11, "done", True))
         self.client.post(reverse("routines:count", args=[tistory.pk]), {"day": today, "value": ""})
         self.assertFalse(RoutineDay.objects.exists())
+        # 앞날짜: 비어 있으면 상태 없음, 그 날로 미리 쓴 글이 있으면 그 날 결과로 (2026-10-28 사용자)
+        from datetime import timedelta
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        r = self.row("writing", date=tomorrow.isoformat())
+        self.assertEqual((r.result, r.state), (0, ""))
+        ahead = TistoryPost.objects.create(title="내일 원고")
+        TistoryPost.all_objects.filter(pk=ahead.pk).update(created_at=timezone.now() + timedelta(days=1))
+        r = self.row("writing", date=tomorrow.isoformat())
+        self.assertEqual((r.result, r.state), (1, "done"))
 
     def test_launcher_one_prompt_report_only_for_run_button(self):
         (self.root / "ideas" / "2026-10-14.json").write_text(json.dumps({
