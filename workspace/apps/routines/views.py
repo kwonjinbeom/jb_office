@@ -636,7 +636,7 @@ def index(request):
         if "picks" in r.data_keys and mode == "day":  # 그날 고른 편수가 목표
             picks, custom = day_picks(r, sel)
             r.target, open_goal = (sum(picks.values()), False) if custom else ("", True)
-        if start > today:
+        if start > today and not r.result:  # 앞날짜는 비워 두되, 미리 쓴 글이 있으면 그 날 결과로 보인다 (2026-10-28 사용자)
             r.state = ""
         elif open_goal:
             r.state = "done" if r.result else "todo"
