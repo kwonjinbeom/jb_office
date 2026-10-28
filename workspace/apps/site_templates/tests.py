@@ -1344,3 +1344,26 @@ class WordpressDraftTests(TestCase):
         with mock.patch.dict("os.environ", {"WP_USER": "", "WP_APP_PASSWORD": ""}):
             call_command("wp_draft", "http://srv/api", stdout=out)
         self.assertIn("건너뜀", out.getvalue())
+
+
+class YudiPhotoRunTests(TestCase):
+    """유디 메모지 사진 묶음이 사진 사이의 본문·소제목을 먹지 않는다 (2026-10-29 사용자: 밤밤 해외여행 2편 다 2일차가 빠졌다)."""
+
+    def test_heading_between_photos_survives(self):
+        from apps.writing.render import render_body, tistory_html
+        from . import looks
+        body = "\n".join([
+            "## 1일차 · 다낭", "", "![바다](https://example.com/a.jpg)", "*사진: A · Unsplash*", "", "본문 하나.", "",
+            "::: 장소 | 미케비치", "⏰ 운영 시간 | 상시", ":::", "", "## 2일차 · 호이안", "", "호이안 본문.", "",
+            "![등불](https://example.com/b.jpg)", "*사진: B · Unsplash*", "", "![다리](https://example.com/c.jpg)", "*사진: C · Unsplash*",
+        ])
+        out = looks.yudi_html(tistory_html(render_body(looks.yudi_source(body))))
+        self.assertIn("2일차 · 호이안", out)
+        self.assertIn("호이안 본문.", out)
+        self.assertIn("미케비치", out)
+        self.assertEqual(out.count("<table"), 1)  # 연달아 둔 2일차 사진 두 장만 콜라주 하나로
+
+    def test_travel_photos_rule_in_request(self):
+        """여행 글 사진 다다익선 (2026-10-29 사용자) — 변환 요청문에 들어간다."""
+        self.assertIn("여행 글은 사진이 다다익선", prompt.PHOTOS)
+        self.assertIn("3박 4일 12장", prompt.PHOTOS)
