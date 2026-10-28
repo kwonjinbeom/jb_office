@@ -1,5 +1,5 @@
 {# 발행예정글 도구 (글 관리 발행예정글 탭 · 중메뉴 발행예정글 공용). 2026-10-23 사용자: 버튼 글씨를 짧게, 재변환 코멘트는 뺐다. 2026-10-28 사용자: 체크한 글만 '변환' #}
-<span class="bar-sep" aria-hidden="true"></span><input class="input sm wr-plan-all" type="date" name="plan_day" form="ph-bulk" aria-label="체크한 글에 줄 발행 예정일"><button class="btn sm" form="ph-bulk" name="plan" value="1" title="체크한 글의 발행 예정일을 이 날짜로 (비우면 지움)">예정일</button>
+<span class="bar-sep" aria-hidden="true"></span><input class="input sm wr-plan-all" type="date" name="plan_day" form="ph-bulk" aria-label="체크한 글에 줄 발행 예정일"><button class="btn sm" form="ph-bulk" name="plan" value="1" title="체크한 글의 발행 예정일을 이 날짜로 (날짜를 안 고르면 오늘)">예정일</button>
 <span class="bar-sep" aria-hidden="true"></span><button type="button" class="btn sm" data-cat-edit aria-pressed="false" title="넣은 카테고리를 줄마다 바꾼다 (다시 누르면 끝)">카테고리</button><button type="button" class="btn sm" data-st-checked="ids" data-st-url="{% url 'site_templates:run' %}" title="체크한 글을 변환 (미변환·변환 요청 중인 것, PC 터미널 claude)">변환</button>
 {# 갱신 (2026-10-23 사용자): 모니터링 '발행 확인'과 같다 — PC 가 사이트마다 RSS 를 읽어 제목이 같은 미발행 글·넣은 곳을 발행 완료로 #}
 <button type="button" class="btn sm" data-feeds-check data-url="{% url 'blog_ops:check' %}" data-status="{% url 'blog_ops:status' %}" title="각 사이트(티스토리·네이버·블로거)에 실제로 올라온 글을 확인해, 제목이 같은 글을 발행 완료로 바꾼다">{% include "includes/ic.html" with name="refresh" %}갱신</button>
