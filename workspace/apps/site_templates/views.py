@@ -32,7 +32,7 @@ from apps.core import briefs
 from apps.core.context_processors import _asset_version
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from . import design, looks, nunip_look, paste, prompt
+from . import design, looks, nunip_look, paste, prompt, red_look
 
 BRIEF_KEY = "convert_brief"  # 마지막 변환·재변환 안내문 (apps/core/briefs)
 
@@ -411,6 +411,8 @@ def _render_cat(cat, text):
         from apps.naver_writing.render import CONVERT_FONT, needs_gaps, paste_html, plain_text, render_body
         html = render_body(text)
         rich = paste_html(html, gaps=needs_gaps(text, html), font=CONVERT_FONT)
+        if _look(cat) == "red":  # 빨강 정갈 (2026-10-28 사용자, black_lukey › 영화·OTT 공개)
+            rich = red_look.red_html(rich)
         return rich, rich, plain_text(html), paste.clean_html(text)
     from apps.writing.render import plain_text, render_body, tistory_align, tistory_html
     if platform == Blog.Platform.WORDPRESS:

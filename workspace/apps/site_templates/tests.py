@@ -837,6 +837,54 @@ class NunipCleanLookTests(TestCase):
         self.assertNotIn("눈잎 정갈", life.concept)
 
 
+class RedLookTests(TestCase):
+    """black_lukey › 영화·OTT 공개 '빨강 정갈' (0046, 2026-10-28 사용자: 지금 구조 그대로, 작품 제목은 막대에 빨강만,
+    나머지는 눈잎 정갈의 표·카드 디테일에 빨강, 글자 끝 '_' 는 빼고)."""
+
+    BODY = "\n".join([
+        "> 10월 26일 KOBIS 기준이에요.", "",
+        "## 11월 날짜별 공개 달력", "",
+        "| 공개일 | 작품 | 볼 곳 | 길이 |", "|---|---|---|---|", "| 11/4(수) | 재혼 황후 | 디즈니+ | 116 |", "",
+        "## 재혼 황후 · 11월 4일", "", "**볼 포인트** 한 줄.", "",
+        "::: 작품 | 재혼 황후", "🎬 종류·장르 | 한국 시리즈", "📺 볼 곳 | [디즈니+](https://www.disneyplus.com)", ":::",
+    ])
+
+    def test_migration_and_render(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+
+        from apps.naver_writing.models import Post as NaverPost
+
+        from .views import _render_for
+        ott = SiteCategory.objects.get_or_create(blog=Blog.objects.get(name="black_lukey"), name="영화·OTT 공개")[0]
+        migration = import_module("apps.blog_types.migrations.0046_ott_red_look")
+        migration.forward(django_apps, None)
+        migration.forward(django_apps, None)  # 두 번 돌아도 한 번만
+        ott.refresh_from_db()
+        self.assertEqual(ott.look, "red")
+        self.assertEqual(ott.concept.count("화면 모양 (빨강 정갈"), 1)
+        pl = Placement.objects.create(site_category=ott, naver_post=NaverPost.objects.create(title="11월 OTT", body="본문"))
+        out = _render_for(pl, self.BODY)[1]
+        self.assertIn('color:#e50914;font-weight:bold">한눈에</p>', out)  # 맨 위 인용 → 한눈에 상자 (인용구가 아니라 표)
+        self.assertNotIn("<blockquote", out)
+        self.assertIn('color:#e50914;font-weight:bold">01</span>&nbsp; <span style="font-size:24px;color:#141414;font-weight:bold">11월 날짜별 공개 달력</span>', out)
+        self.assertNotIn("_</span>", out)  # 글자 끝 '_' 없음
+        self.assertIn("border-top:2px solid #e50914;background-color:#f4f5f7;color:#e50914;font-weight:bold;text-align:left;width:15%\">공개일", out)
+        self.assertIn("text-align:right\">116</td>", out)  # 숫자 칸 오른쪽
+        self.assertIn("border:1px solid #e50914;background-color:#e50914;width:5px", out)  # 작품 제목 막대 빨강
+        self.assertIn(">🎬 종류·장르</td>", out)  # 이모지 이름표 그대로
+        self.assertIn("border-right:1px solid #eeeeee;color:#e50914;font-weight:bold", out)  # 이름표와 값 사이 세로 줄
+        self.assertIn('<strong style="color:#e50914">볼 포인트</strong>', out)
+        self.assertIn("빨강 정갈", prompt.build(pl))
+        fest = SiteCategory.objects.get_or_create(blog=ott.blog, name="축제·행사")[0]  # 다른 네이버 카테고리는 그대로
+        self.assertNotIn("#e50914", _render_for(Placement(site_category=fest, naver_post=pl.naver_post), self.BODY)[1])
+        migration.backward(django_apps, None)
+        ott.refresh_from_db()
+        self.assertEqual(ott.look, "")
+        self.assertNotIn("빨강 정갈", ott.concept)
+
+
 class CloudConvertApiTests(TestCase):
     """클라우드 claude 가 토큰으로 글 관리의 글을 읽고, 카테고리에 넣고, 변환 안내문을 받는다 (2026-10-25)"""
 
