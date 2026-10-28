@@ -7,7 +7,7 @@
 - 보통 소제목(##) → 작은 빨간 번호(01) + 검정 굵은 제목, 아래 가는 회색 줄
 - 작품 제목(work_titles 의 막대 표) → 막대만 빨강, 제목 글자 검정 굵게
 - 표 → 연회색 머리 칸 · 빨간 머리 글자 · 2px 빨간 윗줄 · 몸은 가는 가로줄 · 숫자 칸 오른쪽 · 첫 칸 검정 굵게
-- 정보 카드(::: 작품 …) → 이름 한 줄 + 이름표 줄 (빨간 이름표 · 이모지 그대로 · 이름표와 값 사이 세로 줄)
+- 정보 카드(::: 작품 …) → B 레드 라인: 흰 머리 줄에 빨간 윗줄·검정 아랫줄('작품 정보'만 빨강), 연회색 이름표 칸(검정 글자 · 이모지 그대로) · 세로 줄 · 맨 아래 검정 2px
 - 굵게 → 빨강
 네이버 붙여넣기 HTML(naver_writing.render.paste_html 결과)을 바꾼다 — 남는 꼴(글자색·바탕색·굵게·크기·표 칸 테두리)만 쓴다.
 """
@@ -70,14 +70,22 @@ def _plain_table(m):
 
 
 def _card(m):
+    """정보 카드 — B 레드 라인 (2026-10-28 사용자가 예시안에서 고름: 이전 템플릿의 머리 줄 + 이름표 칸 짜임에 빨강·검정 선).
+    머리 줄은 흰 바탕에 빨간 3px 윗줄 · 검정 아랫줄, '작품 정보'만 빨강 · 이름은 검정 굵게. 몸은 연회색 이름표 칸(검정 글자, 이모지 그대로) ·
+    옅은 가로줄 · 이름표와 값 사이 세로 줄, 맨 아래 검정 2px."""
     cells = [text for _, text in CELL.findall(m.group(1))]
     if len(cells) < 2:
         return m.group(0)
-    rows = "".join("<tr>" + _td(k.strip(), f"width:26%;padding:9px 12px 9px 0;border:1px solid #ffffff;border-bottom:1px solid {LINE};"
-                                           f"border-right:1px solid {LINE};color:{RED};font-weight:bold")
-                   + _td(v.strip(), f"padding:9px 0 9px 14px;border:1px solid #ffffff;border-bottom:1px solid {LINE};color:#333333") + "</tr>"
-                   for k, v in zip(cells[2::2], cells[3::2]))
-    return _p(cells[1].strip(), 16, INK, True) + _table(rows, "6px 0 0")
+    head = f"border:1px solid #ffffff;border-top:3px solid {RED};border-bottom:1px solid {INK};background-color:#ffffff;font-weight:bold"
+    out = ("<tr>" + _td(cells[0].strip(), f"width:28%;padding:10px 12px;{head};color:{RED};text-align:center", 13)
+           + _td(cells[1].strip(), f"padding:10px 14px;{head};color:{INK}", 16) + "</tr>")
+    pairs = list(zip(cells[2::2], cells[3::2]))
+    for n, (k, v) in enumerate(pairs):
+        bottom = f"border-bottom:2px solid {INK}" if n == len(pairs) - 1 else f"border-bottom:1px solid {LINE}"
+        out += ("<tr>" + _td(k.strip(), f"padding:9px 12px;border:1px solid #ffffff;{bottom};border-right:1px solid {LINE};"
+                                        f"background-color:#fafafa;color:#333333;font-weight:bold")
+                + _td(v.strip(), f"padding:9px 14px;border:1px solid #ffffff;{bottom};background-color:#ffffff;color:#333333") + "</tr>")
+    return _table(out, "18px 0")
 
 
 def red_html(rich):
@@ -103,5 +111,6 @@ PROMPT = """## 글 모양 — 빨강 정갈 (이 카테고리만 · 2026-10-28 �
 모양(빨간 포인트·연회색 상자·가는 줄·소제목 번호)은 붙여 넣는 HTML 이 그린다. 변환본은 아래처럼 '쓰기만' 한다 (HTML·색 코드는 넣지 않는다).
 - 맨 위 인용(>)은 '한눈에' 연회색 상자가 된다: 2~3문장, 기준일(○월 ○일 ○○ 공지 기준)은 여기에.
 - 보통 `## 소제목`(공개 달력 · 뭐부터 볼까 등)은 앞에 01·02 번호가 저절로 붙는다 — 번호·이모지를 쓰지 않는다.
-- 작품은 지금처럼 `## 작품 이름 · 공개일` + 바로 아래 `::: 작품` 카드 — 빨간 막대가 붙은 작품 제목이 된다. 카드 이름표는 지금처럼 `이모지 이름표 | 값`.
+- 작품은 지금처럼 `## 작품 이름 · 공개일` + 바로 아래 `::: 작품` 카드 — 빨간 막대가 붙은 작품 제목이 된다.
+- 작품 카드는 '레드 라인' 표로 그려진다 (머리 줄 빨간 윗줄·검정 아랫줄, 연회색 이름표 칸, 맨 아래 검정 줄). 이름표는 `이모지 이름표 | 값` 그대로 — 이모지를 빼지 않는다. 이름표는 짧게 (종류·장르 · 공개 · 볼 곳 · 러닝타임/회차 · 관람 등급 · 감독 · 주요 출연 · 화제·수상 · 예고편).
 - 표는 그대로 (머리 줄 연회색 바탕·빨간 글자, 숫자 칸 오른쪽). 굵게(**)는 빨강으로 보인다 — 한 단락에 한 번 이하."""
