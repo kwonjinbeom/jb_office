@@ -1364,6 +1364,6 @@ class YudiPhotoRunTests(TestCase):
         self.assertEqual(out.count("<table"), 1)  # 연달아 둔 2일차 사진 두 장만 콜라주 하나로
 
     def test_travel_photos_rule_in_request(self):
-        """여행 글 사진 다다익선 (2026-10-29 사용자) — 변환 요청문에 들어간다."""
-        self.assertIn("여행 글은 사진이 다다익선", prompt.PHOTOS)
-        self.assertIn("3박 4일 12장", prompt.PHOTOS)
+        """여행 글 사진: 장수는 상한, 괜찮은 것만 (2026-10-29 사용자) — 변환 요청문에 들어간다."""
+        self.assertIn("여행 글 사진은 장수를 채우지 않는다", prompt.PHOTOS)
+        self.assertIn("많아야: 장소마다 4장", prompt.PHOTOS)

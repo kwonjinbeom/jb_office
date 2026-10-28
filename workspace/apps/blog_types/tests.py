@@ -1573,3 +1573,18 @@ class FixDashTitlesMigrationTests(TestCase):
         question.refresh_from_db()
         self.assertEqual(broken.converted_title, "민둥산 억새 등산코스 — 증산초 완만")
         self.assertEqual(question.converted_title, "블리치 몇 화부터 ? 환산기")  # 원문에 — 가 없으면 손대지 않는다
+
+
+class TravelPhotosMaxMigrationTests(TestCase):
+    """0050 (2026-10-29 사용자): 여행 카테고리 사진 장수는 바닥이 아니라 상한."""
+
+    def test_forward(self):
+        from importlib import import_module
+        from django.apps import apps as django_apps
+        cat = SiteCategory.objects.filter(blog__name="워드프레스", name="World Travel").first()
+        cat.concept = "사진은 그 장소가 실제로 찍힌 무료 사진 — 맨 위 대표 1장 + Day 마다 그날 주인공 장소 1~2장, 글 전체 4장 이상 (2026-10-27 사용자: 로마편 사진이 없다). 끝"
+        cat.save()
+        import_module("apps.blog_types.migrations.0050_travel_photos_max").forward(django_apps, None)
+        cat.refresh_from_db()
+        self.assertIn("괜찮은 것만, 글 전체 많아야 9장", cat.concept)
+        self.assertNotIn("4장 이상", cat.concept)
