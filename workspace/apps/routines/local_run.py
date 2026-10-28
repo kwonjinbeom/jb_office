@@ -234,12 +234,21 @@ def open_terminal(name, title, claude="claude"):
 
 # 전체 실행: 루틴마다 새 터미널 (2026-10-19 사용자: 한 대화로 이으면 답할 때마다 앞 루틴 대화까지 다시 읽어 토큰이 크게 는다).
 # 작은 창(차례 창)이 루틴 터미널을 하나씩 열고, claude 가 끝 표시 파일(.routine/done/)을 남기거나 창이 닫히면 다음 루틴을 연다.
+# 끝 표시 첫 줄이 '실패'면 그 루틴 창은 닫지 않는다 (2026-10-28 사용자: 지역 놀거리를 시각 확인 못 해 못 썼는데 창이 닫혀
+# 이유를 못 봤다 — 실패면 터미널을 열어 두고 마지막에 사유를 보여 줘, 이어서 부탁해 보게). 소재 없음·예정은 실패가 아니다.
 ALL_PART = re.compile(r"^<!-- 일일루틴 루틴: ([a-z0-9_-]{1,30}) -->\n", re.M)  # views.ALL_PART
 CLOSE_AFTER = 90  # 끝 표시 뒤 루틴 창을 닫기까지 (초)
+FAILED = "실패"  # 끝 표시 첫 줄
 DONE_TAIL = """
 ## 끝나면 (전체 실행)
-완료(또는 막힘·실패) 보고를 남긴 뒤, 맨 마지막에 Write 도구로 저장소 폴더의 `workspace/.routine/done/{name}` 파일을 만든다 (내용: 완료).
-이 파일이 생기면 다음 루틴이 새 터미널에서 시작된다. 그 뒤에는 아무것도 하지 않는다.
+완료(또는 막힘·실패) 보고를 남긴 뒤, 맨 마지막에 Write 도구로 저장소 폴더의 `workspace/.routine/done/{name}` 파일을 만든다.
+- 실패가 없으면 내용은 `완료` 한 줄. 이 창은 잠시 뒤 닫힌다.
+- 실패가 하나라도 있으면 첫 줄은 `실패`, 그 아래 줄마다 `- 무엇: 사유`
+  (예: `- black_lukey 지역 놀거리 · 단양 당일치기: 버스·열차 시각을 공식 출처로 확인하지 못함`). 이 창은 닫히지 않는다.
+- 실패 = 하려고 고른 일을 확인 못 함·막힘·오류로 끝내 못 한 것. 소재 '없음', 쓸 시각 전 '예정', 새 소식이 없어 안 쓴 것은 실패가 아니다.
+이 파일이 생기면 다음 루틴이 새 터미널에서 시작된다. 그 뒤에는 도구를 쓰지 않는다.
+실패가 있었으면 맨 마지막 답의 끝에 `## 실패한 것` 을 두고 줄마다 무엇 · 사유 · 이어서 부탁하면 할 수 있는 것 한 줄
+(예: "코레일·버스 회사 시간표로 다시 찾아 써 줘"라고 하면 이어서 쓴다)을 적는다. 사용자가 이 창에서 보고 이어서 부탁한다.
 """
 
 
@@ -252,7 +261,8 @@ def split_all(text, part=ALL_PART):
 def open_chain(steps, title, claude="claude", allow=()):
     """steps: [(안내문 파일 이름, 창 제목)]. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다.
     끝난 루틴 창은 CLOSE_AFTER 초 뒤 닫고(마지막 답·Stop 훅의 git 동기화가 끝나게), 다 끝나면 차례 창도 닫힌다
-    (2026-10-20 사용자: 끝났으면 창을 닫았으면). 끝 표시 없이 사람이 창을 닫은 루틴은 그대로 다음으로 간다."""
+    (2026-10-20 사용자: 끝났으면 창을 닫았으면). 끝 표시 없이 사람이 창을 닫은 루틴은 그대로 다음으로 간다.
+    끝 표시 첫 줄이 '실패'인 루틴 창은 닫지 않고, 차례 창도 다 끝난 뒤 Enter 를 기다린다 (2026-10-28 사용자)."""
     folder = settings.BASE_DIR / ".routine"
     done = folder / "done"
     done.mkdir(parents=True, exist_ok=True)
@@ -260,7 +270,7 @@ def open_chain(steps, title, claude="claude", allow=()):
         return " → 끝나면 ".join(_manual(name) for name, _ in steps)
     lines = [
         f"$Host.UI.RawUI.WindowTitle = {_ps(title)}", f"Set-Location -LiteralPath {_ps(settings.REPO_ROOT)}",
-        "$prev = $null; $prevAt = Get-Date",
+        "$prev = $null; $prevAt = Get-Date; $kept = 0",
         "function Close-Done([int]$wait) { if ($script:prev) { $left = $wait - ((Get-Date) - $script:prevAt).TotalSeconds; "
         "if ($left -gt 0) { Start-Sleep -Seconds ([int]$left) }; "
         "if (-not $script:prev.HasExited) { taskkill /PID $script:prev.Id /T /F | Out-Null }; $script:prev = $null } }",
@@ -275,10 +285,18 @@ def open_chain(steps, title, claude="claude", allow=()):
             f"while (-not (Test-Path -LiteralPath {flag}) -and -not $p.HasExited) {{ Start-Sleep -Seconds 10; "
             f"if ($prev -and ((Get-Date) - $prevAt).TotalSeconds -ge {CLOSE_AFTER}) {{ Close-Done 0 }} }}",
             f"Close-Done {CLOSE_AFTER}",
-            f"if (Test-Path -LiteralPath {flag}) {{ $prev = $p; $prevAt = Get-Date }}",
+            # 끝 표시 첫 줄이 '실패'면 그 창은 닫을 차례에 넣지 않고, 사유를 이 창에도 적는다
+            f"$failed = (Test-Path -LiteralPath {flag}) -and "
+            f"((Get-Content -LiteralPath {flag} -Encoding UTF8 -TotalCount 1) -like {_ps(FAILED + '*')})",
+            f"if ($failed) {{ $kept += 1; Write-Host {_ps(f'{step_title}: 실패가 있어 그 창을 열어 둡니다.')}; "
+            f"Get-Content -LiteralPath {flag} -Encoding UTF8 | Select-Object -Skip 1 | ForEach-Object {{ Write-Host ('  ' + $_) }} }}",
+            f"elseif (Test-Path -LiteralPath {flag}) {{ $prev = $p; $prevAt = Get-Date }}",
             f"Write-Host {_ps(f'{step_title} 끝')}",
         ]
-    lines += [f"Close-Done {CLOSE_AFTER}", f"Write-Host {_ps('전체 실행을 마쳤습니다. 이 창은 10초 뒤 닫힙니다.')}", "Start-Sleep -Seconds 10"]
+    lines += [f"Close-Done {CLOSE_AFTER}",
+              f"if ($kept) {{ Write-Host ({_ps('전체 실행을 마쳤습니다. 실패한 루틴 ')} + $kept + "
+              f"{_ps('개의 창은 열어 두었습니다. 그 창에서 이어서 부탁하세요.')}); Read-Host {_ps('Enter 를 누르면 이 창을 닫습니다')} }}",
+              f"else {{ Write-Host {_ps('전체 실행을 마쳤습니다. 이 창은 10초 뒤 닫힙니다.')}; Start-Sleep -Seconds 10 }}"]
     script = folder / "all-chain.ps1"
     script.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
     _popen(["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)])
