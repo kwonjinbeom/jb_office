@@ -1588,3 +1588,26 @@ class TravelPhotosMaxMigrationTests(TestCase):
         cat.refresh_from_db()
         self.assertIn("괜찮은 것만, 글 전체 많아야 9장", cat.concept)
         self.assertNotIn("4장 이상", cat.concept)
+
+
+class LocalLunchCafeTests(TestCase):
+    """blog_types 0051 (2026-10-29 사용자): black_lukey › 지역 놀거리 점심·카페를 동선 중간에, 합쳐 최대 3곳, 괜찮으면 넣는다."""
+
+    def test_concept_lines(self):
+        from importlib import import_module
+
+        from django.apps import apps as django_apps
+        mig = import_module("apps.blog_types.migrations.0051_local_lunch_cafe")
+        blog = Blog.objects.get(name="black_lukey")
+        SiteCategory.objects.filter(blog=blog, name="지역 놀거리").delete()
+        cat = SiteCategory.objects.create(blog=blog, name="지역 놀거리",
+                                          concept="- 순서: 인용 → 하루 시간표 " + mig.OLD_ORDER + "\n" + mig.OLD_FOOD + "\n- 끝")
+        fest = SiteCategory.objects.filter(blog=blog).exclude(pk=cat.pk).first() or SiteCategory.objects.create(blog=blog, name="축제·행사")
+        fest.concept = mig.OLD_FOOD
+        fest.save()
+        mig.forward(django_apps, None)
+        mig.forward(django_apps, None)  # 두 번 돌아도 그대로
+        cat.refresh_from_db(), fest.refresh_from_db()
+        self.assertEqual(cat.concept, "- 순서: 인용 → 하루 시간표 " + mig.NEW_ORDER + "\n" + mig.NEW_FOOD + "\n- 끝")
+        self.assertIn("합쳐 최대 3곳", cat.concept)
+        self.assertEqual(fest.concept, mig.OLD_FOOD)  # 축제·행사는 그대로
