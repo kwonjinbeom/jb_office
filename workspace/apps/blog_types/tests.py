@@ -1337,8 +1337,8 @@ class DefaultPlacementTests(TestCase):
         ai = SiteCategory.objects.get(blog__name="memorily", name="AI 소식")
         self.assertTrue(ai.heading_bar)
         # memorily 글 분류: AI + 총정리 3개 (0052) — AI 는 하나뿐
-        self.assertEqual(list(Category.objects.filter(section__name="memorily").values_list("name", flat=True)),
-                         ["AI", "무료 AI 툴", "이달의 AI", "IT 할인"])
+        # AI → IT·AI, 총정리 셋은 그 아래 고정 주제로, 애니 소재 (routines 0023, 2026-10-31 사용자)
+        self.assertEqual(list(Category.objects.filter(section__name="memorily").values_list("name", flat=True)), ["IT·AI", "애니"])
 
 
 class MemorilyAiPickTests(TestCase):
@@ -1349,11 +1349,11 @@ class MemorilyAiPickTests(TestCase):
 
         from apps.routines.models import FixedTopic
         from apps.routines.views import default_picks
-        ai = Category.objects.get(section__name="memorily", name="AI")
+        ai = Category.objects.get(section__name="memorily", name="IT·AI")  # 옛 AI (routines 0023)
         picks = default_picks(date(2026, 10, 23))
         self.assertNotIn(ai.sel, picks)
         self.assertIn(Category.objects.get(section__name="밤밤", name="코스피 시황 노트").sel, picks)
-        self.assertEqual(FixedTopic.objects.get(name="AI 소식").category, ai)  # 고정 주제의 소재 → 원고 '분류: memorily > AI'
+        self.assertEqual(FixedTopic.objects.get(name="AI 소식").category, ai)  # 고정 주제의 소재 → 원고 '분류: memorily > IT·AI'
 
 
 class NunipJapanConceptTests(TestCase):

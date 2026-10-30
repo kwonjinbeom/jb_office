@@ -61,7 +61,9 @@ def _site_category(place):
 
 # 고정 주제마다 정해 둔 넣을 곳 (원고의 '넣을 카테고리'보다 먼저). 2026-10-23 사용자: AI 소식은 memorily › AI 로.
 # 2026-10-31 사용자: AI 를 IT·AI 로 바꾸고, AI 소식은 그 아래 컨셉 갈래로.
-TOPIC_PLACES = {"AI 소식": "memorily › IT·AI › AI 소식"}
+TOPIC_PLACES = {"AI 소식": "memorily › IT·AI › AI 소식",  # 총정리 · 분기 신작도 고정 주제 (routines 0023)
+                "무료 AI 툴": "memorily › IT·AI › 무료 AI 툴", "이달의 AI": "memorily › IT·AI › 이달의 AI",
+                "IT 할인": "memorily › IT·AI › IT 할인", "분기 신작": "memorily › 애니 › 분기 신작"}
 
 
 def place_defaults(posts):

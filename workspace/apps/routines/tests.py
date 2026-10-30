@@ -933,6 +933,20 @@ class FixedTopicTests(Login):
         self.assertContains(res, "data-rt-sub hidden", count=rows)
         self.assertNotContains(res, "tp-dot")
 
+    def test_memorily_layers(self):
+        """글쓰기 자동화의 memorily (2026-10-31 사용자, 0023): IT·AI 아래 고정 주제 넷, 애니 아래 분기 신작. 넣을 곳은 컨셉 갈래"""
+        from apps.blog_types import sites
+
+        from . import topics
+        g = next(x for x in topics.groups() if x["name"] == "memorily")
+        self.assertEqual({c.name: [t.name for t in c.topics] for c in g["cats"]},
+                         {"IT·AI": ["AI 소식", "무료 AI 툴", "이달의 AI", "IT 할인"], "애니": ["분기 신작"]})
+        self.assertEqual(g["count"], 5)
+        season = next(t for c in g["cats"] for t in c.topics if t.name == "분기 신작")
+        self.assertIn("memorily › 애니 › 분기 신작", season.note)
+        self.assertEqual(sites.TOPIC_PLACES["분기 신작"], "memorily › 애니 › 분기 신작")
+        self.assertContains(self.client.get(reverse("routines:topics")), "분기 신작")
+
     def test_topics_under_materials_migration(self):
         """2026-10-23 사용자 (0020): 고정 주제는 소재 아래 · 지침은 소재 방향이 먼저 · 일본 한 소재 · 해외여행은 밤밤"""
         from apps.blog_types.models import Category
@@ -942,7 +956,9 @@ class FixedTopicTests(Login):
         self.assertEqual(links, {"공모주 일정 · 국내": ("눈잎", "공모주"), "공모주 일정 · 해외": ("눈잎", "공모주"),
                                  "청년·신혼 정책 (서울·경기)": ("눈잎", "청년·신혼 정책"),
                                  "청약·임대주택 공고 (서울·경기)": ("눈잎", "주택 공고"),
-                                 "AI 소식": ("memorily", "AI")})  # blog_types 0021 (2026-10-23)
+                                 "AI 소식": ("memorily", "IT·AI"),  # blog_types 0021 (2026-10-23) · IT·AI (0023)
+                                 "무료 AI 툴": ("memorily", "IT·AI"), "이달의 AI": ("memorily", "IT·AI"),
+                                 "IT 할인": ("memorily", "IT·AI"), "분기 신작": ("memorily", "애니")})  # 0023 (2026-10-31 사용자)
         kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
         self.assertTrue(kr.note.startswith("방향 (우선): 새 종목 · 일정 변경 · 수요예측 결과"))
         self.assertIn("🔥 화제 종목", kr.note)  # 기존 지침은 뒤에 그대로
@@ -973,7 +989,8 @@ class FixedTopicTests(Login):
         """주제별 피드백 (2026-10-21 사용자): 정책·청약 공고는 따로, 서울·경기는 한 글 안에서 나눈다, 공모주는 앞으로 한 달·분기"""
         from .models import FixedTopic
         names = list(FixedTopic.objects.values_list("name", flat=True))
-        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)", "AI 소식"])  # AI 소식은 0018
+        self.assertEqual(names, ["공모주 일정 · 국내", "공모주 일정 · 해외", "청년·신혼 정책 (서울·경기)", "청약·임대주택 공고 (서울·경기)", "AI 소식",
+                                 "무료 AI 툴", "이달의 AI", "IT 할인", "분기 신작"])  # AI 소식은 0018, 나머지 넷은 0023
         self.assertEqual(FixedTopic.all_objects.filter(deleted_at__isnull=False).count(), 2)  # 경기 주제 둘은 휴지통
         kr = FixedTopic.objects.get(name="공모주 일정 · 국내")
         self.assertIn("앞으로 한 달", kr.note)
@@ -1057,7 +1074,7 @@ class WritingResultTests(Login):
         states = {r["label"]: r["word"] for r in res.context["results"]}
         self.assertEqual(states, {"눈잎 > 일본": "씀", "black_lukey > 축제·행사": "못 씀",
                                   "밤밤 > 코스피 시황 노트": "예정", "black_lukey > 세일 이벤트": "없음", "밤밤 > 해외 여행": "씀",
-                                  "memorily > AI": "못 씀"})  # 매일 쓰는 고정 주제 AI 소식, 소재는 memorily > AI (2026-10-23)
+                                  "memorily > IT·AI": "못 씀"})  # 매일 쓰는 고정 주제 AI 소식, 소재는 memorily > IT·AI (2026-10-23 · 이름 2026-10-31)
         self.assertEqual([r["word"] for r in res.context["results"]], ["씀", "씀", "예정", "못 씀", "못 씀", "없음"])
         self.assertContains(res, "11월 교토 단풍 언제 갈까")
         self.assertContains(res, "예정 1")
@@ -1097,14 +1114,14 @@ class DailyTopicTests(Login):
             (plans / "2026-10-23.md").write_text("## 소재 판정\n| 사이트 > 소재 | 있음/없음 | 근거 |\n|---|---|---|\n"
                                                  "| 밤밤 > 코스피 시황 노트 | 없음 | 휴장 |\n", encoding="utf-8")
             rows = {r["label"]: r for r in writing_results(day)}
-            self.assertEqual(rows["memorily > AI"]["word"], "못 씀")  # 매일 주제인데 아직 원고 없음
+            self.assertEqual(rows["memorily > IT·AI"]["word"], "못 씀")  # 매일 주제인데 아직 원고 없음
             folder = Path(tmp) / "원고" / "T120_AI소식"
             folder.mkdir(parents=True)
             (folder / "원고.md").write_text("사이트: memorily\n고정주제: AI 소식\n<!-- 본문 시작 -->\n# 오늘의 AI 소식\n본문\n<!-- 본문 끝 -->\n", encoding="utf-8")
             post = TistoryPost.objects.create(title="오늘의 AI 소식", target="memorily", custom=True)
             TistoryPost.objects.filter(pk=post.pk).update(created_at=timezone.make_aware(timezone.datetime(2026, 10, 23, 10)))
             rows = {r["label"]: r for r in writing_results(day)}
-            self.assertEqual((rows["memorily > AI"]["word"], rows["memorily > AI"]["posts"][0][0]), ("씀", "오늘의 AI 소식"))
+            self.assertEqual((rows["memorily > IT·AI"]["word"], rows["memorily > IT·AI"]["posts"][0][0]), ("씀", "오늘의 AI 소식"))
         res = self.client.get(reverse("routines:topics"))
         self.assertContains(res, 'name="daily" checked')
 
