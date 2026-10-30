@@ -144,6 +144,47 @@
   });
 })();
 (function () {
+  // 여러 날 글쓰기: 날을 고르고 '실행' → 안내문(views.ahead)을 받아 '전체 실행'처럼 PC 에서 날마다 차례로 연다
+  var box = document.querySelector("[data-rt-ahead]");
+  if (!box) return;
+  var pop = box.querySelector(".rt-ahead-pop"), run = box.querySelector("[data-rt-ahead-run]");
+  function picked() {
+    return Array.prototype.map.call(box.querySelectorAll("[data-rt-ahead-day]:checked"), function (b) { return b.value; });
+  }
+  function count() {
+    var n = picked().length;
+    box.querySelector("[data-rt-ahead-count]").textContent = n ? n + "일 고름" : "날을 고르세요";
+    run.disabled = !n;
+  }
+  function place() {  // 표 카드가 overflow:hidden 이라 창을 화면 기준으로 버튼 아래 오른쪽 끝에 맞춘다
+    var r = box.querySelector("summary").getBoundingClientRect();
+    pop.style.top = (r.bottom + 6) + "px";
+    pop.style.left = Math.max(8, Math.min(r.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 8)) + "px";
+  }
+  box.addEventListener("toggle", function () { if (box.open) place(); });
+  window.addEventListener("resize", function () { if (box.open) place(); });
+  window.addEventListener("scroll", function () { if (box.open) place(); }, true);
+  document.addEventListener("click", function (e) { if (box.open && !box.contains(e.target)) box.open = false; });
+  box.addEventListener("change", count);
+  run.addEventListener("click", function () {
+    var fd = new FormData();
+    fd.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+    picked().forEach(function (d) { fd.append("days", d); });
+    run.disabled = true;
+    fetch(run.dataset.url, { method: "POST", body: fd, credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); return; }
+        box.open = false;
+        App.rtLaunch(res.j.prompt, { kind: "all", key: res.j.key, keys: res.j.keys, day: res.j.day, name: res.j.name,
+                                     msg: "PC 에서 " + res.j.count + "일치 글쓰기를 날마다 새 터미널로 차례로 엽니다." }, run.hasAttribute("data-reload"));
+      })
+      .catch(function () { App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); })
+      .then(function () { count(); });
+  });
+  count();
+})();
+(function () {
   // 실행 이력: 진행 중인 기록이 있으면 그 칸만 다시 읽는다 (펼친 기록은 펼친 채로).
   var box = document.getElementById("rt-runs");
   if (box && box.dataset.rtRefresh) {

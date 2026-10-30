@@ -1661,6 +1661,28 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 /* 일일루틴: 전체 실행(로컬 칸 머리) · 글쓰기 분류 고르기 */
 .rt-th-run { display: flex; align-items: center; gap: 8px; }
 .rt-th-run .rt-launch { margin-left: auto; }
+/* 여러 날 글쓰기 (2026-10-31): 전체 실행 옆 '여러 날' → 주 단위 달력에서 날 고르기. 표 카드가 overflow:hidden 이라 창은 fixed */
+.rt-ahead > summary { list-style: none; cursor: pointer; font-weight: 400; }
+.rt-ahead > summary::-webkit-details-marker { display: none; }
+.rt-ahead[open] > summary { background: var(--hover); }
+.rt-ahead-pop { position: fixed; z-index: 40; width: 300px; padding: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: 0 6px 20px rgba(15, 23, 42, .14); font-weight: 400; }
+.rt-ahead-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+.rt-ahead-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.rt-ahead-wd { text-align: center; font-size: 11px; color: var(--text-3); padding-bottom: 2px; }
+.rt-ahead-day { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 38px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; user-select: none; }
+.rt-ahead-day input { position: absolute; opacity: 0; pointer-events: none; }
+.rt-ahead-day .d { font-size: 12.5px; font-weight: 600; color: var(--text); line-height: 16px; }
+.rt-ahead-day .n { font-size: 10.5px; color: var(--text-3); line-height: 13px; height: 13px; white-space: nowrap; }
+.rt-ahead-day.is-weekend .d { color: var(--danger); }
+.rt-ahead-day.is-today { border-color: var(--accent); }
+.rt-ahead-day:hover { background: var(--hover); }
+.rt-ahead-day:has(input:checked) { background: var(--accent); border-color: var(--accent); }
+.rt-ahead-day:has(input:checked) .d, .rt-ahead-day:has(input:checked) .n { color: #fff; }
+.rt-ahead-day.is-off { border-color: transparent; cursor: default; }
+.rt-ahead-day.is-off .d { color: var(--text-3); font-weight: 400; }
+.rt-ahead-day.is-off:hover { background: none; }
+.rt-ahead-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.id-count { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
 /* 추가 실행 (routines/extra.html): 넓은 칸. 글쓰기 분류는 대분류마다 한 열. */
 .ex-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .ex-day { display: flex; align-items: center; gap: 8px; margin: 0 0 0 auto; }
