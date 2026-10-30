@@ -214,6 +214,21 @@ def brief(request, key):
     return HttpResponse(text, content_type="text/plain; charset=utf-8")
 
 
+# 장소를 다니는 글의 사진 (2026-10-31 사용자: "지역놀거리 글 사진 왜 이렇게 없어? 피드백한 지 얼마 안 됐는데").
+# 한국관광콘텐츠랩만 찾고 0건이면 지워 버렸다 → 사진 자리를 지웠다고 적은 변환본은 위키미디어 공용까지 찾았다고 적혀 있어야 받는다.
+PHOTO_SOURCES_DONE = ("위키미디어", "wikimedia", "commons")
+
+
+def _photo_search_missing(placement, check):
+    """위치 지도가 붙는 여행 카테고리에서 '- 지움:' 이 있는데 위키미디어 공용을 찾았다는 말이 없으면 돌려보낼 까닭, 아니면 빈 값."""
+    if "- 지움:" not in (check or "") or "위치 지도" not in prompt._category_part(placement.site_category):
+        return ""
+    if any(w in check.lower() for w in PHOTO_SOURCES_DONE):
+        return ""
+    return ("사진 자리를 지우기 전에 다 찾지 않았습니다: 한국관광콘텐츠랩은 장소 이름 · 상위 지명(안면도 · 임진각) · 붙은 시설(자연휴양림 · 곤돌라)로, "
+            "그다음 위키미디어 공용을 한글 · 영어 이름으로 찾고, 점검 기록의 '지움' 줄에 찾아본 곳과 검색어를 적어 다시 보내세요.")
+
+
 @csrf_exempt
 @login_not_required
 @require_POST
@@ -224,9 +239,12 @@ def api_save(request, pk):
         return HttpResponseForbidden("token")
     placement = get_object_or_404(Placement, pk=pk)
     data = _form_fields(request)
-    body = paste.unwrap_images(data.get("body", "").replace("\r\n", "\n")).strip()
+    body = paste.drop_asof(paste.unwrap_images(data.get("body", "").replace("\r\n", "\n"))).strip()
     if not body:
         return HttpResponseBadRequest("body 가 비었습니다")
+    missing = _photo_search_missing(placement, data.get("check", ""))
+    if missing:
+        return HttpResponseBadRequest(missing)
     before = (placement.converted_title, placement.converted_body)
     if "title" in data:  # 안 보낸 칸은 그대로 둔다 (본문만 다시 보낼 때)
         placement.converted_title = data["title"].strip()[:200]

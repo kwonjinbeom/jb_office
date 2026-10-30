@@ -319,6 +319,40 @@ class PasteFormatTests(TestCase):
         self.assertEqual(pl.converted_body, f"첫 줄\n\n{img}")
         self.assertIn('<img', self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"])
 
+    def test_asof_line_dropped(self):
+        """글 끝 'YYYY-MM-DD 기준, 바뀌면 고칩니다.' (2026-10-28 사용자: 지워 줘 → 10-31 작가가 다시 씀): 받을 때 · 워드프레스로 그릴 때 코드로 뺀다"""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from . import wp_looks
+        from .paste import drop_asof
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.assertEqual(drop_asof("본문\n\n참고: 오피넷\n\n2026-10-31 기준, 바뀌면 고칩니다.\n"), "본문\n\n참고: 오피넷\n")
+        self.assertEqual(drop_asof("*2026-10-31 기준, 바뀌면 고친다*"), "")
+        self.assertEqual(drop_asof("통행료가 바뀌면 고칩니다 — 본문 안 문장"), "통행료가 바뀌면 고칩니다 — 본문 안 문장")  # 날짜 줄만
+        pl = self.place("밤밤")
+        self.client.post(reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok",
+                         {"body": "첫 줄\n\n2026-10-31 기준, 바뀌면 고칩니다."})
+        pl.refresh_from_db()
+        self.assertEqual(pl.converted_body, "첫 줄")
+        self.assertNotIn("바뀌면 고칩니다", wp_looks.render("본문\n\n2026-10-31 기준, 바뀌면 고칩니다."))
+
+    def test_place_photos_need_wikimedia_before_delete(self):
+        """지역 놀거리 사진 (2026-10-31 사용자: 사진이 왜 이렇게 없어): 콘텐츠랩만 찾고 '지움' 이면 받지 않는다 — 위키미디어까지 찾았다고 적어야"""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        pl = self.place("black_lukey")
+        pl.site_category.concept = "글 모양: 맨 위 인용 다음 위치 지도 1장"
+        pl.site_category.save()
+        api = reverse("site_templates:api_save", args=[pl.pk]) + "?token=tok"
+        res = self.client.post(api, {"body": "본문", "check": "- 지움: 안면암 사진 자리 — 한국관광콘텐츠랩 '안면암' 0건"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("위키미디어 공용", res.content.decode())
+        res = self.client.post(api, {"body": "본문", "check": "- 지움: 안면암 — 콘텐츠랩 '안면암'·'안면도' · 위키미디어 공용 'Anmyeonam' 0건"})
+        self.assertEqual(res.status_code, 200)
+        other = self.place("밤밤")  # 위치 지도가 없는 카테고리는 그대로 받는다
+        other_api = reverse("site_templates:api_save", args=[other.pk]) + "?token=tok"
+        self.assertEqual(self.client.post(other_api, {"body": "본문", "check": "- 지움: 사진 자리"}).status_code, 200)
+        self.assertIn("위키미디어 공용을 한글 · 영어 이름으로", prompt.PHOTOS)
+
     def test_planned_row_copy(self):
         """발행예정글 표의 '복사' (2026-10-27 사용자): 누르면 변환글 보기의 '한 번에 복사'와 같은 내용을 받는다. 워드프레스는 없다."""
         import json

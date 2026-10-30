@@ -258,7 +258,8 @@ def _travel(out: str) -> str:
 
 def render(text: str, look: str = "") -> str:
     """원고·변환본 마크다운 → 워드프레스에 붙일 class HTML (바깥 <div class="jb-post jb-<모양>">)."""
-    text = re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S)
+    from .paste import drop_asof  # 끝의 '기준, 바뀌면 고칩니다' 줄은 그리지 않는다 (2026-10-28 · 10-31 사용자)
+    text = drop_asof(re.sub(r"<!--.*?-->", "", (text or "").replace("\r\n", "\n"), flags=re.S))
     travel = look == "wp_travel"
     english = travel or not re.search(r"[가-힣]", re.sub(r"## (日本語まとめ|中文简介).*", "", text, flags=re.S)[:4000])
     out = markdown.markdown(CARD.sub(_card, text), extensions=["tables", "sane_lists"])
