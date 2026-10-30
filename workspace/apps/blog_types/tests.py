@@ -167,7 +167,13 @@ class SiteCategoryTests(TestCase):
 
     def test_seed_real_categories(self):
         names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
-        self.assertEqual(names, ["AI"])  # AI 는 0021 (2026-10-23). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자)
+        # AI 는 0021 (2026-10-23). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자). 총정리 3개는 0052 (2026-10-31 사용자)
+        self.assertEqual(names, ["AI", "무료 AI 툴", "이달의 AI", "IT 할인"])
+        roundup = SiteCategory.objects.get(blog=self.memorily, name="IT 할인")
+        self.assertIn("정리카드.py", roundup.concept)
+        self.assertIn("IT할인_*.json", roundup.concept)
+        self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="이달의 AI").heading_bar)
+        self.assertFalse(SiteCategory.objects.get(blog=self.memorily, name="무료 AI 툴").heading_bar)
         self.assertTrue(SiteCategory.all_objects.filter(blog=self.memorily, name="Java", deleted_at__isnull=False).exists())
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)  # 낙서장 · videolog (시험 DB 의 옛 값)
@@ -186,7 +192,7 @@ class SiteCategoryTests(TestCase):
     def test_add_edit_move_delete(self):
         self.add(self.memorily.sel, "AI 이야기")
         top = SiteCategory.objects.get(name="AI 이야기")
-        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 11))
+        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 14))  # 총정리 3개 (0052) 뒤
         self.add(top.sel, "Claude Code")
         sub = SiteCategory.objects.get(name="Claude Code")
         self.assertEqual(sub.parent, top)
@@ -196,7 +202,8 @@ class SiteCategoryTests(TestCase):
         top.refresh_from_db()
         self.assertEqual((top.name, top.note), ("AI 개발기", "새 축"))
         self.client.post(reverse("blog_types:move", args=["sitecat", top.pk]), {"dir": "up"})
-        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[0].name, "AI 개발기")
+        names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
+        self.assertEqual(names[-2:], ["AI 개발기", "IT 할인"])  # 한 칸 위로
         res = self.client.get(reverse("blog_types:delete", args=["sitecat", top.pk]))
         self.assertContains(res, "하위 카테고리 1개")
         self.client.post(reverse("blog_types:delete", args=["sitecat", top.pk]))
@@ -1298,7 +1305,9 @@ class DefaultPlacementTests(TestCase):
         self.assertEqual([str(pl.site_category) for pl in post.placements.all()], ["AI"])
         ai = SiteCategory.objects.get(blog__name="memorily", name="AI")
         self.assertTrue(ai.heading_bar)
-        self.assertEqual(Category.objects.get(section__name="memorily", name="AI").section.categories.count(), 1)
+        # memorily 글 분류: AI + 총정리 3개 (0052) — AI 는 하나뿐
+        self.assertEqual(list(Category.objects.filter(section__name="memorily").values_list("name", flat=True)),
+                         ["AI", "무료 AI 툴", "이달의 AI", "IT 할인"])
 
 
 class MemorilyAiPickTests(TestCase):
