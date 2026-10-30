@@ -709,9 +709,9 @@ class RepoTests(Login):
         self.assertTrue(TrashEntry.objects.filter(model_label="routines.routine").exists())
 
 
-class NunipOtherTests(TestCase):
-    def test_migration_trashes_only_nunip_other(self):
-        """0022 (2026-10-31 사용자): 글 분류 눈잎 › 그 외만 휴지통으로. 밤밤 › 그 외 · 눈잎 다른 소재 · 그 분류의 글은 그대로."""
+class DropOtherTests(TestCase):
+    def test_migration_trashes_nunip_and_naver_other(self):
+        """0022 (2026-10-31 사용자): 글 분류 눈잎 · black_lukey › 그 외만 휴지통으로. 다른 사이트의 그 외 · 다른 소재 · 그 분류의 글은 그대로."""
         from importlib import import_module
         from django.apps import apps
         from apps.blog_types.models import Category, PostType, Section
@@ -720,7 +720,9 @@ class NunipOtherTests(TestCase):
         kind = PostType.objects.create(category=other, name="정리")
         keep = [Category.objects.create(section=nunip, code="A", name="공모주"), Category.objects.create(section=bam, code="Z", name="그 외")]
         post = TistoryPost.objects.create(title="그 외 글", bt_category=other)
-        import_module("apps.routines.migrations.0022_nunip_drop_other").forward(apps, None)
+        naver = Category.objects.create(section=Section.objects.create(name="black_lukey"), code="Z", name="그 외")
+        import_module("apps.routines.migrations.0022_drop_other").forward(apps, None)
+        self.assertFalse(Category.objects.filter(pk=naver.pk).exists())
         self.assertFalse(Category.objects.filter(pk=other.pk).exists())
         self.assertFalse(PostType.objects.filter(pk=kind.pk).exists())
         self.assertTrue(all(Category.objects.filter(pk=c.pk).exists() for c in keep))
@@ -747,7 +749,7 @@ class WritingPickTests(Login):
         """기본 = 글 분류의 모든 소재 한 편씩 (소재가 있는 것만 쓴다, 2026-10-22 사용자)"""
         from .views import default_picks
         a = default_picks(date(2026, 10, 16))
-        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 5, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020), 생활 (blog_types 0040), 세일 이벤트 뺌 (0042)
+        self.assertEqual(self.by_section(a), {"눈잎": 5, "black_lukey": 4, "밤밤": 3, "워드프레스": 4})  # AI 소식은 커스텀 (0018), 일본 하나·해외 여행은 밤밤 (0020), 생활 (blog_types 0040), 세일 이벤트 뺌 (0042)
         self.assertEqual(set(a.values()), {1})
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         row = next(r for r in res.context["routines"] if r.key == "writing")
@@ -876,7 +878,7 @@ class FixedTopicTests(Login):
         self.assertEqual(res.context["ACTIVE_MENU"], "routine_topics")
         groups = res.context["groups"]
         self.assertEqual([g["name"] for g in groups[:3]], ["눈잎", "black_lukey", "밤밤"])  # 글 분류의 사이트 순서
-        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 5, 3])  # 눈잎 그 외는 뺌 (0022)  # 일일루틴 글쓰기가 보는 소재 그대로
+        self.assertEqual([len(g["cats"]) for g in groups[:3]], [5, 4, 3])  # 눈잎 · black_lukey 그 외는 뺌 (0022)  # 일일루틴 글쓰기가 보는 소재 그대로
         ipo = next(c for c in groups[0]["cats"] if c.name == "공모주")
         self.assertEqual([t.name for t in ipo.topics], ["공모주 일정 · 국내", "공모주 일정 · 해외"])  # 고정 주제는 소재 아래
         self.assertNotContains(res, f'value="c{ipo.pk}"')  # 고정 주제가 있는 소재는 머리 줄만 (고르지 않는다)

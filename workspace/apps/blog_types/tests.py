@@ -167,7 +167,13 @@ class SiteCategoryTests(TestCase):
 
     def test_seed_real_categories(self):
         names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
-        self.assertEqual(names, ["AI"])  # AI 는 0021 (2026-10-23). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자)
+        # AI 는 0021 (2026-10-23). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자). 총정리 3개는 0052 (2026-10-31 사용자)
+        self.assertEqual(names, ["AI", "무료 AI 툴", "이달의 AI", "IT 할인"])
+        roundup = SiteCategory.objects.get(blog=self.memorily, name="IT 할인")
+        self.assertIn("정리카드.py", roundup.concept)
+        self.assertIn("IT할인_*.json", roundup.concept)
+        self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="이달의 AI").heading_bar)
+        self.assertFalse(SiteCategory.objects.get(blog=self.memorily, name="무료 AI 툴").heading_bar)
         self.assertTrue(SiteCategory.all_objects.filter(blog=self.memorily, name="Java", deleted_at__isnull=False).exists())
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)  # 낙서장 · videolog (시험 DB 의 옛 값)
@@ -186,7 +192,7 @@ class SiteCategoryTests(TestCase):
     def test_add_edit_move_delete(self):
         self.add(self.memorily.sel, "AI 이야기")
         top = SiteCategory.objects.get(name="AI 이야기")
-        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 11))
+        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 14))  # 총정리 3개 (0052) 뒤
         self.add(top.sel, "Claude Code")
         sub = SiteCategory.objects.get(name="Claude Code")
         self.assertEqual(sub.parent, top)
@@ -196,7 +202,8 @@ class SiteCategoryTests(TestCase):
         top.refresh_from_db()
         self.assertEqual((top.name, top.note), ("AI 개발기", "새 축"))
         self.client.post(reverse("blog_types:move", args=["sitecat", top.pk]), {"dir": "up"})
-        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[0].name, "AI 개발기")
+        names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
+        self.assertEqual(names[-2:], ["AI 개발기", "IT 할인"])  # 한 칸 위로
         res = self.client.get(reverse("blog_types:delete", args=["sitecat", top.pk]))
         self.assertContains(res, "하위 카테고리 1개")
         self.client.post(reverse("blog_types:delete", args=["sitecat", top.pk]))
@@ -417,11 +424,11 @@ class PostHubTests(TestCase):
         self.assertContains(res, f"{self.season.category.section.name} › {self.season.category.code}. {self.season.category.name} › {self.season.name}")
         self.assertContains(res, f"p=naver:{n1.pk}")  # 네이버 글도 같은 화면에서
 
-        res = self.client.get(view, {"stage": "review"})  # 고른 글이 없으면 그 단계의 첫 글
+        res = self.client.get(view, {"stage": "review", "view": "one"})  # 한 건씩: 고른 글이 없으면 그 단계의 첫 글
         self.assertEqual(res.context["post"].title, "검토 중인 글")
         self.assertEqual([p.title for p in res.context["pl_items"]], ["검토 중인 글"])
         self.T.objects.filter(stage="review").delete()
-        res = self.client.get(view, {"stage": "review"})  # 글이 없는 단계
+        res = self.client.get(view, {"stage": "review", "view": "one"})  # 글이 없는 단계
         self.assertContains(res, "검토글에 글이 없습니다")
 
         # 발행예정글은 한 건 대신 글 관리와 같은 전체 목록 (2026-10-20 사용자). 글을 누르면 그 글을 본다
@@ -437,18 +444,21 @@ class PostHubTests(TestCase):
         self.assertEqual(res.context["post"].title, "발행할 글 하나")
 
     def test_temp_review_list_mode_bulk(self):
-        """임시글·검토글 (2026-10-22 사용자): 기본은 한 건씩, '목록'으로 바꾸면 체크해서 한꺼번에 옮기기·삭제"""
+        """임시글·검토글 (2026-10-22 사용자): 한 건씩 · 목록(체크해서 한꺼번에 옮기기·삭제). 2026-10-31 사용자: 기본은 목록"""
         a = self.T.objects.create(title="임시 하나", stage="temp")
         b = self.N.objects.create(title="임시 둘", stage="temp")
         view = reverse("posts:view")
-        res = self.client.get(view, {"stage": "temp"})  # 기본: 한 건씩 (글 화면) + 보기 바꾸기
+        res = self.client.get(view, {"stage": "temp", "view": "one"})  # 한 건씩 (글 화면) + 보기 바꾸기
         self.assertIn("post", res.context)
-        self.assertContains(res, f'href="{view}?stage=temp&amp;view=list"')
-        res = self.client.get(view, {"stage": "temp", "view": "list"})
+        self.assertContains(res, f'href="{view}?stage=temp"')
+        res = self.client.get(view, {"stage": "temp"})  # 기본: 목록
+        self.assertEqual(res.context["mode_urls"]["on"], "list")
+        self.assertContains(res, f'href="{view}?stage=temp&amp;view=one"')
         self.assertEqual(sorted(p.title for p in res.context["posts"]), ["임시 둘", "임시 하나"])
+        self.assertEqual(self.client.get(view, {"stage": "temp", "view": "list"}).context["mode_urls"]["on"], "list")  # 예전 주소도 목록
         self.assertContains(res, f'value="tistory:{a.pk}" form="ph-bulk"')
-        self.assertContains(res, f'href="{view}?stage=temp&amp;p=tistory:{a.pk}"')  # 제목은 한 건씩 보기로
-        self.assertContains(res, f'href="{view}?stage=review&amp;view=list"')  # 다른 단계 탭도 목록으로
+        self.assertContains(res, f'href="{view}?stage=temp&amp;view=one&amp;p=tistory:{a.pk}"')  # 제목은 한 건씩 보기로
+        self.assertContains(res, f'href="{view}?stage=review"')  # 다른 단계 탭도 목록으로
         self.assertContains(res, 'name="to" value="review"')
         self.assertContains(res, 'data-trash-checked="ids"')
         self.assertNotContains(res, "변환 가능 글 전체 변환")  # 발행예정글 전용 칸은 없다
@@ -502,7 +512,7 @@ class PostHubTests(TestCase):
         self.T.objects.create(title="오늘 글", stage="temp")
         old = self.N.objects.create(title="어제 글", stage="temp")
         self.N.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=1))
-        res = self.client.get(reverse("posts:view"), {"stage": "temp", "today": "1"})
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "today": "1", "view": "one"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["오늘 글"])
         self.assertEqual(res.context["pl_tabs"][0]["count"], 1)
         self.assertContains(res, 'aria-pressed="true"')
@@ -515,7 +525,7 @@ class PostHubTests(TestCase):
         self.T.objects.create(title="루틴 글", stage="temp")
         self.N.objects.create(title="커스텀 네이버", stage="temp", custom=True)
         mine = self.T.objects.create(title="커스텀 글", stage="temp", custom=True)
-        res = self.client.get(reverse("posts:view"), {"stage": "temp", "custom": "1"})
+        res = self.client.get(reverse("posts:view"), {"stage": "temp", "custom": "1", "view": "one"})
         self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["커스텀 글", "커스텀 네이버"])
         self.assertEqual(res.context["pl_tabs"][0]["count"], 2)
         self.assertIn("custom=1", res.context["pl_tabs"][1]["url"])  # 단계를 바꿔도 조건은 그대로
@@ -536,12 +546,12 @@ class PostHubTests(TestCase):
         self.N.objects.create(title="네 임시", stage="temp")
         self.T.objects.create(title="티 검토", stage="review")
         url = reverse("posts:view")
-        res = self.client.get(url)
+        res = self.client.get(url, {"view": "one"})
         self.assertEqual(sorted(p.title for p in res.context["pl_items"]), ["네 임시", "티 임시"])
         self.assertEqual([t["count"] for t in res.context["pl_tabs"]], [2, 1])  # 임시글 · 검토글 (발행예정글·게시글 관리는 중메뉴로, 2026-10-23)
-        res = self.client.get(url, {"sel": "u", "stage": "review"})
+        res = self.client.get(url, {"sel": "u", "stage": "review", "view": "one"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["티 검토"])  # 미분류
-        res = self.client.get(url, {"sel": self.season.category.sel})
+        res = self.client.get(url, {"sel": self.season.category.sel, "view": "one"})
         self.assertEqual([p.title for p in res.context["pl_items"]], ["티 임시"])
 
     def test_bulk_move_and_send_mixed(self):
@@ -572,7 +582,7 @@ class PostHubTests(TestCase):
         p = self.T.objects.create(title="글", stage="temp")
         res = self.client.get(p.get_absolute_url())
         self.assertEqual(res.context["ACTIVE_MENU"], "posts_view")  # 글 하나를 보는 화면은 '글 보기' 메뉴
-        self.assertContains(res, f'{reverse("posts:view")}?stage=review"')  # 단계 탭은 글 관리 안에서
+        self.assertContains(res, f'{reverse("posts:view")}?stage=review&amp;view=one"')  # 단계 탭은 글 관리 안에서 (한 건씩 그대로)
 
 
 class MappingPanesTests(TestCase):
@@ -728,7 +738,7 @@ class SitePublishTests(TestCase):
         view = self.client.get(url, {"p": f"tistory:{done.pk}"})
         self.assertEqual(view.context["pl_stage"], "done")  # 글 보기 왼쪽 목록도 게시글 관리
         self.T.objects.create(title="임시", stage="temp")
-        res = self.client.get(url, {"stage": "temp"})
+        res = self.client.get(url, {"stage": "temp", "view": "one"})
         self.assertContains(res, 'data-bt-tree="list"')  # 다른 단계는 한 건씩 (왼쪽은 글 목록)
 
     def test_mapping_list_hides_published_and_converted_newest_first(self):
@@ -814,7 +824,7 @@ class SimpleClassesTests(TestCase):
         self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤", "memorily", "워드프레스"])  # memorily › AI 는 0021, 워드프레스 0030
         self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
                          ["코스피 시황 노트", "나스닥 시황 노트", "해외 여행"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020), 제품소개 지움 (0028), 시황 노트를 코스피·나스닥으로 다시 나눔 (0033)
-        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.exclude(name__in=["memorily", "밤밤", "워드프레스", "눈잎"])))  # '그 외' 하나 (밤밤은 0028 · 눈잎은 routines 0022 에서 뺌, 워드프레스는 없음)
+        self.assertFalse(Category.objects.filter(name="그 외").exists())  # '그 외'는 없다 (밤밤 0028 · 눈잎·black_lukey routines 0022 에서 뺌)
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
         self.assertTrue(Category.objects.get(name="코스피 시황 노트").direction)  # 방향 = 글쓰기 컨셉
         trashed = TrashEntry.objects.filter(model_label="blog_types.section")
@@ -1298,7 +1308,9 @@ class DefaultPlacementTests(TestCase):
         self.assertEqual([str(pl.site_category) for pl in post.placements.all()], ["AI"])
         ai = SiteCategory.objects.get(blog__name="memorily", name="AI")
         self.assertTrue(ai.heading_bar)
-        self.assertEqual(Category.objects.get(section__name="memorily", name="AI").section.categories.count(), 1)
+        # memorily 글 분류: AI + 총정리 3개 (0052) — AI 는 하나뿐
+        self.assertEqual(list(Category.objects.filter(section__name="memorily").values_list("name", flat=True)),
+                         ["AI", "무료 AI 툴", "이달의 AI", "IT 할인"])
 
 
 class MemorilyAiPickTests(TestCase):
