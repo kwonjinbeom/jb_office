@@ -516,6 +516,23 @@ class DraftSyncTests(TestCase):
         self.assertEqual((old.source, old.title), ("T150_허브", "이번 주 청약·공모주 달력 (10월 27일~11월 9일)"))
         self.assertTrue(pl.changed_note.startswith("제목·본문 · 국내 공모주 일정"))
 
+    def test_purged_post_is_not_imported_again(self):
+        """휴지통 7일이 지나 영구 삭제된 글이 원고 폴더에서 임시글로 다시 들어오지 않는다 (2026-10-31 사용자: 22일 글이 다시 들어왔다)."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.core.trash import move_to_trash, purge_expired
+
+        from .views import auto_import_drafts
+        auto_import_drafts()
+        move_to_trash(Post.objects.get(source="T150_허브"))
+        purge_expired(now=timezone.now() + timedelta(days=8), limit=1000)
+        self.assertFalse(Post.all_objects.exists())
+        self.assertEqual(auto_import_drafts(), 0)
+        self.write("이번 주 청약·공모주 달력 (11월 3일~11월 16일)", "제목을 고친 원고")  # 제목이 바뀌어도 원고 폴더로 알아본다
+        self.assertEqual(auto_import_drafts(), 0)
+
 
 class TrashNunipKospiTests(TestCase):
     """writing 0026 (2026-10-26 사용자): 눈잎에 넣었던 코스피 글은 휴지통으로."""

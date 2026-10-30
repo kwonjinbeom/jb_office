@@ -36,7 +36,7 @@ def forward(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("routines", "0021_topic_daily"),
-        ("blog_types", "0051_local_lunch_cafe"),
+        ("blog_types", "0053_black_lukey_sale_event"),  # 세일 이벤트를 되살린 뒤
         ("core", "0007_posts_hub_menu"),
     ]
     operations = [migrations.RunPython(forward, migrations.RunPython.noop)]

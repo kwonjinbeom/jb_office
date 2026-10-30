@@ -106,6 +106,16 @@
 | 삼성 뉴스룸 | https://news.samsung.com/kr/ | 갤럭시 출시·One UI | 바로 |
 | GSMArena 뉴스 | https://www.gsmarena.com/news.php3 | 신제품 스펙·출시 소식 | 바로 |
 
+### 세일 이벤트 (2026-10-31 되살림 — 브랜드 공식 공지만)
+| 사이트 | 주소 | 무엇을 보나 | 읽기 |
+|---|---|---|---|
+| 코리아세일페스타 | https://www.koreasalefesta.kr/ | 국가 세일 기간·참여사 | 확인 전 |
+| 올리브영 | https://www.oliveyoung.co.kr/ | 올영세일·올영데이 기간·혜택 (이벤트 공지) | 확인 전 |
+| 무신사 | https://www.musinsa.com/ | 무신사 블랙프라이데이·무진장 기획전 | 확인 전 |
+| 유니클로 | https://www.uniqlo.com/kr/ko/ | 감사제·한정 특가 기간 | 확인 전 |
+| 29CM | https://www.29cm.co.kr/ | 이구위크 등 정기 기획전 | 확인 전 |
+| 쿠팡 | https://www.coupang.com/ | 블프·와우 회원 기획전 | 확인 전 |
+
 ### 영화·OTT 공개
 | 사이트 | 주소 | 무엇을 보나 | 읽기 |
 |---|---|---|---|

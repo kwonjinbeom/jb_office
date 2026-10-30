@@ -176,7 +176,7 @@ class SiteCategoryTests(TestCase):
         self.assertFalse(SiteCategory.objects.get(blog=self.memorily, name="무료 AI 툴").heading_bar)
         self.assertTrue(SiteCategory.all_objects.filter(blog=self.memorily, name="Java", deleted_at__isnull=False).exists())
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
-        self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)  # 낙서장 · videolog (시험 DB 의 옛 값)
+        self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 3)  # 낙서장 · videolog (시험 DB 의 옛 값) + 세일 이벤트 (0053)
         self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 생활 (0040)
 
     def test_tree_shows_both_grids(self):
