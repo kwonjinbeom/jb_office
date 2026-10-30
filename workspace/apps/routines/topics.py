@@ -147,7 +147,7 @@ def _back(request, fallback="routines:topics"):
 def page(request):
     request.nav_key = "routine_topics"
     return render(request, "routines/topics.html", {
-        "page_title": "커스텀 글쓰기", "groups": groups(), "today": timezone.localdate(), "site_names": sites.names(),
+        "page_title": "커스텀 글쓰기", "tab": "topics", "groups": groups(), "today": timezone.localdate(), "site_names": sites.names(),
         "categories": categories(),
         "writing": Routine.objects.filter(key=WRITING_KEY).first(),
     })

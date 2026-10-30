@@ -237,7 +237,9 @@ def open_terminal(name, title, claude="claude"):
 # 끝 표시 첫 줄이 '실패'면 그 루틴 창은 닫지 않는다 (2026-10-28 사용자: 지역 놀거리를 시각 확인 못 해 못 썼는데 창이 닫혀
 # 이유를 못 봤다 — 실패면 터미널을 열어 두고 마지막에 사유를 보여 줘, 이어서 부탁해 보게). 소재 없음·예정은 실패가 아니다.
 # views.ALL_PART · 여러 날 글쓰기는 키 뒤에 날짜 (views.DAY_PART, 2026-10-31) — 그 루틴의 현황·안내문을 그 날짜로
-ALL_PART = re.compile(r"^<!-- 일일루틴 루틴: ([a-z0-9_-]{1,30})(?: (\d{4}-\d{2}-\d{2}))? -->\n", re.M)
+# · 변환까지 (views.CONVERT_PART, 2026-10-31): '변환: 날짜 주소' — 앞 글쓰기가 끝나면 그 주소에서 변환 안내문을 받아 연다
+ALL_PART = re.compile(r"^<!-- 일일루틴 (?:루틴: ([a-z0-9_-]{1,30})(?: (\d{4}-\d{2}-\d{2}))?"
+                      r"|변환: (\d{4}-\d{2}-\d{2}) (https?://\S+)) -->\n?", re.M)
 CLOSE_AFTER = 90  # 끝 표시 뒤 루틴 창을 닫기까지 (초)
 FAILED = "실패"  # 끝 표시 첫 줄
 DONE_TAIL = """
@@ -266,7 +268,8 @@ def split_all(text, part=ALL_PART):
 
 
 def open_chain(steps, title, claude="claude", allow=()):
-    """steps: [(안내문 파일 이름, 창 제목)]. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다.
+    """steps: [(안내문 파일 이름, 창 제목[, 먼저 할 명령])]. 먼저 할 명령이 있으면 그 차례에 돌리고 (변환까지: 안내문 받기),
+    0 으로 끝나야 그 터미널을 연다 — 아니면 건너뛴다. 차례 창 하나가 루틴 터미널을 앞 루틴이 끝날 때마다 하나씩 연다.
     끝난 루틴 창은 CLOSE_AFTER 초 뒤 닫고(마지막 답·Stop 훅의 git 동기화가 끝나게), 다 끝나면 차례 창도 닫힌다
     (2026-10-20 사용자: 끝났으면 창을 닫았으면). 끝 표시 없이 사람이 창을 닫은 루틴은 그대로 다음으로 간다.
     끝 표시 첫 줄이 '실패'인 루틴 창은 닫지 않고, 차례 창도 다 끝난 뒤 Enter 를 기다린다 (2026-10-28 사용자)."""
@@ -282,11 +285,11 @@ def open_chain(steps, title, claude="claude", allow=()):
         "if ($left -gt 0) { Start-Sleep -Seconds ([int]$left) }; "
         "if (-not $script:prev.HasExited) { taskkill /PID $script:prev.Id /T /F | Out-Null }; $script:prev = $null } }",
     ]
-    for name, step_title in steps:
+    for name, step_title, *before in steps:
         (done / name).unlink(missing_ok=True)  # 같은 날 다시 누르면 처음부터
         flag = _ps(done / name)
         argv = terminal_command(step_title, claude, _claude_args(name, allow))
-        lines += [
+        block = [
             f"Write-Host {_ps(f'{step_title} 시작 (새 터미널)')}",
             f"$p = Start-Process -FilePath {_ps(argv[0])} -ArgumentList {','.join(_ps(a) for a in argv[1:])} -PassThru",
             f"while (-not (Test-Path -LiteralPath {flag}) -and -not $p.HasExited) {{ Start-Sleep -Seconds 10; "
@@ -300,6 +303,11 @@ def open_chain(steps, title, claude="claude", allow=()):
             f"elseif (Test-Path -LiteralPath {flag}) {{ $prev = $p; $prevAt = Get-Date }}",
             f"Write-Host {_ps(f'{step_title} 끝')}",
         ]
+        if before:  # 앞 터미널이 끝난 뒤 돌리는 명령. 0 이 아니면 (변환할 글 없음 · 실패) 이 터미널은 건너뛴다
+            lines += [f"Write-Host {_ps(f'{step_title} 준비')}", before[0],
+                      "if ($LASTEXITCODE -eq 0) {", *block, f"}} else {{ Write-Host {_ps(f'{step_title} 건너뜀')} }}"]
+        else:
+            lines += block
     lines += [f"Close-Done {CLOSE_AFTER}",
               f"if ($kept) {{ Write-Host ({_ps('전체 실행을 마쳤습니다. 실패한 루틴 ')} + $kept + "
               f"{_ps('개의 창은 열어 두었습니다. 그 창에서 이어서 부탁하세요.')}); Read-Host {_ps('Enter 를 누르면 이 창을 닫습니다')} }}",
@@ -308,6 +316,41 @@ def open_chain(steps, title, claude="claude", allow=()):
     script.write_text("\n".join(lines) + "\n", encoding="utf-8-sig")  # BOM: Windows PowerShell 5.1 이 한글을 깨뜨리지 않게
     _popen(["powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)])
     return ""
+
+
+def convert_command(url, name):
+    """변환 단계의 '먼저 할 명령' (PowerShell 한 줄): manage.py routine_convert 가 서버에서 안내문을 받아 .routine/<name> 에 쓴다."""
+    python = settings.BASE_DIR / ".venv" / "Scripts" / "python.exe"
+    return (f"& {_ps(python if python.exists() else 'python')} {_ps(settings.BASE_DIR / 'manage.py')} routine_convert "
+            f"{_ps(url)} {_ps(name)}")
+
+
+def fetch_convert(url, name, head="", wait=20, tries=45, opener=None):
+    """변환까지: 서버(views.convert_api)에서 그날 변환 안내문을 받아 .routine/<name> 에 쓴다 (+ 끝 표시 지시).
+    서버에 아직 PC 커밋이 없으면(409, 웹훅 반영 전) wait 초마다 다시 묻는다. (0=씀 · 3=변환할 글 없음 · 1=실패, 한 줄)."""
+    import urllib.error
+    opener = opener or urllib.request.urlopen
+    full = url + ("&" if "?" in url else "?") + f"head={head}" if head else url
+    for i in range(tries):
+        try:
+            with opener(full, timeout=120) as res:
+                if res.status == 204:
+                    return 3, "변환할 글이 없습니다 (그날 쓴 글이 없거나 이미 변환)."
+                text = res.read().decode("utf-8").replace("\r\n", "\n")
+        except urllib.error.HTTPError as e:
+            if e.code == 409 and i < tries - 1:
+                time.sleep(wait)
+                continue
+            return 1, f"변환 안내문을 받지 못했습니다 (HTTP {e.code})."
+        except OSError as e:
+            return 1, f"변환 안내문을 받지 못했습니다 ({e})."
+        if not text.startswith(CONVERT_HEAD):
+            return 1, "서버 응답이 변환 안내문이 아닙니다."
+        folder = settings.BASE_DIR / ".routine"
+        (folder / "convert").mkdir(parents=True, exist_ok=True)
+        (folder / name).write_text(text + DONE_TAIL.format(name=name), encoding="utf-8")
+        return 0, f"변환 안내문을 받았습니다 ({text.splitlines()[0]})."
+    return 1, "서버에 새 원고가 아직 반영되지 않았습니다 (기다리다 멈춤)."
 
 
 def check_feeds(payload):
@@ -368,8 +411,13 @@ def start(link, text):
             raise ValueError("전체 실행 안내문에 루틴이 없습니다. 화면에서 '전체 실행'을 다시 누르세요.")
         folder = settings.BASE_DIR / ".routine"
         folder.mkdir(exist_ok=True)
-        steps, days = [], any(on for (_, on), _ in parts)  # 여러 날 글쓰기: 날마다 그 날짜로
-        for i, ((k, on), body) in enumerate(parts, start=1):
+        steps, days = [], any(on for (_, on, _, _), _ in parts)  # 여러 날 글쓰기: 날마다 그 날짜로
+        for i, ((k, on, cday, curl), body) in enumerate(parts, start=1):
+            if cday:  # 변환까지: 앞 글쓰기가 끝나면 서버에서 그날 변환 안내문을 받아 이 파일에 쓴다 (routine_convert)
+                name = f"all-{cday}-{i}-convert.md"
+                (folder / name).unlink(missing_ok=True)
+                steps.append((name, f"일일루틴 {i}/{len(parts)} 변환 {cday[5:]}", convert_command(curl, name)))
+                continue
             routine, when = _routine_for(k), date.fromisoformat(on) if on else day
             _open_run(routine, when, ("여러 날 글쓰기" if days else "전체 실행") + " · 차례를 기다립니다")
             name = f"all-{when}-{i}-{k}.md"

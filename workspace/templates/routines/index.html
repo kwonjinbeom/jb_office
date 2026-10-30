@@ -2,14 +2,14 @@
 
 {% block heading %}글쓰기 자동화 <span class="cnt">완료 {{ done_total }}/{{ routines|length }}</span>{% endblock %}
 
-{% block toolbar %}{% include "includes/period_bar.html" %}{% endblock %}
+{% block toolbar %}{% include "includes/period_bar.html" with day_only=True %}{% endblock %}
 
 {% block content %}
-{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(최신화 → 글쓰기) · '여러 날'(글쓰기를 고른 날마다). 더 쓰는 건 커스텀 글쓰기. #}
+{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(글쓰기, 최신화·아이디어는 수동 루틴 탭) · '여러 날'(글쓰기를 고른 날마다). 더 쓰는 건 커스텀 글쓰기. #}
 <section class="card br-sites">
   <table class="grid br-table rt-table">
-    <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:230px"><col style="width:80px"></colgroup>
-    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}{% if ahead_days %}{% include "routines/_ahead.html" %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
+    <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:330px"><col style="width:80px"></colgroup>
+    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span><label class="rt-conv" title="{% if can_convert %}체크하고 실행하면 글쓰기가 끝난 뒤 그날 글을 발행예정글로 옮기고 이어서 일괄 변환{% else %}설정 화면에서 보고 토큰을 먼저 만드세요{% endif %}"><input type="checkbox" class="checkbox" data-rt-convert{% if not can_convert %} disabled{% endif %}>변환까지</label>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt alt=all_prompt_convert day=run_day label="전체 실행" primary=True %}{% endif %}{% if ahead_days %}{% include "routines/_ahead.html" %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
     <tbody>
       {% for r in routines %}
       <tr id="rt-{{ r.key }}"{% if r.key == writing_key %} class="rt-has-sub" data-rt-toggle title="눌러서 커스텀 글쓰기(사이트별 소재·고정 주제) 펼치기"{% endif %}>
@@ -21,7 +21,7 @@
         </td>
         <td>
           <div class="rt-acts">
-            {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt day=run_day label="실행" %}
+            {% include "routines/_launch.html" with key=r.key name=r.name kind="run" text=r.prompt alt=r.prompt_convert day=run_day label="실행" %}
           </div>
         </td>
         <td class="c">{% include "includes/state.html" with state=r.state %}</td>
@@ -170,6 +170,8 @@
     var fd = new FormData();
     fd.append("csrfmiddlewaretoken", "{{ csrf_token }}");
     picked().forEach(function (d) { fd.append("days", d); });
+    var conv = document.querySelector("[data-rt-convert]");
+    if (conv && conv.checked) fd.append("convert", "1");
     run.disabled = true;
     fetch(run.dataset.url, { method: "POST", body: fd, credentials: "same-origin" })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
@@ -183,6 +185,13 @@
       .then(function () { count(); });
   });
   count();
+})();
+(function () {
+  // 변환까지: 체크를 이 브라우저에 기억한다 (실행 버튼들이 보낼 안내문은 static/js/app.js 가 고른다)
+  var conv = document.querySelector("[data-rt-convert]");
+  if (!conv || conv.disabled) return;
+  try { conv.checked = localStorage.getItem("rt.convert") === "1"; } catch (e) {}
+  conv.addEventListener("change", function () { try { localStorage.setItem("rt.convert", conv.checked ? "1" : "0"); } catch (e) {} });
 })();
 (function () {
   // 실행 이력: 진행 중인 기록이 있으면 그 칸만 다시 읽는다 (펼친 기록은 펼친 채로).

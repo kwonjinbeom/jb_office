@@ -1682,6 +1682,11 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .rt-ahead-day.is-off .d { color: var(--text-3); font-weight: 400; }
 .rt-ahead-day.is-off:hover { background: none; }
 .rt-ahead-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.up-what { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.9; color: var(--text-2); }
+.up-last { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.rt-conv { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.rt-conv:has(input:disabled) { opacity: .5; cursor: default; }
+.rt-th-run .rt-conv + .rt-launch { margin-left: 0; }
 .id-count { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
 /* 추가 실행 (routines/extra.html): 넓은 칸. 글쓰기 분류는 대분류마다 한 열. */
 .ex-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }

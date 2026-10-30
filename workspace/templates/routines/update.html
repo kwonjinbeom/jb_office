@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block heading %}수동 루틴{% endblock %}
+
+{% block toolbar %}{% include "routines/_manual_tabs.html" %}{% endblock %}
+
+{% block content %}
+<div class="tp-layout">
+{# 왼쪽: 프롬프트 최신화 실행 (루틴 안내문 그대로, PC 터미널 claude). 매일 돌 필요 없다 — 일주일에 한두 번 (2026-10-31 사용자) #}
+<section class="card tp-free">
+  <div class="card-head"><h3 class="card-title">프롬프트 최신화</h3><span class="hint">PC 터미널에서 claude 가 고칩니다</span></div>
+  {% if routine %}
+  <div class="tp-free-body">
+    <ul class="up-what">
+      <li>나의 평가를 읽고 루틴 프롬프트에 반영</li>
+      <li>서치 콘솔 성과로 노출된 글·안 된 글 비교</li>
+      <li>상위 글·수요를 브라우저로 깊게 조사</li>
+      <li>최근 기획표의 반복을 세어 규칙 고치기</li>
+    </ul>
+    <div class="up-last"><span class="muted">마지막 실행</span>{% if last %}<strong>{{ last.day|date:"Y-m-d" }}</strong><span class="muted small">{% if since %}{{ since }}일 전{% else %}오늘{% endif %}</span><span class="badge {{ last.badge }}">{{ last.get_status_display }}</span>{% else %}<span class="muted">없음</span>{% endif %}</div>
+    <div class="tp-free-foot">
+      <span class="muted small">매일 돌 필요 없음 · 일주일에 한두 번</span>
+      {% include "routines/_launch.html" with key=routine.key name=routine.name kind="run" text=prompt day=today label="실행" primary=True %}
+    </div>
+  </div>
+  {% else %}
+  <div class="rt-empty">프롬프트 최신화 루틴이 없습니다. 프롬프트 관리에서 루틴을 만드세요.</div>
+  {% endif %}
+</section>
+
+{# 오른쪽: 최신화가 바꾼 프롬프트 (버전). 누르면 프롬프트 관리의 그 루틴 이력 #}
+<div class="tp-right">
+<section class="card">
+  <div class="card-head tp-head"><h3 class="card-title">최근 바뀐 프롬프트</h3><a class="btn sm" href="{% url 'routines:prompts' %}">프롬프트 관리</a></div>
+  <table class="grid tp-table">
+    <colgroup><col style="width:140px"><col><col style="width:72px"></colgroup>
+    <thead><tr><th>바뀐 때</th><th>루틴</th><th class="c">버전</th></tr></thead>
+    <tbody>
+      {% for v in versions %}
+      <tr>
+        <td>{{ v.captured_at|date:"Y-m-d H:i" }}</td>
+        <td><div class="rt-cell"><a href="{% url 'routines:prompts' %}?r={{ v.routine.key }}#pm-history">{{ v.routine.name }}</a></div></td>
+        <td class="c">v{{ v.number }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" class="grid-empty">아직 바뀐 프롬프트가 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+</div>
+</div>
+{% endblock %}

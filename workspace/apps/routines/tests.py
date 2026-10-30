@@ -55,7 +55,7 @@ class TempRepoTests(Login):
     def test_seed_and_screen(self):
         self.assertEqual(list(Routine.objects.values_list("key", flat=True)), ["daily_ideas", "writing", "prompt_update"])
         res = self.client.get(INDEX)
-        for text in ["일일루틴", "글쓰기", "프롬프트 최신화", ">실행<", "미완료",
+        for text in ["일일루틴", "글쓰기 자동화", "수동 루틴", ">실행<", "미완료",
                      "실행 이력"]:
             self.assertContains(res, text)
         self.assertNotContains(res, "추가 실행")  # 중메뉴 '추가 실행'은 뺐다 (2026-10-23 사용자, 커스텀 글쓰기로)
@@ -392,10 +392,10 @@ class RepoTests(Login):
         PromptVersion.objects.create(routine=tistory, number=2, sha="x", content="바뀐 프롬프트")
         self.assertEqual(self.client.get(PROMPTS, {"r": "writing"}).context["new_count"], 0)
         self.assertIn("3점 · 제목이 길다", launcher(Routine.objects.get(key="prompt_update"), date(2026, 10, 16)))
-        # 그날 바뀐 프롬프트 수가 '프롬프트 최신화' 결과 (하루 1회 목표)
+        # 최신화가 바꾼 프롬프트는 수동 루틴 › 프롬프트 최신화 탭에 (2026-10-31: 글쓰기 자동화 리스트에서 뺌)
         with patch("apps.routines.views.capture_version"):
-            row = next(r for r in self.client.get(INDEX).context["routines"] if r.key == "prompt_update")
-        self.assertEqual((row.result, row.target, row.state), (2, 1, "done"))  # 가짜 v2 + 실제 md 로 돌아온 v3
+            versions = list(self.client.get(reverse("routines:update")).context["versions"])
+        self.assertEqual([v.number for v in versions], [3, 2])  # 가짜 v2 + 실제 md 로 돌아온 v3
         e = Evaluation.objects.get()
         self.client.post(reverse("routines:evaluation_delete", args=[e.pk]))
         self.assertFalse(Evaluation.objects.exists())
@@ -420,37 +420,39 @@ class RepoTests(Login):
 
     @patch("apps.routines.local_run.find_claude", return_value="claude")
     @patch("apps.routines.local_run.subprocess.Popen")
-    def test_all_run_order_update_writing(self, popen, _claude):
+    def test_all_run_is_writing_in_chain(self, popen, _claude):
+        """전체 실행 = 글쓰기 (2026-10-31 사용자: 일일 아이디어·프롬프트 최신화는 수동 루틴 탭으로). 차례 창은 그대로."""
+        Routine.objects.create(key="extra_one", name="다른 루틴", url_name="routines:index", task="다른 일", order=99)
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         self.assertContains(res, ">전체 실행<")
         text = res.context["all_prompt"]
-        self.assertIn("순서: 1. 프롬프트 최신화 → 2. 글쓰기\n", text)  # 일일 아이디어는 뺐다 (2026-10-31 사용자)
-        self.assertLess(text.index("# 일일루틴 · 프롬프트 최신화"), text.index("# 일일루틴 · 글쓰기"))
+        self.assertIn("순서: 1. 글쓰기 → 2. 다른 루틴\n", text)
         self.assertNotIn("# 일일루틴 · 일일 아이디어", text)
+        self.assertNotIn("# 일일루틴 · 프롬프트 최신화", text)
         self.assertEqual(text.count("## 진행 보고"), 2)
-        self.assertEqual(res.context["all_keys"], "prompt_update,writing")
+        self.assertEqual(res.context["all_keys"], "writing,extra_one")
         with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
             folder = Path(tmp) / ".routine"
             (folder / "done").mkdir(parents=True)
-            (folder / "done" / "all-2026-10-16-2-writing.md").write_text("완료", encoding="utf-8")  # 앞서 누른 것
+            (folder / "done" / "all-2026-10-16-1-writing.md").write_text("완료", encoding="utf-8")  # 앞서 누른 것
             msg = start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text.replace("\n", "\r\n"))
             self.assertIn("루틴마다 새 터미널로 차례로", msg)
             # 루틴마다 따로 된 안내문 (한 대화로 잇지 않는다) + 끝 표시 파일 지시
-            names = ["all-2026-10-16-1-prompt_update.md", "all-2026-10-16-2-writing.md"]
+            names = ["all-2026-10-16-1-writing.md", "all-2026-10-16-2-extra_one.md"]
             bodies = [(folder / n).read_text(encoding="utf-8") for n in names]
-            self.assertTrue(bodies[1].startswith("# 일일루틴 · 글쓰기"))
-            self.assertNotIn("# 일일루틴 · 프롬프트 최신화", bodies[1])
-            self.assertEqual(bodies[1].count("## 진행 보고"), 1)
-            self.assertIn("`workspace/.routine/done/all-2026-10-16-2-writing.md` 파일을 만든다", bodies[1])
-            self.assertIn("첫 줄은 `실패`", bodies[1])  # 실패면 창을 열어 두고 사유를 보여 준다 (2026-10-28 사용자)
-            self.assertIn("## 실패한 것", bodies[1])
-            self.assertFalse((folder / "done" / names[1]).exists())  # 다시 누르면 처음부터
+            self.assertTrue(bodies[0].startswith("# 일일루틴 · 글쓰기"))
+            self.assertNotIn("# 일일루틴 · 다른 루틴", bodies[0])
+            self.assertEqual(bodies[0].count("## 진행 보고"), 1)
+            self.assertIn("`workspace/.routine/done/all-2026-10-16-1-writing.md` 파일을 만든다", bodies[0])
+            self.assertIn("첫 줄은 `실패`", bodies[0])  # 실패면 창을 열어 두고 사유를 보여 준다 (2026-10-28 사용자)
+            self.assertIn("## 실패한 것", bodies[0])
+            self.assertFalse((folder / "done" / names[0]).exists())  # 다시 누르면 처음부터
             # 차례 창: 루틴 터미널을 하나씩 열고, 끝 표시나 창 닫힘을 기다린 뒤 다음
             raw = (folder / "all-chain.ps1").read_bytes()
             self.assertTrue(raw.startswith(b"\xef\xbb\xbf"))
             chain = raw.decode("utf-8-sig")
             self.assertEqual(chain.count("Start-Process"), 2)
-            self.assertLess(chain.index("1/2 프롬프트 최신화"), chain.index("2/2 글쓰기"))
+            self.assertLess(chain.index("1/2 글쓰기"), chain.index("2/2 다른 루틴"))
             self.assertIn(f"Test-Path -LiteralPath '{folder / 'done' / names[0]}'", chain)
             self.assertIn("$p.HasExited", chain)
             self.assertIn("-File", popen.call_args[0][0])
@@ -507,7 +509,7 @@ class RepoTests(Login):
         """그날 글쓰기를 한 번이라도 돌렸으면 완료 (2026-10-31 사용자). 일일 아이디어는 리스트에서 뺐다."""
         writing = Routine.objects.get(key="writing")
         res = self.client.get(INDEX, {"date": "2026-10-16"})
-        self.assertNotIn("daily_ideas", [r.key for r in res.context["routines"]])
+        self.assertEqual([r.key for r in res.context["routines"]], ["writing"])  # 아이디어·최신화는 수동 루틴 탭
         self.assertContains(res, "글쓰기 자동화")
         cell = next(c for c in res.context["bar"]["cells"] if c["title"] == "2026-10-16")
         self.assertEqual(cell["state"], "todo")
@@ -516,6 +518,115 @@ class RepoTests(Login):
         cell = next(c for c in res.context["bar"]["cells"] if c["title"] == "2026-10-16")
         self.assertEqual(cell["state"], "done")
         self.assertEqual(next(r for r in res.context["routines"] if r.key == "writing").state, "done")
+
+    def test_manual_tabs_and_prompt_update_page(self):
+        """수동 루틴 (2026-10-31 사용자): 커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화 탭. 메뉴는 '수동 루틴' 하나."""
+        from apps.core.menus import find_menu
+        self.assertEqual(find_menu("routine_topics").title, "수동 루틴")
+        self.assertIsNone(find_menu("routine_ideas"))
+        for name in ("routines:topics", "routines:ideas", "routines:update"):
+            res = self.client.get(reverse(name))
+            self.assertContains(res, 'aria-label="수동 루틴"')
+            self.assertContains(res, 'class="on" aria-current="page"', count=1)
+            for other in ("routines:topics", "routines:ideas", "routines:update"):
+                self.assertContains(res, f'href="{reverse(other)}"')
+        res = self.client.get(reverse("routines:update"))
+        self.assertTrue(res.context["prompt"].startswith("# 일일루틴 · 프롬프트 최신화"))
+        self.assertContains(res, "마지막 실행")
+        RoutineRun.record(Routine.objects.get(key="prompt_update"), timezone.localdate(), "완료", "끝")
+        self.assertEqual(self.client.get(reverse("routines:update")).context["since"], 0)
+
+    @patch("apps.writing.views.auto_import_drafts", return_value=0)
+    def test_convert_api_moves_day_posts_and_returns_convert_brief(self, _import):
+        """변환까지 (2026-10-31 사용자): 그날 쓴 글 → 발행예정글(예정일 그날) → 변환 요청 + 변환 안내문."""
+        from apps.blog_rules.models import Blog
+        from apps.blog_types.models import Placement, SiteCategory
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        today = timezone.localdate()
+        url = reverse("routines:convert", args=[str(today)])
+        self.assertEqual(self.client.get(url + "?token=x").status_code, 403)
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        self.client.logout()
+        self.assertEqual(self.client.get(url + "?token=tok").status_code, 204)  # 그날 글이 없다
+        post = TistoryPost.objects.create(title="오늘 쓴 글", body="본문")
+        old = TistoryPost.objects.create(title="어제 글", body="본문")
+        TistoryPost.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=1))
+        blog = Blog.objects.create(name="시험 블로그", platform=Blog.Platform.TISTORY)
+        cat = SiteCategory.objects.create(blog=blog, name="시험")
+        pl = Placement.objects.create(site_category=cat, tistory_post=post)
+        Placement.objects.create(site_category=cat, tistory_post=old)
+        with patch("apps.routines.views._has_commit", return_value=False):
+            self.assertEqual(self.client.get(url + "?token=tok&head=abc1234").status_code, 409)  # 서버에 아직 원고가 없다
+        res = self.client.get(url + "?token=tok")
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.content.decode("utf-8").startswith("# 사이트 변환"))
+        post.refresh_from_db()
+        pl.refresh_from_db()
+        self.assertEqual((post.stage, post.planned_on, pl.convert_status), ("post", today, Placement.Convert.REQUESTED))
+        old.refresh_from_db()
+        self.assertEqual(old.stage, "temp")  # 다른 날 글은 그대로
+        self.assertEqual(self.client.get(url + "?token=tok").status_code, 204)  # 이미 변환 요청 — 다시 주지 않는다
+
+    @patch("apps.routines.local_run.find_claude", return_value="claude")
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_convert_checkbox_adds_convert_step(self, popen, _claude):
+        """'변환까지' 체크용 안내문: 글쓰기 다음에 변환 단계 → 차례 창이 routine_convert 로 안내문을 받은 뒤 변환 터미널."""
+        from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
+        from . import local_run
+        res = self.client.get(INDEX)
+        self.assertFalse(res.context["can_convert"])  # 토큰이 없으면 체크 못 함
+        self.assertNotContains(res, "?month=")  # 월별 보기는 뺐다
+        AppSetting.set(ROUTINE_BRIEF_TOKEN_KEY, "tok")
+        res = self.client.get(INDEX)
+        today = timezone.localdate()
+        writing = next(r for r in res.context["routines"] if r.key == "writing")
+        self.assertIn(f"<!-- 일일루틴 변환: {today} http://testserver/routines/convert/{today}/?token=tok -->", writing.prompt_convert)
+        self.assertIn("변환: ", res.context["all_prompt_convert"])
+        self.assertContains(res, 'name="prompt_convert"', count=2)
+        d = today + timedelta(days=1)
+        text = self.client.post(reverse("routines:ahead"), {"days": [str(d), str(today)], "convert": "1"}).json()["prompt"]
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
+            start(f"jbroutine:all?key=all&day={today}&keys=writing", text)
+            folder = Path(tmp) / ".routine"
+            self.assertTrue((folder / f"all-{today}-1-writing.md").exists())
+            self.assertFalse((folder / f"all-{today}-2-convert.md").exists())  # 변환 안내문은 글쓰기가 끝난 뒤 받는다
+            self.assertNotIn("일일루틴 변환", (folder / f"all-{today}-1-writing.md").read_text(encoding="utf-8"))
+            chain = (folder / "all-chain.ps1").read_bytes().decode("utf-8-sig")
+            self.assertEqual(chain.count("Start-Process"), 4)
+            self.assertEqual(chain.count("routine_convert"), 2)
+            self.assertLess(chain.index("1/4 글쓰기"), chain.index("2/4 변환"))
+            self.assertLess(chain.index("2/4 변환"), chain.index(f"3/4 글쓰기 {d:%m-%d}"))
+            self.assertIn("if ($LASTEXITCODE -eq 0) {", chain)
+
+            class Res:  # 서버 응답 흉내
+                def __init__(self, status, body=b""):
+                    self.status, self.body = status, body
+
+                def read(self):
+                    return self.body
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *a):
+                    return False
+
+            import urllib.error
+            calls = []
+
+            def opener(url, timeout):
+                calls.append(url)
+                if len(calls) == 1:
+                    raise urllib.error.HTTPError(url, 409, "wait", {}, None)
+                return Res(200, "# 사이트 변환 · 1편\n본문".encode("utf-8"))
+
+            code, _ = local_run.fetch_convert("http://s/routines/convert/x/?token=t", "c.md", "abc1234", wait=0, opener=opener)
+            self.assertEqual(code, 0)
+            self.assertIn("&head=abc1234", calls[0])
+            body = (folder / "c.md").read_text(encoding="utf-8")
+            self.assertTrue(body.startswith("# 사이트 변환"))
+            self.assertIn("workspace/.routine/done/c.md", body)  # 끝 표시 — 다음 날 글쓰기로 넘어간다
+            self.assertEqual(local_run.fetch_convert("http://s/x/", "c.md", opener=lambda u, timeout: Res(204))[0], 3)
 
     def test_ideas_page_runs_daily_ideas_by_hand(self):
         """아이디어 찾기 (2026-10-31 사용자): 개수·방향으로 일일 아이디어 안내문."""

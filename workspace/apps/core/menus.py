@@ -47,9 +47,8 @@ MENUS: list[Menu] = [
         "routines", "일일루틴", "글쓰기를 AI 에게 맡기고(PC 에서 실행 · 전체 실행 · 여러 날 미리 쓰기) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
         listing_title="글쓰기 자동화",  # 예전 '일일루틴 리스트' (2026-10-31 사용자)
         children=(
-            Menu("routine_topics", "커스텀 글쓰기", "사이트별 소재·고정 주제를 골라 편수만큼 더 쓰는 곳", "routines:topics", "calendar"),
-            # 일일 아이디어는 전체 실행에서 빼고 여기서 손으로 돌린다 (2026-10-31 사용자)
-            Menu("routine_ideas", "아이디어 찾기", "아이디어 후보를 개수·방향을 정해 그때그때 찾는 곳", "routines:ideas", "sparkles"),
+            # 수동 루틴 (2026-10-31 사용자): 손으로 돌리는 것을 탭으로 — 커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화
+            Menu("routine_topics", "수동 루틴", "커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화를 그때그때 손으로 돌리는 곳", "routines:topics", "calendar"),
             Menu("routine_prompts", "프롬프트 관리", "루틴마다 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),
     ),

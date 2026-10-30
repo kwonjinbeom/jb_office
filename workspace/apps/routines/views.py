@@ -8,8 +8,11 @@
 '전체 실행'(ALL_ORDER 순서로 루틴마다 새 터미널에서 차례로), '여러 날'(글쓰기를 고른 날마다 차례로, ahead). 하루 분량과 따로
 더 쓰는 건 중메뉴 '커스텀 글쓰기' (topics.py — 사이트별 소재·고정 주제를 골라 편수만큼, 또는 자유 글쓰기 코멘트).
 예전 중메뉴 '추가 실행'은 2026-10-23 뺐다.
-리스트 이름은 '글쓰기 자동화' (2026-10-31 사용자). 일일 아이디어는 리스트·전체 실행에서 빼고 중메뉴 '아이디어 찾기'(ideas)에서 손으로.
-그날 상태(달력 띠)는 글쓰기를 한 번이라도 돌렸으면(실행 이력이나 쓴 글) 완료 (2026-10-31 사용자).
+리스트 이름은 '글쓰기 자동화' (2026-10-31 사용자). 일일 아이디어·프롬프트 최신화는 리스트·전체 실행에서 빼고
+중메뉴 '수동 루틴'의 탭(아이디어 찾기 ideas · 프롬프트 최신화 update)에서 손으로. 첫 탭은 커스텀 글쓰기(topics.page).
+그날 상태(달력 띠)는 글쓰기를 한 번이라도 돌렸으면(실행 이력이나 쓴 글) 완료 (2026-10-31 사용자). 월별 보기는 뺐다.
+'변환까지' 체크 (2026-10-31 사용자): 글쓰기 뒤에 변환 단계(CONVERT_PART)를 붙인다. PC 차례 창이 글쓰기 터미널이 끝나면
+서버의 convert_api 에서 그날 쓴 글을 발행예정글로 옮기고 받은 변환 안내문으로 변환 터미널을 이어 연다 (routine_convert 명령).
 보고 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
 
 로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
@@ -403,7 +406,7 @@ EXTRA_TITLE = "이번에 할 것 (추가 실행)"
 DAILY_TOPICS_TITLE = "매일 쓰는 고정 주제 (전체 실행)"
 AHEAD_TITLE = "미리 쓰기 — 예약 발행분"
 ALL_ORDER = ("prompt_update", "writing")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
-OFF_LIST = ("daily_ideas",)  # 리스트·전체 실행에서 뺀 루틴 — 아이디어 찾기에서 손으로 (2026-10-31 사용자)
+OFF_LIST = ("daily_ideas", "prompt_update")  # 리스트·전체 실행에서 뺀 루틴 — 수동 루틴 탭에서 손으로 (2026-10-31 사용자)
 AHEAD_DAYS = 14  # '여러 날'에서 고를 수 있는 날: 오늘부터 2주
 
 
@@ -582,6 +585,20 @@ def _in_all_order(routines):
 
 ALL_PART = "<!-- 일일루틴 루틴: {key} -->"  # 전체 실행 안내문의 루틴 경계 (local_run.split_all 이 나눈다)
 DAY_PART = "<!-- 일일루틴 루틴: {key} {day} -->"  # 여러 날 글쓰기: 날마다 그 날짜로 현황을 남긴다 (local_run.split_parts)
+CONVERT_PART = "<!-- 일일루틴 변환: {day} {url} -->"  # 변환까지: 앞 글쓰기가 끝나면 이 주소에서 변환 안내문을 받아 연다
+
+
+def convert_url(request, day):
+    """변환 단계가 안내문을 받을 서버 주소 (convert_api). 보고 토큰이 없으면 "" — 변환본도 토큰으로 보내서 변환을 못 한다."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token:
+        return ""
+    return request.build_absolute_uri(reverse("routines:convert", args=[day.isoformat()])) + "?" + urlencode({"token": token})
+
+
+def convert_mark(request, day):
+    url = convert_url(request, day)
+    return f"\n{CONVERT_PART.format(day=day, url=url)}\n" if url else ""
 
 
 def all_prompt(routines, day, report_for=lambda r: True):
@@ -600,7 +617,7 @@ def all_prompt(routines, day, report_for=lambda r: True):
     return "\n".join(parts)
 
 
-def ahead_prompt(routine, days, report_for=lambda d: True):
+def ahead_prompt(routine, days, report_for=lambda d: True, convert_for=lambda d: ""):
     """여러 날 글쓰기 안내문 (2026-10-31 사용자: 며칠치를 미리 쓴다). 고른 날마다 그 날짜의 글쓰기 안내문을 이어 붙이고,
     PC 는 전체 실행처럼 날마다 새 터미널에서 차례로 돌린다. 날마다 그 날짜로 쓰고 보고하니 결과·횟수가 그 날에 남는다."""
     days = sorted(days)
@@ -612,7 +629,7 @@ def ahead_prompt(routine, days, report_for=lambda d: True):
         if i:  # 앞 날짜의 원고는 안내문의 '이미 있는 글'에 아직 없다
             body += (f"\n## 여러 날 글쓰기 ({i + 1}/{len(days)})\n앞 날짜({days[i - 1]}) 실행이 방금 쓴 원고가 '이미 있는 글'에는 아직 없다. "
                      "기획 전에 원고 폴더의 최근 원고(가장 큰 T번호들)를 보고 같은 대상·같은 틀이 겹치지 않게 한다.\n")
-        parts.append(f"\n{DAY_PART.format(key=routine.key, day=d)}\n" + body)
+        parts.append(f"\n{DAY_PART.format(key=routine.key, day=d)}\n" + body + convert_for(d))
     return "\n".join(parts)
 
 
@@ -635,7 +652,8 @@ def ahead(request):
     if not days:
         return JsonResponse({"error": "글을 쓸 날을 고르세요."}, status=400)
     days = sorted(days)
-    return JsonResponse({"prompt": ahead_prompt(writing, days, lambda d: report_url(request, writing, d)),
+    convert = (lambda d: convert_mark(request, d)) if request.POST.get("convert") else (lambda d: "")
+    return JsonResponse({"prompt": ahead_prompt(writing, days, lambda d: report_url(request, writing, d), convert),
                          "key": "all", "keys": writing.key, "day": days[0].isoformat(), "count": len(days),
                          "name": f"{writing.name} {len(days)}일"})
 
@@ -675,6 +693,8 @@ def index(request):
         pass
     today = timezone.localdate()
     mode, sel = period.parse(request, today)
+    if mode != "day":  # 월별 보기는 뺐다 (2026-10-31 사용자)
+        mode, sel = "day", today
     start, end = period.bounds(mode, sel)
     lo, hi = period.strip_bounds(mode, sel)
     routines = list(Routine.objects.all())
@@ -725,6 +745,8 @@ def index(request):
         r.fixed = (r.pk, sel) in fixed
         r.url = reverse(r.url_name)
         r.prompt = launcher(r, run_day, report=report_url(request, r, run_day))
+        mark = convert_mark(request, run_day) if r is writing else ""
+        r.prompt_convert = (f"# 일일루틴 전체 실행 — {run_day}\n\n{ALL_PART.format(key=r.key)}\n{r.prompt}{mark}" if mark else "")
     runs = (RoutineRun.objects.select_related("routine")  # 실행 이력: 모든 루틴, 이 기간 + 끝나지 않은 것
             .filter(Q(day__range=(start, end)) | Q(status__in=[RoutineRun.Status.RUNNING, RoutineRun.Status.WAITING,
                                                                  RoutineRun.Status.BLOCKED]))[:50])
@@ -738,7 +760,11 @@ def index(request):
             c.planned = planned.get(c.sel)
     for r in routines:
         r.planned = len(planned) if r.key == topic_mod.WRITING_KEY else 0
+    all_text = _with_feeds(request, all_prompt(routines, run_day, lambda r: report_url(request, r, run_day))) if routines else ""
+    mark = convert_mark(request, run_day) if writing else ""
     return render(request, "routines/index.html", {
+        "can_convert": bool(mark),
+        "all_prompt_convert": all_text + mark if all_text and mark else "",
         "results": results, "result_counts": counts(results),
         "page_title": "글쓰기 자동화",
         "ahead_days": _ahead_days(writing, today, ran), "ahead_max": AHEAD_DAYS,
@@ -752,7 +778,7 @@ def index(request):
         "done_total": sum(1 for r in routines if r.state == "done"),
         "runs": runs,
         "has_open_run": any(run.is_open for run in runs),
-        "all_prompt": _with_feeds(request, all_prompt(routines, run_day, lambda r: report_url(request, r, run_day))) if routines else "",
+        "all_prompt": all_text,
         "all_keys": ",".join(r.key for r in _in_all_order(routines)),
         "on_server": settings.IS_SERVER,
         "keep": request.get_full_path().partition("?")[2],
@@ -909,6 +935,63 @@ def report_api(request, key):
     return HttpResponse(f"ok {routine.key} {day} {run.status}", content_type="text/plain; charset=utf-8")
 
 
+@csrf_exempt
+@login_not_required
+def convert_api(request, day):
+    """변환까지 (2026-10-31 사용자): 글쓰기가 끝난 뒤 PC 차례 창(routine_convert)이 부른다. 토큰이 맞아야 한다.
+    ?head=<PC 커밋> 이 서버 코드에 아직 없으면 409 (웹훅 반영 전 — PC 가 잠시 뒤 다시 묻는다).
+    원고를 가져와 그날 분량(만든 날 = day)의 임시·검토글을 발행예정글(예정일 day)로 옮기고, 원고의 '넣을 카테고리'에 넣은 뒤
+    아직 변환하지 않은 곳을 모두 변환 요청으로 바꿔 변환 안내문(text)을 돌려준다. 변환할 게 없으면 204."""
+    token = AppSetting.get(ROUTINE_BRIEF_TOKEN_KEY)
+    if not token or not hmac.compare_digest(request.GET.get("token", ""), token):
+        return HttpResponseForbidden("token")
+    try:
+        day = date.fromisoformat(day)
+    except ValueError:
+        return HttpResponseBadRequest("day")
+    head = request.GET.get("head", "")
+    if head and not _has_commit(head):
+        return HttpResponse("wait: 서버에 아직 그 커밋이 없습니다", status=409, content_type="text/plain; charset=utf-8")
+    from apps.blog_types import sites
+    from apps.blog_types.models import Placement
+    from apps.naver_writing.models import Post as NaverPost
+    from apps.site_templates import prompt as convert_prompt
+    from apps.writing.models import Post
+    from apps.writing.views import auto_import_drafts
+    auto_import_drafts()
+    posts = [p for model in (Post, NaverPost) for p in model.objects.filter(created_at__date=day).order_by("created_at", "pk")]
+    moved = [p for p in posts if p.stage in ("temp", "review")]
+    for post in moved:
+        post.stage = "post"
+        post.planned_on = post.planned_on or day
+        post.save(update_fields=["stage", "planned_on", "updated_at"])
+    sites.place_defaults([p for p in posts if p.stage == "post"])
+    pls = [pl for pl in Placement.objects.filter(Q(tistory_post__in=[p for p in posts if isinstance(p, Post)])
+                                                 | Q(naver_post__in=[p for p in posts if isinstance(p, NaverPost)]),
+                                                 convert_status=Placement.Convert.NONE)
+           .select_related("site_category__blog", "site_category__parent", "tistory_post", "naver_post")
+           .order_by("site_category__blog__order", "pk")]
+    if not pls:
+        return HttpResponse(status=204)
+    for pl in pls:
+        pl.convert_status = Placement.Convert.REQUESTED
+        pl.save(update_fields=["convert_status", "updated_at"])
+    return HttpResponse(convert_prompt.launcher(request, pls, token), content_type="text/plain; charset=utf-8")
+
+
+def _has_commit(sha):
+    """서버 저장소에 그 커밋이 들어왔나 (웹훅이 git pull 을 마쳤나)."""
+    import subprocess
+    from apps.core.gitstate import repo_root
+    if not re.fullmatch(r"[0-9a-f]{7,40}", sha):
+        return False
+    try:
+        return subprocess.run(["git", "merge-base", "--is-ancestor", sha, "HEAD"], cwd=str(repo_root()),
+                              capture_output=True, timeout=20).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 @require_POST
 def extra(request, pk):
     """하루 분량과 따로 더 하는 안내문 (JSON). mode=comment: 커스텀 글쓰기의 자유 글쓰기 코멘트. mode=count: 개수 + 방향.
@@ -937,6 +1020,7 @@ def extra(request, pk):
                                             tree=mode == "comment")})
 
 
+MANUAL_NAV = "routine_topics"  # 수동 루틴 메뉴 (탭: 커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화)
 IDEAS_KEY = "daily_ideas"
 IDEAS_RECENT = 10  # 아이디어 찾기 오른쪽: 최근 찾은 날 몇 개
 
@@ -944,7 +1028,7 @@ IDEAS_RECENT = 10  # 아이디어 찾기 오른쪽: 최근 찾은 날 몇 개
 def ideas(request):
     """아이디어 찾기 (2026-10-31 사용자): 일일 아이디어 루틴을 전체 실행에서 빼고 여기서 손으로 돌린다.
     개수·방향을 적고 '실행' → extra(mode=count) 안내문으로 PC 터미널 claude. 오른쪽은 최근 찾은 날과 후보."""
-    _nav(request, "routine_ideas")
+    _nav(request, MANUAL_NAV)
     from apps.daily_ideas.data import load_batches
     routine = Routine.objects.filter(key=IDEAS_KEY).first()
     batches = []
@@ -953,7 +1037,28 @@ def ideas(request):
         batches.append({"day": date.fromisoformat(batch["date"]), "count": len(titles), "titles": " · ".join(titles)})
     return render(request, "routines/ideas.html", {
         "page_title": "아이디어 찾기", "routine": routine, "batches": batches, "today": timezone.localdate(),
-        "on_server": settings.IS_SERVER})
+        "on_server": settings.IS_SERVER, "tab": "ideas"})
+
+
+UPDATE_KEY = "prompt_update"
+UPDATE_RECENT = 15  # 프롬프트 최신화 오른쪽: 최근 바뀐 프롬프트 몇 개
+
+
+def update(request):
+    """프롬프트 최신화 (2026-10-31 사용자): 글쓰기 자동화의 리스트·전체 실행에서 빼고 여기서 손으로 (매일 돌 필요 없다).
+    왼쪽 '실행'(그 루틴의 안내문 그대로) · 마지막 실행, 오른쪽은 최신화가 바꾼 프롬프트 (PromptVersion, 첫 버전은 빼고)."""
+    _nav(request, MANUAL_NAV)
+    routine = Routine.objects.filter(key=UPDATE_KEY).first()
+    today = timezone.localdate()
+    for r in Routine.objects.all():  # 바뀐 md 를 버전으로 남겨 오른쪽 목록에 보이게
+        capture_version(r)
+    last = routine.runs.order_by("-day", "-updated_at").first() if routine else None
+    return render(request, "routines/update.html", {
+        "page_title": "프롬프트 최신화", "routine": routine, "today": today, "last": last,
+        "since": (today - last.day).days if last else None,
+        "prompt": launcher(routine, today, report=report_url(request, routine, today)) if routine else "",
+        "versions": PromptVersion.objects.filter(number__gt=1).select_related("routine").order_by("-captured_at")[:UPDATE_RECENT],
+        "on_server": settings.IS_SERVER, "tab": "update"})
 
 
 def doc(request, rel):

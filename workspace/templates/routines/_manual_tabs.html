@@ -1,0 +1,8 @@
+{# 수동 루틴 탭 (2026-10-31 사용자): 손으로 돌리는 것 — 커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화. tab 은 각 뷰가 넣는다. #}
+<div class="filter-bar">
+  <nav class="seg" aria-label="수동 루틴">
+    <a href="{% url 'routines:topics' %}"{% if tab == "topics" %} class="on" aria-current="page"{% endif %}>커스텀 글쓰기</a>
+    <a href="{% url 'routines:ideas' %}"{% if tab == "ideas" %} class="on" aria-current="page"{% endif %}>아이디어 찾기</a>
+    <a href="{% url 'routines:update' %}"{% if tab == "update" %} class="on" aria-current="page"{% endif %}>프롬프트 최신화</a>
+  </nav>
+</div>

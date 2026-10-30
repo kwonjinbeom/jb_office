@@ -320,6 +320,14 @@
     if (!form.matches || !form.matches("form.rt-launch")) return;
     e.preventDefault();
     var field = function (n) { var el = form.elements.namedItem(n); return el ? el.value : ""; };
+    // 글쓰기 자동화 '변환까지' 체크: 글쓰기 뒤 변환 단계가 붙은 안내문을 차례 창(all)으로 연다 (2026-10-31 사용자)
+    var conv = document.querySelector("[data-rt-convert]");
+    if (conv && conv.checked && field("prompt_convert")) {
+      rtLaunch(field("prompt_convert"), { kind: "all", key: "all", day: field("day"), name: field("name") + " + 변환", keys: field("keys") || field("key"),
+                                          msg: "PC 에서 글쓰기를 시작합니다. 끝나면 그날 글을 발행예정글로 옮기고 변환 터미널을 이어서 엽니다." },
+               form.hasAttribute("data-reload"));
+      return;
+    }
     rtLaunch(field("prompt"), { kind: field("kind"), key: field("key"), day: field("day"), name: field("name"), keys: field("keys") },
              form.hasAttribute("data-reload"));
   });

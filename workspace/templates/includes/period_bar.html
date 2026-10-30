@@ -27,8 +27,8 @@
     <a class="btn ghost sm icon" href="{{ bar.nav.strip_next }}" title="{{ bar.nav.strip_next_label }}" aria-label="{{ bar.nav.strip_next_label }}">{% include "includes/ic.html" with name="chevron-right" %}</a>
   </nav>
 
-  <div class="cal-tools">
+  {% if not day_only %}<div class="cal-tools">
     <a class="btn sm{% if bar.mode == 'day' %} on{% endif %}" href="?date={% if bar.mode == 'day' %}{{ bar.sel|date:'Y-m-d' }}{% else %}{{ bar.month_value }}-01{% endif %}">일별</a>
     <a class="btn sm{% if bar.mode == 'month' %} on{% endif %}" href="?month={{ bar.month_value }}">월별</a>
-  </div>
+  </div>{% endif %}
 </div>
