@@ -38,8 +38,8 @@
         </div>
         {% for s in c.children.all %}
         <div class="bt-row">
-          <a {% trash_attrs s %} class="bt-node lv2{% if site_sel == s.sel %} on{% endif %}" data-pane="top" href="?site={{ s.sel }}{% if class_q %}&amp;{{ class_q }}{% endif %}">
-            <span class="nm">{{ s.name }}</span>
+          <a {% trash_attrs s %} class="bt-node lv2{% if site_sel == s.sel %} on{% endif %}" data-pane="top" href="?site={{ s.sel }}{% if class_q %}&amp;{{ class_q }}{% endif %}"{% if s.branch %} title="블로그에는 없는 컨셉 갈래 — 글은 {{ c.name }}에 올리고 템플릿 컨셉만 따로"{% endif %}>
+            <span class="nm">{{ s.name }}</span>{% if s.branch %}<span class="cat-branch">컨셉</span>{% endif %}
             {% if s.count %}<span class="ct">{{ s.count }}</span>{% endif %}
           </a>
           {% include "blog_types/_acts.html" with add_kind="" parent="" wk="" edit_sel=s.sel %}

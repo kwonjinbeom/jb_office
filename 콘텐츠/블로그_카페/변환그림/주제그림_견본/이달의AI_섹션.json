@@ -1,0 +1,53 @@
+{
+ "theme": "ai_month",
+ "kind": "section",
+ "badge": "11월 큰 변화 둘",
+ "title": "이번 달은 *요금*이 움직였어요",
+ "items": [
+  {
+   "title": "툴 A 새 모델",
+   "scene": "chat",
+   "rows": [
+    [
+     "calendar",
+     "발표",
+     "11월 3일"
+    ],
+    [
+     "credit-card",
+     "대상",
+     "무료 · 유료 모두"
+    ],
+    [
+     "globe",
+     "한국",
+     "바로 사용"
+    ]
+   ],
+   "note": "무료는 하루 10번까지예요."
+  },
+  {
+   "title": "툴 C 요금 개편",
+   "scene": "calendar",
+   "label": "11.18",
+   "rows": [
+    [
+     "calendar",
+     "적용",
+     "11월 18일"
+    ],
+    [
+     "credit-card",
+     "새 요금",
+     "월 2.2만 원"
+    ],
+    [
+     "alert-triangle",
+     "주의",
+     "옛 요금제 12월 끝"
+    ]
+   ],
+   "note": "다음 결제일부터 바뀌어요."
+  }
+ ]
+}

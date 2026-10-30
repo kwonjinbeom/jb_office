@@ -11,8 +11,9 @@ from django.utils import timezone
 DRAFTS = ("콘텐츠", "블로그_카페", "포스팅자동화", "원고")
 
 
-def place(apps, folder, site="memorily", category_prefix="애니", classification="콘텐츠·엔터"):
-    """원고 폴더(T85_블리치환산기 등) 하나를 넣는다. 넣었으면 True."""
+def place(apps, folder, site="memorily", category_prefix="애니", classification="콘텐츠·엔터", branch="회차정리"):
+    """원고 폴더(T85_블리치환산기 등) 하나를 넣는다. 넣었으면 True.
+    branch: 그 카테고리 아래 이 이름의 컨셉 갈래가 있으면 거기에 (2026-10-31 사용자: memorily › 애니 › 회차정리)."""
     from apps.writing.drafts import parse
 
     Blog = apps.get_model("blog_rules", "Blog")
@@ -23,7 +24,9 @@ def place(apps, folder, site="memorily", category_prefix="애니", classificatio
 
     blog = Blog.objects.filter(name=site, deleted_at__isnull=True).first()
     cat = blog and SiteCategory.objects.filter(blog=blog, name__startswith=category_prefix,
-                                               deleted_at__isnull=True).order_by("pk").first()
+                                               parent__isnull=True, deleted_at__isnull=True).order_by("pk").first()
+    if cat and branch:
+        cat = SiteCategory.objects.filter(parent=cat, name=branch, deleted_at__isnull=True).first() or cat
     path = settings.REPO_ROOT.joinpath(*DRAFTS, folder, "원고.md")
     if not cat or not path.is_file():
         return False

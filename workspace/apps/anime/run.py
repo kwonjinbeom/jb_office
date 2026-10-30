@@ -18,10 +18,14 @@ DRAFTS = "콘텐츠/블로그_카페/포스팅자동화/원고"
 
 
 def concept():
-    """memorily › 애니 카테고리 컨셉 (사이트별 템플릿에서 고친 대로). 없으면 빈 값."""
+    """memorily › 애니 카테고리 컨셉 (사이트별 템플릿에서 고친 대로). 없으면 빈 값.
+    컨셉 갈래 '회차정리'가 있으면 애니 컨셉 다음에 그것도 (2026-10-31 사용자: 애니 › 회차정리 · 분기 신작)."""
     blog = Blog.objects.filter(name="memorily").first()
-    cat = blog and SiteCategory.objects.filter(blog=blog, name__startswith="애니").order_by("pk").first()
-    return cat.concept.strip() if cat else ""
+    cat = blog and SiteCategory.objects.filter(blog=blog, name__startswith="애니", parent=None).order_by("pk").first()
+    if not cat:
+        return ""
+    sub = SiteCategory.objects.filter(parent=cat, name="회차정리").first()
+    return "\n\n".join(c.concept.strip() for c in (cat, sub) if c and c.concept.strip())
 
 
 def part(request, anime, token, rule):

@@ -3,7 +3,7 @@
 <div class="cv-panel" data-cv-panel-box>
   <div class="cv-panel-head">
     {% if placements|length > 1 %}
-    <span class="seg" role="tablist" aria-label="넣은 곳">{% for x in placements %}<button type="button" data-cv-tab="{{ panel_url }}&amp;pl={{ x.pk }}"{% if x == pl %} class="on"{% endif %}>{{ x.site_category.blog.name }} › {{ x.site_category.name }}</button>{% endfor %}</span>
+    <span class="seg" role="tablist" aria-label="넣은 곳">{% for x in placements %}<button type="button" data-cv-tab="{{ panel_url }}&amp;pl={{ x.pk }}"{% if x == pl %} class="on"{% endif %}>{{ x.site_category.blog.name }} › {{ x.site_category.short }}</button>{% endfor %}</span>
     {% elif pl %}<strong>{{ pl.site_category.blog.name }} › {{ pl.site_category }}</strong>{% endif %}
     {% if pl %}
     <span class="badge cv-{{ pl.convert_status }}">{{ pl.get_convert_status_display }}</span>

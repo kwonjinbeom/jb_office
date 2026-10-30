@@ -123,13 +123,24 @@ class SiteCategory(TrashableModel):
                                      ("red", "빨강 정갈 (네이버)"), ("line_green", "네이버 · 가는 선 표 + 초록 카드"),
                                      ("line_orange", "네이버 · 가는 선 표 + 주황 카드")],
                             help_text="붙여넣는 HTML 의 화면 모양 (가운데 정렬·메모지 상자 등). 하위 카테고리도 따른다")
+    # 2026-10-31 사용자 (memorily › IT·AI · 애니): 블로그 메뉴는 하나인데 글 갈래마다 템플릿 컨셉이 다르다 →
+    # 하위 카테고리로 두되 블로그에는 없는 '컨셉 갈래'. 글은 위 카테고리에 올리고, 변환만 이 컨셉을 더 받는다. 볼 때 헷갈리지 않게 따로 적는다.
+    branch = models.BooleanField("컨셉 갈래", default=False,
+                                 help_text="블로그에는 없는 하위 카테고리 — 글은 위 카테고리에 올리고, 템플릿 컨셉만 따로 갖는다")
     order = models.PositiveIntegerField("순서", default=0)
 
     class Meta:
         ordering = ["order", "pk"]
 
     def __str__(self):
+        if self.branch and self.parent_id:
+            return self.short
         return f"{self.parent.name} › {self.name}" if self.parent_id else self.name
+
+    @property
+    def short(self):
+        """좁은 칸에 쓰는 이름: 보통은 카테고리 이름, 컨셉 갈래는 '올릴 곳 (컨셉: 갈래)'."""
+        return f"{self.parent.name} (컨셉: {self.name})" if self.branch and self.parent_id else self.name
 
     @property
     def sel(self):
