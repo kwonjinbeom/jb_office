@@ -709,6 +709,19 @@ class RepoTests(Login):
         self.assertTrue(TrashEntry.objects.filter(model_label="routines.routine").exists())
 
 
+class RoundupTitleTests(TestCase):
+    def test_roundup_topics_fix_series_name_in_title(self):
+        """0024 (2026-10-31 사용자): 총정리 셋은 제목 앞에 시리즈 이름 고정 — 작가 지침과 변환 갈래 컨셉 둘 다. AI 소식은 아니다."""
+        from apps.blog_types.models import SiteCategory
+        from .models import FixedTopic
+        for name, series in (("무료 AI 툴", "무료 AI 툴 총정리"), ("이달의 AI", "이달의 AI 총정리"), ("IT 할인", "IT 할인 총정리")):
+            note = FixedTopic.objects.get(name=name).note
+            self.assertIn(f"`{series} · <", note)
+            self.assertEqual(note.count("총정리 이름 고정"), 1)
+            self.assertIn(series, SiteCategory.objects.get(blog__name="memorily", name=name).concept)
+        self.assertNotIn("총정리 이름 고정", FixedTopic.objects.get(name="AI 소식").note)
+
+
 class DropOtherTests(TestCase):
     def test_migration_trashes_nunip_and_naver_other(self):
         """0022 (2026-10-31 사용자): 글 분류 눈잎 · black_lukey › 그 외만 휴지통으로. 다른 사이트의 그 외 · 다른 소재 · 그 분류의 글은 그대로."""
