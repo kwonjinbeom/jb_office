@@ -169,6 +169,22 @@ def restore(entry):
     entry.delete()
 
 
+DRAFT_POSTS = ("writing.post", "naver_writing.post")
+
+
+def _keep_draft_keys(graph):
+    """글쓰기 글을 영구 삭제하기 전에 제목·원고 폴더를 남긴다 (2026-10-31 사용자: 22일 글이 7일 뒤 임시글로 다시 들어왔다).
+    글 관리의 원고 자동 가져오기가 '없는 글'로 보고 원고 폴더에서 다시 만들지 않게 (writing.views.auto_import_drafts)."""
+    keys = set()
+    for label in DRAFT_POSTS:
+        if graph.get(label):
+            model = model_for(label)
+            fields = [f for f in ("title", "source") if any(x.name == f for x in model._meta.fields)]
+            for row in model.all_objects.filter(pk__in=graph[label]).values_list(*fields):
+                keys.update(v for v in row if v)
+    SourceExclusion.objects.bulk_create([SourceExclusion(kind="draft", key=k[:512]) for k in keys], ignore_conflicts=True)
+
+
 @transaction.atomic
 def _purge_entry(entry, cutoff):
     if entry.model_label.startswith("source."):
@@ -182,6 +198,7 @@ def _purge_entry(entry, cutoff):
     for label, ids in graph.items():
         if model_for(label).all_objects.filter(pk__in=ids).filter(models.Q(deleted_at__isnull=True) | models.Q(deleted_at__gt=cutoff)).exists():
             return False
+    _keep_draft_keys(graph)
     pending = [(model_for(label), pk) for label, ids in graph.items() for pk in ids]
     while pending:
         deferred, progressed = [], False

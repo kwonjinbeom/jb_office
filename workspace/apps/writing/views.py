@@ -189,15 +189,17 @@ def auto_import_drafts():
 
     같은 제목의 글이 (휴지통 포함, 티스토리·네이버 어느 표든) 있으면 건너뛴다 — 지운 글이 다시 생기지 않게.
     """
+    from apps.core.trash import hidden_keys
     from apps.naver_writing.models import Post as NaverPost
 
-    existing = set(Post.all_objects.values_list("title", flat=True)) | set(NaverPost.all_objects.values_list("title", flat=True))
+    purged = hidden_keys("draft")  # 휴지통 7일이 지나 영구 삭제된 글의 제목·원고 폴더 (core.trash._keep_draft_keys)
+    existing = set(Post.all_objects.values_list("title", flat=True)) | set(NaverPost.all_objects.values_list("title", flat=True)) | purged
     drafts = drafts_mod.list_drafts()
     fill_targets(drafts)
     fill_custom(drafts)
     fill_classes(drafts)
     sync_sources(drafts)
-    sources = set(Post.all_objects.exclude(source="").values_list("source", flat=True))  # 제목이 바뀐 허브가 새 글로 생기지 않게
+    sources = set(Post.all_objects.exclude(source="").values_list("source", flat=True)) | purged  # 제목이 바뀐 허브가 새 글로 생기지 않게
     added = 0
     for d in drafts:
         number = d.code[1:]
