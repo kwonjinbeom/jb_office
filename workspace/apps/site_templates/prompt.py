@@ -59,6 +59,10 @@ PHOTOS = f"""## 사진·그림 (변환이 끝까지 채운다 · 원문에 자�
     (q.json: `{{"type":"photo","lang":"KOR","cat1":[],"cat2":[],"cat3":[],"photo1":[],"photo2":[],"awardYear":[],"areaCd":[],"sigunguCd":[],"nuri":[],"title":"<장소 이름>","searchStart":0,"searchCnt":100,"pageNo":1,"pageCnt":1,"mainYn":"N","langDiv":"KOR","arrange":"NEW"}}`, UTF-8 파일로)
     → `cpyrhtDivCd` 가 `Type1` 인 것만, `filmDay`·`photoTag` 로 계절·지점이 맞는 것을 골라 `depotOrgImgUrl`(원본, 워터마크 없음)을 받아 너비 620 으로 줄여 올린다.
     캡션 `*사진: <koCmanNm> · 한국관광공사 (공공누리 제1유형)*`. 미리보기 주소(tong.visitkorea.or.kr …image2)는 워터마크가 있어 쓰지 않는다.
+  - 국내 장소가 콘텐츠랩에 없으면 (2026-10-31 사용자: 0건이라고 지워서 지역 놀거리 글에 사진이 거의 없었다): 콘텐츠랩 검색은 제목만 본다 —
+    장소 이름이 0건이면 상위 지명(안면암 → 안면도 · 태안, 캠프그리브스 → 임진각 · 파주)과 붙은 시설(수목원 → 자연휴양림, 곤돌라)로 다시 찾아 photoTag 로 그 장소를 고른다.
+    그래도 없으면 위키미디어 공용을 한글 · 영어 이름으로 (CC0 · CC BY · CC BY-SA · Public domain, `*사진: 작가 · 위키미디어 공용 (라이선스)*`).
+    그다음에야 '지움'. 지움 줄에는 찾아본 곳과 검색어를 모두 적는다 — 위키미디어를 찾았다는 말이 없으면 서버가 변환본을 받지 않는다 (views._photo_search_missing).
   - 해외 장소: 위키미디어 공용 (그 장소 이름 카테고리, CC0·CC BY·CC BY-SA) → Unsplash · Pexels · Pixabay.
   - 장소가 아닌 장면 (노트북 작업, 책상 위 서류 …): Unsplash · Pexels · Pixabay (상업적 사용 무료).
   - 구글 이미지·핀터레스트·뉴스·다른 블로그 사진은 쓰지 않는다.

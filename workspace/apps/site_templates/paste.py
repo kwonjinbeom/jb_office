@@ -133,6 +133,15 @@ def unwrap_images(text):
     return _WRAPPED_IMAGE.sub(lambda m: m.group(2), text or "")
 
 
+# 글 끝 'YYYY-MM-DD 기준, 바뀌면 고칩니다.' 줄 (2026-10-28 사용자: "이거 지워줘" — blog_types 0048 로 컨셉·옛 글에서 뺐는데
+# 2026-10-31 작가가 옛 원고를 흉내 내 다시 썼다 → 프롬프트가 아니라 변환본을 받을 때 · 워드프레스로 그릴 때 코드로 뺀다)
+ASOF_LINE = re.compile(r"(?:\r?\n)*^[ \t]*\*?\d{4}-\d{2}-\d{2} 기준, ?바뀌면 고(?:칩니다|친다|침)\.?\*?[ \t]*$", re.M)
+
+
+def drop_asof(text):
+    return ASOF_LINE.sub("", text or "")
+
+
 ALL_MARK = "JBPASTE1\n"
 PASTE_JS = """(async()=>{
 var MARK='JBPASTE1';
