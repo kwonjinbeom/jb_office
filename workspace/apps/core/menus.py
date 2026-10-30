@@ -75,7 +75,7 @@ MENUS: list[Menu] = [
             Menu("blog_stats", "통계현황", "사이트별 방문자 · 공감 · 댓글 추이 (7·30·90일)", "blog_ops:stats", "list"),
             Menu("blog_ops", "모니터링", "확인할 것 · 사이트별 파이프라인(임시 → 검토 → 예정) · 발행 실적 · 일일루틴", "blog_ops:index", "check-list"),
             Menu("posts_hub", "글 관리", "임시글 → 검토글 → 발행예정글. 카테고리 넣기 · 변환 · 발행까지", "posts:view", "file", children=(
-                Menu("posts_view", "임시·검토글", "원고가 들어오는 임시글과 손본 검토글. 한 건씩 보며 검토글 → 발행예정글로", "posts:view", "edit"),
+                Menu("posts_view", "임시·검토글", "원고가 들어오는 임시글과 손본 검토글. 목록에서 골라 검토글 → 발행예정글로", "posts:view", "edit"),
                 Menu("posts_planned", "발행예정글", "발행 예정일을 정하고 그날 각 블로그에 올릴 글을 보는 곳", "posts:planned", "calendar"),
                 Menu("posts_published", "게시글 관리", "발행 완료한 글을 사이트 › 카테고리별로", "posts:published", "check-list"),
                 Menu("blog_types", "카테고리 관리", "사이트 카테고리에 글 넣기, 글 분류 고치기", "blog_types:index", "tag"),

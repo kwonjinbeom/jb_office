@@ -6,7 +6,7 @@
 (글은 여전히 writing.Post / naver_writing.Post 두 표에 있다).
 
 주소: ?stage=temp|review|post|done &sel=g1|c3|t5|s9|u &q=검색어 &today=1(오늘 만든 글만) &custom=1(커스텀 글만) &site=사이트 이름
-     &view=list(임시글·검토글을 목록으로)
+     &view=one(임시글·검토글을 한 건씩. 없으면 목록)
 
 발행예정글 (2026-10-22 사용자): 사이트로 거르고, 줄마다 발행 예정일(planned_on)을 정해 그 날짜 순으로 늘어놓는다.
 
@@ -16,8 +16,8 @@
 커스텀 (2026-10-22 사용자): 일일루틴 하루 분량(11편)이 아닌 글 — 커스텀 글쓰기의 고정 주제·추가 실행·따로 요청한 글.
 원고의 `고정주제:`·`커스텀:` 줄로 가린다 (writing.Post.custom).
 
-보기 (2026-10-22 사용자): 임시글·검토글은 기본이 한 건씩 보기(글 화면 + 왼쪽 글 목록), '목록'으로 바꾸면 체크해서 한꺼번에
-옮기기·삭제하는 표. 발행예정글은 늘 표.
+보기 (2026-10-22 사용자): 임시글·검토글은 한 건씩 보기(글 화면 + 왼쪽 글 목록)와 체크해서 한꺼번에 옮기기·삭제하는 목록.
+2026-10-31 사용자: 기본을 목록으로 (한 건씩은 view=one). 발행예정글은 늘 표.
 
 글을 누르면 글 보기(각 글쓰기 앱의 detail)로 간다. 글 보기 왼쪽에는 분류 트리 대신 같은 조건(단계·분류·검색·오늘)의
 글 목록을 보여 준다 (post_list_for). 조건은 주소에 그대로 실어 보낸다 (2026-10-17 사용자).
@@ -86,7 +86,7 @@ def _params(request, stage=None):
     kind, obj = _find(sel)
     if kind not in CLASS_KINDS or obj is None:
         sel, kind, obj = "", None, None
-    view = "list" if stage not in TABLE_STAGES and get.get("view") == "list" else ""  # 임시글·검토글 목록 보기
+    view = "" if stage in TABLE_STAGES else "one" if get.get("view") == "one" else "list"  # 임시글·검토글: 기본 목록, one 이면 한 건씩
     site = get.get("site", "") if get.get("site", "") in sites.names() else ""
     return {"stage": stage, "sel": sel, "kind": kind, "obj": obj, "view": view, "site": site,
             "q": get.get("q", "").strip(), "today": get.get("today") == "1", "custom": get.get("custom") == "1"}
@@ -97,6 +97,7 @@ def _query(p, **override):
     vals = {"stage": p["stage"], "sel": p["sel"], "q": p["q"], "today": "1" if p["today"] else "",
             "custom": "1" if p.get("custom") else "", "site": p.get("site", ""), "view": p.get("view", "")}
     vals.update(override)
+    vals["view"] = "one" if vals["view"] == "one" else ""  # 목록이 기본이라 주소에는 한 건씩만 적는다
     return urlencode({k: v for k, v in vals.items() if v})
 
 
@@ -164,8 +165,8 @@ def _mode_urls(p):
     """임시글·검토글의 보기 바꾸기: 한 건씩 · 목록 (조건은 그대로)."""
     if p["stage"] in TABLE_STAGES:
         return None
-    return {"one": f"{reverse('posts:view')}?{_query(p, view='')}", "list": f"{reverse('posts:view')}?{_query(p, view='list')}",
-            "on": p["view"] or "one"}
+    return {"one": f"{reverse('posts:view')}?{_query(p, view='one')}", "list": f"{reverse('posts:view')}?{_query(p, view='list')}",
+            "on": p["view"] or "list"}
 
 
 DAY_NAMES = "월화수목금토일"
@@ -197,7 +198,7 @@ def _list_page(request, p, template="blog_types/posts.html", base="posts:view", 
         for writer in ("tistory", "naver"):
             sites.place_defaults(classify.post_model(writer).objects.filter(stage="post"))
     posts, counts = _collect(p, prefetch=stage in TABLE_STAGES)
-    list_q = _query(p, view="")  # 제목을 누르면 한 건씩 보기로 (같은 조건의 목록과 함께)
+    list_q = _query(p, view="one")  # 제목을 누르면 한 건씩 보기로 (같은 조건의 목록과 함께)
     groups = _site_groups() if stage in TABLE_STAGES else []  # 카테고리 칸에서 바로 넣는다
     for post in posts:
         post.list_url = _view_url(post, list_q)
@@ -305,7 +306,7 @@ def post_list_for(request, post):
     """글 보기 왼쪽의 글 목록: 단계 탭(임시글·검토글·발행예정글)의 글 + 글 관리에서 넘어온 조건(분류·검색·오늘).
     단계가 주소에 없으면 그 글의 단계. 위·아래 화살표, 옮기기·휴지통 뒤에 갈 글도 이 목록 순서를 따른다 (한 건씩 처리)."""
     p = _params(request, stage=tab_of(post))
-    p["view"] = ""  # 한 건씩 보기
+    p["view"] = "one"  # 한 건씩 보기
     posts, counts = _collect(p)
     # 검토글·발행예정글: 넣은 곳 · 변환 (2026-10-22 사용자: 검토글에서도 카테고리 고르고 변환해 보고 발행예정으로)
     placements = (list(post.placements.select_related("site_category__blog", "site_category__parent"))
