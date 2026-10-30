@@ -167,17 +167,46 @@ class SiteCategoryTests(TestCase):
 
     def test_seed_real_categories(self):
         names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
-        # AI 는 0021 (2026-10-23). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자). 총정리 3개는 0052 (2026-10-31 사용자)
-        self.assertEqual(names, ["AI", "무료 AI 툴", "이달의 AI", "IT 할인"])
+        # AI 는 0021 (2026-10-23) → IT·AI (0053, 2026-10-31 사용자). 옛 개발 카테고리 9개는 0042 에서 휴지통 (2026-10-27 사용자)
+        self.assertEqual(names, ["IT·AI"])
+        top = SiteCategory.objects.get(blog=self.memorily, name="IT·AI")
+        self.assertFalse(top.heading_bar)
+        # 블로그에는 없는 컨셉 갈래 넷 (0052 의 총정리 셋을 옮기고 AI 소식에 옛 AI 컨셉)
+        kids = list(top.children.values_list("name", "branch"))
+        self.assertEqual(kids, [("AI 소식", True), ("무료 AI 툴", True), ("이달의 AI", True), ("IT 할인", True)])
         roundup = SiteCategory.objects.get(blog=self.memorily, name="IT 할인")
-        self.assertIn("정리카드.py", roundup.concept)
+        self.assertEqual((str(roundup), roundup.short), ("IT·AI (컨셉: IT 할인)", "IT·AI (컨셉: IT 할인)"))
+        self.assertIn("주제그림.py", roundup.concept)
         self.assertIn("IT할인_*.json", roundup.concept)
+        self.assertNotIn("정리카드", roundup.concept)
+        self.assertIn("AI 소식:", SiteCategory.objects.get(blog=self.memorily, name="AI 소식").concept)
+        self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI 소식").heading_bar)
         self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="이달의 AI").heading_bar)
         self.assertFalse(SiteCategory.objects.get(blog=self.memorily, name="무료 AI 툴").heading_bar)
         self.assertTrue(SiteCategory.all_objects.filter(blog=self.memorily, name="Java", deleted_at__isnull=False).exists())
-        self.assertTrue(SiteCategory.objects.get(blog=self.memorily, name="AI").heading_bar)
         self.assertEqual(SiteCategory.objects.filter(blog__name="black_lukey").count(), 2)  # 낙서장 · videolog (시험 DB 의 옛 값)
         self.assertEqual(SiteCategory.objects.filter(blog__name="눈잎").count(), 7)  # 0019 티스토리 화면 그대로 + 생활 (0040)
+
+    def test_anime_branches(self):
+        """애니 아래 컨셉 갈래 둘 (0053, 2026-10-31 사용자): 옛 애니 컨셉은 회차정리로, 애니 글의 넣은 곳도 회차정리로. 트리에 '컨셉' 표시"""
+        from importlib import import_module
+        from django.apps import apps as django_apps
+        from apps.writing.models import Post
+        mig = import_module("apps.blog_types.migrations.0053_memorily_branches")
+        anime = SiteCategory.objects.create(blog=self.memorily, name="애니", concept="애니 회차정리 글 — 작품 하나에 글 하나")
+        post = Post.objects.create(title="블리치 환산기", stage="post")
+        pl = Placement.objects.create(site_category=anime, tistory_post=post)
+        mig.forward(django_apps, None)
+        kids = {c.name: c for c in anime.children.all()}
+        self.assertEqual(list(kids), ["회차정리", "분기 신작"])
+        self.assertIn("작품 하나에 글 하나", kids["회차정리"].concept)
+        self.assertIn("'분기'", kids["분기 신작"].concept)
+        pl.refresh_from_db()
+        self.assertEqual(str(pl.site_category), "애니 (컨셉: 회차정리)")
+        res = self.client.get(INDEX)
+        self.assertContains(res, '<span class="cat-branch">컨셉</span>')
+        mig.forward(django_apps, None)  # 두 번 돌려도 그대로
+        self.assertEqual(anime.children.count(), 2)
 
     def test_tree_shows_both_grids(self):
         res = self.client.get(INDEX)
@@ -192,7 +221,7 @@ class SiteCategoryTests(TestCase):
     def test_add_edit_move_delete(self):
         self.add(self.memorily.sel, "AI 이야기")
         top = SiteCategory.objects.get(name="AI 이야기")
-        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 14))  # 총정리 3개 (0052) 뒤
+        self.assertEqual((top.blog, top.parent, top.order), (self.memorily, None, 11))
         self.add(top.sel, "Claude Code")
         sub = SiteCategory.objects.get(name="Claude Code")
         self.assertEqual(sub.parent, top)
@@ -202,8 +231,7 @@ class SiteCategoryTests(TestCase):
         top.refresh_from_db()
         self.assertEqual((top.name, top.note), ("AI 개발기", "새 축"))
         self.client.post(reverse("blog_types:move", args=["sitecat", top.pk]), {"dir": "up"})
-        names = list(SiteCategory.objects.filter(blog=self.memorily, parent=None).values_list("name", flat=True))
-        self.assertEqual(names[-2:], ["AI 개발기", "IT 할인"])  # 한 칸 위로
+        self.assertEqual(SiteCategory.objects.filter(blog=self.memorily, parent=None)[0].name, "AI 개발기")
         res = self.client.get(reverse("blog_types:delete", args=["sitecat", top.pk]))
         self.assertContains(res, "하위 카테고리 1개")
         self.client.post(reverse("blog_types:delete", args=["sitecat", top.pk]))
@@ -1305,8 +1333,8 @@ class DefaultPlacementTests(TestCase):
             "| 넣을 카테고리 | memorily › 기타 |\n\n<!-- 본문 시작 -->\n# 오늘의 AI 소식\n본문\n<!-- 본문 끝 -->\n", encoding="utf-8")
         post = Post.objects.create(title="오늘의 AI 소식", stage="post", target="memorily")
         self.client.get(reverse("posts:planned"))
-        self.assertEqual([str(pl.site_category) for pl in post.placements.all()], ["AI"])
-        ai = SiteCategory.objects.get(blog__name="memorily", name="AI")
+        self.assertEqual([str(pl.site_category) for pl in post.placements.all()], ["IT·AI (컨셉: AI 소식)"])  # 2026-10-31 갈래
+        ai = SiteCategory.objects.get(blog__name="memorily", name="AI 소식")
         self.assertTrue(ai.heading_bar)
         # memorily 글 분류: AI + 총정리 3개 (0052) — AI 는 하나뿐
         self.assertEqual(list(Category.objects.filter(section__name="memorily").values_list("name", flat=True)),

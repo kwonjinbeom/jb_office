@@ -98,7 +98,7 @@
           <div class="card-head"><h3 class="card-title">카테고리 컨셉</h3><span class="hint">누르면 그 카테고리</span></div>
           <div class="st-catlist">
             {% for c in cats %}
-            <a class="st-cat{% if c.depth %} sub{% endif %}" href="?site={{ c.sel }}"><span class="nm">{{ c.name }}</span><span class="cc{% if not c.concept %} muted{% endif %}">{{ c.concept|default:"컨셉 없음"|truncatechars:90 }}</span></a>
+            <a class="st-cat{% if c.depth %} sub{% endif %}" href="?site={{ c.sel }}"><span class="nm">{{ c.name }}{% if c.branch %} <span class="cat-branch" title="블로그에는 없는 컨셉 갈래 — 글은 위 카테고리에 올린다">컨셉</span>{% endif %}</span><span class="cc{% if not c.concept %} muted{% endif %}">{{ c.concept|default:"컨셉 없음"|truncatechars:90 }}</span></a>
             {% empty %}
             <div class="muted small st-catlist-empty">카테고리가 없습니다.</div>
             {% endfor %}

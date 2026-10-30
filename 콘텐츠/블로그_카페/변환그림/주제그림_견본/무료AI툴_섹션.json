@@ -1,0 +1,52 @@
+{
+ "theme": "ai_tool",
+ "kind": "section",
+ "badge": "이미지 · 영상",
+ "title": "만들기 AI, *무료*로 이만큼",
+ "items": [
+  {
+   "title": "이미지 만들기",
+   "scene": "image",
+   "rows": [
+    [
+     "credit-card",
+     "무료",
+     "하루 15장"
+    ],
+    [
+     "globe",
+     "한국어",
+     "입력 그대로"
+    ],
+    [
+     "badge-check",
+     "상업 이용",
+     "가능"
+    ]
+   ],
+   "note": "블로그 대표 사진에 잘 맞아요."
+  },
+  {
+   "title": "영상 만들기",
+   "scene": "video",
+   "rows": [
+    [
+     "credit-card",
+     "무료",
+     "월 10초 × 5개"
+    ],
+    [
+     "monitor",
+     "화질",
+     "720p"
+    ],
+    [
+     "alert-triangle",
+     "주의",
+     "워터마크 있음"
+    ]
+   ],
+   "note": "쇼츠 앞부분 3초에 써요."
+  }
+ ]
+}

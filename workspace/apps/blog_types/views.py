@@ -230,7 +230,7 @@ def _site_groups():
     for c in SiteCategory.objects.filter(parent=None).select_related("blog").prefetch_related("children").order_by("blog__order", "order", "pk"):
         rows = groups.setdefault(c.blog.name, [])
         rows.append((c.pk, c.name))
-        rows += [(k.pk, f"{c.name} › {k.name}") for k in c.children.all()]
+        rows += [(k.pk, k.short if k.branch else f"{c.name} › {k.name}") for k in c.children.all()]
     return list(groups.items())
 
 

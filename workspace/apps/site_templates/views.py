@@ -116,11 +116,12 @@ def _design(cat, request=None):
     out = []
     photos = {k: request.build_absolute_uri(static(v)) if request else static(v) for k, v in design.PHOTOS.items()}
     top = cat.parent or cat
-    for it in design.items(platform, look, _heading_bar(cat), photos, (cat.blog.name, top.name)):
+    key = (cat.blog.name, cat.name) if (cat.blog.name, cat.name) in design.CATS else (cat.blog.name, top.name)  # 컨셉 갈래는 제 견본
+    for it in design.items(platform, look, _heading_bar(cat), photos, key):
         it["doc"] = head + _render_cat(cat, it["md"])[0] + "</div></body>"
         out.append(it)
     looks_ = dict(SiteCategory._meta.get_field("look").choices)
-    return {"design": out, "design_look": looks_.get(look, look), "design_own": (cat.blog.name, top.name) in design.CATS}
+    return {"design": out, "design_look": looks_.get(look, look), "design_own": key in design.CATS}
 
 
 def _cats_of(blog):

@@ -432,14 +432,23 @@ class PasteFormatTests(TestCase):
         self.assertNotIn("&nbsp;", self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"])
 
     def test_memorily_ai_heading_bar_and_concept(self):
-        """memorily › AI (2026-10-23 사용자): 소제목 앞 빨간 세로 막대 (크기·말 그대로), 컨셉에 도구마다 사진 · 가공이미지"""
+        """memorily › AI (2026-10-23 사용자): 소제목 앞 빨간 세로 막대 (크기·말 그대로), 컨셉에 도구마다 사진 · 가공이미지.
+        2026-10-31 사용자: AI 는 IT·AI 로, AI 소식은 그 아래 컨셉 갈래 — 위 IT·AI 안내 + AI 소식 컨셉, 막대는 갈래 것"""
         from .views import HEADING_BAR
-        pl = self.place("memorily", "AI")
+        pl = self.place("memorily", "AI 소식")
+        self.assertEqual(str(pl.site_category), "IT·AI (컨셉: AI 소식)")
         html = self.client.get(reverse("site_templates:convert", args=[pl.pk])).context["paste_html"]
         self.assertIn(f'<h2 style="{HEADING_BAR}">소제목</h2>', html)
         text = prompt.build(pl)
+        self.assertIn("넣을 카테고리: IT·AI (컨셉: AI 소식)", text)
+        self.assertIn("블로그 메뉴는 이것 하나다", text)
         self.assertIn("도구(## 소제목)마다 1장씩", text)
         self.assertIn("가공이미지", text)
+        sale = self.place("memorily", "IT 할인")  # 다른 갈래는 제 컨셉만 (AI 소식 컨셉 · 막대가 섞이지 않는다)
+        text = prompt.build(sale)
+        self.assertIn("주제그림.py", text)
+        self.assertNotIn("도구(## 소제목)마다 1장씩", text)
+        self.assertIn("<h2>소제목</h2>", self.client.get(reverse("site_templates:convert", args=[sale.pk])).context["paste_html"])
         other = self.place("memorily", "기타")  # 다른 카테고리는 막대 없이
         self.assertIn("<h2>소제목</h2>", self.client.get(reverse("site_templates:convert", args=[other.pk])).context["paste_html"])
 
