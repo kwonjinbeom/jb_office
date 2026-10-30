@@ -718,6 +718,8 @@ class RoundupTitleTests(TestCase):
             note = FixedTopic.objects.get(name=name).note
             self.assertIn(f"`{series} · <", note)
             self.assertEqual(note.count("총정리 이름 고정"), 1)
+            self.assertNotIn(" (10월 31일 기준)`", note)  # 예시 제목에서 기준일을 뺐다 (0025)
+            self.assertIn("기준일(`(10월 31일 기준)` 같은 것)은 넣지 않는다", note)
             self.assertIn(series, SiteCategory.objects.get(blog__name="memorily", name=name).concept)
         self.assertNotIn("총정리 이름 고정", FixedTopic.objects.get(name="AI 소식").note)
 
