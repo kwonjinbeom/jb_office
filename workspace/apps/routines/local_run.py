@@ -46,7 +46,10 @@ FEEDS_MARK = re.compile(r"^<!-- 발행 확인 (\{.*\}) -->$", re.M)  # 전체 �
 # 브라우저: Playwright MCP 가 PC 의 크롬을 새 창(루틴 전용 프로필)으로 열어 claude 가 직접 검색·클릭·읽기를 한다.
 # 네이버·티스토리처럼 WebFetch 로는 안 읽히는 곳을 사람이 보듯 본다 (2026-10-16 사용자: "예전엔 브라우저를 열어 조작해서 확인했다").
 PLAYWRIGHT_MCP = "@playwright/mcp@0.0.83"
-MCP_SERVERS = {"playwright": {"command": "cmd", "args": ["/c", "npx", "-y", PLAYWRIGHT_MCP]}}
+# --isolated: 루틴 창마다 브라우저 프로필을 메모리에 따로 둔다 (2026-10-31: 실패해 열어 둔 루틴 창의 크롬이 디스크 프로필
+# ms-playwright-mcp/mcp-chrome-… 을 잡고 있어, 다음 창 작가들이 'Browser is already in use' 로 네이버 지도·11번가를 못 열었다).
+# 루틴은 로그인하지 않으니 프로필을 남길 까닭이 없다.
+MCP_SERVERS = {"playwright": {"command": "cmd", "args": ["/c", "npx", "-y", PLAYWRIGHT_MCP, "--isolated"]}}
 ROUTINE_ALLOW = [
     "Read", "Edit", "Write", "Glob", "Grep", "WebSearch", "WebFetch", "mcp__playwright",
     "Bash(git add *)", "Bash(git commit *)", "Bash(git push *)", "Bash(git pull *)", "Bash(git fetch *)",
