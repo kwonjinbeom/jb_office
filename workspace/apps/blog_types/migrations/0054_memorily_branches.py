@@ -127,7 +127,7 @@ def forward(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("blog_types", "0052_memorily_roundups")]
+    dependencies = [("blog_types", "0053_black_lukey_sale_event")]
     operations = [
         migrations.AddField(
             model_name="sitecategory",
