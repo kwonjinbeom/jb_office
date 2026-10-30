@@ -824,7 +824,7 @@ class SimpleClassesTests(TestCase):
         self.assertEqual(list(Section.objects.values_list("name", flat=True)), ["눈잎", "black_lukey", "밤밤", "memorily", "워드프레스"])  # memorily › AI 는 0021, 워드프레스 0030
         self.assertEqual(list(Category.objects.filter(section__name="밤밤").values_list("name", flat=True)),
                          ["코스피 시황 노트", "나스닥 시황 노트", "해외 여행"])  # 해외 여행은 눈잎에서 옮겨 옴 (routines 0020), 제품소개 지움 (0028), 시황 노트를 코스피·나스닥으로 다시 나눔 (0033)
-        self.assertTrue(all(s.categories.filter(name="그 외").exists() for s in Section.objects.exclude(name__in=["memorily", "밤밤", "워드프레스"])))  # '그 외' 하나 (밤밤은 0028 에서 뺌, 워드프레스는 없음)
+        self.assertFalse(Category.objects.filter(name="그 외").exists())  # '그 외'는 없다 (밤밤 0028 · 눈잎·black_lukey routines 0022 에서 뺌)
         self.assertFalse(PostType.objects.exists())  # 소분류 없이 소재만
         self.assertTrue(Category.objects.get(name="코스피 시황 노트").direction)  # 방향 = 글쓰기 컨셉
         trashed = TrashEntry.objects.filter(model_label="blog_types.section")
@@ -921,7 +921,7 @@ class SiteCleanupTests(TestCase):
         kospi = Post.objects.create(title="코스피 3.29% 반등 다음 날 다시 약세, 9거래일 종가표로 보는 지금 위치", target="눈잎")
         heat = NaverPost.objects.create(title="전기장판 vs 온수매트 vs 탄소매트, 월 전기료 직접 계산하고 고르기 (2026 겨울)", target="black_lukey")
         anime = Post.objects.create(title="나루토 회차정리 애니만화 환산기 명장면 등 모음", target="memorily",
-                                    bt_category=Category.objects.get(name="그 외", section__name="눈잎"))
+                                    bt_category=Category.objects.create(section=Section.objects.get(name="눈잎"), code="Z", name="그 외"))  # routines 0022 가 지운 것을 다시
         err = Post.objects.create(title=mig.TRASH_TITLES[0], target="memorily")
         mig.forward(django_apps, None)
         kospi.refresh_from_db(), heat.refresh_from_db(), anime.refresh_from_db()
@@ -943,12 +943,12 @@ class NunipSiteCategoryTests(TestCase):
         self.assertEqual(self.site_names(), self.NAMES)
         self.assertEqual(SiteCategory.objects.get(blog__name="눈잎", name="공모주").note, "티스토리 주제: 경제")
         self.assertEqual(list(Category.objects.filter(section__name="눈잎").values_list("name", flat=True)),
-                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "생활", "그 외"])  # 일본 하나로, 해외 여행은 밤밤 (routines 0020), 동물 (0028)
+                         ["청년·신혼 정책", "주택 공고", "공모주", "일본", "생활"])  # 그 외는 뺌 (routines 0022), 일본 하나로, 해외 여행은 밤밤 (routines 0020), 동물 (0028)
 
     def test_life_category(self):
         """0040 (2026-10-27 사용자): 독감 무료접종 같은 공공 일정을 눈잎 › 생활로. 그 외 앞, 사이트 카테고리에 글 모양"""
         life = Category.objects.get(section__name="눈잎", name="생활")
-        self.assertEqual((life.code, Category.objects.get(section__name="눈잎", name="그 외").code), ("E", "F"))
+        self.assertEqual(life.code, "E")  # 그 외(F)는 routines 0022 에서 뺌
         self.assertIn("무료 접종", life.direction)
         self.assertIn("독감 무료접종 일정", SiteCategory.objects.get(blog__name="눈잎", name="생활").concept)
         self.assertIn("생활(", Blog.objects.get(name="눈잎").content)
