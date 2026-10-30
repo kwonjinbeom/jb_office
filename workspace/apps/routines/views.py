@@ -5,8 +5,11 @@
 로컬·클라우드 구분은 없다 (2026-10-17 사용자). 진행 보고는 서버의 보고 주소(report_api)로 보내 '실행 이력'에 쌓인다
 (토큰이 없으면 PC 의 manage.py routine_report).
 모든 실행은 PC 에서 손으로 한다 (2026-10-17 사용자: 클라우드 예약은 지웠다). 리스트의 '실행'(루틴 하나),
-'전체 실행'(ALL_ORDER 순서로 루틴마다 새 터미널에서 차례로). 하루 분량과 따로 더 쓰는 건 중메뉴 '커스텀 글쓰기'
-(topics.py — 사이트별 소재·고정 주제를 골라 편수만큼, 또는 자유 글쓰기 코멘트). 예전 중메뉴 '추가 실행'은 2026-10-23 뺐다.
+'전체 실행'(ALL_ORDER 순서로 루틴마다 새 터미널에서 차례로), '여러 날'(글쓰기를 고른 날마다 차례로, ahead). 하루 분량과 따로
+더 쓰는 건 중메뉴 '커스텀 글쓰기' (topics.py — 사이트별 소재·고정 주제를 골라 편수만큼, 또는 자유 글쓰기 코멘트).
+예전 중메뉴 '추가 실행'은 2026-10-23 뺐다.
+리스트 이름은 '글쓰기 자동화' (2026-10-31 사용자). 일일 아이디어는 리스트·전체 실행에서 빼고 중메뉴 '아이디어 찾기'(ideas)에서 손으로.
+그날 상태(달력 띠)는 글쓰기를 한 번이라도 돌렸으면(실행 이력이나 쓴 글) 완료 (2026-10-31 사용자).
 보고 토큰은 설정 화면에서 만든다 (AppSetting 'routine_brief_token'). 결과는 main 에 올라가 웹훅으로 서버에 반영된다.
 
 로컬 실행: 화면의 '실행'은 안내문을 클립보드에 복사하고 jbroutine: 링크로 PC 에서 claude 터미널을 연다 (local_run.py).
@@ -24,7 +27,7 @@ import hmac
 import random
 import re
 from collections import Counter
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode
 
@@ -399,7 +402,9 @@ REPORT_URL = 'curl -fsS -X POST "{url}" --data-urlencode "status=<상태>" --dat
 EXTRA_TITLE = "이번에 할 것 (추가 실행)"
 DAILY_TOPICS_TITLE = "매일 쓰는 고정 주제 (전체 실행)"
 AHEAD_TITLE = "미리 쓰기 — 예약 발행분"
-ALL_ORDER = ("prompt_update", "writing", "daily_ideas")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
+ALL_ORDER = ("prompt_update", "writing")  # 전체 실행 순서 (2026-10-17 사용자). 그 밖의 루틴은 뒤에
+OFF_LIST = ("daily_ideas",)  # 리스트·전체 실행에서 뺀 루틴 — 아이디어 찾기에서 손으로 (2026-10-31 사용자)
+AHEAD_DAYS = 14  # '여러 날'에서 고를 수 있는 날: 오늘부터 2주
 
 
 def report_url(request, routine, day, via=RoutineRun.Via.RUN):
@@ -571,10 +576,12 @@ def _day(request):
 
 
 def _in_all_order(routines):
+    routines = [r for r in routines if r.key not in OFF_LIST]
     return sorted(routines, key=lambda r: ALL_ORDER.index(r.key) if r.key in ALL_ORDER else len(ALL_ORDER))
 
 
 ALL_PART = "<!-- 일일루틴 루틴: {key} -->"  # 전체 실행 안내문의 루틴 경계 (local_run.split_all 이 나눈다)
+DAY_PART = "<!-- 일일루틴 루틴: {key} {day} -->"  # 여러 날 글쓰기: 날마다 그 날짜로 현황을 남긴다 (local_run.split_parts)
 
 
 def all_prompt(routines, day, report_for=lambda r: True):
@@ -593,7 +600,66 @@ def all_prompt(routines, day, report_for=lambda r: True):
     return "\n".join(parts)
 
 
-# ---- 일일루틴 리스트
+def ahead_prompt(routine, days, report_for=lambda d: True):
+    """여러 날 글쓰기 안내문 (2026-10-31 사용자: 며칠치를 미리 쓴다). 고른 날마다 그 날짜의 글쓰기 안내문을 이어 붙이고,
+    PC 는 전체 실행처럼 날마다 새 터미널에서 차례로 돌린다. 날마다 그 날짜로 쓰고 보고하니 결과·횟수가 그 날에 남는다."""
+    days = sorted(days)
+    head = [f"# 일일루틴 여러 날 글쓰기 — {' · '.join(str(d) for d in days)}", "",
+            "아래 날짜를 위에서부터 차례로 하나씩 진행한다. PC 에서는 날마다 새 터미널이 열리고, 앞 날짜가 끝나면 다음 날짜가 시작된다.", ""]
+    parts = ["\n".join(head)]
+    for i, d in enumerate(days):
+        body = launcher(routine, d, report=report_for(d))
+        if i:  # 앞 날짜의 원고는 안내문의 '이미 있는 글'에 아직 없다
+            body += (f"\n## 여러 날 글쓰기 ({i + 1}/{len(days)})\n앞 날짜({days[i - 1]}) 실행이 방금 쓴 원고가 '이미 있는 글'에는 아직 없다. "
+                     "기획 전에 원고 폴더의 최근 원고(가장 큰 T번호들)를 보고 같은 대상·같은 틀이 겹치지 않게 한다.\n")
+        parts.append(f"\n{DAY_PART.format(key=routine.key, day=d)}\n" + body)
+    return "\n".join(parts)
+
+
+@require_POST
+def ahead(request):
+    """여러 날 글쓰기 안내문 (JSON). 화면이 받아 '전체 실행'처럼 PC 에서 날마다 차례로 연다."""
+    from .topics import WRITING_KEY
+    writing = Routine.objects.filter(key=WRITING_KEY).first()
+    if writing is None:
+        return JsonResponse({"error": "글쓰기 루틴이 없습니다."}, status=400)
+    today = timezone.localdate()
+    days = set()
+    for raw in request.POST.getlist("days"):
+        try:
+            d = date.fromisoformat(raw)
+        except ValueError:
+            continue
+        if 0 <= (d - today).days < AHEAD_DAYS:
+            days.add(d)
+    if not days:
+        return JsonResponse({"error": "글을 쓸 날을 고르세요."}, status=400)
+    days = sorted(days)
+    return JsonResponse({"prompt": ahead_prompt(writing, days, lambda d: report_url(request, writing, d)),
+                         "key": "all", "keys": writing.key, "day": days[0].isoformat(), "count": len(days),
+                         "name": f"{writing.name} {len(days)}일"})
+
+
+def _ahead_days(writing, today, ran):
+    """'여러 날' 고르기 칸: 오늘이 든 주 월요일부터 주 단위로 [{day, pick, note, ...}] (요일 줄을 맞춘다).
+    pick = 고를 수 있는 날(오늘부터 AHEAD_DAYS 일). note = 이미 쓴 편수, 글은 없지만 돌린 적 있으면 '실행함'."""
+    if writing is None:
+        return []
+    last = today + timedelta(days=AHEAD_DAYS - 1)
+    first = today - timedelta(days=today.weekday())
+    end = last + timedelta(days=6 - last.weekday())
+    written = _auto(writing.key, today, last)
+    fixed = {r.day: r.done for r in RoutineDay.objects.filter(routine=writing, day__range=(today, last))}
+    out = []
+    for d in period.days_between(first, end):
+        pick = today <= d <= last
+        n = fixed.get(d, written[d]) if pick else 0
+        note = f"{n}편" if n else ("실행함" if pick and d in ran else "")
+        out.append({"day": d, "pick": pick, "note": note, "today": d == today, "weekend": d.weekday() >= 5})
+    return out
+
+
+# ---- 일일루틴 리스트 (글쓰기 자동화)
 
 def index(request):
     _nav(request)
@@ -614,18 +680,26 @@ def index(request):
     routines = list(Routine.objects.all())
     for r in routines:  # 프롬프트 md 가 바뀌었으면 버전으로 남긴다 (프롬프트 최신화 결과 수)
         capture_version(r)
+    routines = [r for r in routines if r.key not in OFF_LIST]
+    lo, hi = min(lo, start), max(hi, end)
     fixed = {(r.routine_id, r.day): r.done for r in RoutineDay.objects.filter(day__range=(lo, hi))}
     auto = {r.pk: _auto(r.key, lo, hi) for r in routines}
+    from .topics import WRITING_KEY
+    writing = next((r for r in routines if r.key == WRITING_KEY), None)
+    ran = set(RoutineRun.objects.filter(routine=writing, day__range=(min(lo, today), max(hi, today + timedelta(days=AHEAD_DAYS))))
+              .values_list("day", flat=True)) if writing else set()
 
     def total(r, a, b):
         return sum(fixed.get((r.pk, d), auto[r.pk][d]) for d in period.days_between(a, b))
 
+    def wrote(d):
+        """그날 글쓰기를 한 번이라도 돌렸나: 실행 이력이 있거나 그날 글이 있으면 (2026-10-31 사용자)."""
+        return d in ran or total(writing, d, d) > 0
+
     def state(a, b):
-        days = (b - a).days + 1
-        targets = [r for r in routines if r.daily]
-        if not targets:
+        if writing is None:
             return ""
-        return "done" if all(total(r, a, b) >= r.daily * days for r in targets) else "todo"
+        return "done" if all(wrote(d) for d in period.days_between(a, b)) else "todo"
 
     days = (end - start).days + 1 if start > today else (min(end, today) - start).days + 1
     run_day = sel if mode == "day" else today
@@ -636,7 +710,12 @@ def index(request):
         if "picks" in r.data_keys and mode == "day":  # 그날 고른 편수가 목표
             picks, custom = day_picks(r, sel)
             r.target, open_goal = (sum(picks.values()), False) if custom else ("", True)
-        if start > today and not r.result:  # 앞날짜는 비워 두되, 미리 쓴 글이 있으면 그 날 결과로 보인다 (2026-10-28 사용자)
+        if r is writing:  # 글쓰기는 한 번이라도 돌렸으면 완료 (2026-10-31 사용자). 앞날짜는 돌린 날만 상태를 단다
+            if start <= today:
+                r.state = state(start, min(end, today))
+            else:
+                r.state = "done" if any(wrote(d) for d in period.days_between(start, end)) else ""
+        elif start > today and not r.result:  # 앞날짜는 비워 두되, 미리 쓴 글이 있으면 그 날 결과로 보인다 (2026-10-28 사용자)
             r.state = ""
         elif open_goal:
             r.state = "done" if r.result else "todo"
@@ -661,7 +740,8 @@ def index(request):
         r.planned = len(planned) if r.key == topic_mod.WRITING_KEY else 0
     return render(request, "routines/index.html", {
         "results": results, "result_counts": counts(results),
-        "page_title": "일일루틴",
+        "page_title": "글쓰기 자동화",
+        "ahead_days": _ahead_days(writing, today, ran), "ahead_max": AHEAD_DAYS,
         "topic_groups": topic_groups, "topic_count": sum(g["count"] for g in topic_groups),
         "writing_key": topic_mod.WRITING_KEY,
         "bar": period.bar(mode, sel, today, state),
