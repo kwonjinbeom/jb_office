@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block heading %}일일루틴 <span class="cnt">완료 {{ done_total }}/{{ routines|length }}</span>{% endblock %}
+{% block heading %}글쓰기 자동화 <span class="cnt">완료 {{ done_total }}/{{ routines|length }}</span>{% endblock %}
 
 {% block toolbar %}{% include "includes/period_bar.html" %}{% endblock %}
 
 {% block content %}
-{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(최신화 → 글쓰기 → 아이디어). 더 쓰는 건 커스텀 글쓰기. #}
+{# 메뉴마다 한 줄: 할 일 · 결과 · 실행 · 상태. 모두 PC 에서 손으로: '실행'(하나) · '전체 실행'(최신화 → 글쓰기) · '여러 날'(글쓰기를 고른 날마다). 더 쓰는 건 커스텀 글쓰기. #}
 <section class="card br-sites">
   <table class="grid br-table rt-table">
     <colgroup><col style="width:190px"><col><col style="width:96px"><col style="width:230px"><col style="width:80px"></colgroup>
-    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
+    <thead><tr><th>메뉴</th><th>할 일</th><th class="r">결과</th><th><div class="rt-th-run"><span>실행</span>{% if all_prompt %}{% include "routines/_launch.html" with key="all" name="전체 실행" kind="all" keys=all_keys text=all_prompt day=run_day label="전체 실행" primary=True %}{% endif %}{% if ahead_days %}{% include "routines/_ahead.html" %}{% endif %}</div></th><th class="c">상태</th></tr></thead>
     <tbody>
       {% for r in routines %}
       <tr id="rt-{{ r.key }}"{% if r.key == writing_key %} class="rt-has-sub" data-rt-toggle title="눌러서 커스텀 글쓰기(사이트별 소재·고정 주제) 펼치기"{% endif %}>

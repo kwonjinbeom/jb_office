@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block heading %}아이디어 찾기{% endblock %}
+
+{% block content %}
+<div class="tp-layout">
+{# 왼쪽: 개수 · 방향을 적고 실행 (views.extra mode=count, PC 터미널 claude). 전체 실행에서는 뺐다 (2026-10-31 사용자) #}
+<section class="card tp-free">
+  <div class="card-head"><h3 class="card-title">아이디어 찾기</h3><span class="hint">PC 터미널에서 claude 가 찾습니다</span></div>
+  {% if routine %}
+  <form id="id-run-form" class="tp-free-body" onsubmit="return false">{% csrf_token %}<input type="hidden" name="day" value="{{ today|date:'Y-m-d' }}"><input type="hidden" name="mode" value="count">
+    <label class="id-count">찾을 개수 <input class="input sm tp-n" type="number" name="count" min="1" max="30" value="{{ routine.daily }}" aria-label="찾을 개수"><span class="muted small">{{ routine.unit }}</span></label>
+    <textarea class="input" name="comment" rows="10" maxlength="2000" aria-label="찾을 방향" placeholder="찾을 방향이 있으면 적으세요 (비우면 검색 표준대로).&#10;&#10;예) 1인 사업으로 바로 팔 수 있는 디지털 상품 위주&#10;예) 요즘 텀블벅·크몽에서 돈이 몰리는 분야"></textarea>
+    <div class="tp-free-foot">
+      <span class="muted small">결과는 아이디어 › 일일 아이디어에 날짜별로</span>
+      <button class="btn primary" type="button" data-id-run data-url="{% url 'routines:extra' routine.pk %}" data-key="{{ routine.key }}" data-name="{{ routine.name }}" data-day="{{ today|date:'Y-m-d' }}">{% include "includes/ic.html" with name="server" %}실행</button>
+    </div>
+  </form>
+  {% else %}
+  <div class="rt-empty">일일 아이디어 루틴이 없습니다. 프롬프트 관리에서 루틴을 만드세요.</div>
+  {% endif %}
+</section>
+
+{# 오른쪽: 최근 찾은 날 (시장조사/일일아이디어/*.json). 날짜를 누르면 일일 아이디어 #}
+<div class="tp-right">
+<section class="card">
+  <div class="card-head tp-head"><h3 class="card-title">최근 찾은 아이디어</h3><a class="btn sm" href="{% url 'daily_ideas:list' %}">일일 아이디어</a></div>
+  <table class="grid tp-table">
+    <colgroup><col style="width:120px"><col style="width:64px"><col></colgroup>
+    <thead><tr><th>날짜</th><th class="c">후보</th><th>제목</th></tr></thead>
+    <tbody>
+      {% for b in batches %}
+      <tr>
+        <td><a href="{% url 'daily_ideas:list' %}?date={{ b.day|date:'Y-m-d' }}">{{ b.day|date:"Y-m-d" }}</a></td>
+        <td class="c">{{ b.count }}</td>
+        <td><div class="rt-cell" title="{{ b.titles }}">{{ b.titles|default:"-" }}</div></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" class="grid-empty">아직 찾은 아이디어가 없습니다.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* 아이디어 찾기: 개수·방향으로 안내문을 받아 복사하고 PC 터미널 claude 를 연다 */
+document.addEventListener("click", function (e) {
+  var go = e.target.closest("[data-id-run]");
+  if (!go) return;
+  go.disabled = true;
+  fetch(go.dataset.url, { method: "POST", body: new FormData(document.getElementById("id-run-form")), credentials: "same-origin" })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok) { App.toast(res.j.error || "안내문을 만들지 못했습니다.", "warn"); return; }
+      App.rtLaunch(res.j.prompt, { kind: "run", key: go.dataset.key, day: go.dataset.day, name: go.dataset.name }, false);
+    })
+    .catch(function () { App.toast("안내문을 만들지 못했습니다. 다시 눌러 보세요.", "warn"); })
+    .then(function () { go.disabled = false; });
+});
+</script>
+{% endblock %}

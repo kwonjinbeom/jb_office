@@ -236,7 +236,8 @@ def open_terminal(name, title, claude="claude"):
 # 작은 창(차례 창)이 루틴 터미널을 하나씩 열고, claude 가 끝 표시 파일(.routine/done/)을 남기거나 창이 닫히면 다음 루틴을 연다.
 # 끝 표시 첫 줄이 '실패'면 그 루틴 창은 닫지 않는다 (2026-10-28 사용자: 지역 놀거리를 시각 확인 못 해 못 썼는데 창이 닫혀
 # 이유를 못 봤다 — 실패면 터미널을 열어 두고 마지막에 사유를 보여 줘, 이어서 부탁해 보게). 소재 없음·예정은 실패가 아니다.
-ALL_PART = re.compile(r"^<!-- 일일루틴 루틴: ([a-z0-9_-]{1,30}) -->\n", re.M)  # views.ALL_PART
+# views.ALL_PART · 여러 날 글쓰기는 키 뒤에 날짜 (views.DAY_PART, 2026-10-31) — 그 루틴의 현황·안내문을 그 날짜로
+ALL_PART = re.compile(r"^<!-- 일일루틴 루틴: ([a-z0-9_-]{1,30})(?: (\d{4}-\d{2}-\d{2}))? -->\n", re.M)
 CLOSE_AFTER = 90  # 끝 표시 뒤 루틴 창을 닫기까지 (초)
 FAILED = "실패"  # 끝 표시 첫 줄
 DONE_TAIL = """
@@ -252,10 +253,16 @@ DONE_TAIL = """
 """
 
 
+def split_parts(text, part=ALL_PART):
+    """안내문 → [(경계 표시의 묶음들, 그 부분의 안내문)]."""
+    marks = list(part.finditer(text))
+    ends = [m.start() for m in marks[1:]] + [len(text)]
+    return [(m.groups(), text[m.end():end].strip() + "\n") for m, end in zip(marks, ends)]
+
+
 def split_all(text, part=ALL_PART):
     """전체 실행 안내문 → [(루틴 키, 그 루틴의 안내문)]. 애니 글쓰기·변환은 part=ANIME_PART (작품마다)."""
-    pieces = part.split(text)
-    return [(pieces[i], pieces[i + 1].strip() + "\n") for i in range(1, len(pieces) - 1, 2)]
+    return [(groups[0], body) for groups, body in split_parts(text, part)]
 
 
 def open_chain(steps, title, claude="claude", allow=()):
@@ -356,21 +363,22 @@ def start(link, text):
         name, title = f"{key}-{day}.md", "사이트 변환"
         done = "PC 터미널에서 사이트 변환을 시작했습니다. 끝나면 사이트별 템플릿을 새로고침하세요."
     elif kind == "all":
-        parts = split_all(text)
+        parts = split_parts(text)
         if not parts:
             raise ValueError("전체 실행 안내문에 루틴이 없습니다. 화면에서 '전체 실행'을 다시 누르세요.")
         folder = settings.BASE_DIR / ".routine"
         folder.mkdir(exist_ok=True)
-        steps = []
-        for i, (k, body) in enumerate(parts, start=1):
-            routine = _routine_for(k)
-            _open_run(routine, day, "전체 실행 · 차례를 기다립니다")
-            name = f"all-{day}-{i}-{k}.md"
+        steps, days = [], any(on for (_, on), _ in parts)  # 여러 날 글쓰기: 날마다 그 날짜로
+        for i, ((k, on), body) in enumerate(parts, start=1):
+            routine, when = _routine_for(k), date.fromisoformat(on) if on else day
+            _open_run(routine, when, ("여러 날 글쓰기" if days else "전체 실행") + " · 차례를 기다립니다")
+            name = f"all-{when}-{i}-{k}.md"
             (folder / name).write_text(body + DONE_TAIL.format(name=name), encoding="utf-8")
-            steps.append((name, f"일일루틴 {i}/{len(parts)} {routine.name}"))
-        manual = open_chain(steps, "일일루틴 전체 실행 (차례 창)", claude)
+            steps.append((name, f"일일루틴 {i}/{len(parts)} {routine.name}" + (f" {when:%m-%d}" if on else "")))
+        what = "여러 날 글쓰기" if days else "전체 실행"
+        manual = open_chain(steps, f"일일루틴 {what} (차례 창)", claude)
         said = (f"저장소 폴더에서 차례로 실행하세요: {manual}" if manual else
-                f"PC 에서 전체 실행을 시작했습니다 ({len(parts)}개 루틴, 루틴마다 새 터미널로 차례로).")
+                f"PC 에서 {what}을 시작했습니다 ({f'{len(parts)}일, 날마다' if days else f'{len(parts)}개 루틴, 루틴마다'} 새 터미널로 차례로).")
         payload = _feeds_in(text)
         if payload:  # 루틴 창이 열린 뒤 발행 확인도 (실패해도 전체 실행은 그대로)
             try:

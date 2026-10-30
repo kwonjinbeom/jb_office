@@ -1,0 +1,14 @@
+{% comment %}여러 날 글쓰기 (2026-10-31 사용자): 며칠치 글을 미리 쓴다. 날을 고르고 '실행' → views.ahead 안내문 →
+   PC 가 '전체 실행'처럼 날마다 새 터미널에서 차례로. 날마다 그 날짜로 쓰고 보고하니 결과·횟수가 그 날에 남는다.
+   칸의 '3편' = 이미 그날 분량으로 쓴 글, '실행함' = 글은 없지만 돌린 적 있음. 표 카드가 overflow:hidden 이라 창은 fixed 로 띄운다.{% endcomment %}
+<details class="rt-ahead" data-rt-ahead>
+  <summary class="btn sm" title="며칠치 글쓰기를 미리 (고른 날마다 새 터미널로 차례로)">{% include "includes/ic.html" with name="calendar" %}여러 날</summary>
+  <div class="rt-ahead-pop">
+    <div class="rt-ahead-head"><strong>미리 쓸 날</strong><span class="muted small">오늘부터 {{ ahead_max }}일 · 날마다 차례로</span></div>
+    <div class="rt-ahead-grid">
+      {% for w in "월화수목금토일" %}<span class="rt-ahead-wd">{{ w }}</span>{% endfor %}
+      {% for c in ahead_days %}{% if c.pick %}<label class="rt-ahead-day{% if c.today %} is-today{% endif %}{% if c.weekend %} is-weekend{% endif %}" title="{{ c.day|date:'Y-m-d' }}{% if c.today %} (오늘){% endif %}{% if c.note %} · {{ c.note }}{% endif %}"><input type="checkbox" value="{{ c.day|date:'Y-m-d' }}" data-rt-ahead-day><span class="d">{{ c.day|date:"n/j" }}</span><span class="n">{{ c.note }}</span></label>{% else %}<span class="rt-ahead-day is-off"><span class="d">{{ c.day|date:"n/j" }}</span><span class="n"></span></span>{% endif %}{% endfor %}
+    </div>
+    <div class="rt-ahead-foot"><span class="muted small" data-rt-ahead-count>날을 고르세요</span><button class="btn sm primary" type="button" data-rt-ahead-run data-url="{% url 'routines:ahead' %}"{% if not on_server %} data-reload{% endif %}>{% include "includes/ic.html" with name="server" %}실행</button></div>
+  </div>
+</details>

@@ -937,6 +937,25 @@ def extra(request, pk):
                                             tree=mode == "comment")})
 
 
+IDEAS_KEY = "daily_ideas"
+IDEAS_RECENT = 10  # 아이디어 찾기 오른쪽: 최근 찾은 날 몇 개
+
+
+def ideas(request):
+    """아이디어 찾기 (2026-10-31 사용자): 일일 아이디어 루틴을 전체 실행에서 빼고 여기서 손으로 돌린다.
+    개수·방향을 적고 '실행' → extra(mode=count) 안내문으로 PC 터미널 claude. 오른쪽은 최근 찾은 날과 후보."""
+    _nav(request, "routine_ideas")
+    from apps.daily_ideas.data import load_batches
+    routine = Routine.objects.filter(key=IDEAS_KEY).first()
+    batches = []
+    for batch in load_batches()[:IDEAS_RECENT]:
+        titles = [item["title"] for item in batch["items"]]
+        batches.append({"day": date.fromisoformat(batch["date"]), "count": len(titles), "titles": " · ".join(titles)})
+    return render(request, "routines/ideas.html", {
+        "page_title": "아이디어 찾기", "routine": routine, "batches": batches, "today": timezone.localdate(),
+        "on_server": settings.IS_SERVER})
+
+
 def doc(request, rel):
     """프롬프트가 보는 md 를 읽기 전용으로. 루틴이 보는 파일만 연다."""
     _nav(request, "routine_prompts")
