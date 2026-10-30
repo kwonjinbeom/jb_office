@@ -13,6 +13,7 @@
   (예: apps/discussions/views.py 의 _nav). 넣지 않으면 앱 이름과 같은 key 가 강조된다.
 - query: 같은 화면을 조건만 달리해 여는 하위 메뉴에 쓴다 (예: "?area=blog").
 - listing=False: '<상위 메뉴명> 리스트' 를 만들지 않는다. 하위 메뉴들이 곧 그 묶음의 화면일 때 (예: 아이디어 = 일일 + 내 아이디어).
+- listing_title: '<상위 메뉴명> 리스트' 대신 쓸 이름 (예: 일일루틴 › 글쓰기 자동화).
 
 관리화면 › 메뉴 권한(admin, apps/core/admin.py)에서 이름·순서·보이기·볼 수 있는 그룹을 고치면 MenuSetting 에 남고,
 get_menus()·build_nav() 가 그 값을 입힌다. 사용자를 주면 그 사용자가 볼 수 있는 메뉴만 남긴다 (allowed).
@@ -34,6 +35,7 @@ class Menu:
     query: str = ""
     children: tuple["Menu", ...] = ()
     listing: bool = True
+    listing_title: str = ""
 
     @property
     def url(self) -> str:
@@ -42,9 +44,12 @@ class Menu:
 
 MENUS: list[Menu] = [
     Menu(
-        "routines", "일일루틴", "화면별로 AI 에게 하루 양을 맡기고(PC 에서 실행 · 전체 실행 · 추가 실행) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
+        "routines", "일일루틴", "글쓰기를 AI 에게 맡기고(PC 에서 실행 · 전체 실행 · 여러 날 미리 쓰기) 쌓인 결과를 보는 곳", "routines:index", "refresh", "#0f766e",
+        listing_title="글쓰기 자동화",  # 예전 '일일루틴 리스트' (2026-10-31 사용자)
         children=(
             Menu("routine_topics", "커스텀 글쓰기", "사이트별 소재·고정 주제를 골라 편수만큼 더 쓰는 곳", "routines:topics", "calendar"),
+            # 일일 아이디어는 전체 실행에서 빼고 여기서 손으로 돌린다 (2026-10-31 사용자)
+            Menu("routine_ideas", "아이디어 찾기", "아이디어 후보를 개수·방향을 정해 그때그때 찾는 곳", "routines:ideas", "sparkles"),
             Menu("routine_prompts", "프롬프트 관리", "루틴마다 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),
     ),
@@ -212,7 +217,7 @@ def build_nav(active_key: str, user=None) -> list[dict]:
         if not menu.children:
             nav.append({"menu": menu, "active": menu.key == active_key, "open": False, "children": []})
             continue
-        first = (Menu(menu.key, f"{menu.title} 리스트", menu.description, menu.url_name, menu.icon, menu.color, menu.query),) if menu.listing else ()
+        first = (Menu(menu.key, menu.listing_title or f"{menu.title} 리스트", menu.description, menu.url_name, menu.icon, menu.color, menu.query),) if menu.listing else ()
         children = []
         for child in (*first, *menu.children):  # 중메뉴 아래 소메뉴는 이름 한 줄 + 들여 쓴 링크로 (memorily 티스토리)
             subs = [{"menu": g, "active": g.key == active_key} for g in child.children]
