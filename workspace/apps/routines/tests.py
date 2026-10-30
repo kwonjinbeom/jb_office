@@ -1,6 +1,6 @@
 import json
 import tempfile
-from datetime import date
+from datetime import date, timedelta
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
@@ -420,15 +420,15 @@ class RepoTests(Login):
 
     @patch("apps.routines.local_run.find_claude", return_value="claude")
     @patch("apps.routines.local_run.subprocess.Popen")
-    def test_all_run_order_update_writing_ideas(self, popen, _claude):
+    def test_all_run_order_update_writing(self, popen, _claude):
         res = self.client.get(INDEX, {"date": "2026-10-16"})
         self.assertContains(res, ">전체 실행<")
         text = res.context["all_prompt"]
-        self.assertIn("순서: 1. 프롬프트 최신화 → 2. 글쓰기 → 3. 일일 아이디어", text)
+        self.assertIn("순서: 1. 프롬프트 최신화 → 2. 글쓰기\n", text)  # 일일 아이디어는 뺐다 (2026-10-31 사용자)
         self.assertLess(text.index("# 일일루틴 · 프롬프트 최신화"), text.index("# 일일루틴 · 글쓰기"))
-        self.assertLess(text.index("# 일일루틴 · 글쓰기"), text.index("# 일일루틴 · 일일 아이디어"))
-        self.assertEqual(text.count("## 진행 보고"), 3)
-        self.assertEqual(res.context["all_keys"], "prompt_update,writing,daily_ideas")
+        self.assertNotIn("# 일일루틴 · 일일 아이디어", text)
+        self.assertEqual(text.count("## 진행 보고"), 2)
+        self.assertEqual(res.context["all_keys"], "prompt_update,writing")
         with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
             folder = Path(tmp) / ".routine"
             (folder / "done").mkdir(parents=True)
@@ -436,7 +436,7 @@ class RepoTests(Login):
             msg = start(f"jbroutine:all?key=all&day=2026-10-16&keys={res.context['all_keys']}", text.replace("\n", "\r\n"))
             self.assertIn("루틴마다 새 터미널로 차례로", msg)
             # 루틴마다 따로 된 안내문 (한 대화로 잇지 않는다) + 끝 표시 파일 지시
-            names = ["all-2026-10-16-1-prompt_update.md", "all-2026-10-16-2-writing.md", "all-2026-10-16-3-daily_ideas.md"]
+            names = ["all-2026-10-16-1-prompt_update.md", "all-2026-10-16-2-writing.md"]
             bodies = [(folder / n).read_text(encoding="utf-8") for n in names]
             self.assertTrue(bodies[1].startswith("# 일일루틴 · 글쓰기"))
             self.assertNotIn("# 일일루틴 · 프롬프트 최신화", bodies[1])
@@ -449,21 +449,83 @@ class RepoTests(Login):
             raw = (folder / "all-chain.ps1").read_bytes()
             self.assertTrue(raw.startswith(b"\xef\xbb\xbf"))
             chain = raw.decode("utf-8-sig")
-            self.assertEqual(chain.count("Start-Process"), 3)
-            self.assertLess(chain.index("1/3 프롬프트 최신화"), chain.index("2/3 글쓰기"))
+            self.assertEqual(chain.count("Start-Process"), 2)
+            self.assertLess(chain.index("1/2 프롬프트 최신화"), chain.index("2/2 글쓰기"))
             self.assertIn(f"Test-Path -LiteralPath '{folder / 'done' / names[0]}'", chain)
             self.assertIn("$p.HasExited", chain)
             self.assertIn("-File", popen.call_args[0][0])
             self.assertIn("taskkill /PID $script:prev.Id /T /F", chain)  # 끝난 루틴 창은 닫는다 (2026-10-20 사용자)
-            self.assertEqual(chain.count("Close-Done 90"), 4)  # 루틴마다 + 마지막
-            self.assertEqual(chain.count("-like '실패*'"), 3)  # 끝 표시 첫 줄이 실패면 그 창은 닫을 차례에 넣지 않는다
+            self.assertEqual(chain.count("Close-Done 90"), 3)  # 루틴마다 + 마지막
+            self.assertEqual(chain.count("-like '실패*'"), 2)  # 끝 표시 첫 줄이 실패면 그 창은 닫을 차례에 넣지 않는다
             self.assertIn("if ($kept) {", chain)  # 실패가 있으면 차례 창도 Enter 를 기다린다
             self.assertNotIn("-NoExit", popen.call_args[0][0])  # 다 끝나면 차례 창도 닫힌다
         windows = [c for c in popen.call_args_list if c[0][0][0] == "powershell.exe"]
         self.assertEqual(len(windows), 1)  # 창은 차례 창 하나만 바로 연다 (나머지는 원고 가져오기의 git)
-        self.assertEqual(RoutineRun.objects.count(), 3)
+        self.assertEqual(RoutineRun.objects.count(), 2)
         with self.assertRaises(ValueError):
             start("jbroutine:all?key=all&day=2026-10-16", "# 일일루틴 전체 실행 — 2026-10-16\n루틴 없음")
+
+    @patch("apps.routines.local_run.find_claude", return_value="claude")
+    @patch("apps.routines.local_run.subprocess.Popen")
+    def test_ahead_runs_writing_per_day(self, popen, _claude):
+        """여러 날 글쓰기 (2026-10-31 사용자): 고른 날마다 그 날짜 안내문 → PC 가 날마다 새 터미널, 현황도 그 날짜로."""
+        today = timezone.localdate()
+        d1, d2 = today + timedelta(days=2), today + timedelta(days=1)
+        url = reverse("routines:ahead")
+        self.assertEqual(self.client.post(url, {"days": [str(today + timedelta(days=30)), "x"]}).status_code, 400)
+        res = self.client.post(url, {"days": [str(d1), str(d2), str(d2)]})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual((data["key"], data["keys"], data["day"], data["count"]), ("all", "writing", str(d2), 2))
+        text = data["prompt"]
+        self.assertTrue(text.startswith("# 일일루틴 여러 날 글쓰기"))
+        self.assertLess(text.index(f"# 일일루틴 · 글쓰기 — {d2}"), text.index(f"# 일일루틴 · 글쓰기 — {d1}"))
+        self.assertIn(f"| 발행 예정 | {d1} (예약) |", text)  # 앞날짜 글은 그 날짜로
+        self.assertIn("여러 날 글쓰기 (2/2)", text)  # 둘째 날은 앞 날짜 원고와 겹치지 않게
+        with tempfile.TemporaryDirectory() as tmp, override_settings(BASE_DIR=Path(tmp)), patch("apps.routines.local_run.WINDOWS", True):
+            msg = start(f"jbroutine:all?key=all&day={d2}&keys=writing", text)
+            self.assertIn("2일, 날마다 새 터미널로 차례로", msg)
+            folder = Path(tmp) / ".routine"
+            for i, d in enumerate((d2, d1), start=1):
+                body = (folder / f"all-{d}-{i}-writing.md").read_text(encoding="utf-8")
+                self.assertTrue(body.startswith(f"# 일일루틴 · 글쓰기 — {d}"))
+                self.assertIn(f"--date {d}", body)  # 진행 보고도 그 날짜로
+            chain = (folder / "all-chain.ps1").read_bytes().decode("utf-8-sig")
+            self.assertIn(f"1/2 글쓰기 {d2:%m-%d}", chain)
+        self.assertEqual(sorted(RoutineRun.objects.values_list("day", flat=True)), [d2, d1])
+        # 화면: 그 날이 '실행함'으로 보이고, 앞날짜 상태도 완료
+        res = self.client.get(INDEX)
+        cells = {c["day"]: c for c in res.context["ahead_days"]}
+        self.assertEqual(cells[d1]["note"], "실행함")
+        self.assertTrue(cells[today]["pick"] and cells[today]["today"])
+        self.assertFalse(any(c["pick"] for d, c in cells.items() if d < today))  # 지난날은 고르지 않는다
+        self.assertContains(res, 'data-rt-ahead-day')
+        writing = next(r for r in self.client.get(INDEX, {"date": str(d1)}).context["routines"] if r.key == "writing")
+        self.assertEqual(writing.state, "done")
+
+    def test_day_done_when_writing_ran_once(self):
+        """그날 글쓰기를 한 번이라도 돌렸으면 완료 (2026-10-31 사용자). 일일 아이디어는 리스트에서 뺐다."""
+        writing = Routine.objects.get(key="writing")
+        res = self.client.get(INDEX, {"date": "2026-10-16"})
+        self.assertNotIn("daily_ideas", [r.key for r in res.context["routines"]])
+        self.assertContains(res, "글쓰기 자동화")
+        cell = next(c for c in res.context["bar"]["cells"] if c["title"] == "2026-10-16")
+        self.assertEqual(cell["state"], "todo")
+        RoutineRun.record(writing, date(2026, 10, 16), "시작", "오늘 글쓰기")
+        res = self.client.get(INDEX, {"date": "2026-10-16"})
+        cell = next(c for c in res.context["bar"]["cells"] if c["title"] == "2026-10-16")
+        self.assertEqual(cell["state"], "done")
+        self.assertEqual(next(r for r in res.context["routines"] if r.key == "writing").state, "done")
+
+    def test_ideas_page_runs_daily_ideas_by_hand(self):
+        """아이디어 찾기 (2026-10-31 사용자): 개수·방향으로 일일 아이디어 안내문."""
+        routine = Routine.objects.get(key="daily_ideas")
+        res = self.client.get(reverse("routines:ideas"))
+        self.assertContains(res, "아이디어 찾기")
+        self.assertContains(res, reverse("routines:extra", args=[routine.pk]))
+        res = self.client.post(reverse("routines:extra", args=[routine.pk]), {"mode": "count", "count": "3", "comment": "디지털 상품"})
+        self.assertIn("3개 더 한다", res.json()["prompt"])
+        self.assertIn("디지털 상품", res.json()["prompt"])
 
     def test_report_api_records_run_history(self):
         from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
