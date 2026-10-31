@@ -735,6 +735,23 @@ class RoundupTitleTests(TestCase):
             self.assertIn(series, SiteCategory.objects.get(blog__name="memorily", name=name).concept)
         self.assertNotIn("총정리 이름 고정", FixedTopic.objects.get(name="AI 소식").note)
 
+    def test_roundup_timing_is_flexible(self):
+        """0027 (2026-10-31 사용자): 날짜에 매이지 않는다 — 1~3일 · 7~10일 · 30일 규칙 대신 '언제 쓰나' (겹침만 막는다)."""
+        from apps.blog_types.models import SiteCategory
+        from .models import FixedTopic
+        for name in ("무료 AI 툴", "이달의 AI", "IT 할인"):
+            note = FixedTopic.objects.get(name=name).note
+            self.assertEqual(note.count("날짜에 매이지 않는다"), 1)
+            for old in ("1~3일", "10일 안에", "30일 안에", "한 해 한 번"):
+                self.assertNotIn(old, note)
+            concept = SiteCategory.objects.get(blog__name="memorily", name=name).concept
+            self.assertNotIn("매월 1~3일", concept)
+            self.assertNotIn("7~10일 전", concept)
+        self.assertIn("1건이어도", FixedTopic.objects.get(name="무료 AI 툴").note)
+        self.assertIn("주 단위", FixedTopic.objects.get(name="이달의 AI").note)
+        self.assertIn("<그달 또는 주", FixedTopic.objects.get(name="이달의 AI").note)
+        self.assertIn("하나면 하나만", FixedTopic.objects.get(name="IT 할인").note)
+
 
 class DropOtherTests(TestCase):
     def test_migration_trashes_nunip_and_naver_other(self):
