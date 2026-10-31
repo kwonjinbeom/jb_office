@@ -519,6 +519,18 @@ class RepoTests(Login):
         self.assertEqual(cell["state"], "done")
         self.assertEqual(next(r for r in res.context["routines"] if r.key == "writing").state, "done")
 
+    def test_future_day_done_when_written_ahead(self):
+        """앞날짜도 미리 쓴 날은 달력 띠에 완료, 안 쓴 날은 미완료 대신 비운다 (2026-10-31 사용자)."""
+        writing = Routine.objects.get(key="writing")
+        today = timezone.localdate()
+        ahead = today + timedelta(days=7 - today.weekday())  # 다음 주 월·화 (같은 띠에 들게)
+        empty = ahead + timedelta(days=1)
+        RoutineRun.record(writing, ahead, "시작", "미리 쓰기")
+        for d in (ahead, empty):
+            cells = {c["title"]: c for c in self.client.get(INDEX, {"date": str(d)}).context["bar"]["cells"]}
+            self.assertEqual(cells[str(ahead)]["state"], "done")
+            self.assertEqual(cells[str(empty)]["state"], "")
+
     def test_manual_tabs_and_prompt_update_page(self):
         """수동 루틴 (2026-10-31 사용자): 커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화 탭. 메뉴는 '수동 루틴' 하나."""
         from apps.core.menus import find_menu
