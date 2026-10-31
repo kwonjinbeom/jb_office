@@ -20,7 +20,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("action", choices=["new", "report"])
-        parser.add_argument("args", nargs="+", help="new: <json> · report: <번호> <json>")
+        parser.add_argument("rest", nargs="+", help="new: <json> · report: <번호> <json>")
         parser.add_argument("--source", default="other")
         parser.add_argument("--date", default="")
         parser.add_argument("--key", default="")
@@ -34,7 +34,8 @@ class Command(BaseCommand):
         except OSError as e:
             raise CommandError(f"파일을 못 읽었습니다: {e}") from None
 
-    def handle(self, action, args, source, date, key, **options):
+    def handle(self, *_, **options):
+        action, args, source, date, key = (options[k] for k in ("action", "rest", "source", "date", "key"))
         try:
             if action == "new":
                 saved = followups.add_items(followups._items(self._read(args[0])), source, followups._day(date), key)
