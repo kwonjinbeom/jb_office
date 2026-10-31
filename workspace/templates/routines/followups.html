@@ -21,39 +21,7 @@
     <thead><tr><th>날짜</th><th class="c">어디서</th><th>남은 일</th><th>이어서 할 일</th><th class="c">상태</th><th>실행</th></tr></thead>
     <tbody>
       {% for f in items %}
-      <tr class="fu-row" data-fu-toggle="{{ f.pk }}" title="눌러서 자세히">
-        <td>{{ f.day|date:"m-d" }}</td>
-        <td class="c"><span class="badge {{ f.source_badge }}">{{ f.get_source_display }}</span></td>
-        <td><div class="rt-cell fu-title" title="{{ f.title }}">{{ f.title }}</div>{% if f.why %}<div class="rt-cell muted small" title="{{ f.why }}">{{ f.why }}</div>{% endif %}</td>
-        <td><div class="rt-cell" title="{{ f.next_steps }}">{{ f.first_next|default:"-" }}</div></td>
-        <td class="c"><span class="badge {{ f.badge }}">{{ f.get_status_display }}</span>{% if f.stuck %}<div class="muted small" title="{{ stale_hours }}시간 넘게 소식이 없어요 — 터미널이 닫혔을 수 있어요">멈춤?</div>{% endif %}</td>
-        <td>
-          <div class="rt-acts">
-            {% if f.is_open %}
-            <button class="btn sm primary" type="button" data-fu-resume="{% url 'routines:followup_resume' f.pk %}" title="이어서 할 일을 안내문으로 만들어 PC 터미널 claude 를 엽니다. 끝나면 완료가 남습니다">{% include "includes/ic.html" with name="server" %}이어서 하기</button>
-            <form method="post" action="{% url 'routines:followup_mark' f.pk 'done' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm" type="submit" title="직접 끝냈으면">{% include "includes/ic.html" with name="check" %}완료</button></form>
-            <form method="post" action="{% url 'routines:followup_mark' f.pk 'drop' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm ghost" type="submit" title="하지 않기로 (끝난 것으로 옮김)">안 함</button></form>
-            {% else %}
-            <span class="muted small">{{ f.resolved_at|date:"m-d H:i" }}</span>
-            <form method="post" action="{% url 'routines:followup_mark' f.pk 'open' %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm ghost" type="submit">다시 남음</button></form>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      <tr class="fu-detail" id="fu-{{ f.pk }}" hidden>
-        <td colspan="6">
-          <form class="fu-form" method="post" action="{% url 'routines:followup_save' f.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <label>남은 일<input class="input" name="title" maxlength="200" value="{{ f.title }}"></label>
-            <label>멈춘 까닭<textarea class="input" name="why" rows="3">{{ f.why }}</textarea></label>
-            <label>이어서 할 일 <span class="muted small">— '이어서 하기'의 claude 가 이것을 보고 한다</span><textarea class="input" name="next_steps" rows="5">{{ f.next_steps }}</textarea></label>
-            <div class="fu-foot"><span class="muted small">{% if f.routine %}{{ f.routine.name }} · {% endif %}남긴 때 {{ f.created_at|date:"m-d H:i" }}</span><button class="btn sm" type="submit">{% include "includes/ic.html" with name="save" %}저장</button></div>
-          </form>
-          <div class="fu-logs">
-            <div><div class="fu-label">기록</div><pre class="rt-log">{{ f.log|default:"-" }}</pre></div>
-            {% if f.run %}<div><div class="fu-label">그때 실행 기록 · {{ f.run.routine.name }} {{ f.run.day|date:"m-d" }}</div><pre class="rt-log">{{ f.run.log|default:"-" }}</pre></div>{% endif %}
-          </div>
-        </td>
-      </tr>
+      {% include "routines/_followup_row.html" %}
       {% empty %}
       <tr><td colspan="6" class="grid-empty">{% if tab == "done" %}끝난 일이 없습니다.{% else %}남은 일이 없습니다. 터미널이 끝내지 못한 일이 생기면 여기에 쌓입니다.{% endif %}</td></tr>
       {% endfor %}
@@ -72,20 +40,23 @@
 </section>
 
 {% if tab != "done" %}
-{# 실행 이력에서 실패·막힘, 또는 오래 소식 없는 진행·대기 (터미널이 닫혔을 수 있다). 남은 일로 올리거나 닫는다. #}
+{# 확인이 필요한 것 (2026-10-31 사용자): 다시 확인할 일(공개 전 정보) + 실패·막힘·오래 소식 없는 실행. 일일아이디어는 뺀다 (followups.QUIET_ROUTINES). #}
 <section class="card fu-runs">
-  <div class="card-head"><h3 class="card-title">확인이 필요한 실행 <span class="cnt">{{ runs|length }}</span></h3><span class="hint">최근 {{ run_days }}일 · 실패·막힘 · {{ stale_hours }}시간 넘게 소식 없는 진행</span></div>
+  <div class="card-head"><h3 class="card-title">확인이 필요한 것 <span class="cnt">{{ check_count }}</span></h3><span class="hint">다시 확인할 일(공개 전 정보) · 최근 {{ run_days }}일 실패·막힘 · {{ stale_hours }}시간 넘게 소식 없는 실행</span></div>
   <table class="grid fu-table">
-    <colgroup><col style="width:70px"><col style="width:120px"><col style="width:64px"><col><col style="width:96px"><col style="width:236px"></colgroup>
-    <thead><tr><th>날짜</th><th>루틴</th><th class="c">상태</th><th>마지막 단계</th><th>마지막 보고</th><th>실행</th></tr></thead>
+    <colgroup><col style="width:70px"><col style="width:78px"><col><col style="width:34%"><col style="width:96px"><col style="width:236px"></colgroup>
+    <thead><tr><th>날짜</th><th class="c">어디서</th><th>무엇</th><th>할 일 · 마지막 보고</th><th class="c">상태</th><th>실행</th></tr></thead>
     <tbody>
+      {% for f in rechecks %}
+      {% include "routines/_followup_row.html" %}
+      {% endfor %}
       {% for r in runs %}
       <tr>
         <td>{{ r.day|date:"m-d" }}</td>
-        <td><div class="rt-cell"><strong>{{ r.routine.name }}</strong></div></td>
-        <td class="c"><span class="badge {{ r.badge }}">{{ r.get_status_display }}</span></td>
+        <td class="c"><span class="badge outline">{{ r.routine.name }}</span></td>
         <td><div class="rt-cell" title="{{ r.log }}">{{ r.step|default:"-" }}</div><div class="rt-cell muted small">{{ r.why }}</div></td>
-        <td>{{ r.updated_at|date:"m-d H:i" }}</td>
+        <td class="muted small">{{ r.updated_at|date:"m-d H:i" }} 마지막 보고</td>
+        <td class="c"><span class="badge {{ r.badge }}">{{ r.get_status_display }}</span></td>
         <td>
           <div class="rt-acts">
             <form method="post" action="{% url 'routines:followup_promote' r.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn sm" type="submit" title="남은 일로 올린다 — 실행 기록이 이어서 하기 안내문에 함께 간다">{% include "includes/ic.html" with name="plus" %}남은 일로</button></form>
@@ -93,9 +64,18 @@
           </div>
         </td>
       </tr>
-      {% empty %}
-      <tr><td colspan="6" class="grid-empty">확인할 실행이 없습니다.</td></tr>
       {% endfor %}
+      {% if not rechecks and not runs %}
+      <tr><td colspan="6" class="grid-empty">확인할 것이 없습니다.</td></tr>
+      {% endif %}
+      <tr class="tp-addrow"><td colspan="6">
+        <form method="post" action="{% url 'routines:followup_add' %}" class="tp-add fu-add">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="day" value="{{ today|date:'Y-m-d' }}"><input type="hidden" name="source" value="writing">
+          <input class="input sm" type="date" name="check_on" value="{{ today|date:'Y-m-d' }}" aria-label="다시 확인할 날" required>
+          <input class="input sm" name="title" maxlength="200" placeholder="+ 다시 확인할 것 (예: 올영 블프 본 행사 쿠폰 공개)" aria-label="다시 확인할 것" autocomplete="off">
+          <input class="input sm" name="next_steps" maxlength="4000" placeholder="확인하고 할 일 (선택)" aria-label="확인하고 할 일" autocomplete="off">
+          <button class="btn sm" type="submit">추가</button>
+        </form>
+      </td></tr>
     </tbody>
   </table>
 </section>

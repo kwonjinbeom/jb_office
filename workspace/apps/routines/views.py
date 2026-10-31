@@ -765,7 +765,8 @@ def index(request):
     mark = convert_mark(request, run_day) if writing else ""
     return render(request, "routines/index.html", {
         "can_convert": bool(mark),
-        "followup_open": FollowUp.objects.filter(status__in=[FollowUp.Status.OPEN, FollowUp.Status.RUNNING]).count(),
+        "followup_open": FollowUp.objects.filter(status__in=[FollowUp.Status.OPEN, FollowUp.Status.RUNNING])
+                         .exclude(check_on__gt=timezone.localdate()).count(),  # 다시 확인할 날이 아직이면 세지 않는다
         "all_prompt_convert": all_text + mark if all_text and mark else "",
         "results": results, "result_counts": counts(results),
         "page_title": "글쓰기 자동화",

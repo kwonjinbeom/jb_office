@@ -241,6 +241,9 @@ class FollowUp(models.Model):
     routine = models.ForeignKey(Routine, verbose_name="루틴", null=True, blank=True, on_delete=models.SET_NULL, related_name="followups")
     run = models.ForeignKey(RoutineRun, verbose_name="실행", null=True, blank=True, on_delete=models.SET_NULL, related_name="followups")
     day = models.DateField("날짜")
+    # 다시 확인 (2026-10-31 사용자): 막혀서가 아니라 정보가 아직 안 나와 그날 다시 찾아야 하는 일 (예: 11/1 0시에 공개되는 올영 블프 쿠폰).
+    # 있으면 '확인이 필요한 것' 칸에 그날까지 '기다림', 그날부터 '확인할 때'로 보인다.
+    check_on = models.DateField("다시 확인할 날", null=True, blank=True)
     why = models.TextField("멈춘 까닭", blank=True)
     next_steps = models.TextField("이어서 할 일", blank=True)
     status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.OPEN)
@@ -271,6 +274,22 @@ class FollowUp(models.Model):
     @property
     def is_open(self):
         return self.status in (self.Status.OPEN, self.Status.RUNNING)
+
+    @property
+    def waiting(self):
+        """다시 확인할 날이 아직 오지 않았다."""
+        return self.check_on is not None and self.status == self.Status.OPEN and self.check_on > timezone.localdate()
+
+    @property
+    def state(self):
+        """화면의 상태 글: 다시 확인할 일은 그날 전 '기다림', 그날부터 '확인할 때'."""
+        if self.check_on is not None and self.status == self.Status.OPEN:
+            return "기다림" if self.waiting else "확인할 때"
+        return self.get_status_display()
+
+    @property
+    def state_badge(self):
+        return "gray" if self.waiting else self.badge
 
     def note(self, message, status=None):
         """기록에 한 줄 더하고 (상태를 바꾼다). 완료·안 함이면 끝낸 때를, 다시 열면 지운다."""

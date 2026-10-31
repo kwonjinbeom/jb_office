@@ -84,7 +84,7 @@ class FollowUpTests(TestCase):
         self.assertEqual(fu.status, "done")
         self.assertIsNotNone(fu.resolved_at)
         self.assertIn("원고 저장", fu.log)
-        self.assertEqual(self.client.get(PAGE).context["counts"], {"open": 0, "done": 1})
+        self.assertEqual(self.client.get(PAGE).context["counts"], {"open": 0, "recheck": 0, "done": 1})
 
     def test_stale_running_runs_and_close(self):
         run = RoutineRun.record(self.writing, timezone.localdate(), "시작", "주제 기획")
@@ -97,6 +97,40 @@ class FollowUpTests(TestCase):
         run.refresh_from_db()
         self.assertEqual(run.status, "done")
         self.assertEqual(self.client.get(PAGE).context["runs"], [])
+
+    def test_recheck_waits_then_shows_in_check_grid(self):
+        """다시 확인 (2026-10-31 사용자): 공개 전 정보는 check_on 을 달아 아래 '확인이 필요한 것' 칸에. 그날 전엔 '기다림'."""
+        today = timezone.localdate()
+        url = reverse("routines:followup_new") + f"?token=tok&source=writing&day={today}&key=writing"
+        item = {"title": "T236 올영 블프 — 본 행사 쿠폰·할인 공개 확인", "why": "11/1 0시 공개", "next": "공식 기획전을 보고 한 편 더",
+                "check_on": (today + timedelta(days=1)).isoformat()}
+        self.assertEqual(self.post_json(url, item).status_code, 200)
+        fu = FollowUp.objects.get()
+        self.assertEqual(fu.check_on, today + timedelta(days=1))
+        res = self.client.get(PAGE)
+        self.assertEqual(res.context["items"], [])  # 위 '남은 일'이 아니라
+        self.assertEqual([f.pk for f in res.context["rechecks"]], [fu.pk])  # 아래 칸에
+        self.assertEqual(res.context["counts"]["recheck"], 1)
+        self.assertContains(res, "기다림")
+        self.assertEqual(self.client.get(reverse("routines:index")).context["followup_open"], 0)  # 날이 오기 전엔 세지 않는다
+        FollowUp.objects.filter(pk=fu.pk).update(check_on=today)
+        self.assertContains(self.client.get(PAGE), "확인할 때")
+        prompt = self.client.post(reverse("routines:followup_resume", args=[fu.pk])).json()["prompt"]
+        self.assertIn("다시 확인하기로 남긴 일", prompt)
+        self.assertIn("## 다시 확인하는 까닭", prompt)
+        self.client.post(reverse("routines:followup_add"), {"title": "빼빼로 편의점 공지", "check_on": "2026-11-02"})
+        self.assertEqual(FollowUp.objects.get(title="빼빼로 편의점 공지").check_on, date(2026, 11, 2))
+
+    def test_daily_ideas_runs_are_not_checked(self):
+        ideas = Routine.objects.get(key="daily_ideas")
+        run = RoutineRun.record(ideas, timezone.localdate(), "시작", "아이디어")
+        run.report(RoutineRun.Status.FAILED, "검색 실패", timezone.localtime())
+        self.assertEqual(self.client.get(PAGE).context["runs"], [])
+
+    def test_prompts_ask_for_recheck(self):
+        text = launcher(self.writing, date(2026, 11, 1), report=True)
+        self.assertIn("나중에 다시 찾아야 할 것", text)
+        self.assertIn('"check_on": "YYYY-MM-DD"', text)
 
     def test_page_add_edit_mark(self):
         self.client.post(reverse("routines:followup_add"), {"title": "  변환 다시  ", "source": "convert", "next_steps": "T219 다시 변환"})
