@@ -772,7 +772,8 @@ def index(request):
         "ahead_days": _ahead_days(writing, today, ran), "ahead_max": AHEAD_DAYS,
         "topic_groups": topic_groups, "topic_count": sum(g["count"] for g in topic_groups),
         "writing_key": topic_mod.WRITING_KEY,
-        "bar": period.bar(mode, sel, today, state),
+        "bar": period.bar(mode, sel, today, state,  # 앞날짜도 미리 쓴 날은 완료 — 어디까지 써 뒀는지 보이게 (2026-10-31 사용자)
+                          ahead=(lambda d: "done" if wrote(d) else "") if writing else None),
         "mode": mode,
         "day": sel,
         "run_day": run_day,

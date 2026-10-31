@@ -47,8 +47,9 @@ def days_between(lo: date, hi: date):
     return [lo + timedelta(days=i) for i in range((hi - lo).days + 1)]
 
 
-def bar(mode: str, sel: date, today: date, state) -> dict:
-    """state(lo, hi) → "done" | "todo" | "" (목표 없음). 오늘 뒤의 칸은 상태를 달지 않는다."""
+def bar(mode: str, sel: date, today: date, state, ahead=None) -> dict:
+    """state(lo, hi) → "done" | "todo" | "" (목표 없음). 오늘 뒤의 칸은 상태를 달지 않는다.
+    ahead(d) 를 주면 오늘 뒤의 날 칸에도 그 값을 단다 — 미리 쓴 날만 '완료' (일별, 2026-10-31 사용자)."""
     lo, _ = strip_bounds(mode, sel)
     cells = []
     if mode == "day":
@@ -56,7 +57,7 @@ def bar(mode: str, sel: date, today: date, state) -> dict:
             d = lo + timedelta(days=i)
             cells.append({"href": f"?date={d}", "top": WEEKDAYS[i], "main": d.day, "title": str(d),
                           "on": d == sel, "today": d == today, "weekend": i >= 5,
-                          "state": state(d, d) if d <= today else ""})
+                          "state": state(d, d) if d <= today else (ahead(d) if ahead else "")})
         nav = {"prev": f"?date={sel - timedelta(days=1)}", "next": f"?date={sel + timedelta(days=1)}",
                "strip_prev": f"?date={sel - timedelta(days=7)}", "strip_next": f"?date={sel + timedelta(days=7)}",
                "prev_label": "전날", "next_label": "다음 날", "strip_prev_label": "지난주", "strip_next_label": "다음 주"}
