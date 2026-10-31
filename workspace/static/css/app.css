@@ -1704,9 +1704,9 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .fu-logs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 8px; }
 .fu-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
 .fu-logs .rt-log { max-height: 220px; overflow: auto; border-radius: 6px; }
-.fu-add input[name="title"] { flex: 1.2; max-width: none; }
-.fu-add input[name="next_steps"] { flex: 1; max-width: none; }
-.fu-add select { flex: none; width: 96px; }
+.tp-add.fu-add input[name="title"] { flex: 1.2; max-width: none; }
+.tp-add.fu-add input[name="next_steps"] { flex: 1; max-width: none; }
+.tp-add.fu-add select { flex: none; width: 96px; }
 .fu-runs { margin-top: 14px; }
 .id-count { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
 /* 추가 실행 (routines/extra.html): 넓은 칸. 글쓰기 분류는 대분류마다 한 열. */
