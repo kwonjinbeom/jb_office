@@ -4,7 +4,7 @@ PC 서버(run.bat)가 꺼져 있어도 된다 (2026-10-16 사용자: "누르면 
 화면은 안내문을 클립보드에 복사한 뒤 링크를 연다. 링크는 run.bat / routine_link.bat 이 Windows 에 한 번 등록한다.
 claude 는 단계마다 `manage.py routine_report` 로 PC DB 에 현황(RoutineRun)을 남긴다.
 
-링크: jbroutine:<run|update|all|convert|feeds>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
+링크: jbroutine:<run|update|all|convert|feeds|anime|followup>?key=<루틴 키>&day=YYYY-MM-DD&name=<이름>[&keys=a,b,c]
 convert: 글 관리의 '변환'·'전체 변환'·'재변환'. 안내문은 '# 사이트 변환' 으로 시작하고 (site_templates/prompt.launcher),
 루틴 현황은 남기지 않는다. key 는 그때마다 다른 이름(cv-시분초)이라 여러 번 눌러도 안내문 파일이 겹치지 않는다.
 anime: 애니 총정리의 '글쓰기·변환' (2026-10-23 사용자). 일일루틴과 따로, 작품마다 새 터미널을 차례로 (전체 실행과 같은 차례 창).
@@ -32,7 +32,7 @@ from .models import Routine, RoutineRun
 
 WINDOWS = os.name == "nt"
 SCHEME = "jbroutine"
-KINDS = ("run", "update", "all", "convert", "feeds", "anime")
+KINDS = ("run", "update", "all", "convert", "feeds", "anime", "followup")
 KEY = re.compile(r"[a-z0-9_-]{1,30}")
 PROMPT_HEAD = "# 일일루틴"  # launcher · all_prompt · restore_prompt 가 모두 이렇게 시작한다
 CONVERT_HEAD = "# 사이트 변환"  # apps/site_templates/prompt.LAUNCH_HEAD
@@ -57,6 +57,9 @@ ROUTINE_ALLOW = [
     "Bash(curl *)",  # 진행 보고를 서버 실행 이력으로 (views.report_api)
     "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_report *)",
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_report *)",
+    # 끝내지 못한 일 · 이어서 하기 보고 (토큰이 없을 때 PC DB 로, routines.followups)
+    "Bash(workspace/.venv/Scripts/python workspace/manage.py routine_followup *)",
+    "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py routine_followup *)",
     # 사이트 변환 뒤 워드프레스 초안 올리기 (2026-10-26, site_templates.wp_rest)
     "Bash(workspace/.venv/Scripts/python workspace/manage.py wp_draft *)",
     "Bash(workspace/.venv/Scripts/python.exe workspace/manage.py wp_draft *)",
@@ -405,7 +408,10 @@ def start(link, text):
     elif not text.startswith(PROMPT_HEAD):
         raise ValueError("클립보드에 일일루틴 안내문이 없습니다. 화면에서 '실행'을 다시 누르세요.")
     claude = find_claude() if WINDOWS else "claude"  # 못 찾으면 현황을 남기기 전에 멈춘다
-    if kind == "convert":
+    if kind == "followup":  # 이어서 할 일 (2026-10-31): 루틴 현황은 남기지 않는다 — 결과는 그 남은 일에 보고한다
+        name, title = f"followup-{key}-{day}.md", f"이어서 하기 {req['name'] or key}"
+        done = "PC 터미널에서 이어서 하기를 시작했습니다. 끝나면 '이어서 할 일'에 완료가 남습니다."
+    elif kind == "convert":
         name, title = f"{key}-{day}.md", "사이트 변환"
         done = "PC 터미널에서 사이트 변환을 시작했습니다. 끝나면 사이트별 템플릿을 새로고침하세요."
     elif kind == "all":

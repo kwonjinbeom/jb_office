@@ -203,4 +203,6 @@ def launcher(request, placements, token, redo=""):
             part += (f"\n\n## 지난 변환본 (사진·사실 점검은 살리고 위 '이 글만'대로 고친다)\n### 제목\n{pl.converted_title or '-'}\n"
                      f"### 태그\n{pl.converted_tags or '-'}\n### 본문\n{pl.converted_body}")
         parts.append(part)
+    from apps.routines import followups  # 끝내지 못한 글은 '이어서 할 일'로 (2026-10-31 사용자)
+    parts.append(followups.instruction(followups.new_url(request, "convert", day), "convert", day).strip())
     return "\n\n".join(parts)

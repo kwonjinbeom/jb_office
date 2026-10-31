@@ -51,7 +51,7 @@ from apps.blog_rules.models import Blog
 from apps.core import period
 from apps.core.models import ROUTINE_BRIEF_TOKEN_KEY, AppSetting
 
-from .models import DATA_CHOICES, Evaluation, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
+from .models import DATA_CHOICES, Evaluation, FollowUp, PromptVersion, Routine, RoutineDay, RoutinePick, RoutineRun
 
 NAVER_DRAFTS = ("콘텐츠", "블로그_카페", "포스팅자동화", "네이버원고")
 
@@ -423,9 +423,10 @@ def _report(routine, day, report):
     """report: None/False = 붙이지 않음, True/"" = PC 명령, 주소 = 서버로 curl."""
     if report is None or report is False:
         return ""
+    from .followups import instruction_from_report  # 끝내지 못한 일은 '이어서 할 일'로 (2026-10-31 사용자)
     if report is True or not report:
-        return REPORT.format(cmd=REPORT_PC.format(key=routine.key, day=day))
-    return REPORT.format(cmd=REPORT_URL.format(url=report))
+        return REPORT.format(cmd=REPORT_PC.format(key=routine.key, day=day)) + instruction_from_report("", routine, day)
+    return REPORT.format(cmd=REPORT_URL.format(url=report)) + instruction_from_report(report, routine, day)
 
 
 def launcher(routine, day, report=None, extra="", tree=False):
@@ -764,6 +765,7 @@ def index(request):
     mark = convert_mark(request, run_day) if writing else ""
     return render(request, "routines/index.html", {
         "can_convert": bool(mark),
+        "followup_open": FollowUp.objects.filter(status__in=[FollowUp.Status.OPEN, FollowUp.Status.RUNNING]).count(),
         "all_prompt_convert": all_text + mark if all_text and mark else "",
         "results": results, "result_counts": counts(results),
         "page_title": "글쓰기 자동화",

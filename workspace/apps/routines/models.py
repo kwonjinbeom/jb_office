@@ -216,3 +216,67 @@ class TopicWeek(models.Model):
 
     def __str__(self):
         return f"{self.topic} {self.week}"
+
+
+class FollowUp(models.Model):
+    """이어서 할 일 (2026-10-31 사용자): 글쓰기·변환 터미널이 끝까지 못 하고 끝났을 때, 무엇이 남았는지 짧게 남긴 한 건.
+    터미널은 열렸다 닫히니 어디서 멈췄는지 알 수 없었다 → claude 가 끝낼 때 보고 주소(followups.api_new)로 남기거나,
+    화면에서 실행 이력(실패·막힘·멈춤)을 골라 올린다. '이어서 하기'로 PC 터미널에서 다시 하고, 끝나면 완료가 된다."""
+
+    class Status(models.TextChoices):
+        OPEN = "open", "남음"
+        RUNNING = "running", "이어서 하는 중"
+        DONE = "done", "완료"
+        DROPPED = "dropped", "안 함"
+
+    class Source(models.TextChoices):
+        WRITING = "writing", "글쓰기"
+        CONVERT = "convert", "변환"
+        ANIME = "anime", "애니"
+        ROUTINE = "routine", "루틴"
+        OTHER = "other", "기타"
+
+    title = models.CharField("남은 일", max_length=200)
+    source = models.CharField("어디서", max_length=10, choices=Source.choices, default=Source.OTHER)
+    routine = models.ForeignKey(Routine, verbose_name="루틴", null=True, blank=True, on_delete=models.SET_NULL, related_name="followups")
+    run = models.ForeignKey(RoutineRun, verbose_name="실행", null=True, blank=True, on_delete=models.SET_NULL, related_name="followups")
+    day = models.DateField("날짜")
+    why = models.TextField("멈춘 까닭", blank=True)
+    next_steps = models.TextField("이어서 할 일", blank=True)
+    status = models.CharField("상태", max_length=10, choices=Status.choices, default=Status.OPEN)
+    log = models.TextField("기록", blank=True)
+    created_at = models.DateTimeField("남긴 때", auto_now_add=True)
+    updated_at = models.DateTimeField("고친 때", auto_now=True)
+    resolved_at = models.DateTimeField("끝낸 때", null=True, blank=True)
+
+    BADGES = {"open": "amber", "running": "blue", "done": "green", "dropped": "gray"}
+    SOURCE_BADGES = {"writing": "outline", "convert": "violet", "anime": "outline", "routine": "outline", "other": "gray"}
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        verbose_name = "이어서 할 일"
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def badge(self):
+        return self.BADGES.get(self.status, "gray")
+
+    @property
+    def source_badge(self):
+        return self.SOURCE_BADGES.get(self.source, "gray")
+
+    @property
+    def is_open(self):
+        return self.status in (self.Status.OPEN, self.Status.RUNNING)
+
+    def note(self, message, status=None):
+        """기록에 한 줄 더하고 (상태를 바꾼다). 완료·안 함이면 끝낸 때를, 다시 열면 지운다."""
+        if status:
+            self.status = status
+            self.resolved_at = timezone.now() if status in (self.Status.DONE, self.Status.DROPPED) else None
+        line = f"{timezone.localtime():%m-%d %H:%M} {self.get_status_display()} · {message}"
+        self.log = f"{self.log}\n{line}" if self.log else line
+        self.save()

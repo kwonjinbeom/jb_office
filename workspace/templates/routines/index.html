@@ -79,7 +79,7 @@
 <section class="card rt-panel rt-history" id="rt-runs"{% if has_open_run %} data-rt-refresh="15"{% endif %}>
   <div class="rt-panel-head">
     <h2 class="card-title">실행 이력 <span class="cnt">{{ runs|length }}</span></h2>
-    <span class="muted small rt-right">{% if has_open_run %}15초마다 새로고침{% else %}모든 루틴{% endif %}</span>
+    <span class="muted small rt-right">{% if followup_open %}<a href="{% url 'routines:followups' %}" title="터미널이 끝내지 못한 일">이어서 할 일 {{ followup_open }}</a> · {% endif %}{% if has_open_run %}15초마다 새로고침{% else %}모든 루틴{% endif %}</span>
   </div>
   <div class="rt-runs">
     {% for run in runs %}

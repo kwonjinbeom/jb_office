@@ -1689,6 +1689,25 @@ html.st-solo .st-compare > .st-col:first-child { display: none; }
 .rt-conv { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; font-size: 12px; font-weight: 500; color: var(--text-2); cursor: pointer; white-space: nowrap; }
 .rt-conv:has(input:disabled) { opacity: .5; cursor: default; }
 .rt-th-run .rt-conv + .rt-launch { margin-left: 0; }
+/* 이어서 할 일 (2026-10-31): 남은 일 표 · 줄을 누르면 자세히 · 확인이 필요한 실행 */
+.fu-table { table-layout: fixed; width: 100%; }
+.fu-table td { padding-top: 6px; padding-bottom: 6px; vertical-align: middle; font-size: 13px; }
+.fu-table .btn.sm { height: 26px; }
+.fu-row { cursor: pointer; }
+.fu-row:hover td, .fu-row.open td { background: var(--hover); }
+.fu-title { font-weight: 700; color: var(--text); }
+.fu-detail td { background: var(--panel-2); }
+.fu-form { display: grid; gap: 8px; padding: 6px 2px; }
+.fu-form label { display: grid; gap: 4px; font-size: 12px; color: var(--text-2); }
+.fu-form textarea { width: 100%; resize: vertical; line-height: 1.6; }
+.fu-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fu-logs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 8px; }
+.fu-label { font-size: 12px; color: var(--text-3); margin-bottom: 4px; }
+.fu-logs .rt-log { max-height: 220px; overflow: auto; border-radius: 6px; }
+.fu-add input[name="title"] { flex: 1.2; max-width: none; }
+.fu-add input[name="next_steps"] { flex: 1; max-width: none; }
+.fu-add select { flex: none; width: 96px; }
+.fu-runs { margin-top: 14px; }
 .id-count { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
 /* 추가 실행 (routines/extra.html): 넓은 칸. 글쓰기 분류는 대분류마다 한 열. */
 .ex-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }

@@ -49,6 +49,8 @@ MENUS: list[Menu] = [
         children=(
             # 수동 루틴 (2026-10-31 사용자): 손으로 돌리는 것을 탭으로 — 커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화
             Menu("routine_topics", "수동 루틴", "커스텀 글쓰기 · 아이디어 찾기 · 프롬프트 최신화를 그때그때 손으로 돌리는 곳", "routines:topics", "calendar"),
+            # 이어서 할 일 (2026-10-31 사용자): 터미널이 끝까지 못 하고 끝난 일 · 멈춘 실행을 모아 이어서 하고 완료로
+            Menu("routine_followups", "이어서 할 일", "글쓰기·변환 터미널이 끝내지 못한 일과 멈춘 실행 — 이어서 하고 완료로", "routines:followups", "check-list"),
             Menu("routine_prompts", "프롬프트 관리", "루틴마다 프롬프트와 그 프롬프트가 보는 md", "routines:prompts", "edit"),
         ),
     ),

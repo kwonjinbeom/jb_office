@@ -1,12 +1,21 @@
 from django.urls import path
 
-from . import topics, views
+from . import followups, topics, views
 
 app_name = "routines"
 urlpatterns = [
     path("", views.index, name="index"),
     path("prompts/", views.prompts, name="prompts"),
     path("ahead/", views.ahead, name="ahead"),
+    path("followups/", followups.page, name="followups"),
+    path("followups/add/", followups.add, name="followup_add"),
+    path("followups/new/", followups.api_new, name="followup_new"),
+    path("followups/<int:pk>/save/", followups.save, name="followup_save"),
+    path("followups/<int:pk>/resume/", followups.resume, name="followup_resume"),
+    path("followups/<int:pk>/report/", followups.api_report, name="followup_report"),
+    path("followups/<int:pk>/<str:action>/", followups.mark, name="followup_mark"),
+    path("followups/runs/<int:pk>/promote/", followups.promote, name="followup_promote"),
+    path("followups/runs/<int:pk>/close/", followups.close_run, name="followup_close_run"),
     path("ideas/", views.ideas, name="ideas"),
     path("update/", views.update, name="update"),
     path("convert/<str:day>/", views.convert_api, name="convert"),

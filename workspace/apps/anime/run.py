@@ -67,4 +67,6 @@ def launcher(request, titles, token):
     rule = concept()
     head = (f"{HEAD} · 글쓰기·변환 · {day.isoformat()} · {len(titles)}작품\n\n"
             "원고 없는 작품의 회차정리 글을 쓰고 서버에 변환 완료로 넣는다. 작품마다 새 터미널에서 차례로 한다.")
-    return "\n\n".join([head] + [part(request, a, token, rule) for a in titles])
+    from apps.routines import followups  # 작품마다 끝내지 못한 일은 '이어서 할 일'로 (2026-10-31 사용자)
+    left = followups.instruction(followups.new_url(request, "anime", day), "anime", day)
+    return "\n\n".join([head] + [part(request, a, token, rule) + left for a in titles])
