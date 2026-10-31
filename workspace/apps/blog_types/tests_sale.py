@@ -16,7 +16,7 @@ class SaleEventTests(TestCase):
         self.assertIn("::: 제품 | 행사 이름", site_cat.concept)
         self.assertIn("자라(블프·시즌오프)", site_cat.concept)
         self.assertNotIn("코리아세일페스타처럼", site_cat.concept)  # 검색량이 낮아 고정에서 뺐다
-        self.assertIn("ⓑ 본 공개", site_cat.concept)  # 0056: 고정 5곳은 예고 · 본 공개 두 편
+        self.assertIn("한 편 더 써도 된다", site_cat.concept)  # 0056: 미리 알린 뒤 공식 혜택이 뜨면 한 번 더
         self.assertTrue(Rule.objects.filter(blog__name="black_lukey", body__startswith="올영·무신사 행사").exists())
         self.assertIn("인기 세일", Blog.objects.get(name="black_lukey").content)
         self.assertFalse(TrashEntry.objects.filter(title__contains="세일 이벤트").exists())  # 7일 뒤 영구 삭제되지 않게
